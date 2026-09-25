@@ -804,26 +804,48 @@ namespace NewAgeQoL
         {
             try
             {
-                Talk.Clear();
-                Battle.Clear();
-                Sys.Clear();
-                Found.Clear();
-                Trail.Clear();
-                if (Wiped.Count > 3000) Wiped.Clear();
-                Forget(Line);
-                Forget(Tail);
-                Forget(World);
-                Line.Clear();
-                Tail.Clear();
-                Fresh.Clear();
-                Lost.Clear();
-                World.Clear();
-                _redo = false;
-                _tailUntil = 0f;
-                _window = Page;
+                WipeTalk();
+                WipeBoard();
                 if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
             }
             catch (Exception e) { Plugin.Trace("[док] очистка: " + e.Message); }
+        }
+
+        private static void WipeOpen()
+        {
+            try
+            {
+                if (_tab == 1) WipeBoard();
+                else WipeTalk();
+                if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
+                Plugin.Trace("[док] очищена вкладка " + (_tab == 1 ? "«Системные»" : "«Чат»") + ", другая не тронута");
+            }
+            catch (Exception e) { Plugin.Trace("[док] очистка вкладки: " + e.Message); }
+        }
+
+        private static void WipeTalk()
+        {
+            Talk.Clear();
+            if (Wiped.Count > 3000) Wiped.Clear();
+            Forget(Line);
+            Forget(Tail);
+            Forget(World);
+            Line.Clear();
+            Tail.Clear();
+            Fresh.Clear();
+            Lost.Clear();
+            World.Clear();
+            _redo = false;
+            _tailUntil = 0f;
+            _window = Page;
+        }
+
+        private static void WipeBoard()
+        {
+            Battle.Clear();
+            Sys.Clear();
+            Found.Clear();
+            Trail.Clear();
         }
 
         internal static void Recipient(UserContextMenuData data)
@@ -1975,7 +1997,7 @@ namespace NewAgeQoL
             Button faces = null;
             faces = Pic(keys.transform, Smiles.Icon(), () => Smiles.Toggle((RectTransform)faces.transform), Color.white);
             Tip(faces, "Смайлики");
-            Tip(Pic(keys.transform, Icons.Bin(), Wipe, WardrobeLook.Label), "Очистить чат");
+            Tip(Pic(keys.transform, Icons.Bin(), WipeOpen, WardrobeLook.Label), "Очистить открытую вкладку");
         }
 
         private static TMP_Text _ink;
