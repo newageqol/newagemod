@@ -25,7 +25,7 @@ namespace NewAgeQoL
         private const float ButtonH = 34f;
         private const int MostFiles = 12;
         private const int OneFileMost = 20 * 1024 * 1024;
-        private const int Room = 49 * 1024 * 1024;
+        private const int Room = 44 * 1024 * 1024;
         private const int Least = 10;
         private const string BakedUrl = "https://newagemod.outerlab.org/report";
         private const string BakedKey = "";
@@ -313,7 +313,9 @@ namespace NewAgeQoL
                 using (web)
                 {
                     yield return web.SendWebRequest();
-                    if (web.responseCode >= 200 && web.responseCode < 300)
+                    string answer = web.downloadHandler != null ? web.downloadHandler.text ?? "" : "";
+                    bool taken = web.responseCode >= 200 && web.responseCode < 300 && answer.Replace(" ", "").Contains("\"ok\":true");
+                    if (taken)
                     {
                         Plugin.Log?.LogInfo("[отчёт] отправлен, ответ " + web.responseCode);
                         Say("Отчёт ушёл. Спасибо!");
@@ -324,8 +326,13 @@ namespace NewAgeQoL
                         Close();
                         yield break;
                     }
-                    Plugin.Warn("[отчёт] не ушёл: код " + web.responseCode + ", " + (web.error ?? ""));
-                    Keep(box, "Отправить не вышло (" + web.responseCode + "). Отчёт лежит в папке, пришли файл сам.");
+                    string where = web.GetResponseHeader("Location") ?? "";
+                    Plugin.Warn("[отчёт] не ушёл: код " + web.responseCode + ", " + (web.error ?? "")
+                                + (where.Length > 0 ? ", переадресация на " + (where.Length > 80 ? where.Substring(0, 80) : where) : "")
+                                + (answer.Length > 0 ? ", ответ " + (answer.Length > 120 ? answer.Substring(0, 120) : answer).Replace((char)10, ' ') : ""));
+                    string why = web.responseCode >= 300 && web.responseCode < 400 ? "приёмник закрыт переадресацией"
+                        : web.responseCode >= 200 && web.responseCode < 300 ? "приёмник ответил не то" : web.responseCode.ToString();
+                    Keep(box, "Отправить не вышло (" + why + "). Отчёт лежит в папке, пришли файл сам.");
                 }
             }
             finally { _busy = false; }
@@ -348,6 +355,7 @@ namespace NewAgeQoL
                 form.AddBinaryData("document", box.Zip, string.IsNullOrEmpty(box.File) ? "report.zip" : Path.GetFileName(box.File), "application/zip");
                 var web = UnityWebRequest.Post(url, form);
                 web.timeout = 300;
+                web.redirectLimit = 0;
                 if (key.Length > 0) web.SetRequestHeader("X-Report-Key", key);
                 return web;
             }
@@ -420,6 +428,8 @@ namespace NewAgeQoL
             string flash = Path.Combine(Paths.CachePath, "NewAge2D");
             Tail(zip, Path.Combine(DiskJournal.Folder, "qol.log"), "мод/qol.log", 4000000);
             Tail(zip, Path.Combine(DiskJournal.Folder, "qol.old.log"), "мод/qol.old.log", 1500000);
+            Tail(zip, RouteLog.File, "мод/routes.log", 8000000);
+            Maps(zip);
             Tail(zip, Path.Combine(flash, "plugin.log"), "flash/plugin.log", 2000000);
             Tail(zip, Path.Combine(flash, "plugin.log.old"), "flash/plugin.log.old", 1000000);
             foreach (var path in Latest(Path.Combine(flash, "trace"), "*.log", 3))
@@ -431,6 +441,23 @@ namespace NewAgeQoL
             Tail(zip, player, "игра/Player.log", 2000000);
             string near = Path.GetDirectoryName(player);
             if (!string.IsNullOrEmpty(near)) Tail(zip, Path.Combine(near, "Player-prev.log"), "игра/Player-prev.log", 1000000);
+        }
+
+        private static void Maps(ZipArchive zip)
+        {
+            try
+            {
+                if (!Directory.Exists(MapDump.Folder)) return;
+                long left = 6000000;
+                foreach (var path in Directory.GetFiles(MapDump.Folder, "*.xml"))
+                {
+                    long size = new FileInfo(path).Length;
+                    if (size > left) continue;
+                    left -= size;
+                    Whole(zip, path, "карты/" + Path.GetFileName(path), (int)size + 1);
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[отчёт] карты: " + e.Message); }
         }
 
         private static void Put(ZipArchive zip, string name, byte[] data)

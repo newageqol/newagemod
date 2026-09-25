@@ -1035,18 +1035,23 @@ namespace NewAgeQoL
             if (shiftDown)
             {
                 string now = _input.text ?? "";
-                _armed = _input.isFocused && now.EndsWith(" ", StringComparison.Ordinal) && now.Trim().Length > 0;
+                int caret = _input.caretPosition;
+                _armed = _input.isFocused && caret > 0 && caret <= now.Length && now[caret - 1] == ' ' && now.Trim().Length > 0;
+                _armedAt = caret - 1;
             }
             else if (_armed && Input.anyKeyDown) _armed = false;
             if (shiftUp && _armed)
             {
                 _armed = false;
                 Plugin.Trace("[док] пробел и следом шифт");
+                string now = _input.text ?? "";
+                if (_armedAt >= 0 && _armedAt < now.Length - 1 && now[_armedAt] == ' ')
+                    _input.text = now.Remove(_armedAt, 1);
                 _want = true;
                 return;
             }
             if (!Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.KeypadEnter)) return;
-            if (Roster.Asking || CultPotions.Asking) return;
+            if (Roster.Asking || CultPotions.Asking || TravelEnter.Asking) return;
 
             if (_input.isFocused)
             {
@@ -1925,6 +1930,7 @@ namespace NewAgeQoL
                     _view.OnContentLinkClick += Clicked;
                     Smaller(_view);
                     _ink = AccessTools.Field(typeof(ChatPanelContent), "Text")?.GetValue(_view) as TMP_Text;
+                    if (_ink != null) Smiles.Fit(_ink.font);
                     Ink();
                     ChatPick.Attach(_view);
                     Draggable(_view);
@@ -1997,7 +2003,6 @@ namespace NewAgeQoL
             Sheets[1] = Sheet(row.transform, "Системные", 1, 64f);
             _seekButton = Leaf(row.transform, "Поиск", 46f, out _seekLabel);
             _seekButton.onClick.AddListener(SeekOpen);
-            Tip(_seekButton, "Искать среди системных строк, что сейчас в ленте", true);
             SeekPaint();
             _tabsRt = (RectTransform)row.transform;
             _tabsPad = leftPad;
@@ -2828,6 +2833,16 @@ namespace NewAgeQoL
             _chipText.verticalOverflow = VerticalWrapMode.Overflow;
             OnlineWindow.Place(_chipText.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero);
             go.GetComponent<Button>().onClick.AddListener(() => { _to = 0; _toName = ""; Chip(); Focus(); });
+            var trigger = go.AddComponent<EventTrigger>();
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            entry.callback.AddListener(data =>
+            {
+                var click = data as PointerEventData;
+                if (click == null || click.button != PointerEventData.InputButton.Right || _to <= 0) return;
+                Plugin.Trace("[док] клик по адресату " + _toName + " правой");
+                Menu(_to, _toName);
+            });
+            trigger.triggers.Add(entry);
             go.SetActive(false);
             return go;
         }
@@ -2844,6 +2859,7 @@ namespace NewAgeQoL
         private static bool _want;
         private static bool _all;
         private static bool _armed;
+        private static int _armedAt = -1;
 
         private static string Clean()
         {

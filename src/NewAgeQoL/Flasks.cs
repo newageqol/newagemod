@@ -68,7 +68,7 @@ namespace NewAgeQoL
         private static float _nextTick;
         private static List<int> _tabs;
         private static int _seen;
-        private static bool _listeners, _scanBusy, _scanOk, _scanFull, _wasCombat, _urgent;
+        private static bool _listeners, _scanBusy, _scanOk, _scanFull, _wasCombat, _urgent, _wanted;
         private static float _scanAt = -999f, _nextScan;
         private static float _busySince, _whyAt;
 
@@ -103,6 +103,12 @@ namespace NewAgeQoL
             var cfg = row >= 0 && row < Rows ? Cfg(row) : null;
             return cfg != null ? cfg.Value : 0;
         }
+
+        internal static ConfigEntry<int> IdEntry(int row) => row >= 0 && row < Rows ? Cfg(row) : null;
+
+        internal static ConfigEntry<string> NameEntry(int row) => row >= 0 && row < Rows ? CfgName(row) : null;
+
+        internal static string Title(int row) => row >= 0 && row < Titles.Length ? Titles[row] : "";
 
         internal static int RowFor(int thingId)
         {
@@ -364,6 +370,7 @@ namespace NewAgeQoL
 
         internal static void RequestScan()
         {
+            _wanted = true;
             _nextScan = 0f;
         }
 
@@ -591,7 +598,7 @@ namespace NewAgeQoL
                 return;
             }
 
-            bool any = Picking && !Fresh;
+            bool any = (Picking && !Fresh) || _wanted;
             for (int row = 0; row < Rows; row++) if (Shown(row)) any = true;
             if (!any)
             {
@@ -611,6 +618,7 @@ namespace NewAgeQoL
             }
 
             _urgent = false;
+            _wanted = false;
             _nextScan = RealTime.Now + (_scanOk ? RescanEvery : 3f);
             Plugin.Trace("[банки] запускаю опрос сумки");
             Plugin.Instance.StartCoroutine(RefreshRoutine());

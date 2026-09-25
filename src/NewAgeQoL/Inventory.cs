@@ -757,6 +757,10 @@ namespace NewAgeQoL
                 }
                 if (content.TabNumber == Contracts.AllTab || content.TabNumber == Contracts.TabId) return;
                 content.Things = content.Things.Where(t => !Contracts.IsContract(t)).ToList();
+                if (content.TabNumber == (int)EThingTabType.EQUIPMENT_TAB)
+                    content.Things = content.Things.OrderByDescending(t => t.Level)
+                                                     .ThenBy(t => t.SubType == (int)EThingSubType.RELIQUIAE || t.SubType == (int)EThingSubType.EARING ? 1 : 0)
+                                                     .ToList();
             }
             catch (Exception e) { Plugin.Fault("[contracts] содержимое вкладки: " + e.Message); }
         }

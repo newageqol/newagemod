@@ -59,6 +59,7 @@ namespace NewAgeQoL
         private static readonly Text[] TotalText = new Text[7];
         private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote;
         private static Button _update;
+        private static Text _elixirLabel;
         private static string _statusSeen;
         private static readonly Text[] ArmorText = new Text[5];
         private static readonly Text[] MagicText = new Text[3];
@@ -121,6 +122,8 @@ namespace NewAgeQoL
             WardrobePicker.Close();
             WardrobeArt.Close();
             WardrobeCompare.Close();
+            WardrobeElixirs.Cancel();
+            _elixirLabel = null;
             _menuGo = null;
             _add = null;
             WardrobeDoll.Forget();
@@ -156,6 +159,7 @@ namespace NewAgeQoL
         {
             if (_canvasGo == null) return false;
             if (_askGo != null) { CloseAsk(); return true; }
+            if (WardrobeElixirs.EscapeClose()) return true;
             if (CloseMenu()) return true;
             if (!WardrobePicker.IsOpen && WardrobeArt.EscapeClose()) return true;
             if (WardrobeCompare.EscapeClose()) return true;
@@ -199,6 +203,7 @@ namespace NewAgeQoL
         {
             S.Rank = 0;
             S.Undress();
+            S.Sober();
             for (int i = 0; i < 7; i++) S.Dist[i] = 0;
             var info = Controllers.User?.UserInfo;
             if (info == null) return false;
@@ -343,6 +348,7 @@ namespace NewAgeQoL
             WardrobePicker.Refresh();
             if (!WardrobePicker.IsOpen) WardrobeArt.Refresh();
             WardrobeCompare.Refresh();
+            WardrobeElixirs.Refresh();
             Keep();
         }
 
@@ -400,6 +406,26 @@ namespace NewAgeQoL
             Changed(true);
             Tabs();
             Named();
+        }
+
+        private static void CopyActive()
+        {
+            if (WardrobeStore.OwnCount >= WardrobeStore.MaxOwn)
+            {
+                Notice.Show("Своих манекенов может быть не больше " + WardrobeStore.MaxOwn + ". Удали ненужный.", 5f);
+                return;
+            }
+            Keep();
+            var active = WardrobeStore.Active;
+            string title = (active != null ? active.Title : "Манекен") + " копия";
+            var manikin = WardrobeStore.Add(title, S.Pack(), active);
+            if (manikin == null) return;
+            WardrobePicker.Close();
+            Load(manikin);
+            Changed(true);
+            Tabs();
+            Named();
+            Notice.Show("Манекен скопирован в «" + manikin.Title + "»", 4f);
         }
 
         private static void DeleteActive()
@@ -703,13 +729,15 @@ namespace NewAgeQoL
         private static void BuildSide()
         {
             float y = 12f;
-            _nameInput = OnlineWindow.MakeInput(_side, 322f, "название манекена");
-            At((RectTransform)_nameInput.transform, 12f, y, 322f, 34f);
+            _nameInput = OnlineWindow.MakeInput(_side, 194f, "название манекена");
+            At((RectTransform)_nameInput.transform, 12f, y, 194f, 34f);
             _nameInput.characterLimit = WardrobeStore.MaxTitle;
             WardrobeLook.Style(_nameInput);
             _nameInput.onEndEdit.AddListener(Rename);
+            var copy = GameButton(_side, "Копировать", CopyActive, false);
+            At(copy, 212f, y, 128f, 34f);
             var delete = GameButton(_side, "Удалить", DeleteActive, true);
-            At(delete, 340f, y, 88f, 34f);
+            At(delete, 346f, y, 82f, 34f);
             Named();
             y += 44f;
             _race = Cycler(_side, "Раса", y, step => Turn(Race, step));
@@ -725,10 +753,13 @@ namespace NewAgeQoL
             _rank = Cycler(_side, "Крепость", y, step => { StepRank(step); Changed(true); });
             y += 48f;
 
-            float bw = (SideW - 24f - 16f) / 3f;
+            float bw = (SideW - 24f - 18f) / 4f;
             Place(GameButton(_side, "Как у меня", Mine, false), 12f, y, bw, 38f);
-            Place(GameButton(_side, "Сравнить", Compare, false), 12f + bw + 8f, y, bw, 38f);
-            Place(GameButton(_side, "Обнулить", () => { S.Undress(); S.Minimum(); Changed(true); }, true), 12f + (bw + 8f) * 2f, y, bw, 38f);
+            Place(GameButton(_side, "Сравнить", Compare, false), 12f + bw + 6f, y, bw, 38f);
+            var elixirs = GameButton(_side, WardrobeElixirs.Caption(), Elixirs, false);
+            Place(elixirs, 12f + (bw + 6f) * 2f, y, bw, 38f);
+            _elixirLabel = elixirs.GetComponentInChildren<Text>();
+            Place(GameButton(_side, "Обнулить", () => { S.Undress(); S.Sober(); S.Minimum(); Changed(true); }, true), 12f + (bw + 6f) * 3f, y, bw, 38f);
             y += 50f;
 
             Header(_side, "Характеристики", y);
@@ -888,7 +919,8 @@ namespace NewAgeQoL
             if (_panelGo == null || !Cells.TryGetValue(slot, out cell) || cell == null) return;
             WardrobeThing thing;
             string raw;
-            string title, about, gives = null;
+            string title, about;
+            List<WardrobePicker.TipBlock> sections = null;
             Color color;
             if (S.Worn.TryGetValue(slot, out thing) && thing != null)
             {
@@ -904,7 +936,7 @@ namespace NewAgeQoL
                     head.Append(" · не действует: не хватает ").Append(Gaps(add));
                 }
                 about = head.ToString();
-                gives = WardrobePicker.Gives(thing);
+                sections = WardrobePicker.Sections(thing);
             }
             else if (S.Unknown.TryGetValue(slot, out raw))
             {
@@ -947,7 +979,46 @@ namespace NewAgeQoL
             _tipGo.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             TipLine(title, 15, FontStyle.Bold, color);
             TipLine(about, 12, FontStyle.Normal, WardrobeLook.Faint);
-            if (!string.IsNullOrEmpty(gives)) TipLine(gives, 13, FontStyle.Normal, WardrobeLook.Label);
+            if (sections != null)
+            {
+                if (sections.Count == 0) TipLine("без прибавок", 13, FontStyle.Normal, WardrobeLook.Label);
+                foreach (var section in sections)
+                {
+                    TipRule();
+                    TipLine(section.Title, 12, FontStyle.Bold, WardrobeLook.Accent);
+                    foreach (var row in section.Rows) TipPair(row.Key, row.Value);
+                }
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            float tall = rt.rect.height;
+            if (cy + tall > PanelH - 8f) At(rt, x, Mathf.Max(8f, PanelH - 8f - tall), Width, tall);
+        }
+
+        private static void TipRule()
+        {
+            var go = new GameObject("rule", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            go.transform.SetParent(_tipGo.transform, false);
+            var image = go.GetComponent<Image>();
+            image.color = WardrobeLook.Edge;
+            image.raycastTarget = false;
+            var le = go.GetComponent<LayoutElement>();
+            le.minHeight = le.preferredHeight = 1f;
+        }
+
+        private static void TipPair(string name, string value)
+        {
+            var go = new GameObject("row", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(_tipGo.transform, false);
+            var le = go.GetComponent<LayoutElement>();
+            le.minHeight = le.preferredHeight = 18f;
+            var left = OnlineWindow.Label(go.transform, name, 13, FontStyle.Normal, WardrobeLook.Label);
+            OnlineWindow.Place(left.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(8f, 0f), Vector2.zero);
+            left.alignment = TextAnchor.MiddleLeft;
+            left.raycastTarget = false;
+            var right = OnlineWindow.Label(go.transform, value, 13, FontStyle.Bold, WardrobeLook.Bright);
+            OnlineWindow.Place(right.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            right.alignment = TextAnchor.MiddleRight;
+            right.raycastTarget = false;
         }
 
         private static void TipLine(string text, int size, FontStyle style, Color color)
@@ -1026,6 +1097,15 @@ namespace NewAgeQoL
             WardrobePicker.Open(_side, slot);
         }
 
+        private static void Elixirs()
+        {
+            if (_panelGo == null) return;
+            CloseMenu();
+            WardrobeArt.Close();
+            if (WardrobeElixirs.IsOpen) { WardrobeElixirs.Close(); return; }
+            WardrobeElixirs.Open();
+        }
+
         private static void Compare()
         {
             if (_panelGo == null) return;
@@ -1100,6 +1180,7 @@ namespace NewAgeQoL
             if (_sub != null) _sub.text = sub != null ? sub.Name + " (" + sub.Level + ")" : (S.Level < 8 ? "с 8 уровня" : "нет");
             if (_rank != null) _rank.text = S.ClassId == WardrobeData.Ranger ? "рейнджеру нельзя" : (rank != null ? rank.Name : "нет");
 
+            if (_elixirLabel != null) _elixirLabel.text = WardrobeElixirs.Caption();
             int free = S.Free;
             if (_free != null)
             {
@@ -1279,7 +1360,7 @@ namespace NewAgeQoL
             if (target > want)
             {
                 var sub = S.Sub;
-                why = sub != null && S.Need(i) >= target ? "требования «" + sub.Name + "»" : "база расы";
+                why = sub != null && S.Need(i) >= target ? "требования «" + sub.Name + "»" : S.Potion(i) > 0 ? "база расы и эликсиры" : "база расы";
             }
             string blocker = S.Blocker(i, target);
             if (blocker != null)
@@ -1302,7 +1383,7 @@ namespace NewAgeQoL
                 var sub = S.Sub;
                 Notice.Show(sub != null && S.Need(i) >= now
                     ? "Ниже требований «" + sub.Name + "» не опустить: " + WardrobeData.StatNames[i].ToLowerInvariant() + " " + S.Need(i)
-                    : "Ниже базы расы не опустить", 4f);
+                    : S.Potion(i) > 0 ? "Ниже базы расы и выпитых эликсиров не опустить" : "Ниже базы расы не опустить", 4f);
                 return;
             }
             string blocker = S.Blocker(i, now - step);

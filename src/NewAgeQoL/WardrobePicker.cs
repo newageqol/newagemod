@@ -499,6 +499,43 @@ namespace NewAgeQoL
             return parts.Count > 0 ? string.Join(" · ", parts.ToArray()) : "без прибавок";
         }
 
+        internal sealed class TipBlock
+        {
+            internal string Title;
+            internal readonly List<KeyValuePair<string, string>> Rows = new List<KeyValuePair<string, string>>();
+
+            internal void Add(string name, string value) => Rows.Add(new KeyValuePair<string, string>(name, value));
+        }
+
+        internal static List<TipBlock> Sections(WardrobeThing thing)
+        {
+            var list = new List<TipBlock>();
+            var stats = new TipBlock { Title = "Параметры" };
+            foreach (int i in WardrobeData.StatOrder)
+                if (thing.Bonus[i] != 0) stats.Add(WardrobeData.StatNames[i], Signed(thing.Bonus[i]));
+            if (stats.Rows.Count > 0) list.Add(stats);
+            if (thing.Energy != 0)
+            {
+                var energy = new TipBlock { Title = "Энергия" };
+                energy.Add("Энергия", Signed(thing.Energy));
+                list.Add(energy);
+            }
+            var armor = new TipBlock { Title = "Броня" };
+            for (int p = 0; p < 5; p++)
+                if (thing.Armor[p] != 0) armor.Add(WardrobeData.ArmorNames[p], thing.Armor[p].ToString());
+            if (armor.Rows.Count > 0) list.Add(armor);
+            var magic = new TipBlock { Title = "Защита от магии" };
+            for (int m = 0; m < 3; m++)
+                if (thing.Magic[m] != 0) magic.Add(WardrobeData.MagicNames[m], thing.Magic[m].ToString());
+            if (magic.Rows.Count > 0) list.Add(magic);
+            var weapon = new TipBlock { Title = "Оружие" };
+            if (thing.DamageMax > 0) weapon.Add("Урон", thing.DamageMin + "–" + thing.DamageMax);
+            if (thing.DamageMax > 0 && thing.Range > 0) weapon.Add("Дальность", thing.Range.ToString());
+            if (WardrobeData.IsTwoHand(thing.Sub)) weapon.Add("Двуручное", "");
+            if (weapon.Rows.Count > 0) list.Add(weapon);
+            return list;
+        }
+
         private static string Signed(int value) => value > 0 ? "+" + value : value.ToString();
     }
 }

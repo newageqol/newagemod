@@ -12,6 +12,7 @@ namespace NewAgeQoL
         internal int SubN;
         internal int Rank;
         internal readonly int[] Dist = new int[7];
+        internal readonly int[] Elix = new int[7];
         internal readonly Dictionary<int, WardrobeThing> Worn = new Dictionary<int, WardrobeThing>();
         internal readonly Dictionary<int, string> Unknown = new Dictionary<int, string>();
         internal bool Short;
@@ -29,6 +30,7 @@ namespace NewAgeQoL
                 Short = Short
             };
             Array.Copy(Dist, copy.Dist, Dist.Length);
+            Array.Copy(Elix, copy.Elix, Elix.Length);
             foreach (var pair in Worn) copy.Worn[pair.Key] = pair.Value;
             foreach (var pair in Unknown) copy.Unknown[pair.Key] = pair.Value;
             return copy;
@@ -98,7 +100,9 @@ namespace NewAgeQoL
             var text = new System.Text.StringBuilder();
             text.Append("r=").Append(RaceId).Append(";g=").Append(Gender).Append(";l=").Append(Level)
                 .Append(";c=").Append(ClassId).Append(";s=").Append(SubN).Append(";k=").Append(Rank)
-                .Append(";d=").Append(string.Join(",", Dist)).Append(";w=");
+                .Append(";d=").Append(string.Join(",", Dist));
+            if (Drunk > 0) text.Append(";e=").Append(string.Join(",", Elix));
+            text.Append(";w=");
             bool first = true;
             foreach (var pair in Worn)
             {
@@ -126,6 +130,7 @@ namespace NewAgeQoL
             SubN = 0;
             Rank = 0;
             for (int i = 0; i < 7; i++) Dist[i] = 0;
+            Sober();
             Undress();
             int lost = 0;
             foreach (var part in (body ?? "").Split(';'))
@@ -151,6 +156,16 @@ namespace NewAgeQoL
                         {
                             int d;
                             if (int.TryParse(cells[i], out d) && d > 0 && d < 10000) Dist[i] = d;
+                        }
+                        break;
+                    }
+                    case "e":
+                    {
+                        var cells = value.Split(',');
+                        for (int i = 0; i < 7 && i < cells.Length; i++)
+                        {
+                            int e;
+                            if (int.TryParse(cells[i], out e) && e > 0 && e < 10000) Elix[i] = e;
                         }
                         break;
                     }
@@ -240,7 +255,32 @@ namespace NewAgeQoL
 
         internal int Free => Points(Level) - Spent;
 
-        internal int Base(int i) => Race.Base[i] + Dist[i];
+        internal static int ElixirCap(int level) => level < 0 ? 1 : level * 3 + 1;
+
+        internal int Cap => ElixirCap(Level);
+
+        internal int Doses
+        {
+            get
+            {
+                int sum = 0;
+                foreach (int e in Elix) sum += e;
+                return sum;
+            }
+        }
+
+        internal int Potion(int i) => Elix[i];
+
+        internal int Drunk => Doses;
+
+        internal int Sips => Math.Max(0, Cap - Doses);
+
+        internal void Sober()
+        {
+            for (int i = 0; i < 7; i++) Elix[i] = 0;
+        }
+
+        internal int Base(int i) => Race.Base[i] + Dist[i] + Potion(i);
 
         internal int Need(int i)
         {
@@ -248,7 +288,7 @@ namespace NewAgeQoL
             return sub != null ? sub.Req[i] : 0;
         }
 
-        internal int Floor(int i) => Math.Max(Race.Base[i], Need(i));
+        internal int Floor(int i) => Math.Max(Race.Base[i] + Potion(i), Need(i));
 
         internal int TopSub
         {
@@ -422,6 +462,7 @@ namespace NewAgeQoL
             foreach (var pair in Worn) if (pair.Value.Level > Level) drop.Add(pair.Key);
             foreach (int slot in drop) Worn.Remove(slot);
 
+            if (Doses > Cap) Sober();
             Lift();
             if (Spent > Points(Level))
             {
@@ -449,7 +490,7 @@ namespace NewAgeQoL
             var race = Race;
             for (int i = 0; i < 7; i++)
             {
-                int need = Floor(i) - race.Base[i];
+                int need = Floor(i) - race.Base[i] - Potion(i);
                 if (Dist[i] < need) Dist[i] = need;
             }
         }

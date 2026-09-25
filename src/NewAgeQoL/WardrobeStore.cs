@@ -142,12 +142,14 @@ namespace NewAgeQoL
             }
         }
 
-        internal static WardrobeManikin Add(string title, string body)
+        internal static WardrobeManikin Add(string title, string body) => Add(title, body, null);
+
+        internal static WardrobeManikin Add(string title, string body, WardrobeManikin after)
         {
             Load();
             if (OwnCount >= MaxOwn) return null;
             var m = new WardrobeManikin { Key = Guid.NewGuid().ToString("N"), Title = Clean(title), Body = body };
-            int at = All.FindIndex(x => x.Received);
+            int at = after != null && !after.Received && All.Contains(after) ? All.IndexOf(after) + 1 : All.FindIndex(x => x.Received);
             if (at < 0) All.Add(m);
             else All.Insert(at, m);
             Touch();

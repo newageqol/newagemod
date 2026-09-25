@@ -883,6 +883,7 @@ namespace NewAgeQoL
                     if (Wardrobe.EscapeClose() || KuCalc.EscapeClose() || CraftCalc.EscapeClose()) return false;
                     if (Smiles.EscapeClose()) return false;
                     if (FlaskPicker.EscapeClose()) return false;
+                    if (TravelEdit.EscapeClose()) return false;
                     if (SkillList.EscapeClose()) return false;
                     if (ManikinPicker.EscapeClose()) return false;
                     if (Manikin.EscapeClose()) return false;

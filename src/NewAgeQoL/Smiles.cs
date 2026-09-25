@@ -24,6 +24,10 @@ namespace NewAgeQoL
         private const float Zoom = 1.5f;
         private const float Lift = 0.78f;
         private const float Side = 0.06f;
+        private const float Typical = 19f;
+        private const float Grow = 1.4f;
+        private const byte Opaque = 200;
+        private static TMP_FontAsset _fitted, _wanted;
 
         private sealed class Face
         {
@@ -36,6 +40,7 @@ namespace NewAgeQoL
             internal string Tag;
             internal int[] SpotX;
             internal int[] SpotY;
+            internal int Solid;
         }
 
         private static readonly List<Face> Faces = new List<Face>();
@@ -98,8 +103,10 @@ namespace NewAgeQoL
                 _sheet.hideFlags = HideFlags.HideAndDontSave;
                 if (!ImageConversion.LoadImage(_sheet, art)) { Plugin.Trace("[смайлики] картинка не прочиталась"); return; }
 
+                Measure();
                 Build();
                 _ready = true;
+                Fit(_wanted ?? TMP_Settings.defaultFontAsset);
                 Plugin.Trace("[смайлики] готово: " + Faces.Count + " штук, кадров " + _asset.spriteCharacterTable.Count);
             }
             catch (Exception e) { Plugin.Fault("[смайлики] подготовка: " + e.Message); }
@@ -174,6 +181,35 @@ namespace NewAgeQoL
             return true;
         }
 
+        private static void Measure()
+        {
+            try
+            {
+                var px = _sheet.GetPixels32();
+                int tw = _sheet.width, th = _sheet.height;
+                foreach (var face in Faces)
+                {
+                    int lo = int.MaxValue, hi = -1;
+                    for (int i = 0; i < face.Count; i++)
+                        for (int y = 0; y < face.Height; y++)
+                        {
+                            int row = face.SpotY[i] + y;
+                            if (row < 0 || row >= th) continue;
+                            for (int x = 0; x < face.Width; x++)
+                            {
+                                int col = face.SpotX[i] + x;
+                                if (col < 0 || col >= tw || px[row * tw + col].a < Opaque) continue;
+                                if (y < lo) lo = y;
+                                if (y > hi) hi = y;
+                                break;
+                            }
+                        }
+                    face.Solid = hi >= lo ? hi - lo + 1 : face.Height;
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[смайлики] замер рисунков: " + e.Message); }
+        }
+
         private static void Build()
         {
             _asset = ScriptableObject.CreateInstance<TMP_SpriteAsset>();
@@ -196,10 +232,13 @@ namespace NewAgeQoL
 
             uint slot = 0;
             foreach (var face in Faces)
+            {
+                float body = Math.Max(face.Solid > 0 ? face.Solid : face.Height, face.Height / Grow);
+                float k = Typical / body;
                 for (int i = 0; i < face.Count; i++)
                 {
-                    var metrics = new GlyphMetrics(face.Width, face.Height, face.Width * Side,
-                        face.Height * Lift, face.Width * (1f + Side * 2f));
+                    var metrics = new GlyphMetrics(face.Width * k, face.Height * k, face.Width * Side * k,
+                        face.Height * Lift * k, face.Width * (1f + Side * 2f) * k);
                     var rect = new GlyphRect(face.SpotX[i], face.SpotY[i], face.Width, face.Height);
                     var glyph = new TMP_SpriteGlyph(slot, metrics, rect, 1f, 0);
                     var letter = new TMP_SpriteCharacter(0xFFFE, _asset, glyph);
@@ -209,6 +248,7 @@ namespace NewAgeQoL
                     _asset.spriteCharacterTable.Add(letter);
                     slot++;
                 }
+            }
             _asset.UpdateLookupTables();
             MaterialReferenceManager.AddSpriteAsset(_asset.hashCode, _asset);
             TMP_SpriteAsset back;
@@ -224,6 +264,28 @@ namespace NewAgeQoL
             if (known != null && known.material != null) return new Material(known.material);
             var shader = Shader.Find("TextMeshPro/Sprite");
             return shader != null ? new Material(shader) : null;
+        }
+
+        internal static void Fit(TMP_FontAsset font)
+        {
+            if (font == null) return;
+            _wanted = font;
+            if (!_ready || _asset == null || ReferenceEquals(font, _fitted)) return;
+            try
+            {
+                var main = font.faceInfo;
+                if (main.pointSize <= 0 || main.ascentLine <= 0f) return;
+                var info = main;
+                info.scale = main.scale * main.ascentLine / Typical;
+                info.ascentLine = Typical / Zoom;
+                info.descentLine = main.descentLine * Typical / (main.ascentLine * Zoom);
+                var slot = AccessTools.Field(typeof(TMP_SpriteAsset), "m_FaceInfo");
+                if (slot == null) return;
+                slot.SetValue(_asset, info);
+                _fitted = font;
+                Plugin.Trace("[смайлики] размер по шрифту «" + font.name + "»: " + main.pointSize + " пт");
+            }
+            catch (Exception e) { Plugin.Trace("[смайлики] размер: " + e.Message); }
         }
 
         internal static string Dress(string text)

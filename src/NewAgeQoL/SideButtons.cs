@@ -19,7 +19,9 @@ namespace NewAgeQoL
             internal System.Func<bool> Enabled;
             internal System.Func<Sprite> Sprite;
             internal System.Func<string> Badge;
+            internal bool WhiteBadge;
             internal System.Action Click;
+            internal System.Action<RectTransform> RightClick;
             internal System.Func<bool> Usable;
             internal float PressAt;
             internal int Col;
@@ -168,7 +170,7 @@ namespace NewAgeQoL
                 Order = 9,
                 Col = 2,
                 Hint = () => Travel.Busy ? "Идёт поход — можно выбрать другую точку" : "Куда идти: список точек",
-                Enabled = () => Travel.Enabled && !ClaimLocked() && Travel.Spots().Count > 0,
+                Enabled = () => Travel.Enabled && !ClaimLocked(),
                 Sprite = () => Pick(1, "move5", "move3", "mines_attack", "assassinate"),
                 Badge = () => Travel.Busy ? "▶" : "",
                 Click = TravelMenu.Toggle,
@@ -187,10 +189,12 @@ namespace NewAgeQoL
                     Col = 1,
                     Hint = () => Flasks.Hint(row),
                     Badge = () => Flasks.Badge(row),
+                    WhiteBadge = true,
                     Usable = () => !Flasks.Busy(row) && !Artifacts.Busy,
                     Enabled = () => Flasks.Shown(row),
                     Sprite = () => Flasks.Icon(row),
                     Click = () => Flasks.Use(row),
+                    RightClick = at => FlaskPicker.Near(row, at),
                 });
             }
             for (int i = 0; i < Buttons.Count; i++) Buttons[i].Seat = i;
@@ -1102,7 +1106,7 @@ namespace NewAgeQoL
                 entry.Icon = icon;
                 entry.Frame = frame;
 
-                if (entry.Badge != null) entry.Count = Badge(rt, side, entry.Badge());
+                if (entry.Badge != null) entry.Count = Badge(rt, side, entry.Badge(), entry.WhiteBadge);
 
                 var button = go.GetComponent<Button>();
                 if (button == null) button = go.AddComponent<Button>();
@@ -1125,6 +1129,15 @@ namespace NewAgeQoL
                 var hint = entry.Hint;
                 AddTrigger(trigger, EventTriggerType.PointerEnter, _ => ShowHint(rt, hint()));
                 AddTrigger(trigger, EventTriggerType.PointerExit, _ => HideHint());
+                var right = entry.RightClick;
+                if (right != null)
+                    AddTrigger(trigger, EventTriggerType.PointerClick, data =>
+                    {
+                        var click = data as PointerEventData;
+                        if (click == null || click.button != PointerEventData.InputButton.Right) return;
+                        HideHint();
+                        right(rt);
+                    });
 
                 entry.Go = go;
                 go = null;
@@ -1140,7 +1153,7 @@ namespace NewAgeQoL
             }
         }
 
-        private static Text Badge(RectTransform host, float side, string text)
+        private static Text Badge(RectTransform host, float side, string text, bool white)
         {
             var go = new GameObject("count", typeof(RectTransform), typeof(Text), typeof(Outline));
             go.transform.SetParent(host, false);
@@ -1158,7 +1171,7 @@ namespace NewAgeQoL
             label.fontSize = Mathf.Max(11, Mathf.RoundToInt(side * 0.27f));
             label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.LowerRight;
-            label.color = WardrobeLook.Accent;
+            label.color = white ? Color.white : WardrobeLook.Accent;
             label.raycastTarget = false;
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.verticalOverflow = VerticalWrapMode.Overflow;

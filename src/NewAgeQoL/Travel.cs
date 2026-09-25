@@ -32,9 +32,14 @@ namespace NewAgeQoL
         private static string _why;
 
         internal static bool Busy => _running != null;
-        internal static bool IsRunning(Spot spot) => ReferenceEquals(_running, spot);
+        internal static bool IsRunning(Spot spot)
+        {
+            var now = _running;
+            if (now == null || spot == null) return false;
+            return ReferenceEquals(now, spot) || (now.Area == spot.Area && SamePath(now, spot));
+        }
 
-        internal static bool Enabled => Plugin.CfgTravelButton == null || Plugin.CfgTravelButton.Value;
+        internal static bool Enabled => false;
 
         private static int Town => Plugin.CfgTravelTown != null ? Plugin.CfgTravelTown.Value : 2;
         private static int Outer => Plugin.CfgTravelOuter != null ? Plugin.CfgTravelOuter.Value : 1002;
@@ -79,12 +84,129 @@ namespace NewAgeQoL
             return list;
         }
 
+        private static readonly System.Reflection.FieldInfo PositionField = AccessTools.Field(typeof(GlobalMapController), "_currentPosition");
+
+        internal static int Here()
+        {
+            try
+            {
+                var map = Gmc;
+                if (map == null || !MapReady() || PositionField == null) return -1;
+                return (int)PositionField.GetValue(map);
+            }
+            catch { return -1; }
+        }
+
+        internal static void AddHere()
+        {
+            int area = Area;
+            int vertex = Here();
+            if (area <= 0 || vertex < 0)
+            {
+                Notice.Show("Точку можно добавить только на карте мира — встань на нужную точку", 4f);
+                return;
+            }
+            foreach (var spot in Spots())
+                if (spot.Area == area && spot.Target == vertex)
+                {
+                    Notice.Show("Эта точка уже есть в списке: «" + spot.Name + "»", 4f);
+                    return;
+                }
+            TravelEdit.Ask("Новая точка: участок " + area + ", точка v" + vertex + ".\nКак её назвать?", "", name =>
+            {
+                var list = new List<Spot>(Spots());
+                list.Add(new Spot { Name = name, Area = area, Path = new[] { vertex } });
+                Save(list);
+                Say("Точка «" + name + "» добавлена в список похода.");
+                Plugin.Trace("[travel] добавлена точка «" + name + "» " + area + ":" + vertex);
+            });
+        }
+
+        internal static void Rename(Spot spot)
+        {
+            if (spot == null) return;
+            TravelEdit.Ask("Новое название для «" + spot.Name + "»", spot.Name, name =>
+            {
+                var list = new List<Spot>(Spots());
+                int at = list.IndexOf(spot);
+                if (at < 0) return;
+                list[at] = new Spot { Name = name, Area = spot.Area, Path = spot.Path };
+                Save(list);
+                Plugin.Trace("[travel] точка «" + spot.Name + "» переименована в «" + name + "»");
+            });
+        }
+
+        internal static void Remove(Spot spot)
+        {
+            if (spot == null) return;
+            TravelEdit.Confirm("Удалить точку «" + spot.Name + "» из списка похода?", "Удалить", () =>
+            {
+                var list = new List<Spot>(Spots());
+                int at = list.FindIndex(one => ReferenceEquals(one, spot) || (one.Name == spot.Name && one.Area == spot.Area && SamePath(one, spot)));
+                if (at < 0) return;
+                if (IsRunning(list[at])) Cancel("точка удалена из списка");
+                list.RemoveAt(at);
+                Save(list);
+                Notice.Show("Точка «" + spot.Name + "» убрана из списка", 3f);
+                Plugin.Trace("[travel] удалена точка «" + spot.Name + "»");
+            });
+        }
+
+        internal static void Move(Spot spot, int to)
+        {
+            var list = new List<Spot>(Spots());
+            int from = list.IndexOf(spot);
+            if (from < 0) return;
+            to = Mathf.Clamp(to, 0, list.Count - 1);
+            if (to == from) return;
+            list.RemoveAt(from);
+            list.Insert(to, spot);
+            Save(list);
+            Plugin.Trace("[travel] точка «" + spot.Name + "» перенесена на место " + (to + 1));
+        }
+
+        private static bool SamePath(Spot a, Spot b)
+        {
+            if (a.Path == null || b.Path == null || a.Path.Length != b.Path.Length) return false;
+            for (int i = 0; i < a.Path.Length; i++)
+                if (a.Path[i] != b.Path[i]) return false;
+            return true;
+        }
+
+        private static void Save(List<Spot> list)
+        {
+            if (Plugin.CfgTravelSpots == null) return;
+            var parts = new List<string>();
+            foreach (var spot in list)
+            {
+                if (spot == null || spot.Path == null || spot.Path.Length == 0) continue;
+                string name = spot.Name.Replace(",", " ").Replace(";", " ").Replace(":", " ").Replace("@", " ").Replace(">", " ").Trim();
+                if (name.Length == 0) continue;
+                var hops = new List<string>();
+                foreach (int hop in spot.Path) hops.Add(hop.ToString());
+                parts.Add(name + (spot.Area > 0 ? "@" + spot.Area : "") + ":" + string.Join(">", hops.ToArray()));
+            }
+            Plugin.CfgTravelSpots.Value = string.Join(", ", parts.ToArray());
+        }
+
         private static string _rawGates;
         private static List<Gate> _gates = new List<Gate>();
 
+        private static string SharedFile => System.IO.Path.Combine(System.IO.Path.Combine(BepInEx.Paths.CachePath, "NewAgeQoL"), "gates.txt");
+        private static string _shared;
+
+        private static string Shared()
+        {
+            if (_shared != null) return _shared;
+            try { _shared = System.IO.File.Exists(SharedFile) ? System.IO.File.ReadAllText(SharedFile) : ""; }
+            catch (Exception e) { Plugin.Trace("[travel] общие переходы: " + e.Message); _shared = ""; }
+            return _shared;
+        }
+
         private static List<Gate> Gates()
         {
-            string raw = Plugin.CfgTravelGates != null ? Plugin.CfgTravelGates.Value : "";
+            var cfg = Plugin.CfgTravelGates;
+            string raw = (cfg != null ? cfg.Value + "," + cfg.DefaultValue : "") + "," + Shared();
             if (raw == _rawGates) return _gates;
             _rawGates = raw;
             _gates = ParseGates(raw);
@@ -104,6 +226,7 @@ namespace NewAgeQoL
                 if (!int.TryParse(piece.Substring(arrow + 1, colon - arrow - 1).Trim(), out int to)) continue;
                 if (!int.TryParse(piece.Substring(colon + 1).Trim(), out int vertex)) continue;
                 if (from <= 0 || to <= 0 || vertex < 0) continue;
+                if (list.Exists(one => one.From == from && one.To == to)) continue;
                 list.Add(new Gate { From = from, To = to, Vertex = vertex });
             }
             return list;
@@ -175,10 +298,13 @@ namespace NewAgeQoL
                             if (MapReady() && Area == Outer)
                             {
                                 Plugin.Trace("[travel] нет дороги с участка " + Area + " на " + spot.Area);
+                                RouteLog.Note("нет дороги " + Area + ">" + spot.Area, "поход не знает дороги с участка " + Area + " на " + spot.Area + " («" + spot.Name + "»)");
                                 Fail("не знаю дороги туда");
                                 yield break;
                             }
-                            yield return GoTown(spot);
+                            int gate = MapReady() ? -1 : Exit(spot.Area);
+                            if (gate > 0) yield return Leave(spot, gate);
+                            else yield return GoTown(spot);
                             if (!_ok) yield break;
                             continue;
                         }
@@ -217,6 +343,7 @@ namespace NewAgeQoL
             {
                 Say("«" + spot.Name + "»: точка ещё не открыта.");
                 Plugin.Trace("[travel] v" + vertex + " закрыта");
+                RouteLog.Note("закрыта " + Area + ":" + vertex, "точка v" + vertex + " на участке " + Area + " закрыта");
                 _ok = false;
                 yield break;
             }
@@ -250,6 +377,54 @@ namespace NewAgeQoL
             yield return WaitFor(() => LoadStamp != load && MapReady(), 120f);
             if (!_ok) { Stop("переход не открылся"); yield break; }
             AutoConfirm = false;
+            yield return Settle();
+            _ok = true;
+        }
+
+        private static int Exit(int target)
+        {
+            try
+            {
+                var map = LastMap;
+                if (map == null || map.MapType != 0 || map.SceneObjects == null) return -1;
+                int best = -1, length = int.MaxValue;
+                foreach (var one in map.SceneObjects)
+                {
+                    if (one == null || one.ObjectType != EObjectType.LeaveTown || one.Id <= 0) continue;
+                    if (!Allowed(map.MapId, one.Id)) continue;
+                    var road = GateRoute(one.Id, target);
+                    if (road == null || road.Count >= length) continue;
+                    best = one.Id;
+                    length = road.Count;
+                }
+                if (best > 0) Plugin.Trace("[travel] из локации " + map.MapId + " есть свой выход на участок " + best + ", до цели переходов " + length);
+                return best;
+            }
+            catch (Exception e) { Plugin.Trace("[travel] выходы локации: " + e.Message); return -1; }
+        }
+
+        private static bool Allowed(int place, int area)
+        {
+            int level = 0;
+            try { var info = Ud?.UserInfo; level = info != null ? info.Level : 0; }
+            catch { }
+            if (place == 2 && area == 1000 && level > 14) return false;
+            if (place == 2 && area == 1002 && level > 0 && level < 6) return false;
+            return true;
+        }
+
+        private static IEnumerator Leave(Spot spot, int area)
+        {
+            Say("«" + spot.Name + "»: выхожу на участок " + area + "…");
+            int leave = LoadStamp;
+            if (!Send(new LeaveTownRequest(area))) { _ok = false; yield break; }
+            yield return WaitFor(() => LoadStamp != leave && MapReady(), 90f);
+            if (!_ok)
+            {
+                RouteLog.Note("не выпустили " + Loc + ">" + area, "из локации " + Loc + " не удалось выйти на участок " + area);
+                Stop("не вышел на участок " + area);
+                yield break;
+            }
             yield return Settle();
             _ok = true;
         }
@@ -438,11 +613,82 @@ namespace NewAgeQoL
 
         internal static LocationMap LastMap;
 
+        private static int _mapType = -1;
+        private static int _seenArea = -1;
+        private static int _seenVertex = -1;
+        private static float _watchAt;
+        private static int _viaArea = -1;
+        private static int _viaVertex = -1;
+        private static int _viaLocation = -1;
+        private static int _lastPlace = -1;
+
+        internal static void Watch()
+        {
+            if (Time.unscaledTime < _watchAt) return;
+            _watchAt = Time.unscaledTime + 0.25f;
+            if (_mapType != 2 || !MapReady()) return;
+            int vertex = Here();
+            if (vertex < 0) return;
+            _seenArea = _area;
+            _seenVertex = vertex;
+        }
+
         internal static void NotifyMap(LocationMap map)
         {
             if (map == null) return;
             LastMap = map;
-            _area = map.RootLocation > 0 ? map.RootLocation : map.MapId;
+            int area = map.RootLocation > 0 ? map.RootLocation : map.MapId;
+            int type = map.MapType;
+            if (type != 1)
+            {
+                if (type == 2)
+                {
+                    if (_mapType == 2 && _seenArea > 0 && area != _seenArea && _seenVertex >= 0)
+                        Learn(_seenArea, area, _seenVertex);
+                    else if (_mapType == 0 && _viaArea > 0 && area != _viaArea)
+                        RouteLog.Note("через " + _viaArea + ":" + _viaVertex + ">" + _viaLocation + ">" + area,
+                            "с участка " + _viaArea + " (точка v" + _viaVertex + ") через локацию " + _viaLocation + " попал на участок " + area);
+                    if (_mapType == 0 && _lastPlace > 0)
+                        RouteLog.Note("выход " + _lastPlace + ">" + area, "из локации " + _lastPlace + " вышел на участок " + area);
+                    Plugin.Trace("[travel] загружена карта мира, участок " + area);
+                    _viaArea = -1;
+                }
+                else
+                {
+                    if (_mapType == 2 && _seenArea > 0)
+                    {
+                        _viaArea = _seenArea;
+                        _viaVertex = _seenVertex;
+                        _viaLocation = map.MapId;
+                        Plugin.Trace("[travel] с участка " + _seenArea + " с точки v" + _seenVertex + " зашёл в локацию " + map.MapId);
+                    }
+                    else
+                    {
+                        if (_mapType == 0 && _lastPlace > 0 && _lastPlace != map.MapId) _viaArea = -1;
+                        Plugin.Trace("[travel] загружена локация " + map.MapId);
+                    }
+                }
+                _mapType = type;
+                _lastPlace = type == 0 ? map.MapId : -1;
+            }
+            _area = area;
+        }
+
+        private static void Learn(int from, int to, int vertex)
+        {
+            foreach (var gate in Gates())
+                if (gate.From == from && gate.To == to) return;
+            string line = from + ">" + to + ":" + vertex;
+            RouteLog.Note("переход " + line, "нашёл переход с участка " + from + " на " + to + " через точку v" + vertex);
+            try
+            {
+                string shared = Shared().Trim();
+                _shared = (shared.Length > 0 ? shared + ", " : "") + line;
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SharedFile));
+                System.IO.File.WriteAllText(SharedFile, _shared);
+            }
+            catch (Exception e) { Plugin.Trace("[travel] общие переходы не записаны: " + e.Message); }
+            Plugin.Trace("[travel] запомнил переход " + from + ">" + to + ":" + vertex);
         }
 
         internal static void NotifyRefused(int vertex) { RefusedAt = vertex; RefusedStamp++; }
@@ -462,7 +708,11 @@ namespace NewAgeQoL
     [HarmonyPatch(typeof(LocationMapBuilder), "Build")]
     public static class TravelMapBuiltPatch
     {
-        private static void Postfix(LocationMap __result) { Travel.NotifyMap(__result); }
+        private static void Postfix(string locationXml, LocationMap __result)
+        {
+            Travel.NotifyMap(__result);
+            MapDump.Save(locationXml, __result);
+        }
     }
 
     [HarmonyPatch(typeof(GlobalMapController), "OnAction")]
