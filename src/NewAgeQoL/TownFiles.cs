@@ -157,12 +157,29 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Warn("[night] installing town files: " + e.Message); return false; }
         }
 
+        private static Asset[] ParseAssets(string json)
+        {
+            var list = new List<Asset>();
+            int at = json.IndexOf("\"assets\"", StringComparison.Ordinal);
+            if (at < 0) return list.ToArray();
+            int end = json.IndexOf("\"tarball_url\"", at, StringComparison.Ordinal);
+            string part = end > at ? json.Substring(at, end - at) : json.Substring(at);
+            foreach (Match m in Regex.Matches(part, @"""name""\s*:\s*""((?:[^""\\]|\\.)*)""[\s\S]*?""size""\s*:\s*(\d+)[\s\S]*?""browser_download_url""\s*:\s*""((?:[^""\\]|\\.)*)"""))
+            {
+                long size;
+                long.TryParse(m.Groups[2].Value, out size);
+                list.Add(new Asset { name = Regex.Unescape(m.Groups[1].Value), size = size, browser_download_url = Regex.Unescape(m.Groups[3].Value) });
+            }
+            return list.ToArray();
+        }
+
         private static IEnumerator Run(bool manual, bool probe)
         {
             bool fetch = false;
             Last = NightTheme.Pack.Failed;
             try
             {
+                Plugin.Log.LogInfo("[night files] checking the server" + (probe ? " (probe)" : manual ? " (button)" : ""));
                 var release = default(Release);
                 var request = UnityWebRequest.Get(Api);
                 request.SetRequestHeader("User-Agent", "NewAgeQoL");
@@ -171,16 +188,18 @@ namespace NewAgeQoL
                 yield return request.SendWebRequest();
                 string error = request.error;
                 string json = string.IsNullOrEmpty(error) ? request.downloadHandler.text : "";
+                Plugin.Log.LogInfo("[night files] release request: code " + request.responseCode + ", error " + (error ?? "none") + ", answer " + json.Length + " chars");
                 request.Dispose();
                 if (json.Length == 0) { Say(manual, "Не удалось проверить ночной Иллениум: " + (error ?? "нет ответа")); Plugin.Trace("[night] release check failed: " + (error ?? "no answer")); yield break; }
-                try { release = JsonUtility.FromJson<Release>(json); }
-                catch (Exception e) { Plugin.Trace("[night] parsing release: " + e.Message); }
+                try { release = new Release { assets = ParseAssets(json) }; }
+                catch (Exception e) { Plugin.Log.LogWarning("[night files] parsing release: " + e.Message); }
                 if (release == null || release.assets == null) { Say(manual, "Не удалось разобрать ответ сервера."); yield break; }
 
                 var assets = new Dictionary<string, Asset>(StringComparer.OrdinalIgnoreCase);
                 foreach (var a in release.assets)
                     if (a != null && !string.IsNullOrEmpty(a.name) && !string.IsNullOrEmpty(a.browser_download_url)) assets[a.name] = a;
                 bool complete = assets.ContainsKey(VersionFile);
+                Plugin.Log.LogInfo("[night files] release has " + assets.Count + " files: " + string.Join(", ", assets.Keys));
                 foreach (var name in Names) if (!assets.ContainsKey(name)) complete = false;
                 if (!complete) { Say(manual, "На сервере пока нет файлов ночного Иллениума."); Plugin.Trace("[night] release is missing files"); yield break; }
 
@@ -189,6 +208,7 @@ namespace NewAgeQoL
                 request.timeout = 20;
                 yield return request.SendWebRequest();
                 string remote = string.IsNullOrEmpty(request.error) ? (request.downloadHandler.text ?? "").Trim() : "";
+                Plugin.Log.LogInfo("[night files] version request: code " + request.responseCode + ", error " + (request.error ?? "none") + ", version '" + remote + "', local '" + Local() + "'");
                 request.Dispose();
                 if (remote.Length == 0 || !Regex.IsMatch(remote, "^[0-9A-Za-z._-]{1,32}$")) { Say(manual, "Не удалось узнать версию ночного Иллениума."); Plugin.Trace("[night] bad remote version"); yield break; }
                 _assets = assets;

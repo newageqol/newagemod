@@ -17,8 +17,7 @@ namespace NewAgeQoL
 
         internal static void Bind(ConfigFile cfg)
         {
-            bool was = (NightTown.Enabled?.Value ?? true) || (MagicTower.Enabled?.Value ?? true) || (Gothic.Enabled?.Value ?? true);
-            Enabled = cfg.Bind("Look", "NightTheme", was,
+            Enabled = cfg.Bind("Look", "NightTheme", false,
                 "Ночная тема: ночной Иллениум, башня магии в 3D, готические окна покупок и свой экран загрузки. Включается и выключается целиком.");
             Apply();
             Enabled.SettingChanged += (s, e) => Apply();
@@ -70,7 +69,7 @@ namespace NewAgeQoL
             finally { _running = false; }
             var town = TownFiles.Last;
             var tower = TowerFiles.Last;
-            Plugin.Trace("[theme] check: town " + town + ", tower " + tower);
+            Plugin.Log.LogInfo("[theme] check: town " + town + ", tower " + tower);
             if (town == Pack.Failed || tower == Pack.Failed)
             {
                 Notice.Show("Не удалось проверить ночную тему: сервер с файлами не ответил. Попробуй позже кнопкой в настройках мода.", 6f);
