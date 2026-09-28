@@ -108,7 +108,6 @@ namespace NewAgeQoL
             _fight = null;
             _seenRound = -1;
             _calcRound = -1;
-            _handedRound = -1;
             _chosenRound = -1;
             _chosenWhat = "";
             _soonId = 0;
@@ -140,7 +139,6 @@ namespace NewAgeQoL
 
         internal static bool Handing;
         private static int _calcRound = -1;
-        private static int _handedRound = -1;
 
         internal static bool Calculating
         {
@@ -156,7 +154,6 @@ namespace NewAgeQoL
             Fresh();
             var cd = FighterHint.Cd();
             if (cd == null) return null;
-            if (_handedRound == cd.RoundNum) return "phase already handed in";
             if (_calcRound == cd.RoundNum) return "combat phase over, round is being calculated";
             if (_chosenRound == cd.RoundNum) return _chosenWhat + " already chosen this round";
             return null;
@@ -168,18 +165,31 @@ namespace NewAgeQoL
             {
                 Fresh();
                 var cd = FighterHint.Cd();
-                if (cd != null) _calcRound = cd.RoundNum;
                 if (Handing)
                 {
-                    if (cd != null) _handedRound = cd.RoundNum;
-                    Plugin.Trace("[strike] phase handed in by player in round " + (cd != null ? cd.RoundNum : -1) + ", no more strikes: the server counts a strike as the end of the phase");
-                    Shut("phase handed in, no strike chosen");
+                    Revive(cd);
                     return;
                 }
+                if (cd != null) _calcRound = cd.RoundNum;
                 Plugin.Trace("[strike] combat phase ended in round " + (cd != null ? cd.RoundNum : -1) + ", no more strikes");
                 Shut("phase ended, no strike chosen");
             }
             catch (Exception e) { Plugin.Trace("[strike] phase end: " + e.Message); }
+        }
+
+        private static void Revive(ICombatData cd)
+        {
+            if (cd == null || (cd.RoundType != RoundType.WALK_ROUND && cd.RoundType != RoundType.COMBAT_ROUND))
+            {
+                Plugin.Trace("[strike] phase handed in by player, but no live phase - buttons stay off");
+                return;
+            }
+            var ctrl = Controllers.Get<CombatButtonsController>();
+            var call = AccessTools.Method(typeof(CombatButtonsController), "OnNewRound");
+            if (ctrl == null || call == null) { Plugin.Trace("[strike] game has no button refresh"); return; }
+            call.Invoke(ctrl, new object[] { cd.RoundType });
+            if (_chosenRound == cd.RoundNum) Quiet();
+            Plugin.Trace("[strike] phase handed in by player in round " + cd.RoundNum + ", strike, tricks, skills, spells and items stay live until the round is calculated");
         }
 
         internal static void Release()

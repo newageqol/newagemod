@@ -146,7 +146,8 @@ namespace NewAgeQoL
             if (Second(cell))
             {
                 var data = cell.Data;
-                if (data != null && data.InventoryId > 0) Run(Dress(data.InventoryId, (int)data.SubType, null));
+                if (data != null && data.InventoryId > 0)
+                    Run(data.SubType == EThingSubType.RELIQUIAE ? Relic(data.InventoryId, (int)data.SubType) : Dress(data.InventoryId, (int)data.SubType, null));
                 return;
             }
             Wait(cell, () => Pass(cell));
@@ -251,6 +252,62 @@ namespace NewAgeQoL
                 Plugin.Trace("[items] item " + id + " was not put on, returning item " + backId + " to slot " + into.Value);
                 yield return Act(backId, button, backTab, null);
             }
+        }
+
+        private static int _relicTurn;
+        private static float _relicAt = -100f;
+
+        private static List<ESlots.SlotType> RelicOrder(int kind)
+        {
+            var order = new List<ESlots.SlotType>();
+            try
+            {
+                foreach (var slot in ESlots.GetSlotsByThingSubtype((EThingSubType)kind)) if (!ESlots.IsAdditionalSlot(slot)) order.Add(slot);
+                foreach (var slot in ESlots.GetSlotsByThingSubtype((EThingSubType)kind)) if (ESlots.IsAdditionalSlot(slot)) order.Add(slot);
+            }
+            catch { }
+            return order;
+        }
+
+        private static bool Busy(ESlots.SlotType slot) => Slots.TryGetValue(slot, out var worn) && worn != null && worn.Id != 0;
+
+        private static void Apply(ThingContextActionResponseMessage reply)
+        {
+            if (reply.ChangesInSlots == null) return;
+            foreach (var change in reply.ChangesInSlots)
+            {
+                if (change == null) continue;
+                var slot = (ESlots.SlotType)change.SlotId;
+                if (change.IsDressed) Slots[slot] = new Worn { Id = change.InventoryId.GetValueOrDefault(), ThingId = change.ThingId.GetValueOrDefault(), Kind = change.SubType.GetValueOrDefault() };
+                else Slots.Remove(slot);
+            }
+        }
+
+        private static IEnumerator Relic(int id, int kind)
+        {
+            var order = RelicOrder(kind);
+            if (order.Count == 0) yield break;
+            foreach (var slot in order)
+            {
+                if (Busy(slot)) continue;
+                Plugin.Trace("[items] relic " + id + " goes to the free slot " + slot);
+                ThingContextActionResponseMessage reply = null;
+                yield return Act(id, Into(slot), Tab(), r => reply = r);
+                if (reply != null && reply.Success) Apply(reply);
+                _relicTurn = 0;
+                yield break;
+            }
+            if (Time.unscaledTime - _relicAt > 60f) _relicTurn = 0;
+            var target = order[_relicTurn % order.Count];
+            _relicTurn++;
+            _relicAt = Time.unscaledTime;
+            if (!Slots.TryGetValue(target, out var there) || there == null || there.Id <= 0)
+            {
+                Plugin.Trace("[items] relic " + id + ": slot " + target + " is not known yet, skipping");
+                yield break;
+            }
+            Plugin.Trace("[items] all relic slots are taken, relic " + id + " replaces the one in " + target);
+            yield return Dress(id, kind, target);
         }
 
         private static IEnumerator Undress(int id)

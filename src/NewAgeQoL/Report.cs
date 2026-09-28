@@ -455,6 +455,7 @@ namespace NewAgeQoL
             Tail(zip, Path.Combine(DiskJournal.Folder, "qol.log"), "мод/qol.log", 4000000);
             Tail(zip, Path.Combine(DiskJournal.Folder, "qol.old.log"), "мод/qol.old.log", 1500000);
             Tail(zip, RouteLog.File, "мод/routes.log", 8000000);
+            Tail(zip, LoadTimer.File, "мод/loads.log", 1000000);
             Maps(zip);
             Tail(zip, Path.Combine(flash, "plugin.log"), "flash/plugin.log", 2000000);
             Tail(zip, Path.Combine(flash, "plugin.log.old"), "flash/plugin.log.old", 1000000);

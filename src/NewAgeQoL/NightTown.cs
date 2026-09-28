@@ -47,6 +47,8 @@ namespace NewAgeQoL
 
         internal static bool SceneLoaded() => SceneManager.GetSceneByName(SceneName).isLoaded;
 
+        internal static bool Held => _bundle != null || _ready || _prepping;
+
         internal static void Unload()
         {
             if (_bundle != null) { _bundle.Unload(true); _bundle = null; }
@@ -297,6 +299,7 @@ namespace NewAgeQoL
                         bc.size = new Vector3(Mathf.Max(0.05f, Mathf.Abs(sz.x)), Mathf.Max(0.05f, Mathf.Abs(sz.y)), Mathf.Max(0.05f, Mathf.Abs(sz.z)));
                         parts.Add(r.name);
                     }
+                    if (t.GetComponentInChildren<MeshCollider>(false) != null) continue;
                     float hx = box.size.x * 0.5f, hz = box.size.z * 0.5f;
                     bool any = false;
                     float top = 0f;

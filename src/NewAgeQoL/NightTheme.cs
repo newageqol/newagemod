@@ -18,7 +18,7 @@ namespace NewAgeQoL
         internal static void Bind(ConfigFile cfg)
         {
             Enabled = cfg.Bind("Look", "NightTheme", false,
-                "Ночная тема: ночной Иллениум, башня магии в 3D, готические окна покупок и свой экран загрузки. Включается и выключается целиком.");
+                "Ночная тема: ночной Иллениум, башня магии в 3D и свой экран загрузки. Включается и выключается целиком.");
             Apply();
             Enabled.SettingChanged += (s, e) => Apply();
         }
@@ -137,7 +137,6 @@ namespace NewAgeQoL
             bool on = Enabled.Value;
             if (NightTown.Enabled != null && NightTown.Enabled.Value != on) NightTown.Enabled.Value = on;
             if (MagicTower.Enabled != null && MagicTower.Enabled.Value != on) MagicTower.Enabled.Value = on;
-            if (Gothic.Enabled != null && Gothic.Enabled.Value != on) Gothic.Enabled.Value = on;
             Plugin.Trace("[theme] night theme " + (on ? "on" : "off"));
         }
     }

@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.4.2";
+        public const string Version = "0.5.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -117,7 +117,6 @@ namespace NewAgeQoL
             Chars.Home(Config);
             NightTown.Bind(Config);
             MagicTower.Bind(Config);
-            Gothic.Bind(Config);
             NightTheme.Bind(Config);
 
 
@@ -515,7 +514,8 @@ namespace NewAgeQoL
                 new Part { Name = "Notice.Tick", Do = Notice.Tick },
                 new Part { Name = "TownFiles.Tick", Do = TownFiles.Tick },
                 new Part { Name = "TowerFiles.Tick", Do = TowerFiles.Tick },
-                new Part { Name = "GothicShop.Tick", Do = GothicShop.Tick },
+                new Part { Name = "ShopLift.Tick", Do = ShopLift.Tick },
+                new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
                 new Part { Name = "OnlineList.Tick", Do = OnlineList.Tick },
@@ -605,6 +605,7 @@ namespace NewAgeQoL
         private void Update()
         {
             Perf.Tick();
+            LoadTimer.Tick();
             if (_off) return;
             Run(Parts());
         }

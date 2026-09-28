@@ -758,6 +758,7 @@ namespace NewAgeQoL
                 foreach (var one in seenNow)
                 {
                     if (one == null || string.IsNullOrEmpty(one.Name)) continue;
+                    if (one.Id == DodgesButtonStateHolder.HantingOffButtonId) continue;
                     string key = Mark(kind) + ":" + one.Id;
                     string name = SkillList.Spoken(one.Name);
                     if (Learned.TryGetValue(key, out var was) && was == name) continue;
@@ -786,7 +787,9 @@ namespace NewAgeQoL
                 if (string.IsNullOrEmpty(part)) continue;
                 int at = part.IndexOf(NameSplit);
                 if (at <= 0) continue;
-                Learned[part.Substring(0, at)] = part.Substring(at + 1);
+                string key = part.Substring(0, at);
+                if (key.EndsWith(":" + DodgesButtonStateHolder.HantingOffButtonId, StringComparison.Ordinal)) continue;
+                Learned[key] = part.Substring(at + 1);
             }
         }
 

@@ -198,7 +198,7 @@ namespace NewAgeQoL
                     else Moved(-1, -1);
                     if (_root != null) Rebind();
                 }
-                if ((_redo || Fresh.Count > 0) && Time.unscaledTime >= _flushAt) Render();
+                if ((_redo || Fresh.Count > 0) && Time.unscaledTime >= _flushAt && !Hushed) Render();
 
                 if (!SideButtons.InWorld())
                 {
@@ -288,6 +288,7 @@ namespace NewAgeQoL
                         return;
                     }
                 }
+                if (Time.unscaledTime < _hushUntil && (EChatMessageType)message.Type != EChatMessageType.MSG_SYSTEM) { if (_hushQuiet >= _hushUntil) Plugin.Trace("[dock] first message after the location change came in " + (Time.unscaledTime - (_hushUntil - 3f)).ToString("0.00") + " s"); _hushQuiet = Time.unscaledTime + 0.25f; }
                 var kind = (EChatMessageType)message.Type;
                 if (kind == EChatMessageType.MSG_SYSTEM)
                 {
@@ -489,8 +490,9 @@ namespace NewAgeQoL
             }
             else
             {
-                Wiped.Clear();
-                Carry();
+                bool again = map < 0 && Time.unscaledTime - _carriedAt < 5f;
+                if (!again) Wiped.Clear();
+                Carry(again);
             }
             if (map > 0 && type != 1)
             {
@@ -591,6 +593,12 @@ namespace NewAgeQoL
                 if (_view != null && _tab == 0)
                 {
                     AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null);
+                    if (_snapDown)
+                    {
+                        _snapDown = false;
+                        Canvas.ForceUpdateCanvases();
+                        ChatStay.ToBottom(ChatStay.Of(_view));
+                    }
                     if (!ChatStay.Held) _bottomAt = Time.unscaledTime + 0.4f;
                 }
             }
@@ -613,19 +621,47 @@ namespace NewAgeQoL
             }
         }
 
-        private static void Carry()
+        private static float _hushUntil;
+        private static float _hushQuiet;
+        private static bool _snapDown;
+
+        private static bool Hushed => Time.unscaledTime < _hushUntil && Time.unscaledTime < _hushQuiet;
+
+        private static float _carriedAt = -10f;
+        private static int _carryMark;
+
+        private static void Carry(bool again = false)
         {
             var kept = new List<ChatResponseMessage>();
-            foreach (var message in Line)
-                if (message != null && Kept((EChatMessageType)message.Type)) kept.Add(message);
+            int mark = again ? Mathf.Clamp(_carryMark, 0, Line.Count) : Line.Count;
+            for (int i = 0; i < Line.Count; i++)
+            {
+                var message = Line[i];
+                if (message != null && (i >= mark || Kept((EChatMessageType)message.Type))) kept.Add(message);
+            }
             foreach (var message in Tail)
-                if (message != null && Kept((EChatMessageType)message.Type)) kept.Add(message);
+                if (message != null && (again || Kept((EChatMessageType)message.Type))) kept.Add(message);
+            if (again) Plugin.Trace("[dock] same move, scene loaded: keeping " + (Line.Count - mark + Tail.Count) + " messages that came after the map change");
             Plugin.Trace("[dock] location change: lines were " + (Line.Count + Tail.Count) + ", keeping " + kept.Count
                 + ", in fight " + Battle.Content.Count);
             Line.Clear();
             Tail.Clear();
-            Tail.AddRange(kept);
-            _tailUntil = Time.unscaledTime + 2f;
+            Line.AddRange(kept);
+            _tailUntil = 0f;
+            _carryMark = Line.Count;
+            if (again)
+            {
+                _hushUntil = Time.unscaledTime + 1f;
+                _hushQuiet = Time.unscaledTime + 0.25f;
+            }
+            else
+            {
+                _carriedAt = Time.unscaledTime;
+                _hushUntil = Time.unscaledTime + 3f;
+                _hushQuiet = _hushUntil;
+            }
+            _snapDown = true;
+            ChatStay.Settle();
         }
 
         private static bool Kept(EChatMessageType kind)
@@ -880,6 +916,7 @@ namespace NewAgeQoL
 
         private static int _snap;
         private static float _emptyAt;
+        private static bool _wasEmpty;
 
         internal static void Focus()
         {
@@ -1033,8 +1070,10 @@ namespace NewAgeQoL
             }
             if (_snap > 0) { _snap--; End(); }
             if (_input.text.Length > 0) _emptyAt = Time.unscaledTime;
+            bool wasEmpty = _wasEmpty;
+            _wasEmpty = _input.text.Length == 0;
             if (_to > 0 && _input.text.Length == 0 && Input.GetKey(KeyCode.Backspace)
-                && (Input.GetKeyDown(KeyCode.Backspace) || Time.unscaledTime - _emptyAt > 0.25f))
+                && ((Input.GetKeyDown(KeyCode.Backspace) && wasEmpty) || Time.unscaledTime - _emptyAt > 0.25f))
             {
                 _to = 0;
                 _toName = "";
@@ -1053,22 +1092,9 @@ namespace NewAgeQoL
                 if (Clean().Length > 0) { Send(EChatMessageType.MSG_PRIVATE); return; }
             }
             bool shiftDown = Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift);
-            bool shiftUp = Input.GetKeyUp(KeyCode.LeftShift) || Input.GetKeyUp(KeyCode.RightShift);
-            if (shiftDown)
+            if (shiftDown && Input.GetKey(KeyCode.Space) && _input.isFocused && _to > 0 && Clean().Length > 0)
             {
-                string now = _input.text ?? "";
-                int caret = _input.caretPosition;
-                _armed = _input.isFocused && caret > 0 && caret <= now.Length && now[caret - 1] == ' ' && now.Trim().Length > 0;
-                _armedAt = caret - 1;
-            }
-            else if (_armed && Input.anyKeyDown) _armed = false;
-            if (shiftUp && _armed)
-            {
-                _armed = false;
-                Plugin.Trace("[dock] space followed by shift");
-                string now = _input.text ?? "";
-                if (_armedAt >= 0 && _armedAt < now.Length - 1 && now[_armedAt] == ' ')
-                    _input.text = now.Remove(_armedAt, 1);
+                Plugin.Trace("[dock] shift pressed while space is held");
                 _want = true;
                 return;
             }
@@ -2913,8 +2939,6 @@ namespace NewAgeQoL
 
         private static bool _want;
         private static bool _all;
-        private static bool _armed;
-        private static int _armedAt = -1;
 
         private static string Clean()
         {

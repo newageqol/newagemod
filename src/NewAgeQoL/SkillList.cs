@@ -108,6 +108,7 @@ namespace NewAgeQoL
             var one = kind == "trick" ? Tricks : kind == "spell" ? Spells : kind == "skill" ? Abilities : null;
             if (one == null) return Use(id);
             var skill = one.Skill(id);
+            if (skill == null && id == DodgesButtonStateHolder.HantingOnButtonId) skill = one.Skill(DodgesButtonStateHolder.HantingOffButtonId);
             if (skill == null) { Plugin.Trace("[skills] no button for key " + kind + ":" + id); return false; }
             one.Tap(skill);
             return true;

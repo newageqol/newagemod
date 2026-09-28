@@ -1840,16 +1840,20 @@ internal sealed class FighterDoll : MonoBehaviour
     }
 
     private bool _failed;
+    private float _failedAt = -1f;
 
     private void LateUpdate()
     {
+        if (_failedAt >= 0f && Time.unscaledTime - _failedAt < 1f) return;
         try
         {
             Tick();
             Watch();
+            _failedAt = -1f;
         }
         catch (Exception ex)
         {
+            _failedAt = Time.unscaledTime;
             if (_failed) return;
             _failed = true;
             Plugin.Log.LogError($"[combat] '{_owner?.Login}': doll broke: {ex}");
@@ -2222,7 +2226,7 @@ internal sealed class FighterDoll : MonoBehaviour
     private const float StepGrace = 1f;
     private float _stepWait = -1f;
 
-    private bool Late(string label) => !_broken && label != null && _look != null && _labels.ContainsKey(label) && !Has(label);
+    private bool Late(string label) => !_broken && label != null && _look != null && _labels != null && _labels.ContainsKey(label) && !Has(label);
 
     private Vector3 Glide(Vector3 target)
     {
@@ -2408,7 +2412,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (Trace.On) Trace.Write($"'{Who}' warming look {Trace.Look(_look)} and {Trace.Look(_otherLook)}: strike {main}{(spare != null ? ", second hand " + spare : "")}");
         string strike = Keyed(main, out _);
         string second = spare != null ? Keyed(spare, out _) : null;
-        if (_labels.ContainsKey("move")) Need("move", false, false, true);
+        if (_labels != null && _labels.ContainsKey("move")) Need("move", false, false, true);
         if (strike != null) Need(strike, false);
         if (second != null) Need(second, false);
         foreach (string label in new[] { "cast", "healing" })
@@ -2416,7 +2420,7 @@ internal sealed class FighterDoll : MonoBehaviour
         Need("stop" + Fighters.Living, false);
         if (_labels.ContainsKey("die")) Need("die", false, false, false, true);
         Need("stop", false, true);
-        if (_labels.ContainsKey("move")) Need("move", false, true, Mine, !Mine);
+        if (_labels.ContainsKey("move")) Need("move", false, true, true);
         if (strike != null) Need(strike, false, true, Mine, !Mine);
         if (second != null) Need(second, false, true, Mine, !Mine);
         Need("stop" + Fighters.Living, false, true, false, true);
