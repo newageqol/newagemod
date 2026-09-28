@@ -75,7 +75,7 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             if (Plugin.Instance == null) return;
-            if (_ask && !_busy && SideButtons.InWorld() && !SideButtons.InCombat()) { _ask = false; Ask(); return; }
+            if (_ask && !_busy && SideButtons.InWorld() && !SideButtons.InCombat()) { _ask = false; NightTheme.Offer(); return; }
             if (_busy || _checkAt <= 0f || Time.unscaledTime < _checkAt) return;
             if (MagicTower.Enabled == null || !MagicTower.Enabled.Value) return;
             _checkAt = 0f;

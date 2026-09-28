@@ -76,7 +76,7 @@ namespace NewAgeQoL
         {
             if (Plugin.Instance == null) return;
             if (!_loading) NightTown.Warm();
-            if (_ask && !_busy && SideButtons.InWorld() && !SideButtons.InCombat()) { _ask = false; Ask(); return; }
+            if (_ask && !_busy && SideButtons.InWorld() && !SideButtons.InCombat()) { _ask = false; NightTheme.Offer(); return; }
             if (_busy || _checkAt <= 0f || Time.unscaledTime < _checkAt) return;
             if (NightTown.Enabled == null || !NightTown.Enabled.Value) return;
             _checkAt = 0f;

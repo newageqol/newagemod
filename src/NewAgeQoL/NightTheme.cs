@@ -56,10 +56,17 @@ namespace NewAgeQoL
             }
             _running = true;
             Notice.Show("Проверяю ночную тему…", 3f);
-            Plugin.Instance.StartCoroutine(Check(manual));
+            Plugin.Instance.StartCoroutine(Check(manual, false));
         }
 
-        private static IEnumerator Check(bool manual)
+        internal static void Offer()
+        {
+            if (Plugin.Instance == null || _running || TownFiles.Busy || TowerFiles.Busy) return;
+            _running = true;
+            Plugin.Instance.StartCoroutine(Check(false, true));
+        }
+
+        private static IEnumerator Check(bool manual, bool quiet)
         {
             try
             {
@@ -72,6 +79,7 @@ namespace NewAgeQoL
             Plugin.Log.LogInfo("[theme] check: town " + town + ", tower " + tower);
             if (town == Pack.Failed || tower == Pack.Failed)
             {
+                if (quiet) yield break;
                 Notice.Show("Не удалось проверить ночную тему: сервер с файлами не ответил. Попробуй позже кнопкой в настройках мода.", 6f);
                 yield break;
             }
@@ -79,6 +87,7 @@ namespace NewAgeQoL
             bool needTower = tower != Pack.Current;
             if (!needTown && !needTower)
             {
+                if (quiet) yield break;
                 Notice.Show("У тебя последняя версия ночной темы.", 5f);
                 yield break;
             }
