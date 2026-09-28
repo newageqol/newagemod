@@ -95,14 +95,14 @@ namespace NewAgeQoL
         internal static void Stash()
         {
             if (Busy || Plugin.Instance == null) return;
-            if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] из заявки на бой в хранилище не ходим"); return; }
+            if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] no storage trips from a fight claim"); return; }
             Plugin.Instance.StartCoroutine(StashRoutine());
         }
 
         internal static void Restore()
         {
             if (Busy || Plugin.Instance == null) return;
-            if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] из заявки на бой в хранилище не ходим"); return; }
+            if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] no storage trips from a fight claim"); return; }
             Plugin.Instance.StartCoroutine(RestoreRoutine());
         }
 
@@ -204,8 +204,8 @@ namespace NewAgeQoL
                 Say("смотрю хранилище");
                 yield return Plugin.Instance.StartCoroutine(Scan(WinByLocation, 381));
                 KeepStorage();
-                Plugin.Trace("[art] в хранилище видно " + Scanned.Count + ": "
-                                    + string.Join(", ", Scanned.Select(i => i.ThingId + "/стак" + i.Inv + "/вкл" + i.Tab + "/шт" + i.Qty).ToArray()));
+                Plugin.Trace("[art] visible in storage " + Scanned.Count + ": "
+                                    + string.Join(", ", Scanned.Select(i => i.ThingId + "/stack" + i.Inv + "/tab" + i.Tab + "/qty" + i.Qty).ToArray()));
 
                 var need = new Dictionary<int, int>();
                 foreach (var m in memory)
@@ -277,7 +277,7 @@ namespace NewAgeQoL
                 {
                     var plan = new System.Text.StringBuilder();
                     foreach (var d in dress) plan.Append(Name(d.ThingId)).Append(" -> ").Append(Manikin.SlotName(d.SlotId)).Append("; ");
-                    Plugin.Trace("[возврат] надо надеть: " + plan);
+                    Plugin.Trace("[return] to wear: " + plan);
                 }
 
                 int back = 0;
@@ -326,12 +326,12 @@ namespace NewAgeQoL
                 {
                     var lost = new System.Text.StringBuilder();
                     foreach (var m in missed) lost.Append(Name(m.ThingId)).Append(" (").Append(Manikin.SlotName(m.SlotId)).Append("); ");
-                    Plugin.Warn("[возврат] не вернулось: " + lost);
+                    Plugin.Warn("[return] not returned: " + lost);
                     var now = new System.Text.StringBuilder();
                     foreach (var w in Worn)
                         if (w != null && w.ThingId > 0)
                             now.Append(Manikin.SlotName(w.SlotId)).Append('=').Append(Name(w.ThingId)).Append("; ");
-                    Plugin.Warn("[возврат] по итогу надето: " + now);
+                    Plugin.Warn("[return] worn in the end: " + now);
                 }
 
                 if (missed.Count == 0)
@@ -410,8 +410,8 @@ namespace NewAgeQoL
             var wish = new System.Text.StringBuilder();
             foreach (var pair in need)
                 if (pair.Value > 0) wish.Append(Name(pair.Key)).Append(" x").Append(pair.Value).Append("; ");
-            Plugin.Trace("[набор] надо надеть: " + (wish.Length > 0 ? wish.ToString() : "ничего")
-                                + " | снять лишнего: " + free.Count);
+            Plugin.Trace("[kit] to wear: " + (wish.Length > 0 ? wish.ToString() : "nothing")
+                                + " | extra to remove: " + free.Count);
             Say("переодеваюсь в запасной набор");
 
             if (free.Count > 0)
@@ -451,7 +451,7 @@ namespace NewAgeQoL
                 foreach (var pair in lack)
                     if (pair.Value > 0) missed.Append(Name(pair.Key)).Append(" x").Append(pair.Value).Append("; ");
                 if (missed.Length > 0)
-                    Plugin.Warn("[набор] в хранилище не нашлось: " + missed);
+                    Plugin.Warn("[kit] not found in storage: " + missed);
 
                 if (take.Count > 0)
                 {
@@ -504,8 +504,8 @@ namespace NewAgeQoL
                 foreach (var w in Worn)
                     if (w != null && w.ThingId > 0)
                         now.Append(Manikin.SlotName(w.SlotId)).Append('=').Append(Name(w.ThingId)).Append("; ");
-                Plugin.Warn("[набор] осталось ненадетым: " + notOn);
-                Plugin.Warn("[набор] по итогу надето: " + now);
+                Plugin.Warn("[kit] left unworn: " + notOn);
+                Plugin.Warn("[kit] worn in the end: " + now);
             }
             Say(lost > 0 ? "переоделся: надел " + on + ", не нашёл " + lost : "переоделся: надел " + on);
         }
@@ -513,7 +513,7 @@ namespace NewAgeQoL
         private static string Name(int thingId)
         {
             string name = Flasks.DisplayName(thingId);
-            return (string.IsNullOrEmpty(name) ? "вещь" : "«" + name + "»") + " " + thingId;
+            return (string.IsNullOrEmpty(name) ? "item" : "\"" + name + "\"") + " " + thingId;
         }
 
         private static Dictionary<int, int> TakenOut()
@@ -612,8 +612,8 @@ namespace NewAgeQoL
                 used.Clear();
             }
             if (!_put)
-                Plugin.Warn("[набор] не надел " + Name(thing) + " в слот " + slot + " (" + Manikin.SlotName(slot) + ")"
-                                       + (_lastErr.Length > 0 ? ": " + _lastErr : ": вещи нет в сумке"));
+                Plugin.Warn("[kit] failed to wear " + Name(thing) + " to slot " + slot + " (" + Manikin.SlotName(slot) + ")"
+                                       + (_lastErr.Length > 0 ? ": " + _lastErr : ": item not in bag"));
         }
 
         private static IEnumerator UndressManikin(List<Slot> memory)
@@ -688,7 +688,7 @@ namespace NewAgeQoL
                 seen[it.ThingId] = had + it.Qty;
             }
             Storage.Remember(seen);
-            Plugin.Trace("[art] запомнил хранилище: видов вещей " + seen.Count);
+            Plugin.Trace("[art] storage remembered, item kinds: " + seen.Count);
         }
 
         internal static void RequestStorage()
@@ -715,7 +715,7 @@ namespace NewAgeQoL
                 EnsureListeners();
                 Send(new InventoryWearRequest());
             }
-            catch (System.Exception e) { Plugin.Trace("[art] запрос надетого: " + e.Message); }
+            catch (System.Exception e) { Plugin.Trace("[art] worn items request: " + e.Message); }
         }
 
         internal static bool NearStorage()
@@ -739,7 +739,7 @@ namespace NewAgeQoL
         private static int StorageDoor()
         {
             var map = LastMap;
-            if (map == null || map.SceneObjects == null) { Plugin.Warn("[art] карта банка не разобрана"); return 0; }
+            if (map == null || map.SceneObjects == null) { Plugin.Warn("[art] bank map not parsed"); return 0; }
             int found = 0;
             var sb = new System.Text.StringBuilder();
             foreach (var so in map.SceneObjects)
@@ -751,7 +751,7 @@ namespace NewAgeQoL
                 if (found == 0 && (Has(n, "safe") || Has(n, "storage") || Has(n, "vault") || Has(n, "box")))
                     found = so.Id;
             }
-            Plugin.Trace("[art] двери локации " + Loc() + ": " + sb + "-> хранилище: " + (found > 0 ? found.ToString() : "не найдено"));
+            Plugin.Trace("[art] location doors " + Loc() + ": " + sb + "-> storage: " + (found > 0 ? found.ToString() : "not found"));
             return found;
         }
 
@@ -817,17 +817,17 @@ namespace NewAgeQoL
                     _lastOk = r.Ok;
                     _lastErr = r.Ok ? "" : (r.Err ?? "");
                     if (r.Ok)
-                        Plugin.Trace("[art] кнопка " + button + " стак " + inv + " окно " + window + " вкладка " + tab + " -> ок");
+                        Plugin.Trace("[art] button " + button + " stack " + inv + " window " + window + " tab " + tab + " -> ok");
                     else
-                        Plugin.Warn("[art] кнопка " + button + " стак " + inv + " окно " + window + " вкладка " + tab
-                                               + " -> отказ: " + r.Err);
+                        Plugin.Warn("[art] button " + button + " stack " + inv + " window " + window + " tab " + tab
+                                               + " -> refused: " + r.Err);
                 }
                 else
                 {
                     _lastOk = false;
-                    _lastErr = "сервер не ответил";
-                    Plugin.Warn("[art] кнопка " + button + " стак " + inv + " окно " + window + " вкладка " + tab
-                                           + " -> сервер не ответил");
+                    _lastErr = "server did not respond";
+                    Plugin.Warn("[art] button " + button + " stack " + inv + " window " + window + " tab " + tab
+                                           + " -> server did not respond");
                 }
                 Ctx.Remove(inv);
             }
@@ -924,7 +924,7 @@ namespace NewAgeQoL
         {
             var parts = slots.Select(x => x.ThingId + ";" + x.SlotId).ToArray();
             Saved = string.Join(",", parts);
-            Plugin.Trace("[art] запомнил " + parts.Length + ": " + Saved);
+            Plugin.Trace("[art] remembered " + parts.Length + ": " + Saved);
         }
 
         private static List<Slot> Recall()

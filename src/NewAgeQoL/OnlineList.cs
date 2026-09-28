@@ -94,7 +94,7 @@ namespace NewAgeQoL
                 _askAt = Time.unscaledTime + AskEvery;
                 nc.SendRequest(new UserInfoRequest(p.Id, p.Login));
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] значки клана: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] clan icons: " + e.Message); }
         }
 
         private static void Listen()
@@ -140,7 +140,7 @@ namespace NewAgeQoL
             _flushAt = Time.unscaledTime + 10f;
             if (_cacheDirty) { _cacheDirty = false; SaveCache(); }
             if (_namesDirty) { _namesDirty = false; SaveNames(); }
-            Plugin.Trace("[онлайн] кэш кланов сохранён");
+            Plugin.Trace("[online] clan cache saved");
         }
 
         private static void SaveCache()
@@ -333,14 +333,14 @@ namespace NewAgeQoL
                         _status = "В игре: " + list.Count + " · " + _stamp;
                         _version++;
                     }
-                    Plugin.Trace("[онлайн] получено " + list.Count + " игроков");
+                    Plugin.Trace("[online] received " + list.Count + " players");
                     OnlineCharms.Fetch(stream, acc, list);
                 }
             }
             catch (Exception e)
             {
                 Set("Ошибка: " + e.Message);
-                Plugin.Warn("[онлайн] " + e.Message);
+                Plugin.Warn("[online] " + e.Message);
             }
             finally
             {
@@ -385,7 +385,7 @@ namespace NewAgeQoL
             foreach (Match u in Regex.Matches(xml, "<user\\b([^>]*)/>"))
             {
                 string a = u.Groups[1].Value;
-                if (!_shownRaw) { _shownRaw = true; Plugin.Trace("[онлайн] поля игрока в ответе: " + Keys(a)); }
+                if (!_shownRaw) { _shownRaw = true; Plugin.Trace("[online] player fields in response: " + Keys(a)); }
                 var p = new OnlinePlayer
                 {
                     Id = Int(Attr(a, "id")),

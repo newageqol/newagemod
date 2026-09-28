@@ -10,7 +10,7 @@ namespace NewAgeQoL
             if (!Artifacts.Busy || Artifacts.Internal) return true;
             if (!Blocked(request)) return true;
 
-            Plugin.Trace("[art] не пускаю " + request.GetType().Name + ", идёт работа с хранилищем");
+            Plugin.Trace("[art] blocking " + request.GetType().Name + ", storage operation in progress");
             Refuse();
             return false;
         }
@@ -40,7 +40,7 @@ namespace NewAgeQoL
             if (!__result) return;
             if (!Artifacts.Busy || Artifacts.Internal) return;
             __result = false;
-            Plugin.Trace("[art] не пускаю смену локации, идёт работа с хранилищем");
+            Plugin.Trace("[art] blocking location change, storage operation in progress");
             TravelLockPatch.Refuse();
         }
     }

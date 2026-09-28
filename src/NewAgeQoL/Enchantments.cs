@@ -105,7 +105,7 @@ namespace NewAgeQoL
                 Stand();
                 Tip();
             }
-            catch (Exception e) { Plugin.Trace("[состояния] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[states] " + e.Message); }
         }
 
         private static CanvasGroup _hid;
@@ -126,9 +126,9 @@ namespace NewAgeQoL
                 _hid = go.GetComponent<CanvasGroup>();
                 if (_hid == null) _hid = go.AddComponent<CanvasGroup>();
                 Blank(_hid);
-                Plugin.Trace("[состояния] игровой столбец закрыт: " + go.name);
+                Plugin.Trace("[states] game column covered: " + go.name);
             }
-            catch (Exception e) { Plugin.Trace("[состояния] игровой столбец: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[states] game column: " + e.Message); }
         }
 
         private static void Blank(CanvasGroup veil)
@@ -272,7 +272,7 @@ namespace NewAgeQoL
                 var target = AccessTools.Method(typeof(DialogFactory), "ShowGlobalEnchantmentHintDialog");
                 var info = target != null ? Harmony.GetPatchInfo(target) : null;
                 _quiet = info != null && info.Prefixes != null && info.Prefixes.Count > 0 ? 1 : -1;
-                if (_quiet < 0) Plugin.Trace("[состояния] игровое окно состояния не перехвачено, сам спрашивать не буду");
+                if (_quiet < 0) Plugin.Trace("[states] game state window not hooked, not querying myself");
             }
             catch { _quiet = -1; }
             return _quiet > 0;
@@ -296,7 +296,7 @@ namespace NewAgeQoL
                 }
                 nc.SendRequest(new GlobalEnchantmentsRequest(me, id));
             }
-            catch (Exception e) { Plugin.Trace("[состояния] запрос " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[states] request " + id + ": " + e.Message); }
         }
 
         private static void Refresh()
@@ -430,7 +430,7 @@ namespace NewAgeQoL
             back.sprite = OnlineWindow.Rounded(8);
             back.type = Image.Type.Sliced;
             back.raycastTarget = false;
-            Plugin.Trace("[состояния] свой ряд значков собран");
+            Plugin.Trace("[states] own icon row built");
         }
 
         private static void Fill(List<IEnchantmentData> list)
@@ -445,7 +445,7 @@ namespace NewAgeQoL
                 if (one == null || !seen.Add(one.Id)) continue;
                 Cells.Add(Make(one));
             }
-            Plugin.Trace("[состояния] значков: " + Cells.Count);
+            Plugin.Trace("[states] icons: " + Cells.Count);
         }
 
         private static Cell Make(IEnchantmentData data)

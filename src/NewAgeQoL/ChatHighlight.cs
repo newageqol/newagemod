@@ -44,7 +44,7 @@ namespace NewAgeQoL
         private static void Prefix(ChatResponseMessage message)
         {
             try { ChatHighlight.Apply(message); }
-            catch (Exception e) { Plugin.Fault("[chat] подсветка строки: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[chat] line highlight: " + e.Message); }
         }
     }
 }

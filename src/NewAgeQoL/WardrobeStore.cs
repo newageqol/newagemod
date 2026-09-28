@@ -95,9 +95,9 @@ namespace NewAgeQoL
                         });
                     }
                 }
-                Plugin.Trace("[переодевалка] манекенов прочитано: " + All.Count);
+                Plugin.Trace("[wardrobe] manikins read: " + All.Count);
             }
-            catch (Exception e) { Plugin.Warn("[переодевалка] манекены не прочитаны: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[wardrobe] manikins not read: " + e.Message); }
         }
 
         internal static void Touch()
@@ -136,7 +136,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Warn("[переодевалка] манекены не сохранены: " + e.Message);
+                Plugin.Warn("[wardrobe] manikins not saved: " + e.Message);
                 _saveAt = Time.unscaledTime + 10f;
                 return false;
             }

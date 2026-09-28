@@ -172,7 +172,7 @@ public sealed class SwfStore
             File.WriteAllBytes(partial, data);
             if (File.Exists(cached)) File.Delete(cached);
             File.Move(partial, cached);
-            Log?.Invoke(source == file ? $"скачан {file} ({data.Length} байт)" : $"для {file} взят {source} ({data.Length} байт)");
+            Log?.Invoke(source == file ? $"downloaded {file} ({data.Length} bytes)" : $"for {file} took {source} ({data.Length} bytes)");
             return cached;
         }
         catch (Exception ex)

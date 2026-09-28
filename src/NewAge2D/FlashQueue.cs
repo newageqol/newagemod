@@ -150,10 +150,10 @@ internal static class FlashQueue
         {
             Bind(__instance);
             var model = ModelOf(group);
-            if (Trace.On) Trace.Write($"очередь Flash: группа №{model.Number} пришла ({group.actionType}{(model.EndBattlePhase ? ", в фазе хода" : "")}): {Describe(model)}");
+            if (Trace.On) Trace.Write($"Flash queue: group #{model.Number} arrived ({group.actionType}{(model.EndBattlePhase ? ", in move phase" : "")}): {Describe(model)}");
             Promote(__instance);
         }
-        catch (Exception ex) { Plugin.Log.LogError("[очередь] приход группы: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[queue] group arrival: " + ex); }
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(AnimationProcessor), "StartGroupProcessing")]
@@ -169,7 +169,7 @@ internal static class FlashQueue
     {
         if (!On) return true;
         try { Stop(__instance); }
-        catch (Exception ex) { Plugin.Log.LogError("[очередь] новая фаза: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[queue] new phase: " + ex); }
         return false;
     }
 
@@ -185,7 +185,7 @@ internal static class FlashQueue
             var doll = Fighters.DollOf(__instance);
             if (doll != null && doll.CameDead)
             {
-                if (Trace.On) Trace.Write($"«{NameOf(__instance)}» был мёртв ещё до входа в бой: ролик смерти в очередь не ставлю");
+                if (Trace.On) Trace.Write($"'{NameOf(__instance)}' was dead before entering the fight: not queueing death clip");
                 return true;
             }
             if (Dying.Add(__instance)) Die(__instance, combat, processor);
@@ -193,7 +193,7 @@ internal static class FlashQueue
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogError("[очередь] смерть: " + ex);
+            Plugin.Log.LogError("[queue] death: " + ex);
             return true;
         }
     }
@@ -229,7 +229,7 @@ internal static class FlashQueue
         group.characters = new List<int> { who.UserId };
         var model = ModelOf(group);
         model.EndBattlePhase = true;
-        if (Trace.On) Trace.Write($"«{NameOf(who)}» сервер прислал смерть: группа смерти №{model.Number} встаёт в конец очереди");
+        if (Trace.On) Trace.Write($"'{NameOf(who)}' server sent death: death group #{model.Number} goes to end of queue");
         processor.AddGroup(group);
         if (!processor.Active) BaseLocationView.ExecuteCoroutine(processor.StartGroupProcessing());
     }
@@ -250,7 +250,7 @@ internal static class FlashQueue
             yield return null;
         }
         ActiveField.SetValue(processor, false);
-        if (Trace.On) Trace.Write("очередь Flash: все группы доиграли, конец анимаций");
+        if (Trace.On) Trace.Write("Flash queue: all groups finished, end of animations");
         FinishedMethod.Invoke(processor, new object[] { 0 });
     }
 
@@ -271,14 +271,14 @@ internal static class FlashQueue
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"[очередь] группа №{model.Number}: {ex}");
+                Plugin.Log.LogError($"[queue] group #{model.Number}: {ex}");
                 over = true;
             }
             if (!over) continue;
             Unlock(model);
             playing.RemoveAt(i);
             removed = true;
-            if (Trace.On) Trace.Write($"очередь Flash: группа №{model.Number} доиграла через {(now - model.StartedAt) * 1000f:0} мс{(now - model.StartedAt > Patience ? ", ОБОРВАНА по времени" : "")}");
+            if (Trace.On) Trace.Write($"Flash queue: group #{model.Number} finished after {(now - model.StartedAt) * 1000f:0} ms{(now - model.StartedAt > Patience ? ", CUT OFF by timeout" : "")}");
         }
         if (removed && Waiting(processor).Count > 0) Promote(processor);
         foreach (var group in playing.ToArray())
@@ -288,7 +288,7 @@ internal static class FlashQueue
             try { Start(model, now); }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"[очередь] старт группы №{model.Number}: {ex}");
+                Plugin.Log.LogError($"[queue] group #{model.Number} start: {ex}");
                 model.Started = true;
                 model.StartedAt = now;
                 foreach (var source in model.Sources) source.Current.Clear();
@@ -316,7 +316,7 @@ internal static class FlashQueue
             waiting.RemoveAt(i);
             dropped++;
         }
-        if (Trace.On) Trace.Write($"очередь Flash: началась фаза хода, недоигранных групп снято {dropped}, осталось {playing.Count + waiting.Count}");
+        if (Trace.On) Trace.Write($"Flash queue: move phase started, unfinished groups dropped {dropped}, left {playing.Count + waiting.Count}");
         if (waiting.Count > 0) Promote(processor);
     }
 
@@ -396,7 +396,7 @@ internal static class FlashQueue
             Locked.UnionWith(model.Locks);
             playing.Add(waiting[i]);
             waiting.RemoveAt(i);
-            if (Trace.On) Trace.Write($"очередь Flash: группа №{model.Number} заняла бойцов: {string.Join(", ", model.Locks.Select(NameOf))}");
+            if (Trace.On) Trace.Write($"Flash queue: group #{model.Number} locked fighters: {string.Join(", ", model.Locks.Select(NameOf))}");
         }
     }
 
@@ -430,7 +430,7 @@ internal static class FlashQueue
     {
         model.Started = true;
         model.StartedAt = now;
-        if (Trace.On) Trace.Write($"очередь Flash: группа №{model.Number} стартует");
+        if (Trace.On) Trace.Write($"Flash queue: group #{model.Number} starts");
         foreach (var source in model.Sources)
             foreach (int type in source.Types)
                 if (source.Queues[type].Count > 0)
@@ -448,7 +448,7 @@ internal static class FlashQueue
                 StartBody(play, now);
             }
             if (!Stopped(play, now)) continue;
-            if (Trace.On) Trace.Write($"«{NameOf(play.Item.Source)}» {Describe(play.Item)} закончилось через {(now - play.At) * 1000f:0} мс");
+            if (Trace.On) Trace.Write($"'{NameOf(play.Item.Source)}' {Describe(play.Item)} ended after {(now - play.At) * 1000f:0} ms");
             Children(source, play.Item, now);
             int type = (int)play.Item.AnimationType;
             if (source.Queues.TryGetValue(type, out var queue) && queue.Count > 0) source.Current[i] = Begin(source, queue.Dequeue(), now, false);
@@ -484,7 +484,7 @@ internal static class FlashQueue
             if (source.Timer && now < source.TimerAt) continue;
             source.Timer = false;
             try { NextChild(source, now); }
-            catch (Exception ex) { Plugin.Log.LogError("[очередь] следующее действие ребёнка: " + ex); }
+            catch (Exception ex) { Plugin.Log.LogError("[queue] next child action: " + ex); }
             if (!source.Timer) Timers.RemoveAt(i);
         }
         for (int i = Sounds.Count - 1; i >= 0; i--)
@@ -496,7 +496,7 @@ internal static class FlashQueue
             {
                 if (who != null && who.Initialized) who.PlayCombatSound(sound);
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("[очередь] звук: " + ex.Message); }
+            catch (Exception ex) { Plugin.Log.LogWarning("[queue] sound: " + ex.Message); }
         }
     }
 
@@ -506,7 +506,7 @@ internal static class FlashQueue
         var play = new Play { Item = item, At = now, Kind = KindOf(item) };
         string name = item.AnimationName ?? "";
         var who = item.Source;
-        if (Trace.On) Trace.Write($"«{NameOf(who)}» {(child ? "ребёнок " : "")}{Describe(item)} → {NameOf(item.Target)}, группа №{model.Number}");
+        if (Trace.On) Trace.Write($"'{NameOf(who)}' {(child ? "child " : "")}{Describe(item)} → {NameOf(item.Target)}, group #{model.Number}");
         ShowTexts(item);
         switch (play.Kind)
         {
@@ -535,7 +535,7 @@ internal static class FlashQueue
         {
             if (item is KickAnimationItem kick && kick.Target != null && KickTextMethod != null) KickTextMethod.Invoke(kick, new object[] { kick.Target });
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[очередь] надпись над головой: " + (ex.InnerException ?? ex).Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[queue] label above head: " + (ex.InnerException ?? ex).Message); }
     }
 
     private static int KindOf(AnimationItem item) => item.AnimationType switch
@@ -557,7 +557,7 @@ internal static class FlashQueue
             Dying.Remove(who);
             if (!who.Dead)
             {
-                if (Trace.On) Trace.Write($"«{NameOf(who)}» к очереди смерти уже поднят, смерть не играется");
+                if (Trace.On) Trace.Write($"'{NameOf(who)}' already raised by the time of death queue, death not played");
                 return;
             }
             DeathCall = true;
@@ -641,7 +641,7 @@ internal static class FlashQueue
         if (indicators == null || value == 0) return;
         if (!model.Fresh(indicators))
         {
-            if (Trace.On) Trace.Write($"«{NameOf(who)}» мана каста {value}: сервер уже прислал итог, не прибавлена");
+            if (Trace.On) Trace.Write($"'{NameOf(who)}' cast mana {value}: server already sent the result, not added");
             return;
         }
         indicators.CurrentMana += value;
@@ -664,7 +664,7 @@ internal static class FlashQueue
         if (name != "change_life" && name != "change_mana" && name != "change_stamina" && name != "change_expower") return;
         int value = item is ChangeLifeAnimationItem change ? change.life : item.Value;
         if (Counts(model)) Apply(model, item, who, name, value);
-        else if (Trace.On) Trace.Write($"«{NameOf(who)}» {name} {value}: действие прошлой фазы, значение не прибавлено");
+        else if (Trace.On) Trace.Write($"'{NameOf(who)}' {name} {value}: action from previous phase, value not added");
         if (item.IgnoreByPlayAnimation || !who.Initialized) return;
         FlashNumbers.Show(who, name, value);
         play.Until = now + NumberSeconds;
@@ -676,7 +676,7 @@ internal static class FlashQueue
         {
             if (StartTimeField.GetValue(change) != null)
             {
-                if (Trace.On) Trace.Write($"«{NameOf(who)}» {name} {value}: уже применено сразу");
+                if (Trace.On) Trace.Write($"'{NameOf(who)}' {name} {value}: already applied immediately");
                 return;
             }
             StartTimeField.SetValue(change, (float?)0f);
@@ -685,7 +685,7 @@ internal static class FlashQueue
         if (indicators == null) return;
         if (!model.Fresh(indicators))
         {
-            if (Trace.On) Trace.Write($"«{NameOf(who)}» {name} {value}: сервер уже прислал итог, не прибавлено");
+            if (Trace.On) Trace.Write($"'{NameOf(who)}' {name} {value}: server already sent the result, not added");
             return;
         }
         switch (name)
@@ -741,8 +741,8 @@ internal static class FlashQueue
         return combat != null && combat.Characters.TryGetValue(userId, out var character) ? NameOf(character) : userId.ToString();
     }
 
-    private static string Describe(AnimationItem item) => $"{item.AnimationName} (тип {(int)item.AnimationType}, {item.Value})";
+    private static string Describe(AnimationItem item) => $"{item.AnimationName} (type {(int)item.AnimationType}, {item.Value})";
 
     private static string Describe(Group model) =>
-        string.Join("; ", model.Sources.Select(source => $"«{NameOf(source.Who)}»: " + string.Join(", ", source.Types.SelectMany(type => source.Queues[type]).Select(item => Describe(item) + (item.Items != null && item.Items.Count > 0 ? $" + детей {item.Items.Count}" : "")))));
+        string.Join("; ", model.Sources.Select(source => $"'{NameOf(source.Who)}': " + string.Join(", ", source.Types.SelectMany(type => source.Queues[type]).Select(item => Describe(item) + (item.Items != null && item.Items.Count > 0 ? $" + children {item.Items.Count}" : "")))));
 }

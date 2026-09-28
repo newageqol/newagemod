@@ -66,7 +66,7 @@ namespace NewAgeQoL
                     over = body != null || Walk(cd);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[боец] курсор: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] cursor: " + e.Message); }
             Light(cd, body);
             if (over == _shown) return;
             _shown = over;
@@ -79,7 +79,7 @@ namespace NewAgeQoL
                 }
                 else if (!SkillList.Armed) Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             }
-            catch (Exception e) { Plugin.Trace("[боец] курсор: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] cursor: " + e.Message); }
         }
 
         private static void Light(ICombatData cd, AbstractCharacter body)
@@ -89,7 +89,7 @@ namespace NewAgeQoL
             Unlight(cd);
             if (cd == null || body == null || at == null) return;
             try { _litPick = cd.SetSelection(at, 0, Lit, true, true); }
-            catch (Exception e) { Plugin.Trace("[боец] подсветка клетки: " + e.Message); _litPick = 0; }
+            catch (Exception e) { Plugin.Trace("[fighter] hex highlight: " + e.Message); _litPick = 0; }
             _litData = cd;
             _litFor = body.UserId;
             _litAt = at;
@@ -101,7 +101,7 @@ namespace NewAgeQoL
             if (_litPick != 0 && _litData != null && ReferenceEquals(_litData, cd))
             {
                 try { _litData.ClearSelection(_litPick); }
-                catch (Exception e) { Plugin.Trace("[боец] снять подсветку клетки: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[fighter] clear hex highlight: " + e.Message); }
             }
             _litPick = 0;
             _litFor = 0;
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 skin.SetPropertyBlock(_paint);
                 _tinted = skin;
             }
-            catch (Exception e) { Plugin.Trace("[боец] подсветка модели: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] model highlight: " + e.Message); }
         }
 
         private static AbstractCharacter Hovered(ICombatData cd)
@@ -218,13 +218,13 @@ namespace NewAgeQoL
                 var hex = body != null ? body.HexGridPosition : null;
                 if (hex == null) return true;
                 BaseStateButton.CloseDefaultButtonGroup();
-                Plugin.Trace("[боец] клик по телу: " + body.Login + ", клетка " + hex.clientX + ";" + hex.clientY);
+                Plugin.Trace("[fighter] body click: " + body.Login + ", hex " + hex.clientX + ";" + hex.clientY);
                 Fire.Invoke(__instance, new object[] { hex });
                 return false;
             }
             catch (Exception e)
             {
-                Plugin.Trace("[боец] клик по телу: " + e.Message);
+                Plugin.Trace("[fighter] body click: " + e.Message);
                 return true;
             }
         }

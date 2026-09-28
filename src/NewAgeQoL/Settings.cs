@@ -48,6 +48,8 @@ namespace NewAgeQoL
             {
                 new Header { Title = "Мод" },
                 A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
+                B("Ночная тема", NightTheme.Enabled),
+                A(NightTheme.RowTitle(), NightTheme.ButtonText(), NightTheme.Download),
                 new Header { Title = "Кнопки" },
                 B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
                 B("Кнопка сдачи вещей в хранилище", Plugin.CfgArtifactButtons),
@@ -73,6 +75,7 @@ namespace NewAgeQoL
                 new Header { Title = "Карта" },
                 B("Номера точек внешнего мира", Plugin.CfgMapLabels),
                 B("Подписывать, что это за точка", Plugin.CfgMapLabelType),
+                B("Порталы: сразу список направлений, перенос без диалога", Plugin.CfgPortalList),
 
                 new Header { Title = "Кто в игре" },
                 S("Логин запасного аккаунта", Plugin.CfgOnlineLogin),
@@ -197,7 +200,7 @@ namespace NewAgeQoL
             if (_win != null) { Close(); return; }
             _keysMode = false;
             try { Open(); }
-            catch (Exception e) { Plugin.Fault("[settings] окно не открылось: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[settings] window did not open: " + e); Close(); }
         }
 
         internal static void ToggleHotkeys()
@@ -205,7 +208,7 @@ namespace NewAgeQoL
             if (_win != null) { Close(); return; }
             _keysMode = true;
             try { Open(); }
-            catch (Exception e) { Plugin.Fault("[клавиши] окно не открылось: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[hotkeys] window did not open: " + e); Close(); }
         }
 
         internal static void Close() => Close(revert: false);
@@ -216,7 +219,7 @@ namespace NewAgeQoL
             if (Hotkeys.Capturing) Hotkeys.Stop();
             Changelog.Close();
             ChatColors.Close();
-            if (revert) foreach (var u in _undo.Values) { try { u(); } catch (Exception e) { Plugin.Trace("[настройки] откат: " + e.Message); } }
+            if (revert) foreach (var u in _undo.Values) { try { u(); } catch (Exception e) { Plugin.Trace("[settings] revert: " + e.Message); } }
             if (_win != null) UnityEngine.Object.Destroy(_win);
             _win = null;
             _frame = null;
@@ -240,12 +243,12 @@ namespace NewAgeQoL
         private static void Open()
         {
             var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.HotkeytsDialog : null;
-            if (prefab == null) { Plugin.Warn("[settings] окно горячих клавиш не найдено."); return; }
+            if (prefab == null) { Plugin.Warn("[settings] hotkeys window not found."); return; }
 
             _win = UnityEngine.Object.Instantiate(prefab);
             Clones.StripHotkeys(_win, prefab);
             var dlg = _win.GetComponent<HotkeysDialog>();
-            if (dlg == null) { Plugin.Warn("[settings] в окне нет HotkeysDialog."); Close(); return; }
+            if (dlg == null) { Plugin.Warn("[settings] no HotkeysDialog in the window."); Close(); return; }
 
             dlg.ShowDialog(null, ECanvasType.ModalWindow);
 
@@ -254,11 +257,11 @@ namespace NewAgeQoL
             var resetButton = Field<Button>(dlg, "ResetToDefaultButton");
             var resetText = Field<Text>(dlg, "ResetToDefaultButtonText");
             var manager = Field<MonoBehaviour>(dlg, "widgetManager");
-            if (manager == null) { Plugin.Warn("[settings] не нашёл список строк окна."); Close(); return; }
+            if (manager == null) { Plugin.Warn("[settings] window row list not found."); Close(); return; }
 
             var rowPrefab = Field<GameObject>(manager, "WidgetPrefab");
             var container = manager.transform;
-            if (rowPrefab == null) { Plugin.Warn("[settings] не нашёл шаблон строки."); Close(); return; }
+            if (rowPrefab == null) { Plugin.Warn("[settings] row template not found."); Close(); return; }
 
             manager.enabled = false;
             for (int i = container.childCount - 1; i >= 0; i--)
@@ -283,15 +286,91 @@ namespace NewAgeQoL
             }
 
             _undo.Clear();
+            Slots.Clear();
             foreach (var row in Rows())
             {
                 try { AddRow(rowPrefab, container, row); }
-                catch (Exception e) { Plugin.Fault("[settings] строка «" + (row.Title ?? "?") + "»: " + e); }
+                catch (Exception e) { Plugin.Fault("[settings] row '" + (row.Title ?? "?") + "': " + e); }
             }
 
             var scroll = Field<ScrollRect>(manager, "ParentScrollRect");
             ScrollTop(scroll);
             if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(ScrollTopNextFrame(scroll));
+            if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(EvenButtons());
+        }
+
+        private static readonly List<(RectTransform row, RectTransform slot, Text label)> Slots = new List<(RectTransform, RectTransform, Text)>();
+
+        private static IEnumerator EvenButtons()
+        {
+            yield return null;
+            yield return null;
+            try
+            {
+                Canvas.ForceUpdateCanvases();
+                float widest = 0f;
+                foreach (var (row, slot, _) in Slots)
+                    if (row != null && slot != null && slot.gameObject.activeInHierarchy) widest = Mathf.Max(widest, slot.rect.width);
+                if (widest < 10f) yield break;
+                int fixedCount = 0;
+                foreach (var (row, slot, label) in Slots)
+                {
+                    if (row == null || slot == null || !slot.gameObject.activeInHierarchy) continue;
+                    float add = widest - slot.rect.width;
+                    if (add < 1f) continue;
+                    var group = row.GetComponent<HorizontalLayoutGroup>();
+                    if (group != null)
+                    {
+                        var le = slot.GetComponent<LayoutElement>() ?? slot.gameObject.AddComponent<LayoutElement>();
+                        le.minWidth = widest;
+                        le.preferredWidth = widest;
+                        le.flexibleWidth = 0f;
+                        if (label != null && label.transform.parent == row)
+                        {
+                            var ll = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+                            ll.preferredWidth = 0f;
+                            ll.minWidth = 0f;
+                            ll.flexibleWidth = 1f;
+                        }
+                        LayoutRebuilder.ForceRebuildLayoutImmediate(row);
+                    }
+                    else if (Mathf.Abs(slot.anchorMax.x - slot.anchorMin.x) > 0.01f)
+                    {
+                        slot.offsetMin = new Vector2(slot.offsetMin.x - add, slot.offsetMin.y);
+                        Squeeze(label, add);
+                    }
+                    else
+                    {
+                        slot.sizeDelta = new Vector2(slot.sizeDelta.x + add, slot.sizeDelta.y);
+                        slot.anchoredPosition = new Vector2(slot.anchoredPosition.x - add * (1f - slot.pivot.x), slot.anchoredPosition.y);
+                        Squeeze(label, add);
+                    }
+                    fixedCount++;
+                }
+                Plugin.Trace("[settings] buttons widened to " + widest.ToString("0") + ": " + fixedCount);
+            }
+            catch (Exception e) { Plugin.Fault("[settings] button width: " + e.Message); }
+        }
+
+        private static void Squeeze(Text label, float by)
+        {
+            if (label == null) return;
+            var rt = label.rectTransform;
+            if (Mathf.Abs(rt.anchorMax.x - rt.anchorMin.x) > 0.01f)
+                rt.offsetMax = new Vector2(rt.offsetMax.x - by, rt.offsetMax.y);
+            else
+            {
+                rt.sizeDelta = new Vector2(Mathf.Max(20f, rt.sizeDelta.x - by), rt.sizeDelta.y);
+                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x - by * rt.pivot.x, rt.anchoredPosition.y);
+            }
+        }
+
+        private static RectTransform SlotOf(Transform row, Component part)
+        {
+            if (row == null || part == null) return null;
+            var t = part.transform;
+            while (t != null && t.parent != row) t = t.parent;
+            return t as RectTransform;
         }
 
         private static void Indent(RectTransform list, float pad)
@@ -303,13 +382,13 @@ namespace NewAgeQoL
                 if (layout != null)
                 {
                     layout.padding.left += Mathf.RoundToInt(pad);
-                    Plugin.Trace("[settings] отступ списка слева: " + layout.padding.left);
+                    Plugin.Trace("[settings] list left padding: " + layout.padding.left);
                     return;
                 }
                 list.offsetMin = new Vector2(list.offsetMin.x + pad, list.offsetMin.y);
-                Plugin.Trace("[settings] отступ списка сдвигом: " + list.offsetMin.x);
+                Plugin.Trace("[settings] list padding by offset: " + list.offsetMin.x);
             }
-            catch (Exception e) { Plugin.Fault("[settings] отступ списка: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[settings] list padding: " + e.Message); }
         }
 
         private static RectTransform _frame;
@@ -348,10 +427,10 @@ namespace NewAgeQoL
                 Grow(_frame, need, self: true);
                 foreach (RectTransform child in _frame) Grow(child, need, self: false);
                 Center();
-                Plugin.Trace("[settings] ширина окна " + now + " → " + _frame.rect.width
-                             + " (хотим " + _wantWidth + ")");
+                Plugin.Trace("[settings] window width " + now + " → " + _frame.rect.width
+                             + " (want " + _wantWidth + ")");
             }
-            catch (Exception e) { Plugin.Fault("[settings] ширина окна: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[settings] window width: " + e.Message); }
         }
 
         private static void Center()
@@ -373,9 +452,9 @@ namespace NewAgeQoL
             if (Mathf.Abs(shift) < 0.5f) { Settled(frameW, areaW, atX); return; }
             _frame.position += area.TransformVector(new Vector3(shift, 0f, 0f));
             Settled(frameW, areaW, _frame.position.x);
-            Plugin.Trace("[settings] окно двигаю по горизонтали на " + shift.ToString("0")
-                                + " (окно " + left.ToString("0") + ".." + right.ToString("0")
-                                + ", холст " + area.rect.xMin.ToString("0") + ".." + area.rect.xMax.ToString("0") + ")");
+            Plugin.Trace("[settings] shifting window horizontally by " + shift.ToString("0")
+                                + " (window " + left.ToString("0") + ".." + right.ToString("0")
+                                + ", canvas " + area.rect.xMin.ToString("0") + ".." + area.rect.xMax.ToString("0") + ")");
         }
 
         private static void Settled(float frameW, float areaW, float atX)
@@ -420,17 +499,17 @@ namespace NewAgeQoL
             {
                 var canvas = _frame.GetComponentInParent<Canvas>();
                 var area = canvas != null ? canvas.transform as RectTransform : null;
-                Plugin.Trace("[settings] холст " + (area != null ? area.name + " " + area.rect.width.ToString("0") + "x" + area.rect.height.ToString("0") : "нет")
-                    + ", окно " + _frame.name + " " + _frame.rect.width.ToString("0") + "x" + _frame.rect.height.ToString("0")
-                    + " опора " + _frame.pivot.x.ToString("0.00") + ", якоря " + _frame.anchorMin.x.ToString("0.00") + ".." + _frame.anchorMax.x.ToString("0.00"));
+                Plugin.Trace("[settings] canvas " + (area != null ? area.name + " " + area.rect.width.ToString("0") + "x" + area.rect.height.ToString("0") : "none")
+                    + ", window " + _frame.name + " " + _frame.rect.width.ToString("0") + "x" + _frame.rect.height.ToString("0")
+                    + " pivot " + _frame.pivot.x.ToString("0.00") + ", anchors " + _frame.anchorMin.x.ToString("0.00") + ".." + _frame.anchorMax.x.ToString("0.00"));
                 foreach (RectTransform child in _frame)
                 {
                     if (child == null) continue;
                     Plugin.Trace("[settings]   " + child.name + " " + child.rect.width.ToString("0") + "x" + child.rect.height.ToString("0")
-                        + (child.gameObject.activeSelf ? "" : " (выключен)"));
+                        + (child.gameObject.activeSelf ? "" : " (inactive)"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[settings] разбор окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[settings] window dump: " + e.Message); }
         }
 
         private static void Grow(RectTransform rt, float extra, bool self)
@@ -490,10 +569,23 @@ namespace NewAgeQoL
                         lrt.anchoredPosition = new Vector2(lrt.anchoredPosition.x + pad, lrt.anchoredPosition.y);
                     }
                     if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                        Plugin.Trace("[settings] подпись «" + def.Title + "» якоря "
+                        Plugin.Trace("[settings] caption '" + def.Title + "' anchors "
                                      + lrt.anchorMin.x + ".." + lrt.anchorMax.x
-                                     + " отступы " + lrt.offsetMin.x + ".." + lrt.offsetMax.x
-                                     + " позиция " + lrt.anchoredPosition.x);
+                                     + " offsets " + lrt.offsetMin.x + ".." + lrt.offsetMax.x
+                                     + " position " + lrt.anchoredPosition.x);
+                }
+            }
+
+            if (!(def is Header))
+            {
+                var slot = SlotOf(go.transform, (Component)background ?? (Component)button ?? value);
+                if (slot != null && (label == null || !label.transform.IsChildOf(slot)))
+                {
+                    Slots.Add((go.transform as RectTransform, slot, label));
+                    if (Slots.Count == 1 && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
+                        Plugin.Trace("[settings] row layout: group " + (go.GetComponent<HorizontalLayoutGroup>() != null) + ", slot " + slot.name
+                                     + " anchors " + slot.anchorMin.x + ".." + slot.anchorMax.x + " pivot " + slot.pivot.x
+                                     + ", label parent " + (label != null ? label.transform.parent.name : "-"));
                 }
             }
 
@@ -528,6 +620,8 @@ namespace NewAgeQoL
                     {
                         b.Cfg.Value = !b.Cfg.Value;
                         SetSwitch(value, b.Cfg.Value);
+                        if (ReferenceEquals(b.Cfg, NightTheme.Enabled))
+                            NightTheme.Switched(b.Cfg.Value, () => { if (value != null) SetSwitch(value, b.Cfg.Value); });
                     });
                 }
                 return;
@@ -701,7 +795,7 @@ namespace NewAgeQoL
                     return slider;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[settings] ползунок игры не взялся: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[settings] game slider failed: " + e.Message); }
 
             var sgo = new GameObject("MvlSlider", typeof(RectTransform), typeof(Slider));
             sgo.transform.SetParent(background.transform, false);
@@ -913,7 +1007,7 @@ namespace NewAgeQoL
             {
                 if (!SideButtons.InWorld()) return;
                 var reset = AccessTools.Field(typeof(SetupDialog), "ResetChatButton")?.GetValue(__instance) as Button;
-                if (reset == null) { Plugin.Warn("[settings] кнопку «Сбросить положение чата» не нашёл."); return; }
+                if (reset == null) { Plugin.Warn("[settings] 'Reset chat position' button not found."); return; }
 
                 var src = (RectTransform)reset.transform;
                 var go = UnityEngine.Object.Instantiate(reset.gameObject, src.parent);
@@ -933,7 +1027,7 @@ namespace NewAgeQoL
 
                 Bug(__instance, btn);
             }
-            catch (Exception e) { Plugin.Fault("[settings] кнопка не добавлена: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[settings] button not added: " + e.Message); }
         }
 
         private static void Bug(SetupDialog dialog, Button sample)
@@ -941,7 +1035,7 @@ namespace NewAgeQoL
             try
             {
                 var caption = AccessTools.Field(typeof(SetupDialog), "LanguageCaptionText")?.GetValue(dialog) as Text;
-                if (caption == null) { Plugin.Warn("[settings] подпись «Язык» не нашёл, кнопку отчёта не ставлю."); return; }
+                if (caption == null) { Plugin.Warn("[settings] 'Language' caption not found, not placing the report button."); return; }
                 var slot = caption.rectTransform;
                 if (Unity3DHelper.FindInChild(slot.gameObject, "MvlReportButton") != null) return;
 
@@ -964,9 +1058,9 @@ namespace NewAgeQoL
                 var press = go.GetComponent<Button>();
                 press.onClick.RemoveAllListeners();
                 press.onClick.AddListener(Report.Open);
-                Plugin.Trace("[settings] кнопка отчёта встала на место подписи «Язык»");
+                Plugin.Trace("[settings] report button placed where the 'Language' caption was");
             }
-            catch (Exception e) { Plugin.Warn("[settings] кнопка отчёта: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[settings] report button: " + e.Message); }
         }
 
         private static IEnumerator Fit(SetupDialog dialog, Button sample, RectTransform slot)
@@ -978,7 +1072,7 @@ namespace NewAgeQoL
             }
             float want = sample != null ? ((RectTransform)sample.transform).rect.height : -1f;
             float was = slot != null ? slot.rect.height : -1f;
-            Plugin.Warn("[settings] высоту кнопки отчёта так и не удалось померить (образец " + want.ToString("0.#") + ", слот " + was.ToString("0.#") + "), кнопка осталась низкой.");
+            Plugin.Warn("[settings] could not measure the report button height (sample " + want.ToString("0.#") + ", slot " + was.ToString("0.#") + "), the button stayed short.");
         }
 
         private static bool Stretch(SetupDialog dialog, Button sample, RectTransform slot)
@@ -992,9 +1086,9 @@ namespace NewAgeQoL
 
                 var home = slot.parent as RectTransform;
                 var stack = home != null ? home.GetComponent<LayoutGroup>() : null;
-                Plugin.Trace("[settings] слот «Язык»: родитель " + (home != null ? home.name : "нет")
-                    + ", раскладка " + (stack != null ? stack.GetType().Name : "нет")
-                    + ", высота слота " + was.ToString("0.#") + ", кнопки " + want.ToString("0.#"));
+                Plugin.Trace("[settings] 'Language' slot: parent " + (home != null ? home.name : "none")
+                    + ", layout " + (stack != null ? stack.GetType().Name : "none")
+                    + ", slot height " + was.ToString("0.#") + ", button " + want.ToString("0.#"));
                 if (want <= was + 1f) return true;
 
                 var fit = slot.GetComponent<LayoutElement>();
@@ -1007,7 +1101,7 @@ namespace NewAgeQoL
                 Grow(dialog, want - Mathf.Max(was, 0f));
                 return true;
             }
-            catch (Exception e) { Plugin.Warn("[settings] высота кнопки отчёта: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Warn("[settings] report button height: " + e.Message); return true; }
         }
 
         private static void Grow(SetupDialog dialog, float by)
@@ -1020,13 +1114,13 @@ namespace NewAgeQoL
                 var home = root.parent as RectTransform;
                 if (home != null && home.GetComponent<LayoutGroup>() != null)
                 {
-                    Plugin.Trace("[settings] окно настроек внутри раскладки " + home.name + ", высоту не трогаю");
+                    Plugin.Trace("[settings] settings window is inside layout " + home.name + ", leaving height alone");
                     return;
                 }
                 root.sizeDelta = new Vector2(root.sizeDelta.x, root.sizeDelta.y + Mathf.Min(by, 60f));
-                Plugin.Trace("[settings] окно настроек игры подросло на " + by + ", стало " + root.sizeDelta.y);
+                Plugin.Trace("[settings] game settings window grew by " + by + ", now " + root.sizeDelta.y);
             }
-            catch (Exception e) { Plugin.Trace("[settings] окно настроек не растянулось: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[settings] settings window did not stretch: " + e.Message); }
         }
     }
 
@@ -1042,9 +1136,9 @@ namespace NewAgeQoL
                 var reset = AccessTools.Field(typeof(SetupDialog), "ResetChatButton")?.GetValue(__instance) as Button;
                 if (reset == null) return;
                 reset.gameObject.SetActive(false);
-                Plugin.Trace("[settings] кнопка «Сбросить положение чата» спрятана: чат мода стоит на своём месте");
+                Plugin.Trace("[settings] 'Reset chat position' button hidden: the mod chat is in its own place");
             }
-            catch (Exception e) { Plugin.Trace("[settings] кнопка сброса чата: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[settings] chat reset button: " + e.Message); }
         }
     }
 }

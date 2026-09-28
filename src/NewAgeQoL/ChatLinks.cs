@@ -89,9 +89,9 @@ namespace NewAgeQoL
             {
                 string go = url.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? "http://" + url : url;
                 Application.OpenURL(go);
-                Plugin.Trace("[чат] открыта ссылка из чата");
+                Plugin.Trace("[chat] opened a link from chat");
             }
-            catch (Exception e) { Plugin.Warn("[чат] ссылка не открылась: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[chat] link did not open: " + e.Message); }
         }
 
         private static bool Inside(string text, int at)
@@ -115,7 +115,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatContent __instance, ChatResponseMessage resp)
         {
             try { ChatLinks.Mark(__instance, resp); }
-            catch (Exception e) { Plugin.Trace("[чат] ссылки в строке: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] links in line: " + e.Message); }
         }
     }
 

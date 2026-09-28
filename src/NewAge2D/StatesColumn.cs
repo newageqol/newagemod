@@ -25,7 +25,7 @@ internal static class StatesColumn
         if (Time.unscaledTime < _next) return;
         _next = Time.unscaledTime + 0.5f;
         try { Hide(); }
-        catch (Exception ex) { Plugin.Log.LogWarning("[значки состояний] " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[state icons] " + ex.Message); }
     }
 
     private static void Hide()
@@ -42,7 +42,7 @@ internal static class StatesColumn
             if (!Hidden.ContainsKey(group))
             {
                 Hidden[group] = (group.alpha, group.blocksRaycasts, group.interactable);
-                if (Trace.On) Trace.Write($"спрятан столбец значков состояний {property.Name}");
+                if (Trace.On) Trace.Write($"state icon column hidden {property.Name}");
             }
             if (group.alpha != 0f) group.alpha = 0f;
             if (group.blocksRaycasts) group.blocksRaycasts = false;

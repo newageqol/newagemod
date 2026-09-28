@@ -36,7 +36,7 @@ namespace NewAgeQoL
                 _byMouse = Time.unscaledTime;
                 Poke(id);
             }
-            catch (Exception e) { Plugin.Trace("[удар] мышь: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] mouse: " + e.Message); }
         }
 
         private static float _watchAt;
@@ -61,7 +61,7 @@ namespace NewAgeQoL
             _watchAt = Time.unscaledTime + 0.1f;
             if (!_mine) return;
             if (!SideButtons.InCombat()) { _mine = false; return; }
-            if (Counted()) Shut("раунд считается");
+            if (Counted()) Shut("round is being calculated");
         }
 
         private static bool Counted()
@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 if (cd == null) return true;
                 return cd.RoundType != RoundType.COMBAT_ROUND;
             }
-            catch (Exception e) { Plugin.Trace("[удар] тип раунда: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[strike] round type: " + e.Message); return false; }
         }
 
         private static int _chosenRound = -1;
@@ -87,7 +87,7 @@ namespace NewAgeQoL
                 var cd = FighterHint.Cd();
                 if (cd == null)
                 {
-                    if (_fight != null) Forget("боя нет");
+                    if (_fight != null) Forget("no fight");
                     return;
                 }
                 if (ReferenceEquals(cd, _fight) && cd.RoundNum >= _seenRound)
@@ -95,11 +95,11 @@ namespace NewAgeQoL
                     _seenRound = cd.RoundNum;
                     return;
                 }
-                if (_fight != null) Forget("новый бой");
+                if (_fight != null) Forget("new fight");
                 _fight = cd;
                 _seenRound = cd.RoundNum;
             }
-            catch (Exception e) { Plugin.Trace("[удар] смена боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] fight change: " + e.Message); }
         }
 
         private static void Forget(string why)
@@ -108,12 +108,13 @@ namespace NewAgeQoL
             _fight = null;
             _seenRound = -1;
             _calcRound = -1;
+            _handedRound = -1;
             _chosenRound = -1;
             _chosenWhat = "";
             _soonId = 0;
             _lastId = 0;
             _mine = false;
-            if (had) Plugin.Trace("[удар] " + why + " — запреты прошлого боя сняты");
+            if (had) Plugin.Trace("[strike] " + why + " - previous fight locks cleared");
         }
 
         internal static void Chosen(string what)
@@ -123,11 +124,11 @@ namespace NewAgeQoL
                 Fresh();
                 var cd = FighterHint.Cd();
                 if (cd == null || cd.RoundType != RoundType.COMBAT_ROUND) return;
-                if (_chosenRound != cd.RoundNum) Plugin.Trace("[удар] в раунде " + cd.RoundNum + " выбран " + what + ", до конца раунда удар не даю ни кнопкой, ни клавишей, ни двойным кликом");
+                if (_chosenRound != cd.RoundNum) Plugin.Trace("[strike] round " + cd.RoundNum + ": " + what + " chosen, no strike until round end by button, key or double click");
                 _chosenRound = cd.RoundNum;
                 _chosenWhat = what;
             }
-            catch (Exception e) { Plugin.Trace("[удар] выбор удара: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] strike choice: " + e.Message); }
         }
 
         internal static bool AnyBlock(BlocksMessage blocks)
@@ -139,14 +140,25 @@ namespace NewAgeQoL
 
         internal static bool Handing;
         private static int _calcRound = -1;
+        private static int _handedRound = -1;
+
+        internal static bool Calculating
+        {
+            get
+            {
+                var cd = FighterHint.Cd();
+                return cd != null && _calcRound == cd.RoundNum;
+            }
+        }
 
         internal static string Locked()
         {
             Fresh();
             var cd = FighterHint.Cd();
             if (cd == null) return null;
-            if (_calcRound == cd.RoundNum) return "фаза боя закончилась, идёт расчёт раунда";
-            if (_chosenRound == cd.RoundNum) return _chosenWhat + " в этом раунде уже выбран";
+            if (_handedRound == cd.RoundNum) return "phase already handed in";
+            if (_calcRound == cd.RoundNum) return "combat phase over, round is being calculated";
+            if (_chosenRound == cd.RoundNum) return _chosenWhat + " already chosen this round";
             return null;
         }
 
@@ -156,30 +168,18 @@ namespace NewAgeQoL
             {
                 Fresh();
                 var cd = FighterHint.Cd();
+                if (cd != null) _calcRound = cd.RoundNum;
                 if (Handing)
                 {
-                    Revive(cd);
+                    if (cd != null) _handedRound = cd.RoundNum;
+                    Plugin.Trace("[strike] phase handed in by player in round " + (cd != null ? cd.RoundNum : -1) + ", no more strikes: the server counts a strike as the end of the phase");
+                    Shut("phase handed in, no strike chosen");
                     return;
                 }
-                if (cd != null) _calcRound = cd.RoundNum;
-                Plugin.Trace("[удар] фаза боя закончилась в раунде " + (cd != null ? cd.RoundNum : -1) + ", удар больше не даю");
-                Shut("фаза закончилась, удар не выбран");
+                Plugin.Trace("[strike] combat phase ended in round " + (cd != null ? cd.RoundNum : -1) + ", no more strikes");
+                Shut("phase ended, no strike chosen");
             }
-            catch (Exception e) { Plugin.Trace("[удар] конец фазы: " + e.Message); }
-        }
-
-        private static void Revive(ICombatData cd)
-        {
-            if (cd == null || cd.RoundType != RoundType.COMBAT_ROUND || _chosenRound == cd.RoundNum)
-            {
-                Plugin.Trace("[удар] фаза сдана игроком, удар уже выбран или не фаза боя — кнопку не возвращаю");
-                return;
-            }
-            var ctrl = Controllers.Get<CombatButtonsController>();
-            var call = AccessTools.Method(typeof(CombatButtonsController), "ChangeAttackButtonEnable");
-            if (ctrl == null || call == null) return;
-            call.Invoke(ctrl, new object[] { cd.RoundType });
-            Plugin.Trace("[удар] фаза сдана игроком, удар не выбран — кнопка, клавиша и двойной клик остаются");
+            catch (Exception e) { Plugin.Trace("[strike] phase end: " + e.Message); }
         }
 
         internal static void Release()
@@ -190,7 +190,7 @@ namespace NewAgeQoL
                 var button = ctrl != null ? AccessTools.Property(typeof(CombatButtonsController), "AttackButton")?.GetValue(ctrl) as AttackButton : null;
                 if (button != null && button.Activated) button.CloseMenu();
             }
-            catch (Exception e) { Plugin.Trace("[удар] кнопка удара: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] strike button: " + e.Message); }
         }
 
         private static void Shut(string why)
@@ -202,11 +202,11 @@ namespace NewAgeQoL
                 if (dialog == null || !dialog.Opened) return;
                 dialog.AttackConfirmedCallback = null;
                 var close = AccessTools.Method(typeof(ConfirmActionDialogController), "Close");
-                if (close == null) { Plugin.Trace("[удар] у игры нет закрытия окна"); return; }
+                if (close == null) { Plugin.Trace("[strike] game has no window close"); return; }
                 close.Invoke(dialog, null);
-                Plugin.Trace("[удар] " + why + " — окно удара закрыто");
+                Plugin.Trace("[strike] " + why + " - strike window closed");
             }
-            catch (Exception e) { Plugin.Trace("[удар] закрытие окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] window close: " + e.Message); }
         }
 
         private static bool OnUi()
@@ -243,7 +243,7 @@ namespace NewAgeQoL
                     return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[удар] клетка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] cell: " + e.Message); }
         }
 
         internal static void Body()
@@ -255,7 +255,7 @@ namespace NewAgeQoL
                 var picked = cd != null ? cd.SelectedCharacter : null;
                 if (picked != null) Poke(picked.UserId);
             }
-            catch (Exception e) { Plugin.Trace("[удар] боец: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] fighter: " + e.Message); }
         }
 
         private static void Sync()
@@ -273,14 +273,14 @@ namespace NewAgeQoL
             float now = Time.unscaledTime;
             if (_press == _took || now - _pressAt > Hold)
             {
-                Plugin.Trace("[удар] отклик без свежего нажатия — не считаю кликом");
+                Plugin.Trace("[strike] response without a fresh press - not counted as a click");
                 return;
             }
             _took = _press;
             bool twice = id == _lastId && now - _lastAt <= Twice;
             _lastId = id;
             _lastAt = twice ? -10f : now;
-            Plugin.Trace("[удар] клик по " + id + (twice ? ", второй" : ", первый"));
+            Plugin.Trace("[strike] click on " + id + (twice ? ", second" : ", first"));
             if (!twice) return;
             _soonId = id;
             _soonAt = now + Wait;
@@ -309,7 +309,7 @@ namespace NewAgeQoL
             if (target == null || me == null) return;
             if (cd.RoundType != RoundType.COMBAT_ROUND || target.Dead) return;
             string locked = Locked();
-            if (locked != null) { Plugin.Trace("[удар] двойной клик: " + locked + " — окно не открываю"); return; }
+            if (locked != null) { Plugin.Trace("[strike] double click: " + locked + " - window not opened"); return; }
 
             var dialog = Controllers.Get<ConfirmActionDialogController>();
             if (dialog == null || dialog.Opened) return;
@@ -344,28 +344,28 @@ namespace NewAgeQoL
                     request.SetKicks(leftKick, rightKick);
                     NetworkConnection.Instance.SendRequest(request);
                     Quiet();
-                    Plugin.Trace("[удар] отправлен по " + who);
+                    Plugin.Trace("[strike] sent at " + who);
                 }
-                catch (Exception e) { Plugin.Warn("[удар] отправка: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[strike] send: " + e.Message); }
             };
-            Plugin.Trace("[удар] окно по " + (foe ? "врагу " : "союзнику ") + who + ", дистанция " + distance);
+            Plugin.Trace("[strike] window at " + (foe ? "enemy " : "ally ") + who + ", distance " + distance);
         }
 
         internal static void Key()
         {
             string locked = Locked();
-            if (locked != null) { Plugin.Trace("[удар] клавиша: " + locked + " — не бью"); return; }
+            if (locked != null) { Plugin.Trace("[strike] key: " + locked + " - not striking"); return; }
             if (Swing()) return;
             try
             {
-                if (Counted()) { Plugin.Trace("[удар] клавиша: сейчас не фаза боя"); return; }
+                if (Counted()) { Plugin.Trace("[strike] key: not a combat phase now"); return; }
                 var ctrl = Controllers.Get<CombatButtonsController>();
                 var click = AccessTools.Method(typeof(CombatButtonsController), "OnAttackButtonClicked");
                 if (ctrl == null || click == null) return;
-                Plugin.Trace("[удар] клавиша: удар не собран, решает игра, как при клике по кнопке");
+                Plugin.Trace("[strike] key: strike not assembled, the game decides, as with a button click");
                 click.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[удар] клавиша: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] key: " + e.Message); }
         }
 
         internal static bool Swing()
@@ -381,14 +381,14 @@ namespace NewAgeQoL
 
                 var ctrl = Controllers.Get<CombatButtonsController>();
                 var call = AccessTools.Method(typeof(CombatButtonsController), "MakeAutomaticAttack");
-                if (ctrl == null || call == null) { Plugin.Trace("[удар] обычного удара у игры нет"); return false; }
+                if (ctrl == null || call == null) { Plugin.Trace("[strike] game has no plain strike"); return false; }
 
                 int distance = HexUtils.range(me.HexGridPosition, target.HexGridPosition);
                 call.Invoke(ctrl, new object[] { cd.RoundNum, cd.TimeUnitsManager, me, target, distance });
-                Plugin.Trace("[удар] обычный удар по " + target.UserId + ", дистанция " + distance);
+                Plugin.Trace("[strike] plain strike at " + target.UserId + ", distance " + distance);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[удар] обычный удар: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[strike] plain strike: " + e.Message); return false; }
         }
 
         private static void Quiet()
@@ -399,7 +399,7 @@ namespace NewAgeQoL
                 var button = ctrl != null ? AccessTools.Property(typeof(CombatButtonsController), "AttackButton")?.GetValue(ctrl) as AttackButton : null;
                 if (button != null) button.Disable();
             }
-            catch (Exception e) { Plugin.Trace("[удар] кнопка удара: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] strike button: " + e.Message); }
         }
     }
 
@@ -412,11 +412,11 @@ namespace NewAgeQoL
             {
                 string locked = Strike.Locked();
                 if (locked == null) return !Strike.Swing();
-                Plugin.Trace("[удар] кнопка удара: " + locked + " — не бью");
+                Plugin.Trace("[strike] strike button: " + locked + " - not striking");
                 Strike.Release();
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[удар] кнопка атаки: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[strike] attack button: " + e.Message); return true; }
         }
     }
 
@@ -425,14 +425,14 @@ namespace NewAgeQoL
     {
         private static void Postfix(object[] __args)
         {
-            if (__args != null && ((__args.Length > 0 && __args[0] != null) || (__args.Length > 1 && __args[1] != null))) Strike.Chosen("удар");
+            if (__args != null && ((__args.Length > 0 && __args[0] != null) || (__args.Length > 1 && __args[1] != null))) Strike.Chosen("strike");
         }
     }
 
     [HarmonyPatch(typeof(CombatRequest), "AddKick")]
     internal static class StrikeKickPatch
     {
-        private static void Postfix() => Strike.Chosen("удар");
+        private static void Postfix() => Strike.Chosen("strike");
     }
 
     [HarmonyPatch(typeof(CombatRequest), "SetBlocks")]
@@ -440,14 +440,14 @@ namespace NewAgeQoL
     {
         private static void Postfix(object[] __args)
         {
-            if (__args != null && __args.Length > 0 && Strike.AnyBlock(__args[0] as BlocksMessage)) Strike.Chosen("блок");
+            if (__args != null && __args.Length > 0 && Strike.AnyBlock(__args[0] as BlocksMessage)) Strike.Chosen("block");
         }
     }
 
     [HarmonyPatch(typeof(CombatRequest), "AddBlock")]
     internal static class StrikeBlockPatch
     {
-        private static void Postfix() => Strike.Chosen("блок");
+        private static void Postfix() => Strike.Chosen("block");
     }
 
     [HarmonyPatch(typeof(PhaseTimerScript), "EndPhasePressed")]

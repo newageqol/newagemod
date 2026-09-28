@@ -24,7 +24,7 @@ namespace NewAgeQoL
             _box = box;
             _bornFrame = Time.frameCount;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
-            Plugin.Trace("[переход] окно перехода, Enter подтвердит");
+            Plugin.Trace("[gate] gate window, Enter will confirm");
         }
 
         internal static void Tick()
@@ -40,10 +40,10 @@ namespace NewAgeQoL
                 if (ok == null || !ok.isActiveAndEnabled || !ok.interactable) return;
                 _enterFrame = Time.frameCount;
                 _box = null;
-                Plugin.Trace("[переход] подтверждён по Enter");
+                Plugin.Trace("[gate] confirmed by Enter");
                 ok.onClick.Invoke();
             }
-            catch (Exception e) { Plugin.Trace("[переход] Enter: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[gate] Enter: " + e.Message); }
         }
     }
 
@@ -56,7 +56,7 @@ namespace NewAgeQoL
         private static void Postfix(string message, ConfirmMessageBox __result)
         {
             try { if (message == TravelEnter.Question) TravelEnter.Born(__result); }
-            catch (Exception e) { Plugin.Trace("[переход] окно: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[gate] window: " + e.Message); }
         }
     }
 }

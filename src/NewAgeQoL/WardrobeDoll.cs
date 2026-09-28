@@ -48,7 +48,7 @@ namespace NewAgeQoL
             {
                 if (!Chainloader.PluginInfos.TryGetValue("newage.2d", out var info) || info.Instance == null)
                 {
-                    Plugin.Trace("[переодевалка] NewAge2D не установлен, куклы не будет");
+                    Plugin.Trace("[wardrobe] NewAge2D not installed, no doll");
                     return;
                 }
                 var asm = info.Instance.GetType().Assembly;
@@ -60,7 +60,7 @@ namespace NewAgeQoL
                 var storeType = asm.GetType("NewAge2D.SwfStore");
                 if (_request == null || _wear == null || picture == null || doll == null || worker == null || storeType == null)
                 {
-                    Plugin.Warn("[переодевалка] в NewAge2D нет нужных типов куклы");
+                    Plugin.Warn("[wardrobe] NewAge2D lacks the required doll types");
                     _request = null;
                     return;
                 }
@@ -83,15 +83,15 @@ namespace NewAgeQoL
                 _error = picture.GetField("Error", Any);
                 if (_store == null || _render == null || _run == null || _list == null || _rgba == null)
                 {
-                    Plugin.Warn("[переодевалка] у куклы NewAge2D другой вид, рисовать не берусь");
+                    Plugin.Warn("[wardrobe] NewAge2D doll has a different shape, not drawing it");
                     _run = null;
                     return;
                 }
-                Plugin.Trace("[переодевалка] кукла NewAge2D подключена");
+                Plugin.Trace("[wardrobe] NewAge2D doll connected");
             }
             catch (Exception e)
             {
-                Plugin.Warn("[переодевалка] кукла NewAge2D: " + e.Message);
+                Plugin.Warn("[wardrobe] NewAge2D doll: " + e.Message);
                 _run = null;
             }
         }
@@ -124,7 +124,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Warn("[переодевалка] кукла не заказана: " + e.Message);
+                Plugin.Warn("[wardrobe] doll not requested: " + e.Message);
                 return 0;
             }
             return job;

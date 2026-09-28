@@ -35,7 +35,7 @@ namespace NewAgeQoL
                 }
                 Put(text, seconds);
             }
-            catch (Exception e) { Plugin.Trace("[сообщение] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[message] " + e.Message); }
         }
 
         private static void Put(string text, float seconds)

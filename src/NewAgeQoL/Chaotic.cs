@@ -58,7 +58,7 @@ namespace NewAgeQoL
                 if (_paper != null && _paper.enabled) _paper.enabled = false;
                 if (_autoBar != null && _autoBar.enabled) _autoBar.enabled = false;
             }
-            catch (Exception e) { Plugin.Trace("[заявки] поздний кадр: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[claims] late frame: " + e.Message); }
         }
 
         internal static void Wake()
@@ -89,9 +89,9 @@ namespace NewAgeQoL
                     _view = view;
                     _noRail = false;
                     var main = Main();
-                    Plugin.Trace("[заявки] окно " + view.GetType().Name + " переделываю в список; MainContainer "
-                        + (main != null ? "есть" : "НЕ НАЙДЕН") + ", ScrollContainerMask "
-                        + (main != null && main.Find("ScrollContainerMask") != null ? "есть" : "нет"));
+                    Plugin.Trace("[claims] window " + view.GetType().Name + " rebuilt as a list; MainContainer "
+                        + (main != null ? "found" : "NOT FOUND") + ", ScrollContainerMask "
+                        + (main != null && main.Find("ScrollContainerMask") != null ? "found" : "none"));
                     Build();
                     if (_panel == null) return;
                 }
@@ -102,7 +102,7 @@ namespace NewAgeQoL
                 Fill();
                 Clocks();
             }
-            catch (Exception e) { Plugin.Fault("[заявки] " + e.Message); Restore(); }
+            catch (Exception e) { Plugin.Fault("[claims] " + e.Message); Restore(); }
         }
 
         private static float _seekAt;
@@ -163,7 +163,7 @@ namespace NewAgeQoL
             if (hider != null) hider.enabled = false;
             if (_railAcross != null) _railAcross.gameObject.SetActive(false);
             if (_railDown != null) _railDown.gameObject.SetActive(false);
-            Plugin.Trace("[заявки] полоса прокрутки списка убрана");
+            Plugin.Trace("[claims] list scrollbar removed");
         }
 
         private static void Lift(bool up)
@@ -261,7 +261,7 @@ namespace NewAgeQoL
             if (_view == null) return null;
             var caption = AccessTools.Field(typeof(BaseEnterfightView), "Caption")?.GetValue(_view) as Text;
             if (caption != null && caption.transform.IsChildOf(_view.transform)) return null;
-            Plugin.Trace("[заявки] карточки прячу по самому окну: ScrollContainerMask не найден");
+            Plugin.Trace("[claims] hiding cards by the window itself: ScrollContainerMask not found");
             return _view.transform;
         }
 
@@ -303,10 +303,10 @@ namespace NewAgeQoL
                 if (view == null) view = UnityEngine.Object.FindObjectOfType<ChaoticEnterfightView>();
                 if (view == null || view.CreateAnnouncePanel == null || !view.CreateAnnouncePanel.activeInHierarchy) return false;
                 view.CreateAnnounceCancelClick();
-                Plugin.Trace("[заявки] окно создания заявки закрыто по Escape");
+                Plugin.Trace("[claims] claim creation window closed by Escape");
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[заявки] Escape: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[claims] Escape: " + e.Message); return false; }
         }
 
         private static void Dress(RectTransform maker)
@@ -350,13 +350,13 @@ namespace NewAgeQoL
                     var image = art as Image;
                     told.Append(art.GetType().Name).Append(' ').Append(art.name)
                         .Append(image != null && image.sprite != null ? "=" + image.sprite.name : "")
-                        .Append(' ').Append(Mathf.RoundToInt(w / wide * 100f)).Append('%').Append(frame ? " рамка; " : " у края; ");
+                        .Append(' ').Append(Mathf.RoundToInt(w / wide * 100f)).Append('%').Append(frame ? " frame; " : " at edge; ");
                     art.enabled = false;
                     Trims.Add(art);
                 }
-                Plugin.Trace("[заявки] украшения у кнопки создания: " + (told.Length > 0 ? told.ToString() : "не найдены"));
+                Plugin.Trace("[claims] create button decorations: " + (told.Length > 0 ? told.ToString() : "not found"));
             }
-            catch (Exception e) { Plugin.Trace("[заявки] украшения кнопки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[claims] button decorations: " + e.Message); }
         }
 
         private static RectTransform Maker()
@@ -371,7 +371,7 @@ namespace NewAgeQoL
             if (found == null) return null;
             _maker = found.transform as RectTransform;
             if (_maker != null) { _makerHome = _maker.position; _makerMoved = false; }
-            Plugin.Trace("[заявки] кнопка создания: " + found.gameObject.name + (wired ? ", по обработчику" : ", по имени объекта"));
+            Plugin.Trace("[claims] create button: " + found.gameObject.name + (wired ? ", by handler" : ", by object name"));
             return _maker;
         }
 
@@ -437,7 +437,7 @@ namespace NewAgeQoL
                 if (_maker != null && _makerMoved) _maker.position = _makerHome;
                 if (_panel != null) UnityEngine.Object.Destroy(_panel);
             }
-            catch (Exception e) { Plugin.Trace("[заявки] возврат: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[claims] return: " + e.Message); }
             Folded.Clear();
             Bars.Clear();
             Trims.Clear();
@@ -554,7 +554,7 @@ namespace NewAgeQoL
                     if (low > area.rect.yMin && low < area.rect.yMax) return low + 26f;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[заявки] шапка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[claims] header: " + e.Message); }
             return area.rect.yMax - 268f;
         }
 
@@ -759,7 +759,7 @@ namespace NewAgeQoL
                     var click = enter != null ? enter.GetComponent<Button>() : null;
                     if (click != null) click.onClick.Invoke();
                 }
-                catch (Exception e) { Plugin.Warn("[заявки] вход: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[claims] entry: " + e.Message); }
             });
         }
 

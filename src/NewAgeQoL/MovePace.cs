@@ -21,7 +21,7 @@ namespace NewAgeQoL
         {
             if (msg == null) return;
             int left = msg.Value3;
-            Plugin.Trace("[скорость] режим " + msg.Value1 + ", таймер " + left + " из " + msg.Value2 + " мс");
+            Plugin.Trace("[speed] mode " + msg.Value1 + ", timer " + left + " of " + msg.Value2 + " ms");
             if (left > 0)
             {
                 _due = Time.unscaledTime + left / 1000f + Margin;
@@ -29,14 +29,14 @@ namespace NewAgeQoL
             }
             if (_due <= 0f) return;
             _due = 0f;
-            Resend("сервер прислал режим без таймера");
+            Resend("server sent mode without timer");
         }
 
         internal static void Tick()
         {
             if (_due <= 0f || Time.unscaledTime < _due) return;
             _due = 0f;
-            Resend("таймер режима вышел");
+            Resend("mode timer expired");
         }
 
         private static void Resend(string why)
@@ -52,9 +52,9 @@ namespace NewAgeQoL
                 (MoverField?.GetValue(map) as splineMove)?.Stop();
                 ToggleMethod?.Invoke(map, new object[] { false });
                 conn.SendRequest(new BeginMoveRequest(target.Id));
-                Plugin.Trace("[скорость] " + why + ": иду к v" + target.Id + " заново, с новой скоростью");
+                Plugin.Trace("[speed] " + why + ": walking to v" + target.Id + " again, with the new speed");
             }
-            catch (Exception e) { Plugin.Trace("[скорость] повтор хода: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[speed] move resend: " + e.Message); }
         }
     }
 
@@ -64,7 +64,7 @@ namespace NewAgeQoL
         private static void Postfix(object msg)
         {
             try { MovePace.Heard(msg as ThreeIntMessage); }
-            catch (Exception e) { Plugin.Trace("[скорость] ответ 155: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[speed] response 155: " + e.Message); }
         }
     }
 }

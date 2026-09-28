@@ -10,6 +10,7 @@ namespace NewAge2D;
 internal static class WindowDoll
 {
     private const string DollName = "NewAge2D.Doll";
+    private const float Room = 0.1f;
 
     private static readonly Dictionary<int, string> ImageByThing = new();
     private static readonly Dictionary<int, string> ImageBySlot = new();
@@ -21,7 +22,8 @@ internal static class WindowDoll
 
     private static string _signature;
     private static int _job;
-    private static float _worldHeight;
+    private static float _worldLow;
+    private static float _worldHigh;
 
     [HarmonyPrefix, HarmonyPatch(typeof(UserMenuCharacterSlotsPanelContent), "UpdateView")]
     private static void RememberImages(IDictionary<ESlots.SlotType, InventoryWearResponseMessageItem> wearedSlots)
@@ -42,7 +44,7 @@ internal static class WindowDoll
     private static void AfterLayer(UserMenuSlotsPanel3DCharacter __instance)
     {
         try { Refresh(__instance); }
-        catch (Exception ex) { Plugin.Log.LogError("[кукла] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[doll] " + ex); }
     }
 
     internal static void Set(bool on)
@@ -52,7 +54,7 @@ internal static class WindowDoll
             if (on)
             {
                 try { Refresh(panel); }
-                catch (Exception ex) { Plugin.Log.LogError("[кукла] " + ex); }
+                catch (Exception ex) { Plugin.Log.LogError("[doll] " + ex); }
                 continue;
             }
             var character = CharacterField.GetValue(panel) as PlayerCharacter;
@@ -73,20 +75,41 @@ internal static class WindowDoll
 
         bool any = false;
         var bounds = new Bounds();
+        var weapons = new HashSet<Transform>();
+        AddWeapons(weapons, character.LeftHandWeapon);
+        AddWeapons(weapons, character.RightHandWeapon);
         Hidden.RemoveWhere(r => r == null);
         foreach (var renderer in container.GetComponentsInChildren<Renderer>(true))
         {
             if (renderer.gameObject.name == DollName) continue;
             if (renderer.enabled)
             {
-                if (!any) { bounds = renderer.bounds; any = true; }
-                else bounds.Encapsulate(renderer.bounds);
+                if (!InWeapon(renderer.transform, weapons))
+                {
+                    if (!any) { bounds = renderer.bounds; any = true; }
+                    else bounds.Encapsulate(renderer.bounds);
+                }
                 Hidden.Add(renderer);
             }
             renderer.enabled = false;
         }
-        if (any && bounds.size.y > 0.05f) _worldHeight = bounds.size.y;
-        if (_worldHeight <= 0f) _worldHeight = 1.8f;
+        if (any)
+        {
+            var root = container.transform;
+            var center = bounds.center;
+            float low = root.InverseTransformPoint(new Vector3(center.x, bounds.min.y, center.z)).y;
+            float high = root.InverseTransformPoint(new Vector3(center.x, bounds.max.y, center.z)).y;
+            if (high - low > 0.05f)
+            {
+                _worldLow = low;
+                _worldHigh = high;
+            }
+        }
+        if (_worldHigh - _worldLow <= 0.05f)
+        {
+            _worldLow = 0f;
+            _worldHigh = 1.8f;
+        }
 
         var request = new DollRequest
         {
@@ -122,16 +145,18 @@ internal static class WindowDoll
 
         _signature = signature;
         int job = ++_job;
-        float worldHeight = _worldHeight;
+        float worldLow = _worldLow;
+        float worldHigh = _worldHigh;
+        float worldHeight = worldHigh - worldLow;
         if (Plugin.CfgVerbose.Value)
-            Plugin.Log.LogInfo($"[кукла] раса {request.Race}, пол {request.Gender}, вещей {request.Wear.Count}"
-                               + (missing.Count > 0 ? ", без картинки: " + string.Join(",", missing) : "")
-                               + $", высота 3D {worldHeight:0.00}");
+            Plugin.Log.LogInfo($"[doll] race {request.Race}, gender {request.Gender}, items {request.Wear.Count}"
+                               + (missing.Count > 0 ? ", no image: " + string.Join(",", missing) : "")
+                               + $", 3D height {worldHeight:0.00}");
 
         DollWorker.Enqueue(request, picture => MainThread.Post(() =>
         {
             if (job != _job) return;
-            if (!Show(panel, container, picture, worldHeight)) Restore();
+            if (!Show(panel, container, picture, worldLow, worldHigh)) Restore();
         }));
     }
 
@@ -143,16 +168,32 @@ internal static class WindowDoll
         _signature = null;
     }
 
-    private static bool Show(UserMenuSlotsPanel3DCharacter panel, GameObject container, DollPicture picture, float worldHeight)
+    private static void AddWeapons(HashSet<Transform> weapons, Weapon weapon)
+    {
+        var parts = weapon?.WeaponGameObjects;
+        if (parts == null) return;
+        foreach (var part in parts)
+            if (part != null) weapons.Add(part.transform);
+    }
+
+    private static bool InWeapon(Transform item, HashSet<Transform> weapons)
+    {
+        if (weapons.Count == 0) return false;
+        for (var t = item; t != null; t = t.parent)
+            if (weapons.Contains(t)) return true;
+        return false;
+    }
+
+    private static bool Show(UserMenuSlotsPanel3DCharacter panel, GameObject container, DollPicture picture, float worldLow, float worldHigh)
     {
         if (panel == null || container == null) return true;
         if (picture.Error != null)
         {
-            Plugin.Log.LogWarning("[кукла] " + picture.Error + " — показываю 3D-модель");
+            Plugin.Log.LogWarning("[doll] " + picture.Error + " - showing 3D model");
             return false;
         }
         if (Plugin.CfgVerbose.Value)
-            foreach (string note in picture.Notes) Plugin.Log.LogInfo("[кукла] " + note);
+            foreach (string note in picture.Notes) Plugin.Log.LogInfo("[doll] " + note);
 
         var texture = new Texture2D(picture.Width, picture.Height, TextureFormat.RGBA32, false)
         {
@@ -162,11 +203,28 @@ internal static class WindowDoll
         texture.LoadRawTextureData(picture.Rgba);
         texture.Apply(false, true);
 
+        float worldHeight = worldHigh - worldLow;
         float pixelsPerUnit = (picture.BodyHeight > 1f ? picture.BodyHeight : picture.Height) / worldHeight;
+        float spriteLow = -picture.PivotY * picture.Height / pixelsPerUnit;
+        float spriteHigh = (1f - picture.PivotY) * picture.Height / pixelsPerUnit;
+        float boxLow = worldLow - worldHeight * Room;
+        float boxHigh = worldHigh + worldHeight * Room;
+        float fit = 1f;
+        if (spriteHigh - spriteLow > boxHigh - boxLow)
+        {
+            fit = (boxHigh - boxLow) / (spriteHigh - spriteLow);
+            pixelsPerUnit /= fit;
+            spriteLow *= fit;
+            spriteHigh *= fit;
+        }
+        float lift = 0f;
+        if (spriteHigh > boxHigh) lift = boxHigh - spriteHigh;
+        else if (spriteLow < boxLow) lift = boxLow - spriteLow;
         var sprite = Sprite.Create(texture, new Rect(0, 0, picture.Width, picture.Height),
             new Vector2(picture.PivotX, picture.PivotY), pixelsPerUnit, 0, SpriteMeshType.FullRect);
 
         var doll = Find(container) ?? Make(container);
+        doll.GetComponent<DollBillboard>().Lift = lift;
         var view = doll.GetComponent<SpriteRenderer>();
         var old = view.sprite;
         view.sprite = sprite;
@@ -176,7 +234,7 @@ internal static class WindowDoll
             UnityEngine.Object.Destroy(old);
         }
         Place(doll, container, panel);
-        Plugin.Log.LogInfo($"[кукла] показана {picture.Width}x{picture.Height}, тело {picture.BodyHeight:0} px, {pixelsPerUnit:0} px на единицу");
+        Plugin.Log.LogInfo($"[doll] shown {picture.Width}x{picture.Height}, body {picture.BodyHeight:0} px, {pixelsPerUnit:0} px per unit, fit {fit:0.00}, lift {lift:0.00}");
         return true;
     }
 
@@ -198,7 +256,7 @@ internal static class WindowDoll
             billboard.Skin = new Material(shader);
             view.sharedMaterial = billboard.Skin;
         }
-        else Plugin.Log.LogWarning("[кукла] шейдер спрайтов не найден, останется материал по умолчанию");
+        else Plugin.Log.LogWarning("[doll] sprite shader not found, default material stays");
         return doll;
     }
 
@@ -206,8 +264,8 @@ internal static class WindowDoll
     {
         int layer = LayerMask.NameToLayer("WindowGameObjectsLayer");
         doll.layer = layer >= 0 ? layer : container.layer;
-        doll.transform.localPosition = Vector3.zero;
         var billboard = doll.GetComponent<DollBillboard>();
+        doll.transform.localPosition = new Vector3(0f, billboard.Lift, 0f);
         billboard.Eye = panel.GetComponentInChildren<Camera>(true);
         billboard.Body = container.transform;
         doll.SetActive(true);
@@ -219,6 +277,7 @@ internal sealed class DollBillboard : MonoBehaviour
     public Camera Eye;
     public Transform Body;
     public Material Skin;
+    public float Lift;
 
     private SpriteRenderer _view;
     private bool _baseKnown;

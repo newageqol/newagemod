@@ -89,7 +89,7 @@ namespace NewAgeQoL
                 bool show = _open && !locked;
                 if (_list.gameObject.activeSelf != show) _list.gameObject.SetActive(show);
             }
-            catch (Exception e) { Plugin.Trace("[скорость] полоса: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[speed] bar: " + e.Message); }
         }
 
         private static string Caption(bool locked)
@@ -266,7 +266,7 @@ namespace NewAgeQoL
             }
 
             listGo.SetActive(false);
-            Plugin.Trace("[скорость] полоса над чатом собрана");
+            Plugin.Trace("[speed] bar above chat built");
         }
 
         private static bool _ruled;
@@ -281,9 +281,9 @@ namespace NewAgeQoL
             var his = new Vector3[4];
             _bar.GetWorldCorners(mine);
             home.GetWorldCorners(his);
-            Plugin.Trace("[скорость] полоса x " + mine[0].x.ToString("0.#") + "…" + mine[2].x.ToString("0.#")
-                + " | чат x " + his[0].x.ToString("0.#") + "…" + his[2].x.ToString("0.#")
-                + " | справа расходятся на " + (mine[2].x - his[2].x).ToString("0.##"));
+            Plugin.Trace("[speed] bar x " + mine[0].x.ToString("0.#") + "…" + mine[2].x.ToString("0.#")
+                + " | chat x " + his[0].x.ToString("0.#") + "…" + his[2].x.ToString("0.#")
+                + " | right edges differ by " + (mine[2].x - his[2].x).ToString("0.##"));
         }
 
         private static void Room(float right)

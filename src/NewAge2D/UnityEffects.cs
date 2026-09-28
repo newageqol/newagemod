@@ -23,17 +23,17 @@ internal static class Effects
         if (__result == null) return;
         try
         {
-            if (Plugin.CfgVerbose.Value && Asked.Add(name ?? "")) Plugin.Log.LogInfo($"[эффекты] игра запросила префаб «{name}»");
+            if (Plugin.CfgVerbose.Value && Asked.Add(name ?? "")) Plugin.Log.LogInfo($"[effects] game requested prefab '{name}'");
             Remember(__result);
             if (Plugin.HideMagic) Strip(__result, name);
         }
-        catch (Exception ex) { Plugin.Log.LogError("[эффекты] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[effects] " + ex); }
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(BaseVisualEffectHandler), "AttachToBottom")]
     private static void AfterBottom(ref GameObject __result)
     {
-        if (Plugin.HideMagic && __result != null) StripInstance(__result, "снизу");
+        if (Plugin.HideMagic && __result != null) StripInstance(__result, "below");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(BaseVisualEffectHandler), "AttachToTop")]
@@ -42,7 +42,7 @@ internal static class Effects
     [HarmonyPrefix, HarmonyPatch(typeof(BaseVisualEffectHandler), "AttachToHand")]
     private static void BeforeHand(GameObject instance)
     {
-        if (Plugin.HideMagic && instance != null) StripInstance(instance, "в руке");
+        if (Plugin.HideMagic && instance != null) StripInstance(instance, "in hand");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(MagicAttacher), "MakeAttachments")]
@@ -68,7 +68,7 @@ internal static class Effects
         foreach (var light in instance.GetComponentsInChildren<Light>(true))
             light.enabled = false;
         if (Plugin.CfgVerbose.Value && Seen.Add("inst:" + instance.name))
-            Plugin.Log.LogInfo($"[эффекты] экземпляр «{instance.name}» {where} скрыт: рендереров {count}");
+            Plugin.Log.LogInfo($"[effects] instance '{instance.name}' {where} hidden: renderers {count}");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(AnimationEventHandler), "arcTrailRendererStart")]
@@ -148,7 +148,7 @@ internal static class Effects
         StrippedRenderers[id] = renderers;
         StrippedLights[id] = lights;
         if (Plugin.CfgVerbose.Value && Seen.Add(name ?? ""))
-            Plugin.Log.LogInfo($"[эффекты] 3D-эффект «{name}» скрыт: рендереров {renderers.Count}, источников света {lights.Count}");
+            Plugin.Log.LogInfo($"[effects] 3D effect '{name}' hidden: renderers {renderers.Count}, lights {lights.Count}");
     }
 
     internal static void Set(bool on)
@@ -201,7 +201,7 @@ internal static class Effects
                 else HideInstance(pair.Key);
             }
         }
-        catch (Exception ex) { Plugin.Log.LogError("[эффекты] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[effects] " + ex); }
     }
 
     private static void HideInstance(Transform root)

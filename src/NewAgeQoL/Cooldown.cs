@@ -57,7 +57,7 @@ namespace NewAgeQoL
                 Tell(button);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[кд] " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[cd] " + e.Message); return false; }
         }
 
         internal static IQuickButton Skill(int id)
@@ -76,15 +76,15 @@ namespace NewAgeQoL
             int left = Left(button);
             if (left <= 0)
             {
-                Plugin.Trace("[кд] умение " + button.Id + " готово, в чат ничего не пишу");
+                Plugin.Trace("[cd] skill " + button.Id + " ready, nothing to post in chat");
                 return;
             }
             string name;
             if (!Names.TryGetValue(button.Id, out name)) name = button.Name ?? "";
             string text = "кд " + name + " " + left + " " + Rounds(left);
             Post(text);
-            Plugin.Trace("[кд] умение " + button.Id + ": перезарядка " + button.Recharge + ", прошло " + button.Turn
-                         + ", в чат: " + text);
+            Plugin.Trace("[cd] skill " + button.Id + ": recharge " + button.Recharge + ", elapsed " + button.Turn
+                         + ", to chat: " + text);
         }
 
         private static int Left(IQuickButton button)
@@ -106,7 +106,7 @@ namespace NewAgeQoL
         private static void Post(string text)
         {
             try { NetworkConnection.Instance.SendRequest(new ChatRequest(null, EChatMessageType.MSG_TEAM, text)); }
-            catch (Exception e) { Plugin.Warn("[кд] отправка в командный чат: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[cd] team chat send: " + e.Message); }
         }
     }
 
@@ -117,7 +117,7 @@ namespace NewAgeQoL
         private static bool Prefix(int buttonId)
         {
             try { return !Cooldown.Catch(Cooldown.Skill(buttonId)); }
-            catch (Exception e) { Plugin.Trace("[кд] кнопка умения: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[cd] skill button: " + e.Message); return true; }
         }
     }
 
@@ -137,7 +137,7 @@ namespace NewAgeQoL
                 int cut = text.IndexOf('\n');
                 tip.text = cut < 0 ? text + Cooldown.Tip : text.Substring(0, cut) + Cooldown.Tip + text.Substring(cut);
             }
-            catch (Exception e) { Plugin.Trace("[кд] подсказка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cd] hint: " + e.Message); }
         }
     }
 
@@ -148,7 +148,7 @@ namespace NewAgeQoL
         private static bool Prefix(IQuickButton skill)
         {
             try { return !Cooldown.Catch(skill); }
-            catch (Exception e) { Plugin.Trace("[кд] выбор умения: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[cd] skill pick: " + e.Message); return true; }
         }
     }
 
@@ -159,7 +159,7 @@ namespace NewAgeQoL
         private static bool Prefix(IQuickButton button)
         {
             try { return !Cooldown.Catch(button); }
-            catch (Exception e) { Plugin.Trace("[кд] отправка умения: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[cd] skill send: " + e.Message); return true; }
         }
     }
 }

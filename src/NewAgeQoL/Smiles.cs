@@ -94,22 +94,22 @@ namespace NewAgeQoL
                 string list = null;
                 byte[] raw = Grab("smiles.txt");
                 if (raw != null) list = new UTF8Encoding(false).GetString(raw);
-                if (art == null || list == null) { Plugin.Trace("[смайлики] нет картинки или описи"); return; }
+                if (art == null || list == null) { Plugin.Trace("[smiles] no picture or index"); return; }
                 if (!Read(list)) return;
 
                 _sheet = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                 _sheet.wrapMode = TextureWrapMode.Clamp;
                 _sheet.filterMode = FilterMode.Bilinear;
                 _sheet.hideFlags = HideFlags.HideAndDontSave;
-                if (!ImageConversion.LoadImage(_sheet, art)) { Plugin.Trace("[смайлики] картинка не прочиталась"); return; }
+                if (!ImageConversion.LoadImage(_sheet, art)) { Plugin.Trace("[smiles] picture could not be read"); return; }
 
                 Measure();
                 Build();
                 _ready = true;
                 Fit(_wanted ?? TMP_Settings.defaultFontAsset);
-                Plugin.Trace("[смайлики] готово: " + Faces.Count + " штук, кадров " + _asset.spriteCharacterTable.Count);
+                Plugin.Trace("[smiles] ready: " + Faces.Count + " pcs, frames " + _asset.spriteCharacterTable.Count);
             }
-            catch (Exception e) { Plugin.Fault("[смайлики] подготовка: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[smiles] setup: " + e.Message); }
         }
 
         private static byte[] Grab(string tail)
@@ -207,7 +207,7 @@ namespace NewAgeQoL
                     face.Solid = hi >= lo ? hi - lo + 1 : face.Height;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[смайлики] замер рисунков: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[smiles] glyph measure: " + e.Message); }
         }
 
         private static void Build()
@@ -221,7 +221,7 @@ namespace NewAgeQoL
             if (stamp != null) stamp.SetValue(_asset, "1.1.0");
             ShaderUtilities.GetShaderPropertyIDs();
             var paint = Paint();
-            if (paint == null) throw new Exception("не нашёлся материал для картинок в тексте");
+            if (paint == null) throw new Exception("material for inline text images not found");
             paint.name = Sheet + " Material";
             paint.hideFlags = HideFlags.HideAndDontSave;
             paint.SetTexture(ShaderUtilities.ID_MainTex, _sheet);
@@ -253,9 +253,9 @@ namespace NewAgeQoL
             MaterialReferenceManager.AddSpriteAsset(_asset.hashCode, _asset);
             TMP_SpriteAsset back;
             if (!MaterialReferenceManager.TryGetSpriteAsset(_asset.hashCode, out back) || !ReferenceEquals(back, _asset))
-                throw new Exception("лист смайликов не записался в справочник TextMeshPro");
+                throw new Exception("smiles sheet was not registered in TextMeshPro");
             if (_asset.spriteCharacterTable.Count != (int)slot)
-                throw new Exception("кадров в листе " + _asset.spriteCharacterTable.Count + ", ждали " + slot);
+                throw new Exception("frames in sheet " + _asset.spriteCharacterTable.Count + ", expected " + slot);
         }
 
         private static Material Paint()
@@ -283,9 +283,9 @@ namespace NewAgeQoL
                 if (slot == null) return;
                 slot.SetValue(_asset, info);
                 _fitted = font;
-                Plugin.Trace("[смайлики] размер по шрифту «" + font.name + "»: " + main.pointSize + " пт");
+                Plugin.Trace("[smiles] size from font '" + font.name + "': " + main.pointSize + " pt");
             }
-            catch (Exception e) { Plugin.Trace("[смайлики] размер: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[smiles] size: " + e.Message); }
         }
 
         internal static string Dress(string text)
@@ -344,7 +344,7 @@ namespace NewAgeQoL
             Prepare();
             if (!_ready) return;
             try { Show(near); }
-            catch (Exception e) { Plugin.Fault("[смайлики] окно: " + e.Message); Close(); }
+            catch (Exception e) { Plugin.Fault("[smiles] window: " + e.Message); Close(); }
         }
 
         internal static void Close()
@@ -506,7 +506,7 @@ namespace NewAgeQoL
                 var run = __instance != null ? __instance.GetComponent<TMP_SpriteAnimator>() : null;
                 if (run != null) run.StopAllAnimations();
             }
-            catch (Exception e) { Plugin.Trace("[смайлики] пустой текст: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[smiles] empty text: " + e.Message); }
         }
     }
 
@@ -517,7 +517,7 @@ namespace NewAgeQoL
         {
             if (!Smiles.Ready) return true;
             try { __result = Smiles.Dress(str); }
-            catch (Exception e) { Plugin.Trace("[смайлики] строка: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[smiles] line: " + e.Message); return true; }
             return false;
         }
     }

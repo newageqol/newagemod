@@ -112,9 +112,9 @@ namespace NewAgeQoL
                 Build();
                 Changed(true);
                 WardrobeUpdate.Auto(S.Unknown.Count > 0);
-                Plugin.Trace("[переодевалка] открыта: " + Describe());
+                Plugin.Trace("[wardrobe] opened: " + Describe());
             }
-            catch (Exception e) { Plugin.Fault("[переодевалка] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[wardrobe] window: " + e); Close(); }
         }
 
         internal static void Close()
@@ -188,14 +188,14 @@ namespace NewAgeQoL
             var race = S.Race;
             var klass = S.Klass;
             var sub = S.Sub;
-            return (race != null ? race.Name : "?") + ", ур. " + S.Level + ", " + (klass != null ? klass.Name : "?")
-                   + (sub != null ? " / " + sub.Name : "") + ", вещей " + S.Worn.Count + ", рейтинг " + S.Rating;
+            return (race != null ? race.Name : "?") + ", lvl " + S.Level + ", " + (klass != null ? klass.Name : "?")
+                   + (sub != null ? " / " + sub.Name : "") + ", items " + S.Worn.Count + ", rating " + S.Rating;
         }
 
         internal static void Seed()
         {
             try { Blank(); }
-            catch (Exception e) { Plugin.Trace("[переодевалка] свой персонаж не прочитан: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] own character not read: " + e.Message); }
             S.Settle(false);
         }
 
@@ -214,9 +214,26 @@ namespace NewAgeQoL
             return true;
         }
 
+        private static WardrobeThing Known(int slot, InventoryWearResponseMessageItem item, Dictionary<int, IGeneralThingInfoDescription> told, ref int adopted)
+        {
+            var thing = WardrobeData.Thing(item.ThingId);
+            if (thing != null) return thing;
+            IGeneralThingInfoDescription about = null;
+            if (told != null) told.TryGetValue(item.ThingId, out about);
+            if (about != null) thing = WardrobeData.Called(about.Name, about.Level ?? item.Level, item.Rarity);
+            if (thing == null) thing = WardrobeData.Look(item.Image, item.Level, item.Rarity);
+            if (thing == null && about != null && WardrobeData.Fits(slot, (int)about.ThingSubType))
+            {
+                thing = WardrobeData.Adopt(WardrobeData.FromGame(about));
+                if (thing != null) adopted++;
+            }
+            return thing;
+        }
+
         private static int Seed(Dictionary<int, InventoryWearResponseMessageItem> worn, Dictionary<int, IGeneralThingInfoDescription> told, int[] card)
         {
             int dressed = 0;
+            int adopted = 0;
             try
             {
                 if (Controllers.User?.UserInfo == null) { S.Settle(false); return 0; }
@@ -234,7 +251,7 @@ namespace NewAgeQoL
                             arts.Add(new KeyValuePair<int, IGeneralThingInfoDescription>(pair.Key, about));
                         continue;
                     }
-                    var thing = WardrobeData.Thing(item.ThingId) ?? WardrobeData.Look(item.Image, item.Level, item.Rarity);
+                    var thing = Known(pair.Key, item, told, ref adopted);
                     if (thing == null || !WardrobeData.Fits(pair.Key, thing.Sub) || thing.Level > S.Level) continue;
                     S.Wear(pair.Key, thing);
                     dressed++;
@@ -246,12 +263,13 @@ namespace NewAgeQoL
                     dressed++;
                 }
                 foreach (var pair in new List<KeyValuePair<int, WardrobeThing>>(S.Worn)) S.Grant(pair.Value);
-                Plugin.Trace("[переодевалка] как у меня: надето " + dressed + ", из них артефактов " + arts.Count
-                             + (card != null ? ", броня по точкам из карточки" : ", карточки нет — броня артефактов поровну"));
+                if (adopted > 0) Notice.Show("Переодевалка: вещей нет в базе, взял из игры без требований: " + adopted, 5f);
+                Plugin.Trace("[wardrobe] like mine: worn " + dressed + ", artifacts among them " + arts.Count + ", taken from the game " + adopted
+                             + (card != null ? ", armor by zones from the card" : ", no card - artifact armor split evenly"));
             }
             catch (Exception e)
             {
-                Plugin.Trace("[переодевалка] свой персонаж не прочитан: " + e.Message);
+                Plugin.Trace("[wardrobe] own character not read: " + e.Message);
                 S.Settle(false);
             }
             return dressed;
@@ -277,7 +295,7 @@ namespace NewAgeQoL
                 if (info != null) { me = info.UserId; login = info.Login; }
                 if (me > 0) Armor.AskNow(me, login);
             }
-            catch (Exception e) { Plugin.Trace("[переодевалка] карточка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] card: " + e.Message); }
             yield return Plugin.Instance.StartCoroutine(Artifacts.FetchWear());
             if (!Artifacts.WearArrived)
             {
@@ -308,7 +326,7 @@ namespace NewAgeQoL
                 };
             int dressed = Seed(worn, told, card);
             Changed(true);
-            if (told.Count < asked) Notice.Show("Переодевалка: игра не рассказала про " + (asked - told.Count) + " " + Plural(asked - told.Count, "артефакт", "артефакта", "артефактов"), 5f);
+            if (told.Count < asked) Notice.Show("Переодевалка: игра не рассказала про " + (asked - told.Count) + " " + Plural(asked - told.Count, "вещь", "вещи", "вещей"), 5f);
             else
             {
                 int wanted = 0;
@@ -327,13 +345,14 @@ namespace NewAgeQoL
                 foreach (var pair in worn)
                 {
                     var item = pair.Value;
-                    if (item == null || item.Rarity != WardrobeArt.Rarity || item.ThingId <= 0) continue;
+                    if (item == null || item.ThingId <= 0 || !WardrobeData.IsSlot(pair.Key)) continue;
+                    if (item.Rarity != WardrobeArt.Rarity && WardrobeData.Thing(item.ThingId) != null) continue;
                     int id = item.ThingId;
                     asked++;
                     cache.Get(id, got => { if (got != null) told[id] = got; });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[переодевалка] описание артефакта: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] artifact description: " + e.Message); }
             return asked;
         }
 
@@ -1258,7 +1277,7 @@ namespace NewAgeQoL
             {
                 _doll.enabled = false;
                 _dollNote.text = "Кукла не нарисовалась: " + (picture.Error ?? "нет картинки");
-                Plugin.Warn("[переодевалка] кукла: " + (picture.Error ?? "нет картинки"));
+                Plugin.Warn("[wardrobe] doll: " + (picture.Error ?? "no picture"));
                 return;
             }
             try
@@ -1287,7 +1306,7 @@ namespace NewAgeQoL
             {
                 _doll.enabled = false;
                 _dollNote.text = "Кукла не нарисовалась: " + e.Message;
-                Plugin.Warn("[переодевалка] кукла в окне: " + e.Message);
+                Plugin.Warn("[wardrobe] doll in window: " + e.Message);
             }
         }
 
@@ -1555,7 +1574,7 @@ namespace NewAgeQoL
             button.onClick.AddListener(() =>
             {
                 try { click(); }
-                catch (Exception e) { Plugin.Warn("[переодевалка] кнопка: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[wardrobe] button: " + e.Message); }
             });
             return (RectTransform)go.transform;
         }
@@ -1577,7 +1596,7 @@ namespace NewAgeQoL
             button.onClick.AddListener(() =>
             {
                 try { click(); }
-                catch (Exception e) { Plugin.Warn("[переодевалка] кнопка: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[wardrobe] button: " + e.Message); }
             });
             var label = OnlineWindow.Label(go.transform, text, 18, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -1590,7 +1609,7 @@ namespace NewAgeQoL
         private void Update()
         {
             try { Wardrobe.Tick(); }
-            catch (Exception e) { Plugin.Warn("[переодевалка] такт: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[wardrobe] tick: " + e.Message); }
         }
     }
 
@@ -1628,7 +1647,7 @@ namespace NewAgeQoL
                     if (System.IO.File.Exists(file) && Make(image, System.IO.File.ReadAllBytes(file))) return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[переодевалка] картинка «" + image + "» из кэша: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] picture '" + image + "' from cache: " + e.Message); }
             if (Plugin.Instance == null) return;
             Plugin.Instance.StartCoroutine(Fetch(image, file));
         }
@@ -1643,7 +1662,7 @@ namespace NewAgeQoL
             req.Dispose();
             if (data == null || !Make(image, data))
             {
-                Plugin.Trace("[переодевалка] картинка «" + image + "» не загрузилась: " + error);
+                Plugin.Trace("[wardrobe] picture '" + image + "' did not load: " + error);
                 yield break;
             }
             if (file == null) yield break;
@@ -1652,7 +1671,7 @@ namespace NewAgeQoL
                 System.IO.Directory.CreateDirectory(Folder);
                 System.IO.File.WriteAllBytes(file, data);
             }
-            catch (Exception e) { Plugin.Trace("[переодевалка] картинка «" + image + "» не сохранилась: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] picture '" + image + "' was not saved: " + e.Message); }
         }
 
         private static bool Make(string image, byte[] data)
@@ -1687,7 +1706,7 @@ namespace NewAgeQoL
                 var last = Clone(reset, "QoLCraftButton", 3, "Калькулятор крафта", CraftCalc.Show);
                 __instance.StartCoroutine(Fit(__instance, last, 3));
             }
-            catch (Exception e) { Plugin.Fault("[переодевалка] кнопка в настройках: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[wardrobe] settings button: " + e.Message); }
         }
 
         private static RectTransform Clone(Button reset, string name, int step, string text, Action open)
@@ -1734,14 +1753,14 @@ namespace NewAgeQoL
                 float scale = root.lossyScale.y > 0f ? root.lossyScale.y : 1f;
                 float over = (box[0].y - mine[0].y) / scale + 12f;
                 if (step == 0)
-                    Plugin.Trace("[переодевалка] кнопка в настройках: колонка " + column.name + " высота " + column.rect.height.ToString("0")
-                                 + ", якоря кнопки " + button.anchorMin + "-" + button.anchorMax + ", вылезает на " + over.ToString("0"));
+                    Plugin.Trace("[wardrobe] settings button: column " + column.name + " height " + column.rect.height.ToString("0")
+                                 + ", button anchors " + button.anchorMin + "-" + button.anchorMax + ", overflows by " + over.ToString("0"));
                 if (over <= 1f) yield break;
                 if (grown >= steps * (h + 10f)) yield break;
                 float by = Mathf.Min(over, steps * (h + 10f) - grown);
                 root.sizeDelta = new Vector2(root.sizeDelta.x, root.sizeDelta.y + by);
                 grown += by;
-                Plugin.Trace("[переодевалка] окно настроек выросло на " + by.ToString("0") + ", всего " + grown.ToString("0"));
+                Plugin.Trace("[wardrobe] settings window grew by " + by.ToString("0") + ", total " + grown.ToString("0"));
             }
         }
     }

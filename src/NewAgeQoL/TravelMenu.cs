@@ -97,7 +97,7 @@ namespace NewAgeQoL
             }
             catch (System.Exception e)
             {
-                Plugin.Fault("[travel] список точек: " + e.Message);
+                Plugin.Fault("[travel] point list: " + e.Message);
                 _open = false;
             }
         }
@@ -344,7 +344,7 @@ namespace NewAgeQoL
             button.onClick.AddListener(() =>
             {
                 try { click(); }
-                catch (System.Exception e) { Plugin.Warn("[travel] кнопка точки: " + e.Message); }
+                catch (System.Exception e) { Plugin.Warn("[travel] point button: " + e.Message); }
             });
             var label = OnlineWindow.Label(rt, mark, 15, FontStyle.Bold, red ? WardrobeLook.DangerText : WardrobeLook.Bright);
             OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);

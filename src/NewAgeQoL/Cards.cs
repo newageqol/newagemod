@@ -39,7 +39,7 @@ namespace NewAgeQoL
                 Listen();
                 Drain();
             }
-            catch (Exception e) { Plugin.Trace("[карточка] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[card] " + e.Message); }
         }
 
         private static void Listen()
@@ -73,10 +73,10 @@ namespace NewAgeQoL
                 Queue.Remove(m.UserId);
                 if (!other) return;
                 Stamp++;
-                Plugin.Trace("[карточка] " + (m.Login ?? m.UserId.ToString()) + ": класс " + m.ClassId
-                             + ", клан " + (m.ClanName ?? "нет"));
+                Plugin.Trace("[card] " + (m.Login ?? m.UserId.ToString()) + ": class " + m.ClassId
+                             + ", clan " + (m.ClanName ?? "none"));
             }
-            catch (Exception e) { Plugin.Trace("[карточка] ответ: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[card] reply: " + e.Message); }
         }
 
         private static void Drain()

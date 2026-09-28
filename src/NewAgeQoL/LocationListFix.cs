@@ -25,9 +25,9 @@ namespace NewAgeQoL
                     var row = list.Content[i];
                     if (row != null && row.UserId == id) { list.RemoveItemAt(i); removed++; }
                 }
-                if (removed > 0) Plugin.Trace("[локация] убран повтор игрока " + id + " ×" + removed);
+                if (removed > 0) Plugin.Trace("[location] removed duplicate player " + id + " ×" + removed);
             }
-            catch (Exception e) { Plugin.Trace("[локация] дубли: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[location] duplicates: " + e.Message); }
         }
     }
 }

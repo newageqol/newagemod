@@ -63,8 +63,8 @@ namespace NewAgeQoL
                 child.gameObject.SetActive(false);
                 hidden.Append(hidden.Length > 0 ? ", " : "").Append(child.name);
             }
-            Plugin.Trace("[карточка] " + (m.Login ?? m.UserId.ToString()) + ": игровая вкладка " + Mathf.RoundToInt(rt.rect.width) + "x"
-                         + Mathf.RoundToInt(rt.rect.height) + ", спрятано: " + hidden);
+            Plugin.Trace("[card] " + (m.Login ?? m.UserId.ToString()) + ": game tab " + Mathf.RoundToInt(rt.rect.width) + "x"
+                         + Mathf.RoundToInt(rt.rect.height) + ", hidden: " + hidden);
             Widen(rt);
             Plugin.Instance.StartCoroutine(Lay(panel, m));
         }
@@ -96,7 +96,7 @@ namespace NewAgeQoL
                 }
                 LayoutRebuilder.MarkLayoutForRebuild(panel);
             }
-            catch (Exception e) { Plugin.Trace("[карточка] ширина окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[card] window width: " + e.Message); }
         }
 
         private static IEnumerator Lay(GeneralUserInfoPanelContent panel, Unity3DUserInfoResponseMessage m)
@@ -109,7 +109,7 @@ namespace NewAgeQoL
             float need = Pad * 2f + Height * 24f;
             height = Fit(rt, height, need);
             try { Build(panel, m, width, height); }
-            catch (Exception e) { Plugin.Warn("[карточка] не построилась: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[card] not built: " + e.Message); }
         }
 
         private static float Fit(RectTransform panel, float height, float need)
@@ -409,7 +409,7 @@ namespace NewAgeQoL
             req.timeout = 15;
             yield return req.SendWebRequest();
             string body = req.responseCode == 200 && req.downloadHandler != null ? Encoding.UTF8.GetString(req.downloadHandler.data ?? new byte[0]) : null;
-            if (body == null) Plugin.Trace("[карточка] профиль " + userId + " с сайта не пришёл: " + (req.error ?? "код " + req.responseCode));
+            if (body == null) Plugin.Trace("[card] profile " + userId + " not received from site: " + (req.error ?? "code " + req.responseCode));
             req.Dispose();
             try
             {
@@ -420,7 +420,7 @@ namespace NewAgeQoL
                         profile.Fields[match.Groups[1].Value.Trim()] = Space.Replace(value, " ").Trim();
                     }
             }
-            catch (Exception e) { Plugin.Trace("[карточка] профиль " + userId + " не разобран: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[card] profile " + userId + " not parsed: " + e.Message); }
             profile.Failed = profile.Fields.Count == 0;
             profile.Done = true;
             foreach (var wait in Live.ToArray())

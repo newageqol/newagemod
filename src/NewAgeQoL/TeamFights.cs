@@ -55,9 +55,9 @@ namespace NewAgeQoL
                     new SceneObjectInfo(TeamFights.Room, pattern.SceneObjectName, pattern.InteractionType, EObjectType.Link,
                         TeamFights.Button, pattern.AtlasType, pattern.SpriteName) { HintId = pattern.HintId });
                 field.SetValue(list);
-                Plugin.Trace("[командные] на арене добавлена кнопка в локацию " + TeamFights.Room);
+                Plugin.Trace("[team fights] arena button added for location " + TeamFights.Room);
             }
-            catch (Exception e) { Plugin.Trace("[командные] кнопка на арене: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[team fights] arena button: " + e.Message); }
         }
 
         private static void Leave(Traverse field, IList<SceneObjectInfo> infos)
@@ -72,10 +72,10 @@ namespace NewAgeQoL
                 list[i] = new SceneObjectInfo(arena, info.SceneObjectName, info.InteractionType, EObjectType.Link,
                     info.Text, info.AtlasType, info.SpriteName) { HintId = info.HintId };
                 field.SetValue(list);
-                Plugin.Trace("[командные] выход ведёт на арену " + arena + " вместо " + info.Id);
+                Plugin.Trace("[team fights] exit leads to arena " + arena + " instead of " + info.Id);
                 return;
             }
-            Plugin.Trace("[командные] кнопки выхода среди объектов локации нет");
+            Plugin.Trace("[team fights] no exit button among location objects");
         }
     }
 
@@ -92,7 +92,7 @@ namespace NewAgeQoL
                 var view = Traverse.Create(__instance).Property("EnterfightView").GetValue<BaseEnterfightView>();
                 if (view != null) view.SetCaption(TeamFights.Caption);
             }
-            catch (Exception e) { Plugin.Trace("[командные] заголовок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[team fights] title: " + e.Message); }
         }
     }
 }

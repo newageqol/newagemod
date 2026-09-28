@@ -151,29 +151,29 @@ namespace NewAgeQoL
             {
                 text = text.Replace("\r\n", "\n");
                 try { pack = Read(text); }
-                catch (Exception e) { Plugin.Warn("[рецепты] файл с GitHub не разобран: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[recipes] file from GitHub not parsed: " + e.Message); }
             }
             if (pack == null || pack.All.Count == 0)
             {
-                Plugin.Trace("[рецепты] рецепты с GitHub не пришли: " + (string.IsNullOrEmpty(error) ? "код " + code : error));
+                Plugin.Trace("[recipes] recipes from GitHub did not arrive: " + (string.IsNullOrEmpty(error) ? "code " + code : error));
                 yield break;
             }
             Load();
             if (When(pack) < When(_pack))
             {
-                Plugin.Trace("[рецепты] на GitHub рецепты старше тех, что уже есть (" + pack.Stamp + " против " + _pack.Stamp + "), оставляю свои");
+                Plugin.Trace("[recipes] recipes on GitHub are older than the current ones (" + pack.Stamp + " vs " + _pack.Stamp + "), keeping mine");
                 yield break;
             }
             if (text == Cached())
             {
-                Plugin.Trace("[рецепты] рецепты на GitHub те же, что в кэше");
+                Plugin.Trace("[recipes] recipes on GitHub are the same as in cache");
                 yield break;
             }
             Store(text);
             _pack = pack;
             _loaded = true;
             Version++;
-            Plugin.Trace("[рецепты] обновлены с GitHub: " + Describe(pack));
+            Plugin.Trace("[recipes] updated from GitHub: " + Describe(pack));
         }
 
         private static void Load()
@@ -190,7 +190,7 @@ namespace NewAgeQoL
                     cache = Read(cached);
                     if (cache.All.Count == 0) cache = null;
                 }
-                catch (Exception e) { Plugin.Warn("[рецепты] кэш рецептов битый: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[recipes] recipe cache is broken: " + e.Message); }
             }
             try
             {
@@ -198,18 +198,18 @@ namespace NewAgeQoL
                 if (bytes != null) built = Read(Encoding.UTF8.GetString(bytes));
                 if (built != null && built.All.Count == 0) built = null;
             }
-            catch (Exception e) { Plugin.Fault("[рецепты] список в сборке не прочитан: " + e); }
+            catch (Exception e) { Plugin.Fault("[recipes] built-in list not read: " + e); }
             if (cache != null && (built == null || When(cache) >= When(built)))
             {
                 _pack = cache;
-                Plugin.Trace("[рецепты] из кэша: " + Describe(cache));
+                Plugin.Trace("[recipes] from cache: " + Describe(cache));
             }
             else if (built != null)
             {
                 _pack = built;
-                Plugin.Trace("[рецепты] из сборки: " + Describe(built));
+                Plugin.Trace("[recipes] from build: " + Describe(built));
             }
-            else Plugin.Warn("[рецепты] рецептов нет ни в кэше, ни в сборке");
+            else Plugin.Warn("[recipes] no recipes in cache or in build");
         }
 
         private static DateTime When(Pack pack)
@@ -219,7 +219,7 @@ namespace NewAgeQoL
         }
 
         private static string Describe(Pack pack) =>
-            (pack.Stamp ?? "без даты") + ", рецептов " + pack.All.Count + ", предметов " + pack.Things.Count + ", профессий " + pack.Crafts.Count;
+            (pack.Stamp ?? "no date") + ", recipes " + pack.All.Count + ", things " + pack.Things.Count + ", professions " + pack.Crafts.Count;
 
         private static Pack Read(string text)
         {
@@ -315,7 +315,7 @@ namespace NewAgeQoL
                 if (File.Exists(file)) File.Delete(file);
                 File.Move(temp, file);
             }
-            catch (Exception e) { Plugin.Warn("[рецепты] кэш рецептов не записан: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[recipes] recipe cache not written: " + e.Message); }
         }
 
         private static string Cached()

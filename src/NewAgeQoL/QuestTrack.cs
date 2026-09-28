@@ -146,7 +146,7 @@ namespace NewAgeQoL
                 }
                 Lay();
             }
-            catch (Exception e) { Plugin.Trace("[слежка] " + e.Message); Kill(); }
+            catch (Exception e) { Plugin.Trace("[spectate] " + e.Message); Kill(); }
         }
 
         private static void Prune()
@@ -163,7 +163,7 @@ namespace NewAgeQoL
                 if (!Missing.TryGetValue(id, out since)) { Missing[id] = Time.unscaledTime; continue; }
                 if (Time.unscaledTime - since < 10f) continue;
                 Missing.Remove(id);
-                Plugin.Trace("[слежка] задания " + id + " больше нет в списке — перестаю следить");
+                Plugin.Trace("[spectate] quest " + id + " no longer in the list - stopped tracking");
                 Drop(id);
             }
         }

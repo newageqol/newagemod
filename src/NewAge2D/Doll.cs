@@ -229,14 +229,14 @@ public static class Doll
             string file = WearFile(wear.Image);
             if (file == null)
             {
-                outfit.Notes.Add($"слот {slot}: у вещи {wear.ThingId} нет имени картинки");
+                outfit.Notes.Add($"slot {slot}: item {wear.ThingId} has no image name");
                 continue;
             }
 
             var movie = store.Get(file, out string reason);
             if (movie == null)
             {
-                outfit.Notes.Add($"слот {slot}: {file} — {reason}");
+                outfit.Notes.Add($"slot {slot}: {file} - {reason}");
                 continue;
             }
 
@@ -252,7 +252,7 @@ public static class Doll
                 var target = root.FindDescendant(points[i]);
                 if (target == null)
                 {
-                    outfit.Notes.Add($"в теле нет точки {points[i]}");
+                    outfit.Notes.Add($"body has no point {points[i]}");
                     continue;
                 }
                 string name = $"{slot}:{symbol}";
@@ -282,7 +282,7 @@ public static class Doll
                 outfit.Attached.Add((target, instance, name, slot));
                 worn++;
             }
-            outfit.Notes.Add($"слот {slot}: {file} — частей {worn}");
+            outfit.Notes.Add($"slot {slot}: {file} - parts {worn}");
         }
         foreach (var (point, symbol) in Bare)
         {
@@ -292,7 +292,7 @@ public static class Doll
             if (instance == null) continue;
             target.AttachExternal(instance, symbol, 50000);
             outfit.Attached.Add((target, instance, symbol, -1));
-            outfit.Notes.Add($"{point} без вещей: {symbol}");
+            outfit.Notes.Add($"{point} without items: {symbol}");
         }
         return outfit;
     }
@@ -711,7 +711,7 @@ public static class Doll
         sequence.FrameRate = StageRate;
         if (!labels.TryGetValue(label, out var range))
         {
-            sequence.Error = $"в теле нет метки {label}";
+            sequence.Error = $"body has no label {label}";
             return sequence;
         }
 
@@ -753,7 +753,7 @@ public static class Doll
             {
                 count = cycle;
                 loops = true;
-                sequence.Notes.Add($"{label}: вещи живут {cycle} кадров");
+                sequence.Notes.Add($"{label}: items live {cycle} frames");
             }
         }
         bool live = (alive && loops) || label == "prizuv";
@@ -786,7 +786,7 @@ public static class Doll
                     foreach (var (target, _, name, _) in outfit.Attached) target.RemoveAttached(name);
                     outfit = Dress(root, request, store, SwapHands(request, label));
                     Kick(outfit, kick);
-                    sequence.Notes.Add($"кадр {range.Start + i}: точки крепления пересозданы, одет заново");
+                    sequence.Notes.Add($"frame {range.Start + i}: attach points recreated, dressed again");
                 }
                 sequence.AdvanceTicks += Now - mark;
                 if (step > 1)
@@ -865,7 +865,7 @@ public static class Doll
         var root = movie.CreateRoot();
         root.GotoAndStop(0);
         var bounds = SwfBounds.Measure(movie, root, SwfMatrix.Identity);
-        if (bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1) return new DollPicture { Error = "в ролике нечего рисовать" };
+        if (bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1) return new DollPicture { Error = "nothing to draw in clip" };
 
         int left = (int)Math.Round(bounds.Left);
         int top = (int)Math.Round(bounds.Top);
@@ -907,7 +907,7 @@ public static class Doll
     public static DollSequence RenderClip(SwfMovie movie, string symbol, float scale, int smooth, bool sharp = true)
     {
         var root = movie.CreateInstance(symbol);
-        if (root == null) return new DollSequence { Label = symbol, FrameRate = StageRate, Error = $"в ролике нет символа {symbol}" };
+        if (root == null) return new DollSequence { Label = symbol, FrameRate = StageRate, Error = $"clip has no symbol {symbol}" };
         root.GotoFrame(0);
         root.Play();
         return RenderClipInstance(movie, root, symbol, scale, smooth, sharp);

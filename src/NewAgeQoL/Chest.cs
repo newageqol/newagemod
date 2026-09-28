@@ -25,7 +25,7 @@ namespace NewAgeQoL
             _placeAt = 0f;
             _shown = false;
             _told = false;
-            Plugin.Trace("[сундук] игра создала сундук");
+            Plugin.Trace("[chest] game created the chest");
         }
 
         internal static void Tick()
@@ -50,14 +50,14 @@ namespace NewAgeQoL
                 }
                 Place(holder);
             }
-            catch (Exception e) { Plugin.Trace("[сундук] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chest] " + e.Message); }
         }
 
         private static void Forget()
         {
             _chest = null;
             _holder = null;
-            Plugin.Trace("[сундук] игра убрала сундук, больше не слежу");
+            Plugin.Trace("[chest] game removed the chest, no longer watching");
         }
 
         private static RectTransform Holder()
@@ -83,7 +83,7 @@ namespace NewAgeQoL
             rt.SetAsFirstSibling();
             foreach (var kid in kids) kid.SetParent(rt, false);
             _holder = rt;
-            Plugin.Trace("[сундук] содержимое взято в держатель: " + kids.Count + ", кнопка " + kids[0].name);
+            Plugin.Trace("[chest] contents moved to holder: " + kids.Count + ", button " + kids[0].name);
             return rt;
         }
 
@@ -109,7 +109,7 @@ namespace NewAgeQoL
             holder.anchoredPosition += new Vector2(dx, dy) / scale;
             if (_told) return;
             _told = true;
-            Plugin.Trace("[сундук] стоит справа от панели чата");
+            Plugin.Trace("[chest] placed right of the chat panel");
         }
     }
 
@@ -119,7 +119,7 @@ namespace NewAgeQoL
         private static void Postfix(OpenDailyChestButton __instance)
         {
             try { Chest.Found(__instance); }
-            catch (Exception e) { Plugin.Trace("[сундук] появление: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chest] appearance: " + e.Message); }
         }
     }
 }

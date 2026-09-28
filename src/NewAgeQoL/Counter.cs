@@ -48,7 +48,7 @@ namespace NewAgeQoL
                 if (_startExpower < 0)
                 {
                     _startExpower = ind.CurrentExpower;
-                    Plugin.Trace("[контрприём] бой начался, зарядов " + _startExpower);
+                    Plugin.Trace("[counter] fight started, charges " + _startExpower);
                 }
 
                 if (Plugin.CfgCounterAuto == null || !Plugin.CfgCounterAuto.Value) return;
@@ -64,13 +64,13 @@ namespace NewAgeQoL
                 if (st != null && st.Actual && HasCounterState(me, btn.Id))
                 {
                     _lastUse = round;
-                    Plugin.Trace("[контрприём] уже висит на мне — ставить не нужно");
+                    Plugin.Trace("[counter] already on me - no need to cast");
                     return;
                 }
 
                 if (_startExpower < btn.ExpowerCost) return;
                 if (!EnemyPlayer(cd)) return;
-                string why = "в бою есть игроки";
+                string why = "players in the fight";
 
                 string no = CantUse(cd, me, ind, btn);
                 if (no != null)
@@ -79,7 +79,7 @@ namespace NewAgeQoL
                     {
                         _whyRound = round;
                         _whyText = no;
-                        Plugin.Trace("[контрприём] не сейчас (" + why + "): " + no);
+                        Plugin.Trace("[counter] not now (" + why + "): " + no);
                     }
                     return;
                 }
@@ -88,9 +88,9 @@ namespace NewAgeQoL
                 NetworkConnection.Instance.SendRequest(new UseDodgeRequest(btn.Id, cd.RoundNum, me.UserId, null));
                 _sentRound = round;
                 _tries++;
-                Plugin.Trace("[контрприём] «" + btn.Name + "» на себя, раунд " + round + " (фаза " + cd.RoundNum + ") — " + why);
+                Plugin.Trace("[counter] '" + btn.Name + "' on self, round " + round + " (phase " + cd.RoundNum + ") - " + why);
             }
-            catch (Exception e) { Plugin.Fault("[контрприём] " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[counter] " + e.Message); }
         }
 
         internal static void NoteAimed(IQuickButton btn)
@@ -128,22 +128,22 @@ namespace NewAgeQoL
 
                 if (aimed == 0)
                 {
-                    Plugin.Trace("[контрприём] применён, но цель неизвестна — засчитываем на себя");
+                    Plugin.Trace("[counter] used, but target unknown - counting it as on self");
                     _lastUse = round;
                     _tries = 0;
                     return;
                 }
                 if (aimed != me.UserId)
                 {
-                    Plugin.Trace("[контрприём] ушёл на другого бойца (" + aimed + ") — себе не засчитываем");
+                    Plugin.Trace("[counter] went to another fighter (" + aimed + ") - not counting it for self");
                     return;
                 }
 
                 _lastUse = round;
                 _tries = 0;
-                Plugin.Trace("[контрприём] применён на себя в раунде " + round);
+                Plugin.Trace("[counter] used on self in round " + round);
             }
-            catch (Exception e) { Plugin.Fault("[контрприём] " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[counter] " + e.Message); }
         }
 
         private static void Sync(ICombatData cd)
@@ -199,13 +199,13 @@ namespace NewAgeQoL
 
         private static string CantUse(ICombatData cd, PlayerCharacter me, CharacterIndicators ind, QuickButton btn)
         {
-            if (!btn.Enabled) return string.IsNullOrEmpty(btn.DisableCause) ? "приём выключен сервером" : btn.DisableCause;
-            if (!QuickButtonHelper.CheckRoundType(btn, cd.RoundType)) return "не та фаза раунда";
-            if (!btn.CanActivate) return "перезарядка";
-            if (btn.StaminaCost > ind.CurrentStamina) return "не хватает энергии";
-            if (btn.ExpowerCost > ind.CurrentExpower) return "не хватает зарядов";
-            if (btn.Target == ETargetType.TARGET_ALLY_EXCEPT_SOURCE) return "этот приём на себя не наводится";
-            if (TargetTypeExtension.IsActionHasCellTarget(btn)) return "приёму нужна клетка на поле";
+            if (!btn.Enabled) return string.IsNullOrEmpty(btn.DisableCause) ? "dodge disabled by server" : btn.DisableCause;
+            if (!QuickButtonHelper.CheckRoundType(btn, cd.RoundType)) return "wrong round phase";
+            if (!btn.CanActivate) return "cooldown";
+            if (btn.StaminaCost > ind.CurrentStamina) return "not enough energy";
+            if (btn.ExpowerCost > ind.CurrentExpower) return "not enough charges";
+            if (btn.Target == ETargetType.TARGET_ALLY_EXCEPT_SOURCE) return "this dodge cannot target self";
+            if (TargetTypeExtension.IsActionHasCellTarget(btn)) return "dodge needs a field cell";
             return null;
         }
 

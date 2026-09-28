@@ -326,7 +326,7 @@ namespace NewAgeQoL
                 if (Plugin.CfgContractsIconImage == null || string.IsNullOrEmpty(t?.Image)) return;
                 if (!string.IsNullOrEmpty(Plugin.CfgContractsIconImage.Value)) return;
                 Plugin.CfgContractsIconImage.Value = t.Image;
-                Plugin.Trace("[contracts] картинка вкладки: «" + t.Image + "» (по контракту " + t.ThingId + " «" + t.Name + "»)");
+                Plugin.Trace("[contracts] tab image: '" + t.Image + "' (from contract " + t.ThingId + " '" + t.Name + "')");
             }
             catch { }
         }
@@ -363,10 +363,10 @@ namespace NewAgeQoL
                 {
                     if (tab == null || tab.Index != _seat) continue;
                     tab.UpdateView(_seat, fresh);
-                    Plugin.Trace("[contracts] картинка вкладки доехала, значок обновлён на месте");
+                    Plugin.Trace("[contracts] tab image arrived, icon updated in place");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[contracts] обновить значок вкладки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[contracts] update tab icon: " + e.Message); }
         }
 
         internal static void Wake()
@@ -394,7 +394,7 @@ namespace NewAgeQoL
                     RemoteImageLoader.Instance.Load(
                         "https://files.nura.biz/site/images/things100x100/" + img + ".png",
                         sprite => _remote = sprite,
-                        error => Plugin.Warn("[contracts] картинка вкладки не загрузилась: " + error));
+                        error => Plugin.Warn("[contracts] tab image failed to load: " + error));
                 }
             }
             catch { }
@@ -487,7 +487,7 @@ namespace NewAgeQoL
                 Known[thingId] = number;
             }
             if (!fresh) return;
-            Plugin.Trace("[contracts] номер " + number + " у предмета " + thingId);
+            Plugin.Trace("[contracts] number " + number + " for item " + thingId);
             Refresh(thingId);
             _restackAt = Time.unscaledTime + 0.4f;
             _dirty = true;
@@ -524,7 +524,7 @@ namespace NewAgeQoL
                 var conn = NetworkConnection.Instance;
                 if (conn == null || !conn.IsConnected()) return;
                 conn.SendRequest(new GetTabContentRequest(Contracts.AllTab, (int)EThingContextWindow.WINDOW_INVENTORY));
-                Plugin.Trace("[contracts] перестраиваю вкладку — узнали новые номера");
+                Plugin.Trace("[contracts] rebuilding tab - new numbers learned");
             }
             catch { }
         }
@@ -542,7 +542,7 @@ namespace NewAgeQoL
         {
             if (r == null) return;
             try { Draw(r, Number(r.Data)); }
-            catch (Exception e) { Plugin.Fault("[contracts] номер на клетке: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[contracts] number on cell: " + e.Message); }
         }
 
         private static string Number(InventoryThingTabContentDto d)
@@ -639,6 +639,25 @@ namespace NewAgeQoL
         }
     }
 
+    internal static class EquipOrder
+    {
+        internal static int Tab = -1;
+
+        internal static int Rank(InventoryThingTabContentDto t) =>
+            t.SubType == EThingSubType.RELIQUIAE || t.SubType == EThingSubType.EARING ? 1 : 0;
+
+        internal static int Compare(InventoryThingTabContentDto a, InventoryThingTabContentDto b)
+        {
+            int c = a.Level.GetValueOrDefault().CompareTo(b.Level.GetValueOrDefault());
+            if (c != 0) return c;
+            c = Rank(b).CompareTo(Rank(a));
+            if (c != 0) return c;
+            c = b.ThingId.CompareTo(a.ThingId);
+            if (c != 0) return c;
+            return b.InventoryId.CompareTo(a.InventoryId);
+        }
+    }
+
     [HarmonyPatch(typeof(InventoryThingTabContentDto), "CompareTo")]
     public static class ContractOrderPatch
     {
@@ -649,6 +668,11 @@ namespace NewAgeQoL
                 if (other == null) return true;
                 int mine = ContractNumbers.Order(__instance.ThingId, __instance.Name);
                 int theirs = ContractNumbers.Order(other.ThingId, other.Name);
+                if (mine == int.MaxValue && theirs == int.MaxValue && EquipOrder.Tab == (int)EThingTabType.EQUIPMENT_TAB)
+                {
+                    __result = EquipOrder.Compare(__instance, other);
+                    return false;
+                }
                 if (mine == int.MaxValue || theirs == int.MaxValue) return true;
 
                 __result = mine != theirs ? mine.CompareTo(theirs)
@@ -672,7 +696,7 @@ namespace NewAgeQoL
                 tabs.TabIds.Insert(Math.Max(0, tabs.TabIds.Count - 1), Contracts.TabId);
                 Contracts.Seat(tabs.TabIds.IndexOf(Contracts.TabId));
             }
-            catch (Exception e) { Plugin.Fault("[contracts] список вкладок: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[contracts] tab list: " + e.Message); }
         }
     }
 
@@ -720,7 +744,7 @@ namespace NewAgeQoL
                     new GetTabContentRequest(Contracts.AllTab, (int)EThingContextWindow.WINDOW_INVENTORY));
                 return false;
             }
-            catch (Exception e) { Plugin.Fault("[contracts] выбор вкладки: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Fault("[contracts] tab selection: " + e.Message); return true; }
         }
     }
 
@@ -736,6 +760,7 @@ namespace NewAgeQoL
                 if (content.WindowId != (int)EThingContextWindow.WINDOW_INVENTORY) return;
 
                 RecipeIcons.CurrentTab = __instance.CurrentTab;
+                EquipOrder.Tab = content.TabNumber;
                 SlotSwap.LearnTabs(content);
                 foreach (var t in content.Things)
                 {
@@ -752,7 +777,7 @@ namespace NewAgeQoL
                                          .ThenBy(t => t.ThingId)
                                          .ToList();
                     content.TabNumber = Contracts.TabId;
-                    Plugin.Trace("[contracts] вкладка: " + mine.Count + " шт.");
+                    Plugin.Trace("[contracts] tab: " + mine.Count + " pcs");
                     return;
                 }
                 if (content.TabNumber == Contracts.AllTab || content.TabNumber == Contracts.TabId) return;
@@ -760,9 +785,10 @@ namespace NewAgeQoL
                 if (content.TabNumber == (int)EThingTabType.EQUIPMENT_TAB)
                     content.Things = content.Things.OrderByDescending(t => t.Level)
                                                      .ThenBy(t => t.SubType == (int)EThingSubType.RELIQUIAE || t.SubType == (int)EThingSubType.EARING ? 1 : 0)
+                                                     .ThenBy(t => t.ThingId)
                                                      .ToList();
             }
-            catch (Exception e) { Plugin.Fault("[contracts] содержимое вкладки: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[contracts] tab contents: " + e.Message); }
         }
     }
 }

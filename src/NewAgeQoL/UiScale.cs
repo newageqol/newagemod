@@ -28,7 +28,7 @@ namespace NewAgeQoL
                 if (!Owned.Contains(scaler)) Owned.Add(scaler);
                 Fit(scaler);
             }
-            catch (Exception e) { Plugin.Trace("[масштаб] холст: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[scale] canvas: " + e.Message); }
         }
 
         internal static void Tick()
@@ -50,10 +50,10 @@ namespace NewAgeQoL
                 if (natural > 0f && !Mathf.Approximately(target, _said))
                 {
                     _said = target;
-                    Plugin.Trace("[масштаб] экран " + _w + "×" + _h + ": интерфейс мода " + Mathf.RoundToInt(target / natural * 100f) + "% от игрового");
+                    Plugin.Trace("[scale] screen " + _w + "×" + _h + ": mod UI " + Mathf.RoundToInt(target / natural * 100f) + "% of the game's");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[масштаб] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[scale] " + e.Message); }
         }
 
         private static void Fit(CanvasScaler scaler)

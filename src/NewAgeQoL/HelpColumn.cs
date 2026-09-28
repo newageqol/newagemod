@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 Place(top, paged);
                 if (!_panelGo.activeSelf) _panelGo.SetActive(true);
             }
-            catch (Exception e) { Plugin.Trace("[помощь] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[help] " + e.Message); }
         }
 
         internal static bool Under()
@@ -176,7 +176,7 @@ namespace NewAgeQoL
             if (_page == was) return;
             HideTip();
             _next = 0f;
-            Plugin.Trace("[помощь] прокрутка: с " + (_page + 1) + " из " + _total);
+            Plugin.Trace("[help] scroll: from " + (_page + 1) + " of " + _total);
         }
 
         private static bool Same(List<QuickButton> all, int from, int count)
@@ -224,7 +224,7 @@ namespace NewAgeQoL
             Plugin.CfgHelpFolded.Value = !Plugin.CfgHelpFolded.Value;
             HideTip();
             _next = 0f;
-            Plugin.Trace("[помощь] столбец " + (Plugin.CfgHelpFolded.Value ? "свёрнут" : "развёрнут"));
+            Plugin.Trace("[help] column " + (Plugin.CfgHelpFolded.Value ? "folded" : "unfolded"));
         }
 
         private static void BuildFold(RectTransform host)
@@ -395,7 +395,7 @@ namespace NewAgeQoL
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            Plugin.Trace("[помощь] столбец построен");
+            Plugin.Trace("[help] column built");
         }
 
         private static void Fill(List<QuickButton> all, int from, int count)
@@ -569,7 +569,7 @@ namespace NewAgeQoL
                 float bottom = _panel.anchoredPosition.y + y - trt.rect.height;
                 if (bottom < floor) trt.anchoredPosition = new Vector2(x, y + (floor - bottom));
             }
-            catch (Exception e) { Plugin.Trace("[помощь] подсказка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[help] hint: " + e.Message); }
         }
 
         private static void HideTip()

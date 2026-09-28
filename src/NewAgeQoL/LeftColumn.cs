@@ -27,7 +27,7 @@ namespace NewAgeQoL
                 Top();
                 Keys();
             }
-            catch (Exception e) { Plugin.Trace("[колонка] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[column] " + e.Message); }
         }
 
         private static float _keysAt;
@@ -41,7 +41,7 @@ namespace NewAgeQoL
                 _keysAt = Time.unscaledTime + 2f;
                 var bag = Key(EHotkeyActions.Inventory);
                 var daily = Key(EHotkeyActions.DailyTasks);
-                if (bag != _bagKey || daily != _dailyKey) Plugin.Trace("[колонка] клавиши: сумка " + bag + ", задания " + daily);
+                if (bag != _bagKey || daily != _dailyKey) Plugin.Trace("[column] keys: bag " + bag + ", quests " + daily);
                 _bagKey = bag;
                 _dailyKey = daily;
             }
@@ -49,14 +49,14 @@ namespace NewAgeQoL
             if (!Input.anyKeyDown || Typing()) return;
             if (_bagKey != KeyCode.None && Input.GetKeyDown(_bagKey))
             {
-                Plugin.Trace("[колонка] сумка по клавише " + _bagKey);
+                Plugin.Trace("[column] bag by key " + _bagKey);
                 try { Spells.Menu(UserMenuController.ETabs.Inventory); }
-                catch (Exception e) { Plugin.Trace("[колонка] сумка клавишей: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[column] bag key: " + e.Message); }
             }
             if (_dailyKey != KeyCode.None && Input.GetKeyDown(_dailyKey))
             {
                 try { DependencyContainer.GetContainer()?.Resolve<DailyTasksWindowController>()?.OpenByButton(); }
-                catch (Exception e) { Plugin.Trace("[колонка] задания клавишей: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[column] quests key: " + e.Message); }
             }
         }
 
@@ -79,7 +79,7 @@ namespace NewAgeQoL
                 if (got is KeyCode key) return key;
                 if (got is int code) return (KeyCode)code;
             }
-            catch (Exception e) { Plugin.Trace("[колонка] клавиша " + action + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[column] key " + action + ": " + e.Message); }
             return KeyCode.None;
         }
 
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 Menu();
                 Top();
             }
-            catch (Exception e) { Plugin.Trace("[колонка] поздний кадр: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[column] late frame: " + e.Message); }
         }
 
         internal static void Squash(LeftBottomMenuScript menu)
@@ -133,7 +133,7 @@ namespace NewAgeQoL
             if (menu == null || !On || !menu.gameObject.activeSelf) return;
             menu.gameObject.SetActive(false);
             _hidMenu = true;
-            Plugin.Trace("[колонка] игровое меню снизу скрыто");
+            Plugin.Trace("[column] bottom game menu hidden");
         }
 
         private static LeftBottomMenuScript Find()
@@ -186,7 +186,7 @@ namespace NewAgeQoL
             if (block.activeSelf == !hide) return;
             block.SetActive(!hide);
             _hidBlock = hide;
-            Plugin.Trace("[колонка] блок персонажа сверху " + (hide ? "скрыт" : "возвращён"));
+            Plugin.Trace("[column] top character block " + (hide ? "hidden" : "restored"));
         }
 
         private static GameObject Block(TopPanelView view)
@@ -208,7 +208,7 @@ namespace NewAgeQoL
                 }
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[колонка] блок персонажа: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[column] character block: " + e.Message); return null; }
         }
     }
 

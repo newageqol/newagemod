@@ -52,7 +52,7 @@ public static class CacheReset
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogError("[кэш] сброс: " + ex);
+            Plugin.Log.LogError("[cache] reset: " + ex);
             return "Кэш вещей сброшен не полностью: " + ex.Message;
         }
     }

@@ -33,7 +33,7 @@ namespace NewAgeQoL
                 _rigField = AccessTools.Field(typeof(CameraControl), "constraint");
                 _bodyProp = AccessTools.Property(typeof(BaseUserInput), "cameraTransform");
             }
-            catch (Exception e) { Plugin.Trace("[камера] поля камеры: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[camera] camera fields: " + e.Message); }
         }
 
         private static float Pan
@@ -139,7 +139,7 @@ namespace NewAgeQoL
                     {
                         _panFrozen = measured;
                         _panLocked = true;
-                        Plugin.Trace("[камера] запас под панель посчитан один раз: " + measured.ToString("0.0"));
+                        Plugin.Trace("[camera] panel margin measured once: " + measured.ToString("0.0"));
                     }
                     else return;
                 }
@@ -179,18 +179,18 @@ namespace NewAgeQoL
                             rig.maxPos = Wider(rig.maxPos, back, false);
                             rig.lowerMinPos = Wider(rig.lowerMinPos, back, true);
                             rig.lowermaxPos = Wider(rig.lowermaxPos, back, false);
-                            Plugin.Trace("[камера] бой: границы сдвинуты к низу экрана на " + pan.ToString("0.0") + " по " + back);
+                            Plugin.Trace("[camera] combat: bounds shifted toward screen bottom by " + pan.ToString("0.0") + " along " + back);
                         }
                     }
 
-                    Plugin.Trace("[камера] " + (Fight ? "бой" : "локация") + ": предел отдаления "
+                    Plugin.Trace("[camera] " + (Fight ? "combat" : "location") + ": zoom-out limit "
                                  + _maxPos.y.ToString("0.0") + " → " + rig.maxPos.y.ToString("0.0"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[камера] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[camera] " + e.Message); }
 
             try { Pull(); }
-            catch (Exception e) { Plugin.Trace("[камера] отвод: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[camera] pull back: " + e.Message); }
         }
 
         private static Vector3 Wider(Vector3 edge, Vector3 by, bool low)
@@ -221,7 +221,7 @@ namespace NewAgeQoL
                     _rig.minAngle = _minAngle;
                     _rig.maxAngle = _maxAngle;
                 }
-                catch (Exception e) { Plugin.Trace("[камера] вернуть исходные границы: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[camera] restore original bounds: " + e.Message); }
             }
             _control = null;
             _rig = null;
@@ -304,7 +304,7 @@ namespace NewAgeQoL
                     }
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[камера] шаг клетки: " + e.Message); return 0f; }
+            catch (Exception e) { Plugin.Trace("[camera] cell step: " + e.Message); return 0f; }
         }
 
         private static float Ground(Camera cam)
@@ -337,17 +337,17 @@ namespace NewAgeQoL
         {
             var cam = body != null ? body.GetComponent<Camera>() : null;
             if (cam == null) cam = Camera.main;
-            if (cam == null) { why = "камеры нет"; return true; }
+            if (cam == null) { why = "no camera"; return true; }
             if (pitch < 0.01f)
             {
                 bool all = Fits(body);
-                why = all ? "все бойцы в кадре" : "бойцы ещё не влезают";
+                why = all ? "all fighters in frame" : "fighters do not fit yet";
                 return all;
             }
             float wide = Ground(cam);
             bool mine = Mine(cam);
-            why = "в кадре " + (wide / pitch).ToString("0.0") + " клеток из " + Span.ToString("0.0")
-                  + (mine ? "" : ", свой боец у края");
+            why = "in frame " + (wide / pitch).ToString("0.0") + " cells of " + Span.ToString("0.0")
+                  + (mine ? "" : ", own fighter at the edge");
             return wide >= pitch * Span && mine;
         }
 
@@ -376,7 +376,7 @@ namespace NewAgeQoL
                 }
                 return seen > 0;
             }
-            catch (Exception e) { Plugin.Trace("[камера] обзор: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[camera] view: " + e.Message); return false; }
         }
 
         private static void Pull()
@@ -398,11 +398,11 @@ namespace NewAgeQoL
             float angleStep = (float)step.GetValue(control);
             float pitch = Pitch();
             int moved = 0;
-            string why = "бойцов не нашлось";
+            string why = "no fighters found";
             for (int i = 0; i < 40; i++)
             {
                 if (crowd > 0 && Enough(body, pitch, out why)) break;
-                if (!Step(control, body, fit, turn, angleStep, -1f)) { why += ", дальше некуда"; break; }
+                if (!Step(control, body, fit, turn, angleStep, -1f)) { why += ", cannot go farther"; break; }
                 moved++;
             }
             if (crowd > 0 && moved == 0)
@@ -410,11 +410,11 @@ namespace NewAgeQoL
                 for (int i = 0; i < 40; i++)
                 {
                     if (Roomy(body, pitch) <= 1.1f) break;
-                    if (!Step(control, body, fit, turn, angleStep, 1f)) { why += ", ближе некуда"; break; }
+                    if (!Step(control, body, fit, turn, angleStep, 1f)) { why += ", cannot go closer"; break; }
                     if (!Mine(Eye(body)))
                     {
                         Step(control, body, fit, turn, angleStep, -1f);
-                        why = "свой боец у края, ближе не подхожу";
+                        why = "own fighter at the edge, not moving closer";
                         break;
                     }
                     moved--;
@@ -423,7 +423,7 @@ namespace NewAgeQoL
             }
 
             _pulled = true;
-            Plugin.Trace("[камера] вход: бойцов " + crowd + ", шагов " + moved + ", " + why);
+            Plugin.Trace("[camera] entry: fighters " + crowd + ", steps " + moved + ", " + why);
         }
     }
 }

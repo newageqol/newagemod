@@ -13,7 +13,7 @@ namespace NewAgeQoL
             {
                 _looked = true;
                 try { _startTime = AccessTools.FieldRefAccess<ChangeLifeAnimationItem, float?>("_startTime"); }
-                catch (System.Exception e) { Plugin.Fault("[combat] поле _startTime не найдено: " + e.Message); }
+                catch (System.Exception e) { Plugin.Fault("[combat] field _startTime not found: " + e.Message); }
             }
             if (_startTime == null) return false;
             _startTime(item) = 0f;
@@ -36,11 +36,11 @@ namespace NewAgeQoL
                 var group = item.Group;
                 if (animation == "change_life" && (group == null || group.actionType != ActionType.THINGEFFECT))
                 {
-                    Plugin.Trace("[combat] жизнь +" + item.life + " не от расходника (действие "
-                                 + (group == null ? "?" : group.actionType.ToString()) + ") — идёт по анимации, как в игре");
+                    Plugin.Trace("[combat] life +" + item.life + " not from a consumable (action "
+                                 + (group == null ? "?" : group.actionType.ToString()) + ") - follows the animation, as in the game");
                     return;
                 }
-                Plugin.Trace("[combat] " + animation + " +" + item.life + ", действие "
+                Plugin.Trace("[combat] " + animation + " +" + item.life + ", action "
                              + (group == null ? "?" : group.actionType.ToString()));
                 int was, max;
                 switch (animation)
@@ -65,9 +65,9 @@ namespace NewAgeQoL
                     default: indicators.CurrentStamina = now; break;
                 }
 
-                Plugin.Trace("[combat] " + animation + " +" + item.life + " сразу, без анимации: было "
-                                    + was + ", стало " + now + ", предел " + max
-                                    + ", раунд " + Round() + ", очередь анимаций " + Queue());
+                Plugin.Trace("[combat] " + animation + " +" + item.life + " instantly, no animation: was "
+                                    + was + ", now " + now + ", max " + max
+                                    + ", round " + Round() + ", animation queue " + Queue());
             }
             catch (System.Exception e) { Plugin.Fault("[combat] " + e.Message); }
         }
@@ -99,7 +99,7 @@ namespace NewAgeQoL
             try
             {
                 var ap = Cd()?.AnimationProcessor;
-                return ap == null ? "?" : ap.GroupCount + (ap.Active ? " (идёт)" : " (стоит)");
+                return ap == null ? "?" : ap.GroupCount + (ap.Active ? " (running)" : " (idle)");
             }
             catch { return "?"; }
         }

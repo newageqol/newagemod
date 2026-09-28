@@ -101,9 +101,9 @@ namespace NewAgeQoL
                 Fill();
                 Pick(_picked);
                 Recount();
-                Plugin.Trace("[крафт] окно открыто: вещей " + Things.Count + ", в корзине " + Cart.Count);
+                Plugin.Trace("[craft] window opened: items " + Things.Count + ", in cart " + Cart.Count);
             }
-            catch (Exception e) { Plugin.Fault("[крафт] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[craft] window: " + e); Close(); }
         }
 
         internal static void Close()
@@ -176,7 +176,7 @@ namespace NewAgeQoL
             Fill();
             Pick(_picked);
             Recount();
-            Plugin.Trace("[крафт] рецепты обновились, окно перерисовано");
+            Plugin.Trace("[craft] recipes updated, window redrawn");
         }
 
         private static void Collect()
@@ -933,7 +933,7 @@ namespace NewAgeQoL
             button.onClick.AddListener(() =>
             {
                 try { click(); }
-                catch (Exception e) { Plugin.Warn("[крафт] нажатие: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[craft] click: " + e.Message); }
             });
             return (RectTransform)go.transform;
         }
@@ -1091,10 +1091,10 @@ namespace NewAgeQoL
                         if (_tipText == null || _tipFor != thing || about == null) return;
                         _tipText.text = About(thing, about);
                     }
-                    catch (Exception e) { Plugin.Trace("[крафт] облачко " + thing + ": " + e.Message); }
+                    catch (Exception e) { Plugin.Trace("[craft] tooltip " + thing + ": " + e.Message); }
                 });
             }
-            catch (Exception e) { Plugin.Trace("[крафт] облачко " + thing + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[craft] tooltip " + thing + ": " + e.Message); }
         }
 
         private static string About(int thing, IGeneralThingInfoDescription about)
@@ -1217,7 +1217,7 @@ namespace NewAgeQoL
         private void Update()
         {
             try { CraftCalc.Tick(); }
-            catch (Exception e) { Plugin.Warn("[крафт] такт: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[craft] tick: " + e.Message); }
         }
     }
 }

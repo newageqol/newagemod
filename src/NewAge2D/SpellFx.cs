@@ -46,9 +46,9 @@ internal static class SpellFx
             var go = new GameObject("NewAge2D.Fx." + prefix);
             var player = go.AddComponent<FxPlayer>();
             player.Init(target, Look, prefix + "up", prefix + "down", since < 0f ? Time.time : since);
-            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[магия] эффект {prefix} у «{target.Login}»");
+            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[magic] effect {prefix} on '{target.Login}'");
         }
-        catch (Exception ex) { Plugin.Log.LogError("[магия] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[magic] " + ex); }
     }
 
     private static bool _noClient;
@@ -63,33 +63,33 @@ internal static class SpellFx
         DollWorker.Run(() =>
         {
             var movie = Plugin.Store.Get("client.swf", out string reason);
-            if (movie == null) return new DollSequence { Label = symbol, Error = "нет client.swf: " + reason };
+            if (movie == null) return new DollSequence { Label = symbol, Error = "no client.swf: " + reason };
             return DollWorker.Packed(Doll.RenderClip(movie, symbol, scale, 1, false));
         }, result => MainThread.Post(() =>
         {
             if (FrameCache.Generation != generation) return;
-            var sequence2 = result as DollSequence ?? new DollSequence { Label = symbol, Error = result is Exception ex ? ex.Message : "пусто" };
+            var sequence2 = result as DollSequence ?? new DollSequence { Label = symbol, Error = result is Exception ex ? ex.Message : "empty" };
             bool ok = sequence2.Error == null && sequence2.Frames.Count > 0;
             if (!ok)
             {
                 FrameCache.EndSequence(sequence, false);
-                string trouble = sequence2.Error ?? "нет кадров";
+                string trouble = sequence2.Error ?? "no frames";
                 if (trouble.Contains("client.swf"))
                 {
                     if (!_noClient)
                     {
                         _noClient = true;
-                        Plugin.Log.LogInfo("[магия] картинок заклинаний пока нет: " + trouble + ". Ролик берётся с сервера игры, при следующем заходе попробую снова; остальное работает как обычно");
+                        Plugin.Log.LogInfo("[magic] no spell pictures yet: " + trouble + ". The clip comes from the game server, will retry on next login; everything else works as usual");
                     }
                     return;
                 }
-                Plugin.Log.LogWarning($"[магия] {symbol}: {trouble}");
+                Plugin.Log.LogWarning($"[magic] {symbol}: {trouble}");
                 return;
             }
             FrameCache.Remember(look, sequence2.Labels, sequence2.FrameRate);
             FrameCache.Store(look, symbol, sequence, sequence2.Frames, NominalPpu, () =>
             {
-                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[магия] {symbol} готов, кадров {sequence2.Frames.Count}");
+                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[magic] {symbol} ready, frames {sequence2.Frames.Count}");
             });
         }), priority);
     }
@@ -229,7 +229,7 @@ internal sealed class FxPlayer : MonoBehaviour
             _count = Mathf.Max(_countUp, _countDown);
             _rate = FrameCache.RateFor(_look);
             _start = began >= 0f ? began : Time.time;
-            if (Trace.On && caster != null) Trace.Write($"«{_target.Login}» аура {_up} стартует {(began >= 0f ? $"вместе с действием куклы, разница {(Time.time - began) * 1000f:0} мс" : "без действия куклы")}, ждала {(Time.time - _born) * 1000f:0} мс");
+            if (Trace.On && caster != null) Trace.Write($"'{_target.Login}' aura {_up} starts {(began >= 0f ? $"with doll action, difference {(Time.time - began) * 1000f:0} ms" : "without doll action")}, waited {(Time.time - _born) * 1000f:0} ms");
         }
 
         int frame = (int)((Time.time - _start) * _rate);

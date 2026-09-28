@@ -153,10 +153,10 @@ namespace NewAgeQoL
                 Flasks.RequestScan();
                 Artifacts.RequestWear();
                 Artifacts.RequestStorage();
-                Plugin.Trace("[набор] открыт, в хранилище: " + (Artifacts.NearStorage() ? "да" : "нет")
-                                    + ", в памяти хранилища вещей " + Storage.Things().Count);
+                Plugin.Trace("[kit] opened, at storage: " + (Artifacts.NearStorage() ? "yes" : "no")
+                                    + ", storage items in memory " + Storage.Things().Count);
             }
-            catch (Exception e) { Plugin.Fault("[манекен] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[manikin] window: " + e); Close(); }
         }
 
         internal static void Close()
@@ -231,8 +231,8 @@ namespace NewAgeQoL
             var content = _slotsGo.GetComponent<UserMenuCharacterSlotsPanelContent>();
             if (content == null) content = _slotsGo.GetComponentInChildren<UserMenuCharacterSlotsPanelContent>(true);
             var all = _slotsGo.GetComponentsInChildren<InteractiveIcon>(true);
-            Plugin.Trace("[набор] панель: " + (content != null ? content.GetType().Name : "нет компонента")
-                         + ", ячеек в префабе " + (all != null ? all.Length : 0));
+            Plugin.Trace("[kit] panel: " + (content != null ? content.GetType().Name : "no component")
+                         + ", cells in prefab " + (all != null ? all.Length : 0));
             if (all == null || all.Length == 0) return;
 
             Icons.Clear();
@@ -245,11 +245,11 @@ namespace NewAgeQoL
                         foreach (var pair in known)
                             if (pair.Value != null) Icons[(int)pair.Key] = pair.Value;
                 }
-                catch (Exception e) { Plugin.Trace("[набор] разметка слотов игры: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[kit] game slot layout: " + e.Message); }
 
             if (Icons.Count == 0) ByShape();
 
-            if (Icons.Count == 0) { Plugin.Warn("[набор] ячейки не разложились по слотам"); return; }
+            if (Icons.Count == 0) { Plugin.Warn("[kit] cells were not mapped to slots"); return; }
 
             foreach (var pair in Icons)
             {
@@ -268,7 +268,7 @@ namespace NewAgeQoL
                 else icon.ButtonClickEvent += ignored => Choose(slot);
             }
             _hooked = true;
-            Plugin.Trace("[набор] слотов подключено: " + Icons.Count);
+            Plugin.Trace("[kit] slots hooked up: " + Icons.Count);
             Arrange(content);
             Paint();
         }
@@ -419,7 +419,7 @@ namespace NewAgeQoL
                     if (icon != null) list.Add(icon);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[набор] группа " + field + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[kit] group " + field + ": " + e.Message); }
             return list;
         }
 
@@ -500,7 +500,7 @@ namespace NewAgeQoL
             OnlineWindow.MakeCloseButton(_panelGo.transform, Close);
 
             var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.UserMenuCharacterSlotsPanelContentPrefab : null;
-            if (prefab == null) throw new Exception("не нашёл окно экипировки игры");
+            if (prefab == null) throw new Exception("game equipment window not found");
             _slotsGo = UnityEngine.Object.Instantiate(prefab, _panelGo.transform, false);
             _slotsGo.name = "QoLSlots";
             _builtFrame = Time.frameCount;

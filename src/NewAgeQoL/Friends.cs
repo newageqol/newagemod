@@ -58,26 +58,26 @@ namespace NewAgeQoL
             try
             {
                 _me = Friends.Mine();
-                if (_me <= 0) { Plugin.Warn("[друзья] своего id нет"); return false; }
+                if (_me <= 0) { Plugin.Warn("[friends] no own id"); return false; }
                 var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.FriendsContentPanelPrefab : null;
-                if (prefab == null) { Plugin.Warn("[друзья] заготовки панели нет"); return false; }
+                if (prefab == null) { Plugin.Warn("[friends] no panel prefab"); return false; }
                 var nc = NetworkConnection.Instance;
-                if (nc == null) { Plugin.Warn("[друзья] соединения нет"); return false; }
+                if (nc == null) { Plugin.Warn("[friends] no connection"); return false; }
                 made = UnityEngine.Object.Instantiate(prefab);
                 _panel = made.GetComponent<FriendsUserInfoPanelContent>();
-                if (_panel == null) { Plugin.Warn("[друзья] панель не собралась"); return false; }
+                if (_panel == null) { Plugin.Warn("[friends] panel not built"); return false; }
                 _menu = Friends.Menu();
                 _panel.ContextMenuResolver = _menu;
                 main.AddPanelContent(_panel);
                 nc.AddMessageListener(234, OnList);
                 nc.SendRequest(new FriendsListRequest(_me));
-                Plugin.Trace("[друзья] вкладка открыта, спросил список по " + _me);
+                Plugin.Trace("[friends] tab opened, requested list for " + _me);
                 made = null;
                 return true;
             }
             catch (Exception e)
             {
-                Plugin.Warn("[друзья] вкладка: " + e.Message);
+                Plugin.Warn("[friends] tab: " + e.Message);
                 return false;
             }
             finally
@@ -98,9 +98,9 @@ namespace NewAgeQoL
                 var list = msg as FriendListResponseMessage;
                 if (list == null || _panel == null || list.Userid != _me) return;
                 _panel.SetFriendList(new ListWrapper<FriendMessage>(list.Friends));
-                Plugin.Trace("[друзья] в списке " + (list.Friends != null ? list.Friends.Count : 0));
+                Plugin.Trace("[friends] in list " + (list.Friends != null ? list.Friends.Count : 0));
             }
-            catch (Exception e) { Plugin.Trace("[друзья] список: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[friends] list: " + e.Message); }
         }
 
         public override bool InternalDeactivatePanel(IPanelContentWindowController parent,
@@ -115,7 +115,7 @@ namespace NewAgeQoL
                 NetworkConnection.Instance.RemoveMessageListener(234, OnList);
                 main.ClearContent();
             }
-            catch (Exception e) { Plugin.Trace("[друзья] закрытие: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[friends] close: " + e.Message); }
             _panel = null;
             _menu = null;
             return true;
@@ -127,12 +127,12 @@ namespace NewAgeQoL
             {
                 if (_panel == null || _menu == null) return;
                 var call = AccessTools.Method(typeof(FriendsUserInfoPanelContent), "OnConfigmFriend");
-                if (call == null) { Plugin.Trace("[друзья] обработчика подтверждения нет"); return; }
+                if (call == null) { Plugin.Trace("[friends] no confirm handler"); return; }
                 var hand = Delegate.CreateDelegate(typeof(Action<UserContextMenuData>), _panel, call) as Action<UserContextMenuData>;
                 if (hand == null) return;
                 _menu.ConfirmFriendEvent -= hand;
             }
-            catch (Exception e) { Plugin.Trace("[друзья] снятие подписки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[friends] unsubscribe: " + e.Message); }
         }
 
         public override void InitializeAfterFirstActivatePanel()
@@ -155,7 +155,7 @@ namespace NewAgeQoL
                 foreach (var one in __result) if (one is FriendsTab) return;
                 __result.Add(new FriendsTab());
             }
-            catch (Exception e) { Plugin.Warn("[друзья] раздел не добавлен: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[friends] section not added: " + e.Message); }
         }
     }
 
@@ -169,9 +169,9 @@ namespace NewAgeQoL
                 if (__result == null) return;
                 foreach (var one in __result) if (one != null && one.Id == Friends.TabId) return;
                 __result.Add(new TabView(Friends.TabId, Friends.Title(), Friends.Face()));
-                Plugin.Trace("[друзья] вкладка встала после профессий");
+                Plugin.Trace("[friends] tab placed after professions");
             }
-            catch (Exception e) { Plugin.Warn("[друзья] вкладка не добавлена: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[friends] tab not added: " + e.Message); }
         }
     }
 }

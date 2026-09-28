@@ -72,7 +72,7 @@ internal static class Field
         catch (Exception ex)
         {
             _parsed = null;
-            Plugin.Log.LogWarning("[поле] XML карты не разобрался: " + ex.Message);
+            Plugin.Log.LogWarning("[field] map XML not parsed: " + ex.Message);
         }
     }
 
@@ -224,10 +224,10 @@ internal static class Field
 
     private static void Finish(string key, object result, System.Diagnostics.Stopwatch clock)
     {
-        var picture = result as DollPicture ?? new DollPicture { Error = result is Exception failure ? failure.Message : "пустой результат" };
+        var picture = result as DollPicture ?? new DollPicture { Error = result is Exception failure ? failure.Message : "empty result" };
         var backdrop = new Backdrop { Key = key };
         if (picture.Error != null || picture.Rgba == null || picture.Width <= 0 || picture.Height <= 0)
-            backdrop.Error = picture.Error ?? "пусто";
+            backdrop.Error = picture.Error ?? "empty";
         else
         {
             try { Build(backdrop, picture); }
@@ -236,14 +236,14 @@ internal static class Field
         if (backdrop.Error == null)
         {
             Remember(backdrop);
-            Plugin.Log.LogInfo($"[поле] {backdrop.File} готов: {backdrop.Width}x{backdrop.Height} с запасом снизу, растр ×{backdrop.Scale:0.##} ({backdrop.Texture.width}x{backdrop.Texture.height}), {clock.ElapsedMilliseconds} мс");
+            Plugin.Log.LogInfo($"[field] {backdrop.File} ready: {backdrop.Width}x{backdrop.Height} with bottom margin, raster ×{backdrop.Scale:0.##} ({backdrop.Texture.width}x{backdrop.Texture.height}), {clock.ElapsedMilliseconds} ms");
         }
         if (!Loading.TryGetValue(key, out var waiters)) return;
         Loading.Remove(key);
         foreach (var waiter in waiters)
         {
             try { waiter(backdrop); }
-            catch (Exception ex) { Plugin.Log.LogError("[поле] " + ex); }
+            catch (Exception ex) { Plugin.Log.LogError("[field] " + ex); }
         }
     }
 
@@ -308,7 +308,7 @@ internal static class Field
         {
             foreach (var root in Roots()) __state.Add(root.GetInstanceID());
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[поле] список объектов сцены: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[field] scene object list: " + ex.Message); }
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(CombatLocationLoadController), nameof(CombatLocationLoadController.AssetDataLoaded))]
@@ -321,7 +321,7 @@ internal static class Field
                 if (__state == null || !__state.Contains(root.GetInstanceID())) fresh.Add(root);
             Begin(fresh);
         }
-        catch (Exception ex) { Plugin.Log.LogError("[поле] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[field] " + ex); }
     }
 
     private static void Begin(List<GameObject> fresh)
@@ -331,11 +331,11 @@ internal static class Field
         Scenery.Clear();
         Scenery.AddRange(fresh);
         _ground = _parsed;
-        Trace.Battle(_ground?.File ?? "карта без картинки Flash");
+        Trace.Battle(_ground?.File ?? "map without Flash picture");
         if (Plugin.CfgVerbose.Value)
             Plugin.Log.LogInfo(_ground == null
-                ? $"[поле] у карты боя нет картинки Flash, объектов 3D-карты {fresh.Count}"
-                : $"[поле] карта боя: {_ground.File}{(_ground.DayNight ? " (утро/день/ночь)" : "")}, угол картинки во Flash ({_ground.X:0}, {_ground.Y:0}), объектов 3D-карты {fresh.Count}");
+                ? $"[field] combat map has no Flash picture, 3D map objects {fresh.Count}"
+                : $"[field] combat map: {_ground.File}{(_ground.DayNight ? " (morning/day/night)" : "")}, picture corner in Flash ({_ground.X:0}, {_ground.Y:0}), 3D map objects {fresh.Count}");
         if (Plugin.FlashField) Set(true);
     }
 
@@ -359,7 +359,7 @@ internal static class Field
             if (battle != _battle || view == null || !ReferenceEquals(view, _view)) return;
             if (backdrop.Error != null)
             {
-                Plugin.Log.LogWarning($"[поле] картинка поля не получилась ({backdrop.Error}), бой остаётся в 3D");
+                Plugin.Log.LogWarning($"[field] field picture failed ({backdrop.Error}), fight stays in 3D");
                 Stop();
                 return;
             }
@@ -496,7 +496,7 @@ internal sealed class FieldView : MonoBehaviour
         _hasBounds = true;
         _pictureObject.SetActive(Applied);
 
-        Plugin.Log.LogInfo($"[поле] {backdrop.File} на поле: угол ({x:0}, {y:0}) → сетка ({origin.x:0.00}, {origin.z:0.00}), камера под {Field.Pitch:0.0}°");
+        Plugin.Log.LogInfo($"[field] {backdrop.File} on field: corner ({x:0}, {y:0}) → grid ({origin.x:0.00}, {origin.z:0.00}), camera at {Field.Pitch:0.0}°");
     }
 
     private TransparencySortMode _wasSort;
@@ -507,7 +507,7 @@ internal sealed class FieldView : MonoBehaviour
         _eye = location != null && location.CombatCamera != null ? location.CombatCamera : Camera.main;
         if (_eye == null)
         {
-            Plugin.Log.LogWarning("[поле] камеры боя нет, бой остаётся в 3D");
+            Plugin.Log.LogWarning("[field] no combat camera, fight stays in 3D");
             return;
         }
         _control = FindObjectOfType<CameraControl>();
@@ -574,7 +574,7 @@ internal sealed class FieldView : MonoBehaviour
             if (alive && _eye != null && ConstraintField?.GetValue(_control) is CameraConstraint rig && rig != null)
             {
                 try { _control.SetConstraint(rig); }
-                catch (Exception ex) { Plugin.Log.LogWarning("[поле] камера Unity не вернулась на место: " + ex.GetType().Name + " " + ex.Message); }
+                catch (Exception ex) { Plugin.Log.LogWarning("[field] Unity camera not restored: " + ex.GetType().Name + " " + ex.Message); }
             }
         }
         if (_pictureObject != null) _pictureObject.SetActive(false);
@@ -584,7 +584,7 @@ internal sealed class FieldView : MonoBehaviour
     {
         Camera.onPreCull -= BeforeCull;
         try { Restore(); }
-        catch (Exception ex) { Plugin.Log.LogWarning("[поле] возврат вида: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[field] view restore: " + ex.Message); }
         if (_pictureObject != null) Destroy(_pictureObject);
         if (_skin != null) Destroy(_skin);
         Field.Forget(this);
@@ -597,7 +597,7 @@ internal sealed class FieldView : MonoBehaviour
         catch (Exception ex)
         {
             _failed = true;
-            Plugin.Log.LogError("[поле] камера: " + ex);
+            Plugin.Log.LogError("[field] camera: " + ex);
         }
     }
 
@@ -608,7 +608,7 @@ internal sealed class FieldView : MonoBehaviour
         {
             if (_failed) return;
             _failed = true;
-            Plugin.Log.LogError("[поле] " + ex);
+            Plugin.Log.LogError("[field] " + ex);
         }
     }
 
@@ -634,7 +634,7 @@ internal sealed class FieldView : MonoBehaviour
         if (!_warmLogged && Plugin.CfgVerbose.Value && Fighters.AllReady())
         {
             _warmLogged = true;
-            Plugin.Log.LogInfo($"[поле] все куклы и их анимации готовы через {Time.unscaledTime - _appliedAt:0.00} с после загрузки карты");
+            Plugin.Log.LogInfo($"[field] all dolls and their animations ready {Time.unscaledTime - _appliedAt:0.00} s after map load");
         }
         Center();
         Steer();
@@ -662,7 +662,7 @@ internal sealed class FieldView : MonoBehaviour
             }
         }
         if (Plugin.CfgVerbose.Value && (_hidden.Count != renderers || _terrains.Count != terrains))
-            Plugin.Log.LogInfo($"[поле] спрятано у 3D-карты: объектов {_hidden.Count}, ландшафтов {_terrains.Count}");
+            Plugin.Log.LogInfo($"[field] hidden on 3D map: objects {_hidden.Count}, terrains {_terrains.Count}");
     }
 
     private void Center()

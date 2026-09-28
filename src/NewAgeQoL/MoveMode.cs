@@ -29,7 +29,7 @@ namespace NewAgeQoL
             _sentAt = -100f;
             Status = "";
             StatusAt = 0f;
-            Plugin.Trace("[скорость] персонаж сменился, прежнюю скорость забыл");
+            Plugin.Trace("[speed] character changed, previous speed forgotten");
         }
 
         internal static int Current => _current;
@@ -71,7 +71,7 @@ namespace NewAgeQoL
         {
             Status = text ?? "";
             StatusAt = Time.unscaledTime;
-            if (Status.Length > 0) Plugin.Trace("[скорость] " + Status);
+            if (Status.Length > 0) Plugin.Trace("[speed] " + Status);
         }
 
         internal static void Send(int mode)
@@ -86,9 +86,9 @@ namespace NewAgeQoL
                 _wanted = mode;
                 _sentAt = Time.unscaledTime;
                 Status = "";
-                Plugin.Trace("[скорость] прошу " + Name(mode) + ", номер " + mode);
+                Plugin.Trace("[speed] requesting " + Name(mode) + ", number " + mode);
             }
-            catch (Exception e) { Plugin.Fault("[скорость] " + e); Say("Ошибка: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[speed] " + e); Say("Ошибка: " + e.Message); }
         }
 
         internal static void Note(int mode, int leftMs)
@@ -104,8 +104,8 @@ namespace NewAgeQoL
                 if (other) Status = "";
                 else Say("Скорость осталась прежней: " + Name(mode));
             }
-            Plugin.Trace("[скорость] сервер: " + Name(mode)
-                         + (leftMs > 0 ? ", перезарядка " + Clock(leftMs / 1000f) : ""));
+            Plugin.Trace("[speed] server: " + Name(mode)
+                         + (leftMs > 0 ? ", cooldown " + Clock(leftMs / 1000f) : ""));
         }
     }
 
@@ -120,7 +120,7 @@ namespace NewAgeQoL
                 if (three == null) return;
                 MoveMode.Note(three.Value1, three.Value3);
             }
-            catch (Exception e) { Plugin.Trace("[скорость] ответ сервера: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[speed] server response: " + e.Message); }
         }
     }
 }

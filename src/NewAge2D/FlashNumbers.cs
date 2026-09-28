@@ -59,7 +59,7 @@ internal static class FlashNumbers
         if (!Plugin.FlashFight || target == null) return;
         var location = CombatView.Get();
         if (location == null || location.CombatCamera == null) return;
-        if (Trace.On) Trace.Write($"«{NameOf(target)}»: {name} {(value > 0 ? "+" : "")}{value}, цифра Flash");
+        if (Trace.On) Trace.Write($"'{NameOf(target)}': {name} {(value > 0 ? "+" : "")}{value}, Flash number");
 
         bool plus = value > 0;
         string symbol = name + (plus ? "_plus" : "_minus");
@@ -177,7 +177,7 @@ internal static class FlashNumbers
         DollWorker.Run(() =>
         {
             var movie = Plugin.Store.Get("effects.swf", out string reason);
-            if (movie == null) return new DollSequence { Label = symbol, Error = "нет effects.swf: " + reason };
+            if (movie == null) return new DollSequence { Label = symbol, Error = "no effects.swf: " + reason };
             return Doll.RenderClip(movie, symbol, IconScale, 1);
         }, result => MainThread.Post(() =>
         {
@@ -185,7 +185,7 @@ internal static class FlashNumbers
             var picture = sequence != null && sequence.Error == null && sequence.Frames.Count > 0 ? sequence.Frames[0] : null;
             if (picture == null || picture.Rgba == null)
             {
-                Plugin.Log.LogWarning($"[цифры] иконка {symbol}: {sequence?.Error ?? (result as Exception)?.Message ?? "нет кадра"}");
+                Plugin.Log.LogWarning($"[numbers] icon {symbol}: {sequence?.Error ?? (result as Exception)?.Message ?? "no frame"}");
                 return;
             }
             var texture = new Texture2D(picture.Width, picture.Height, TextureFormat.RGBA32, false)

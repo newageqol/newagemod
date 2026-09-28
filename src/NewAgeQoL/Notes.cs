@@ -52,7 +52,7 @@ namespace NewAgeQoL
         internal static void Flush()
         {
             if (!_dirty) return;
-            if (!_read) { Plugin.Warn("[заметки] прежние заметки не прочитаны, сохранение отложено, чтобы не затереть файл"); return; }
+            if (!_read) { Plugin.Warn("[notes] previous notes not read, saving postponed to avoid overwriting the file"); return; }
             _dirty = false;
             try
             {
@@ -69,17 +69,17 @@ namespace NewAgeQoL
                     try { File.Replace(temp, path, null); }
                     catch (Exception e)
                     {
-                        Plugin.Trace("[заметки] замена одним действием не вышла, меняю по частям: " + e.Message);
+                        Plugin.Trace("[notes] atomic replace failed, replacing in steps: " + e.Message);
                         File.Delete(path);
                         File.Move(temp, path);
                     }
                 }
-                Plugin.Trace("[заметки] сохранено заметок: " + Known.Count);
+                Plugin.Trace("[notes] notes saved: " + Known.Count);
             }
             catch (Exception e)
             {
                 _dirty = true;
-                Plugin.Warn("[заметки] сохранение: " + e.Message);
+                Plugin.Warn("[notes] saving: " + e.Message);
             }
         }
 
@@ -100,9 +100,9 @@ namespace NewAgeQoL
                     Known[id] = new Entry { Login = Unpack(parts[1]), Text = note };
                 }
                 _read = true;
-                Plugin.Trace("[заметки] прочитано заметок: " + Known.Count);
+                Plugin.Trace("[notes] notes read: " + Known.Count);
             }
-            catch (Exception e) { Plugin.Warn("[заметки] чтение: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[notes] reading: " + e.Message); }
         }
 
         private static string Pack(string raw)
@@ -171,7 +171,7 @@ namespace NewAgeQoL
                 box.AddComponent<NoteKeeper>();
                 return (RectTransform)box.transform;
             }
-            catch (Exception e) { Plugin.Trace("[заметки] поле в карточке: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[notes] card field: " + e.Message); return null; }
         }
     }
 

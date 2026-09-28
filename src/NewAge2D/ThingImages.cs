@@ -47,7 +47,7 @@ internal static class ThingImages
         if (!fresh) return;
         _dirty = true;
         try { Learned?.Invoke(thingId); }
-        catch (Exception ex) { Plugin.Log.LogError("[вещи] " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[items] " + ex); }
     }
 
     public static void Ask(int thingId)
@@ -85,7 +85,7 @@ internal static class ThingImages
                     catch (Exception ex)
                     {
                         lock (Known) Asked.Remove(id);
-                        Plugin.Log.LogWarning($"[вещи] запрос {id}: {ex.Message}");
+                        Plugin.Log.LogWarning($"[items] request {id}: {ex.Message}");
                     }
                 }
                 float waited = 0f;
@@ -151,7 +151,7 @@ internal static class ThingImages
                 }
             }
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[вещи] кэш не прочитан: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[items] cache not read: " + ex.Message); }
     }
 
     private static void Save()
@@ -165,6 +165,6 @@ internal static class ThingImages
             lock (Known) lines = Known.OrderBy(pair => pair.Key).Select(pair => pair.Key + " " + pair.Value).ToList();
             File.WriteAllLines(FilePath, lines);
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[вещи] кэш не записан: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[items] cache not written: " + ex.Message); }
     }
 }

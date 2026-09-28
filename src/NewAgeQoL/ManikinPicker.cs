@@ -55,7 +55,7 @@ namespace NewAgeQoL
                 Ask();
                 Flasks.RequestScan();
             }
-            catch (Exception e) { Plugin.Fault("[манекен] выбор вещи: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[manikin] item pick: " + e); Close(); }
         }
 
         internal static void Close()

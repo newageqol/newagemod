@@ -52,7 +52,7 @@ namespace NewAgeQoL
                 if (!SideButtons.InWorld() || !OnMap) return;
                 foreach (var name in Covered) Cover(name);
             }
-            catch (Exception e) { Plugin.Trace("[слоты] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[slots] " + e.Message); }
         }
 
         private static void Cover(string name)
@@ -65,7 +65,7 @@ namespace NewAgeQoL
             if (veil == null) veil = go.AddComponent<CanvasGroup>();
             Dim(veil);
             Veils[name] = veil;
-            Plugin.Trace("[слоты] игровая кнопка " + name + " закрыта своей");
+            Plugin.Trace("[slots] game button " + name + " covered by our own");
         }
 
         private static void Dim(CanvasGroup veil)
@@ -82,7 +82,7 @@ namespace NewAgeQoL
             var field = Field();
             if (field == null) return null;
             try { return field.GetValue(ctrl) as QuickButtonStateHolder; }
-            catch (Exception e) { Plugin.Trace("[слоты] держатель: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[slots] holder: " + e.Message); return null; }
         }
 
         private static FieldInfo Field()
@@ -98,11 +98,11 @@ namespace NewAgeQoL
                 return _spare;
             }
             _bag = AccessTools.Field(typeof(GlobalMapQuickslotController), name);
-            if (_bag == null) Plugin.Warn("[слоты] поле быстрых слотов не найдено: " + name);
+            if (_bag == null) Plugin.Warn("[slots] quickslots field not found: " + name);
             else if (!_bagSaid)
             {
                 _bagSaid = true;
-                Plugin.Trace("[слоты] «Помощь» лежит в " + name);
+                Plugin.Trace("[slots] 'Help' is in " + name);
             }
             return _bag;
         }
@@ -131,7 +131,7 @@ namespace NewAgeQoL
                 if (part == null) return list;
                 foreach (var one in part) if (one != null) list.Add(one);
             }
-            catch (Exception e) { Plugin.Trace("[слоты] список помощи: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[slots] help list: " + e.Message); }
             return list;
         }
 
@@ -151,17 +151,17 @@ namespace NewAgeQoL
                     if (answer == null || answer.WindowId != Window) return;
                     if (!answer.Success)
                     {
-                        Plugin.Trace("[слоты] отказ на " + id + ": " + answer.ErrorMessage);
+                        Plugin.Trace("[slots] refused for " + id + ": " + answer.ErrorMessage);
                         try { AirMessageScript.ShowErrorNotification(answer.ErrorMessage); } catch { }
                         return;
                     }
                     if (holder == null || answer.ChangesInTab == null) return;
                     foreach (var change in answer.ChangesInTab) Shrink(holder, button, change);
                 });
-                Plugin.Trace("[слоты] применяю " + button.Name + ", запись " + id);
+                Plugin.Trace("[slots] using " + button.Name + ", record " + id);
                 return null;
             }
-            catch (Exception e) { Plugin.Fault("[слоты] " + e); return "Ошибка: " + e.Message; }
+            catch (Exception e) { Plugin.Fault("[slots] " + e); return "Ошибка: " + e.Message; }
         }
 
         private static void Shrink(QuickButtonStateHolder holder, QuickButton source, ChangesInTabMessage change)
@@ -196,7 +196,7 @@ namespace NewAgeQoL
                 fresh.Description = source.Description;
                 fresh.Unity3DCombatIconAtlasId = source.Unity3DCombatIconAtlasId;
             }
-            catch (Exception e) { Plugin.Trace("[слоты] пересчёт остатка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[slots] remainder recount: " + e.Message); }
         }
 
         internal static Sprite Icon(QuickButton button)
@@ -220,7 +220,7 @@ namespace NewAgeQoL
                 if (sprite == null && InCombatAtlas(AtlasName(button))) sprite = Alive(AtlasUtils.GetQuickButtonSprite(button));
                 if (sprite == null) sprite = Web(image);
                 if (sprite == null && string.IsNullOrEmpty(image) && Blank.Add(button.Id))
-                    Plugin.Trace("[слоты] нет картинки у записи " + button.Id + " «" + button.Name + "», вещь " + button.Unity3DCombatIconAtlasId);
+                    Plugin.Trace("[slots] no picture for record " + button.Id + " '" + button.Name + "', item " + button.Unity3DCombatIconAtlasId);
                 return sprite;
             }
             catch { return null; }
@@ -265,8 +265,8 @@ namespace NewAgeQoL
                 RemoteImageLoader.Instance.Load(
                     "https://files.nura.biz/site/images/things100x100/" + image + ".png",
                     got => { if (got != null) Loaded[image] = got; },
-                    error => Plugin.Trace("[слоты] картинка «" + image + "» не загрузилась: " + error));
-                Plugin.Trace("[слоты] тяну картинку «" + image + "» с сайта");
+                    error => Plugin.Trace("[slots] picture '" + image + "' failed to load: " + error));
+                Plugin.Trace("[slots] fetching picture '" + image + "' from the site");
             }
             catch { }
             return null;
@@ -306,7 +306,7 @@ namespace NewAgeQoL
                 Asked.Add(thingId);
                 cache.Get(thingId, got => { if (got != null) Told[thingId] = got; });
             }
-            catch (Exception e) { Plugin.Trace("[слоты] описание " + thingId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[slots] description " + thingId + ": " + e.Message); }
         }
     }
 }

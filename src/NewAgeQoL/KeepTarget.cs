@@ -30,15 +30,15 @@ namespace NewAgeQoL
                 if (chosen == null || me == null) return false;
                 if (combat.Characters == null || !combat.Characters.ContainsKey(chosen.UserId))
                 {
-                    Plugin.Trace("[цель] выделенный " + chosen.UserId + " ушёл с поля, цель выбирает игра");
+                    Plugin.Trace("[target] selected " + chosen.UserId + " left the field, the game picks the target");
                     return false;
                 }
                 if (!_players) _players = Rivals(combat, me);
                 if (!_players) return false;
-                Plugin.Trace("[цель] бой против игроков: выделение остаётся на " + chosen.UserId);
+                Plugin.Trace("[target] fight against players: selection stays on " + chosen.UserId);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[цель] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[target] " + e.Message); }
             return false;
         }
 
@@ -49,7 +49,7 @@ namespace NewAgeQoL
             {
                 var one = pair.Value as PlayerCharacter;
                 if (one == null || one.UserId == me.UserId || one.Team == me.Team) continue;
-                Plugin.Trace("[цель] в бою есть противник-игрок " + one.UserId + ", дальше цель только своя");
+                Plugin.Trace("[target] enemy player " + one.UserId + " is in the fight, target is manual from now on");
                 return true;
             }
             return false;

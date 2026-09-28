@@ -90,7 +90,7 @@ namespace NewAgeQoL
                         if (method != null && method.ReturnType == typeof(AbstractCharacter))
                             _under = (System.Func<AbstractCharacter>)System.Delegate.CreateDelegate(typeof(System.Func<AbstractCharacter>), method);
                     }
-                    Plugin.Trace("[боец] наведение во Flash-виде " + (_under != null ? "берётся у куклы, мёртвые тоже" : "у куклы не найдено, по капсуле"));
+                    Plugin.Trace("[fighter] Flash view hover " + (_under != null ? "taken from the doll, dead ones too" : "not found on the doll, using capsule"));
                 }
                 if (_under == null) return false;
                 body = _under();

@@ -49,7 +49,7 @@ internal static class TopBars
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[панель] " + ex.Message);
+            Plugin.Log.LogWarning("[panel] " + ex.Message);
         }
     }
 
@@ -80,7 +80,7 @@ internal static class TopBars
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[панель] значения боя: " + ex.Message);
+            Plugin.Log.LogWarning("[panel] combat values: " + ex.Message);
             return true;
         }
     }

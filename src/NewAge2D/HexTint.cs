@@ -21,7 +21,7 @@ internal static class HexTint
             var grid = view != null ? view.HexGrid : null;
             var renderer = grid != null ? grid.GetComponent<MeshRenderer>() : null;
             string shader = renderer != null && renderer.sharedMaterial != null && renderer.sharedMaterial.shader != null ? renderer.sharedMaterial.shader.name : "?";
-            Plugin.Log.LogInfo($"[гексы] цвет хода карты {color} → {wanted}; шейдер сетки {shader}");
+            Plugin.Log.LogInfo($"[hexes] map move color {color} → {wanted}; grid shader {shader}");
         }
         color = wanted;
     }

@@ -41,11 +41,11 @@ namespace NewAgeQoL
 
     internal static class Perf
     {
-        private const string Mod = "мод";
-        private const string Flash = "Flash-вид";
-        private const string Ui = "интерфейс";
-        private const string Detail = "подробно";
-        private const string Quiet = "холостой ход";
+        private const string Mod = "mod";
+        private const string Flash = "Flash view";
+        private const string Ui = "ui";
+        private const string Detail = "detail";
+        private const string Quiet = "idle";
         private const string DetailBase =
             "BodyClick.Body, BodyClick.OverUi, BodyClick.Hovered, BodyClick.Walk, FlashLook.Under, " +
             "SkillList.HexUnder, SkillList.Look, SkillList.Pad, WalkHex.Walkable, " +
@@ -139,7 +139,7 @@ namespace NewAgeQoL
                 if (!On) return;
                 var idle = Mark();
                 Spin();
-                Add(_noise ?? (_noise = Track(Quiet, "холостая проба")), idle);
+                Add(_noise ?? (_noise = Track(Quiet, "idle probe")), idle);
                 long now = Stopwatch.GetTimestamp();
                 if (_last != 0L) Close((now - _last) * TickMs, now);
                 _last = now;
@@ -148,7 +148,7 @@ namespace NewAgeQoL
             {
                 _broken = true;
                 On = false;
-                Plugin.Log?.LogWarning("[замер] остановлен из-за ошибки: " + e);
+                Plugin.Log?.LogWarning("[perf] stopped due to an error: " + e);
             }
         }
 
@@ -216,7 +216,7 @@ namespace NewAgeQoL
                 _listener = new Lines();
                 BepInEx.Logging.Logger.Listeners.Add(_listener);
                 _exactBytes = ExactBytes();
-                Say("[замер] выделения памяти считаются " + (_exactBytes ? "точно, по основному потоку" : "приблизительно, по росту кучи (с другими потоками)"));
+                Say("[perf] memory allocations counted " + (_exactBytes ? "exactly, on the main thread" : "approximately, by heap growth (including other threads)"));
                 Hook();
                 try { PerfCounters.Open(); }
                 catch (Exception e) { CountersFailed(e); }
@@ -226,7 +226,7 @@ namespace NewAgeQoL
             _lastBytes = 0L;
             _gc = GC.CollectionCount(0);
             Restart(Stopwatch.GetTimestamp());
-            Say("[замер] включён. " + Machine());
+            Say("[perf] enabled. " + Machine());
         }
 
         private static void End()
@@ -234,7 +234,7 @@ namespace NewAgeQoL
             if (Frames.Count > 0 && _windowMs >= 5000.0) Report();
             On = false;
             Unhook();
-            Say("[замер] выключен");
+            Say("[perf] disabled");
         }
 
         private static void Unhook()
@@ -242,9 +242,9 @@ namespace NewAgeQoL
             if (!_started) return;
             _started = false;
             try { Application.logMessageReceived -= OnUnityLog; }
-            catch (Exception e) { Say("[замер] подписка на сообщения Unity не снялась: " + e.Message); }
+            catch (Exception e) { Say("[perf] Unity message subscription not removed: " + e.Message); }
             try { SceneManager.sceneLoaded -= OnScene; }
-            catch (Exception e) { Say("[замер] подписка на смену сцены не снялась: " + e.Message); }
+            catch (Exception e) { Say("[perf] scene change subscription not removed: " + e.Message); }
             try
             {
                 if (_listener != null)
@@ -253,14 +253,14 @@ namespace NewAgeQoL
                     _listener.Dispose();
                 }
             }
-            catch (Exception e) { Say("[замер] слушатель журналов не снялся: " + e.Message); }
+            catch (Exception e) { Say("[perf] log listener not removed: " + e.Message); }
             _listener = null;
             try { _harmony?.UnpatchSelf(); }
-            catch (Exception e) { Say("[замер] замеры методов не сняты: " + e.Message); }
+            catch (Exception e) { Say("[perf] method probes not removed: " + e.Message); }
             _harmony = null;
             Hooked.Clear();
             try { PerfCounters.Close(); }
-            catch (Exception e) { Say("[замер] счётчики Unity не закрылись: " + e.Message); }
+            catch (Exception e) { Say("[perf] Unity counters not closed: " + e.Message); }
             _countersBroken = false;
         }
 
@@ -381,7 +381,7 @@ namespace NewAgeQoL
         private static void CountersFailed(Exception e)
         {
             _countersBroken = true;
-            Say("[замер] счётчики Unity недоступны: " + e.GetType().Name + ": " + e.Message);
+            Say("[perf] Unity counters unavailable: " + e.GetType().Name + ": " + e.Message);
         }
 
         private static string Place()
@@ -389,10 +389,10 @@ namespace NewAgeQoL
             BaseLocationView view;
             try { view = BaseLocationView.GetInstance(); }
             catch { return "?"; }
-            if (view == null) return "без локации";
-            if (view is CombatLocationView) return "бой";
-            if (view is GlobalMapLocationView) return "карта мира";
-            if (view is StaticLocationView) return "город";
+            if (view == null) return "no location";
+            if (view is CombatLocationView) return "combat";
+            if (view is GlobalMapLocationView) return "world map";
+            if (view is StaticLocationView) return "town";
             return view.GetType().Name;
         }
 
@@ -406,18 +406,18 @@ namespace NewAgeQoL
                 return;
             }
             _saidAt = now;
-            var sb = new StringBuilder("[замер] рывок ").Append(ms.ToString("0", Inv)).Append(" мс · ").Append(place);
-            if (_loaded) sb.Append(" · загружалась сцена");
-            if (collected) sb.Append(" · сборка мусора");
+            var sb = new StringBuilder("[perf] spike ").Append(ms.ToString("0", Inv)).Append(" ms · ").Append(place);
+            if (_loaded) sb.Append(" · scene was loading");
+            if (collected) sb.Append(" · GC");
             var heavy = Meters.Where(m => m.Frame * TickMs >= 1.0).OrderByDescending(m => m.Frame).Take(5)
-                .Select(m => m.Name + " " + (m.Frame * TickMs).ToString("0.0", Inv) + (m.FrameCalls > 1 ? " ×" + m.FrameCalls : "") + (m.FrameGc ? " (сборка мусора)" : ""))
+                .Select(m => m.Name + " " + (m.Frame * TickMs).ToString("0.0", Inv) + (m.FrameCalls > 1 ? " ×" + m.FrameCalls : "") + (m.FrameGc ? " (GC)" : ""))
                 .ToArray();
-            if (heavy.Length > 0) sb.Append(" · дольше всего: ").Append(string.Join(", ", heavy));
-            if (unity > 0) sb.Append(" · сообщений Unity: ").Append(unity);
-            if (mod > 0) sb.Append(" · строк журналов модов: ").Append(mod);
+            if (heavy.Length > 0) sb.Append(" · slowest: ").Append(string.Join(", ", heavy));
+            if (unity > 0) sb.Append(" · Unity messages: ").Append(unity);
+            if (mod > 0) sb.Append(" · mod log lines: ").Append(mod);
             if (_hushed > 0)
             {
-                sb.Append(" · до этого ещё рывков без записи: ").Append(_hushed);
+                sb.Append(" · unlogged spikes before this: ").Append(_hushed);
                 _hushed = 0;
             }
             Say(sb.ToString());
@@ -432,27 +432,27 @@ namespace NewAgeQoL
             double avg = _windowMs / n;
             float median = Frames[n / 2];
             float p99 = Frames[Math.Min(n - 1, (int)(n * 0.99))];
-            Say("[замер] " + seconds.ToString("0", Inv) + " с · " + Where() + " · " + Setup());
-            Say("[замер] кадры: " + n + ", в среднем " + (1000.0 / avg).ToString("0.0", Inv) + " к/с (" + avg.ToString("0.0", Inv) +
-                " мс), обычный кадр " + median.ToString("0.0", Inv) + " мс, 99% кадров не дольше " + p99.ToString("0.0", Inv) +
-                " мс, худший " + _worst.ToString("0", Inv) + " мс; дольше 33 мс: " + _slow + ", дольше 100 мс: " + _stalls + ", рывков: " + _spikes);
+            Say("[perf] " + seconds.ToString("0", Inv) + " s · " + Where() + " · " + Setup());
+            Say("[perf] frames: " + n + ", average " + (1000.0 / avg).ToString("0.0", Inv) + " fps (" + avg.ToString("0.0", Inv) +
+                " ms), median frame " + median.ToString("0.0", Inv) + " ms, 99% of frames within " + p99.ToString("0.0", Inv) +
+                " ms, worst " + _worst.ToString("0", Inv) + " ms; over 33 ms: " + _slow + ", over 100 ms: " + _stalls + ", spikes: " + _spikes);
             Group(Mod, n, 8, true, seconds);
             Group(Flash, n, 6, true, seconds);
             Group(Ui, n, 0, true, seconds);
             Group(Detail, n, 14, false, seconds);
-            Say("[замер] память: сборок мусора " + _collections + ", выделено " + (_exactBytes ? "основным потоком " : "примерно ") +
+            Say("[perf] memory: GC runs " + _collections + ", allocated " + (_exactBytes ? "by main thread " : "approx. ") +
                 Rate(_windowBytes, seconds) + ", " + Heap() +
-                (_exactBytes || Noise <= 0L ? "" : "; шум холостой пробы " + Rate(Noise, seconds) + " — меньше этого по модулям не считается"));
+                (_exactBytes || Noise <= 0L ? "" : "; idle probe noise " + Rate(Noise, seconds) + " - per-module amounts below this are ignored"));
             Takers(seconds);
             if (!_countersBroken)
             {
                 string counters = "";
                 try { counters = PerfCounters.Line(); }
                 catch (Exception e) { CountersFailed(e); }
-                if (counters.Length > 0) Say("[замер] счётчики Unity: " + counters);
+                if (counters.Length > 0) Say("[perf] Unity counters: " + counters);
             }
-            Say("[замер] сообщения Unity: " + _unityTotal + " (" + (_unityTotal / seconds).ToString("0.0", Inv) + " в с)" + TopLines());
-            Say("[замер] журналы модов: " + ModLinesText(seconds));
+            Say("[perf] Unity messages: " + _unityTotal + " (" + (_unityTotal / seconds).ToString("0.0", Inv) + " per s)" + TopLines());
+            Say("[perf] mod logs: " + ModLinesText(seconds));
         }
 
         private static void Takers(double seconds)
@@ -461,34 +461,34 @@ namespace NewAgeQoL
             var top = Meters.Where(m => m.Group != Detail && m.Group != Quiet && m.Bytes > floor).OrderByDescending(m => m.Bytes).Take(8).ToList();
             if (top.Count == 0) return;
             long mine = Meters.Where(m => m.Group != Detail && m.Group != Quiet).Sum(m => m.Bytes);
-            string rest = _exactBytes && _windowBytes > mine ? "; игра и всё остальное на основном потоке " + Rate(_windowBytes - mine, seconds) : "";
-            Say("[замер] выделяют больше всех: " + string.Join(", ", top.Select(m => m.Name + " " + Rate(m.Bytes, seconds))) + rest);
+            string rest = _exactBytes && _windowBytes > mine ? "; game and everything else on the main thread " + Rate(_windowBytes - mine, seconds) : "";
+            Say("[perf] top allocators: " + string.Join(", ", top.Select(m => m.Name + " " + Rate(m.Bytes, seconds))) + rest);
         }
 
         private static string Rate(long bytes, double seconds)
         {
             double perSecond = seconds > 0.0 ? bytes / seconds : 0.0;
             return perSecond >= 1048576.0
-                ? (perSecond / 1048576.0).ToString("0.0", Inv) + " МБ/с"
-                : (perSecond / 1024.0).ToString("0", Inv) + " КБ/с";
+                ? (perSecond / 1048576.0).ToString("0.0", Inv) + " MB/s"
+                : (perSecond / 1024.0).ToString("0", Inv) + " KB/s";
         }
 
         private static void Group(string group, int frames, int take, bool sum, double seconds)
         {
             var list = Meters.Where(m => m.Group == group && m.Calls > 0).ToList();
             if (list.Count == 0) return;
-            var line = new StringBuilder("[замер] ").Append(group).Append(": ");
+            var line = new StringBuilder("[perf] ").Append(group).Append(": ");
             if (sum)
             {
                 double total = list.Sum(m => (double)m.Total) * TickMs / frames;
                 var worst = list.OrderByDescending(m => m.Peak).First();
-                line.Append(total.ToString("0.00", Inv)).Append(" мс за кадр, пик ").Append((worst.Peak * TickMs).ToString("0.0", Inv)).Append(" мс")
-                    .Append(worst.PeakGc ? " со сборкой мусора" : "");
+                line.Append(total.ToString("0.00", Inv)).Append(" ms per frame, peak ").Append((worst.Peak * TickMs).ToString("0.0", Inv)).Append(" ms")
+                    .Append(worst.PeakGc ? " with GC" : "");
             }
             if (take > 0)
             {
                 var top = list.OrderByDescending(m => m.Total).Take(take).Select(m => Cost(m, frames, seconds));
-                line.Append(sum ? "; дороже всех: " : "").Append(string.Join(", ", top));
+                line.Append(sum ? "; most expensive: " : "").Append(string.Join(", ", top));
             }
             Say(line.ToString());
         }
@@ -496,11 +496,11 @@ namespace NewAgeQoL
         private static string Cost(Meter m, int frames, double seconds)
         {
             var text = new StringBuilder(m.Name).Append(' ').Append((m.Total * TickMs / frames).ToString("0.00", Inv))
-                .Append(" (пик ").Append((m.Peak * TickMs).ToString("0.0", Inv));
-            if (m.PeakGc) text.Append(" со сборкой мусора");
-            if (m.GcHits > 0) text.Append(", сборок внутри ").Append(m.GcHits);
-            if (seconds > 0.0 && m.Bytes / seconds >= 1024.0 && m.Bytes > Noise * 2L) text.Append(", выделяет ").Append(Rate(m.Bytes, seconds));
-            if (m.Calls * 2 >= frames * 3L) text.Append(", вызовов за кадр ").Append(((double)m.Calls / frames).ToString("0.#", Inv));
+                .Append(" (peak ").Append((m.Peak * TickMs).ToString("0.0", Inv));
+            if (m.PeakGc) text.Append(" with GC");
+            if (m.GcHits > 0) text.Append(", GC runs inside ").Append(m.GcHits);
+            if (seconds > 0.0 && m.Bytes / seconds >= 1024.0 && m.Bytes > Noise * 2L) text.Append(", allocates ").Append(Rate(m.Bytes, seconds));
+            if (m.Calls * 2 >= frames * 3L) text.Append(", calls per frame ").Append(((double)m.Calls / frames).ToString("0.#", Inv));
             return text.Append(')').ToString();
         }
 
@@ -511,7 +511,7 @@ namespace NewAgeQoL
             string places = shares.Count <= 1
                 ? string.Join(", ", shares.Select(p => p.Key))
                 : string.Join(", ", shares.Select(p => p.Key + " " + (p.Value * 100.0 / all).ToString("0", Inv) + "%"));
-            return places + (_windowScene.Length > 0 ? " (сцена " + _windowScene + ")" : "");
+            return places + (_windowScene.Length > 0 ? " (scene " + _windowScene + ")" : "");
         }
 
         private static string SceneName()
@@ -522,28 +522,28 @@ namespace NewAgeQoL
 
         private static string Setup()
         {
-            return "мод " + (ModSwitch.On ? "вкл" : "выкл") + ", Flash-вид " + FlashState() + ", окно " + Screen.width + "x" + Screen.height +
-                   ", цель " + Application.targetFrameRate + " к/с, vSync " + QualitySettings.vSyncCount;
+            return "mod " + (ModSwitch.On ? "on" : "off") + ", Flash view " + FlashState() + ", window " + Screen.width + "x" + Screen.height +
+                   ", target " + Application.targetFrameRate + " fps, vSync " + QualitySettings.vSyncCount;
         }
 
         private static string FlashState()
         {
             var entry = FlashLook.Entry("General", "Enabled");
-            return entry == null ? "нет" : entry.Value ? "вкл" : "выкл";
+            return entry == null ? "none" : entry.Value ? "on" : "off";
         }
 
         private static string Machine()
         {
             string refresh = "";
-            try { refresh = " " + Screen.currentResolution.refreshRateRatio.value.ToString("0", Inv) + " Гц"; }
+            try { refresh = " " + Screen.currentResolution.refreshRateRatio.value.ToString("0", Inv) + " Hz"; }
             catch { }
             string quality = "?";
             try { quality = QualitySettings.names[QualitySettings.GetQualityLevel()]; }
             catch { }
-            return "Видеокарта " + SystemInfo.graphicsDeviceName + " (" + SystemInfo.graphicsDeviceType + "), процессор " + SystemInfo.processorType +
-                   " (" + SystemInfo.processorCount + " потоков), память " + SystemInfo.systemMemorySize + " МБ, монитор " +
-                   Screen.currentResolution.width + "x" + Screen.currentResolution.height + refresh + ", режим " + Screen.fullScreenMode +
-                   ", качество " + quality + ", " + Setup();
+            return "GPU " + SystemInfo.graphicsDeviceName + " (" + SystemInfo.graphicsDeviceType + "), CPU " + SystemInfo.processorType +
+                   " (" + SystemInfo.processorCount + " threads), memory " + SystemInfo.systemMemorySize + " MB, monitor " +
+                   Screen.currentResolution.width + "x" + Screen.currentResolution.height + refresh + ", mode " + Screen.fullScreenMode +
+                   ", quality " + quality + ", " + Setup();
         }
 
         private static string Heap()
@@ -553,9 +553,9 @@ namespace NewAgeQoL
                 long used = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
                 long heap = UnityEngine.Profiling.Profiler.GetMonoHeapSizeLong();
                 long total = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
-                return "куча C# занята " + Mb(used) + " из " + Mb(heap) + " МБ" + (total > 0 ? ", всего у Unity " + Mb(total) + " МБ" : "");
+                return "C# heap used " + Mb(used) + " of " + Mb(heap) + " MB" + (total > 0 ? ", Unity total " + Mb(total) + " MB" : "");
             }
-            catch { return "размер кучи неизвестен"; }
+            catch { return "heap size unknown"; }
         }
 
         private static string Mb(long bytes) => (bytes / 1048576.0).ToString("0", Inv);
@@ -563,17 +563,17 @@ namespace NewAgeQoL
         private static string TopLines()
         {
             if (UnityLines.Count == 0) return "";
-            var top = UnityLines.OrderByDescending(p => p.Value).Take(4).Select(p => "«" + p.Key + "» ×" + p.Value);
-            return "; чаще всего: " + string.Join(", ", top) + (_unityRest > 0 ? "; ещё разных сверх учёта: " + _unityRest : "");
+            var top = UnityLines.OrderByDescending(p => p.Value).Take(4).Select(p => "\"" + p.Key + "\" ×" + p.Value);
+            return "; most frequent: " + string.Join(", ", top) + (_unityRest > 0 ? "; other distinct beyond tracking: " + _unityRest : "");
         }
 
         private static string ModLinesText(double seconds)
         {
             lock (Gate)
             {
-                if (ModLines.Count == 0) return "ничего";
+                if (ModLines.Count == 0) return "none";
                 return string.Join(", ", ModLines.OrderByDescending(p => p.Value)
-                    .Select(p => p.Key + " " + p.Value + " (" + (p.Value / seconds).ToString("0.0", Inv) + " в с)"));
+                    .Select(p => p.Key + " " + p.Value + " (" + (p.Value / seconds).ToString("0.0", Inv) + " per s)"));
             }
         }
 
@@ -619,8 +619,8 @@ namespace NewAgeQoL
             var after = new HarmonyMethod(AccessTools.Method(typeof(Perf), nameof(After)));
             int count = 0;
             var rebuild = AccessTools.Method(typeof(UnityEngine.UI.CanvasUpdateRegistry), "PerformUpdate");
-            if (rebuild == null) Say("[замер] перестройка интерфейса не найдена, её время не считается");
-            else if (Watch(harmony, rebuild, Ui, "перестройка uGUI", before, after)) count++;
+            if (rebuild == null) Say("[perf] UI rebuild not found, its time is not counted");
+            else if (Watch(harmony, rebuild, Ui, "uGUI rebuild", before, after)) count++;
             string own = typeof(Perf).Assembly.GetName().Name;
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
@@ -639,7 +639,7 @@ namespace NewAgeQoL
                 }
             }
             count += Details(harmony, before, after);
-            Say("[замер] подключено методов: " + count);
+            Say("[perf] methods hooked: " + count);
         }
 
         private static int Details(Harmony harmony, HarmonyMethod before, HarmonyMethod after)
@@ -670,7 +670,7 @@ namespace NewAgeQoL
                     if (Watch(harmony, method, Detail, name, before, after)) count++;
                 }
             }
-            if (missing.Count > 0) Say("[замер] для подробного замера не нашлись: " + string.Join(", ", missing));
+            if (missing.Count > 0) Say("[perf] not found for detailed perf: " + string.Join(", ", missing));
             return count;
         }
 
@@ -693,7 +693,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 Hooked.Remove(key);
-                Say("[замер] не подключился " + name + ": " + e.Message);
+                Say("[perf] failed to hook " + name + ": " + e.Message);
                 return false;
             }
         }
@@ -747,15 +747,15 @@ namespace NewAgeQoL
 
         private static readonly string[,] Wanted =
         {
-            { "CPU Main Thread Frame Time", "основной поток" },
-            { "CPU Render Thread Frame Time", "поток отрисовки" },
-            { "GPU Frame Time", "видеокарта" },
-            { "Draw Calls Count", "вызовов отрисовки" },
-            { "Batches Count", "пакетов" },
-            { "SetPass Calls Count", "смен материала" },
-            { "Triangles Count", "треугольников" },
-            { "GC Allocated In Frame", "выделено памяти за кадр" },
-            { "GC Allocation In Frame Count", "выделений за кадр" },
+            { "CPU Main Thread Frame Time", "main thread" },
+            { "CPU Render Thread Frame Time", "render thread" },
+            { "GPU Frame Time", "GPU" },
+            { "Draw Calls Count", "draw calls" },
+            { "Batches Count", "batches" },
+            { "SetPass Calls Count", "SetPass calls" },
+            { "Triangles Count", "triangles" },
+            { "GC Allocated In Frame", "GC alloc per frame" },
+            { "GC Allocation In Frame Count", "GC allocs per frame" },
         };
 
         private const int SampleEvery = 10;
@@ -781,10 +781,10 @@ namespace NewAgeQoL
                     break;
                 }
             }
-            Plugin.Log?.LogInfo("[замер] счётчиков Unity доступно " + handles.Count + ", взяты: " + (taken.Count == 0 ? "ни одного" : string.Join(", ", taken)));
+            Plugin.Log?.LogInfo("[perf] Unity counters available " + handles.Count + ", taken: " + (taken.Count == 0 ? "none" : string.Join(", ", taken)));
             if (taken.Count > 0) return;
             var names = handles.Take(80).Select(h => ProfilerRecorderHandle.GetDescription(h).Name);
-            Plugin.Log?.LogInfo("[замер] первые счётчики Unity: " + string.Join(", ", names));
+            Plugin.Log?.LogInfo("[perf] first Unity counters: " + string.Join(", ", names));
         }
 
         internal static void Close()
@@ -833,11 +833,11 @@ namespace NewAgeQoL
                 if (c.Samples == 0 || c.Sum <= 0.0) continue;
                 double avg = c.Sum / c.Samples;
                 if (c.Unit == ProfilerMarkerDataUnit.TimeNanoseconds)
-                    parts.Add(c.Title + " " + (avg / 1e6).ToString("0.0", Inv) + " мс (пик " + (c.Peak / 1e6).ToString("0", Inv) + ")");
+                    parts.Add(c.Title + " " + (avg / 1e6).ToString("0.0", Inv) + " ms (peak " + (c.Peak / 1e6).ToString("0", Inv) + ")");
                 else if (c.Unit == ProfilerMarkerDataUnit.Bytes)
-                    parts.Add(c.Title + " " + (avg / 1024.0).ToString("0", Inv) + " КБ (пик " + (c.Peak / 1024.0).ToString("0", Inv) + ")");
+                    parts.Add(c.Title + " " + (avg / 1024.0).ToString("0", Inv) + " KB (peak " + (c.Peak / 1024.0).ToString("0", Inv) + ")");
                 else
-                    parts.Add(c.Title + " " + avg.ToString("0", Inv) + " (пик " + c.Peak + ")");
+                    parts.Add(c.Title + " " + avg.ToString("0", Inv) + " (peak " + c.Peak + ")");
             }
             return string.Join(", ", parts);
         }

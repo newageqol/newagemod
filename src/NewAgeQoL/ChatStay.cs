@@ -111,7 +111,7 @@ namespace NewAgeQoL
                 if (last >= now.Count || !ReferenceEquals(now[last], before[before.Count - 1])) return 0f;
                 return -Height(panel, scroll, now, added);
             }
-            catch (Exception e) { Plugin.Trace("[чат] срезанные сверху строки: " + e.Message); return 0f; }
+            catch (Exception e) { Plugin.Trace("[chat] lines trimmed from top: " + e.Message); return 0f; }
         }
 
         private static float Height(ChatPanelContent panel, ScrollRect scroll, IList<ITextScrollerContent> lines, int count)
@@ -235,7 +235,7 @@ namespace NewAgeQoL
                 Put(scroll, fromTop);
                 if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(Later(scroll, fromTop, _turn));
             }
-            catch (Exception e) { Plugin.Trace("[чат] прокрутка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] scroll: " + e.Message); }
         }
 
         private static IEnumerator Later(ScrollRect scroll, float fromTop, int turn)
@@ -272,14 +272,14 @@ namespace NewAgeQoL
         {
             if (!ChatStay.On) return;
             try { ChatStay.Remember(__instance); }
-            catch (Exception e) { Plugin.Trace("[чат] запомнить прокрутку: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] save scroll: " + e.Message); }
         }
 
         private static void Postfix(ChatPanelContent __instance)
         {
             if (!ChatStay.On) return;
             try { ChatStay.Note(__instance); }
-            catch (Exception e) { Plugin.Trace("[чат] список строк: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] line list: " + e.Message); }
             if (!ChatStay.Held) return;
             ChatStay.Keep(ChatStay.Of(__instance), ChatStay.Mark);
         }
@@ -291,7 +291,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatPanelContent __instance)
         {
             try { ChatStay.Note(__instance); }
-            catch (Exception e) { Plugin.Trace("[чат] смена вкладки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] tab switch: " + e.Message); }
         }
     }
 }

@@ -36,12 +36,12 @@ namespace NewAgeQoL
                 var info = new FileInfo(Current);
                 if (info.Exists && info.Length > Limit) Rotate();
                 Open();
-                _writer.WriteLine("===== запуск " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + ", версия мода " + Plugin.Version + " =====");
+                _writer.WriteLine("===== start " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + ", mod version " + Plugin.Version + " =====");
                 _writer.Flush();
                 _source = source;
                 source.LogEvent += OnLog;
             }
-            catch (Exception e) { source.LogWarning("журнал на диске не открылся: " + e.Message); }
+            catch (Exception e) { source.LogWarning("disk log did not open: " + e.Message); }
         }
 
         internal static void Detach(ManualLogSource source)
@@ -91,7 +91,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 _rotateBroken = true;
-                Blame("старый журнал не переименовался (" + e.Message + "), пишу дальше в тот же файл");
+                Blame("old log was not renamed (" + e.Message + "), writing on to the same file");
             }
             Open();
         }
@@ -113,7 +113,7 @@ namespace NewAgeQoL
                 try { Write(e); }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ObjectDisposedException)
                 {
-                    Blame("запись в журнал не прошла: " + ex.Message);
+                    Blame("log write failed: " + ex.Message);
                 }
                 catch { }
             }
@@ -135,7 +135,7 @@ namespace NewAgeQoL
             string why = _blame;
             if (why == null) return;
             _blame = null;
-            _source?.LogWarning("[журнал] " + why);
+            _source?.LogWarning("[journal] " + why);
         }
     }
 }

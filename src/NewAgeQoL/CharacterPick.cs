@@ -24,7 +24,7 @@ namespace NewAgeQoL
         {
             if (userId <= 0 || Plugin.CfgLastCharacter == null) return;
             Plugin.CfgLastCharacter.Value = userId;
-            Plugin.Trace("[персонаж] запомнен id " + userId);
+            Plugin.Trace("[character] remembered id " + userId);
             Chars.Use(userId);
         }
 
@@ -40,9 +40,9 @@ namespace NewAgeQoL
                 int index = Find(message, want);
                 if (index <= 0) return;
                 Pick(selector, index);
-                Plugin.Trace("[персонаж] на экране выбора показан " + message.Items[index].Login);
+                Plugin.Trace("[character] shown on the selection screen: " + message.Items[index].Login);
             }
-            catch (Exception e) { Plugin.Trace("[персонаж] выбор: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[character] pick: " + e.Message); }
         }
 
         private static void Learn(AvailableCharactersResponseMessage message)
@@ -63,8 +63,8 @@ namespace NewAgeQoL
             }
             Known.Sort((a, b) => a.UserId.CompareTo(b.UserId));
             var line = new System.Text.StringBuilder();
-            foreach (var one in Known) line.Append(line.Length > 0 ? ", " : "").Append(one.Login).Append(" класс ").Append(one.ClassId);
-            Plugin.Trace("[персонаж] персонажей на аккаунте: " + Known.Count + " (" + line + ")");
+            foreach (var one in Known) line.Append(line.Length > 0 ? ", " : "").Append(one.Login).Append(" class ").Append(one.ClassId);
+            Plugin.Trace("[character] characters on account: " + Known.Count + " (" + line + ")");
         }
 
         private static int Find(AvailableCharactersResponseMessage message, int userId)
@@ -87,7 +87,7 @@ namespace NewAgeQoL
             int index = Find(message, want);
             if (index < 0 || message.Items[index].Banned == true)
             {
-                Plugin.Trace("[персонаж] персонажа " + want + " нет в списке или он заблокирован, остаюсь на экране выбора");
+                Plugin.Trace("[character] character " + want + " is not in the list or is blocked, staying on the selection screen");
                 return;
             }
             Pick(selector, index);
@@ -101,9 +101,9 @@ namespace NewAgeQoL
             try
             {
                 AccessTools.Method(typeof(CharacterSelectorComponent), "FireCharacterSelected")?.Invoke(selector, new object[] { userId });
-                Plugin.Trace("[персонаж] вход персонажем " + userId + " сразу, без выбора");
+                Plugin.Trace("[character] entering as " + userId + " right away, without picking");
             }
-            catch (Exception e) { Plugin.Warn("[персонаж] вход: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[character] enter: " + e.Message); }
         }
     }
 
@@ -118,5 +118,38 @@ namespace NewAgeQoL
     public static class CharacterPickEnterPatch
     {
         private static void Prefix(int __0) => CharacterPick.Remember(__0);
+    }
+
+    [HarmonyPatch(typeof(SessionController), "OnConnect")]
+    public static class CharacterPickDisconnectPatch
+    {
+        private static readonly System.Reflection.FieldInfo Listeners = AccessTools.Field(typeof(NetworkConnection), "DisconnectEvent");
+        private static readonly System.Reflection.MethodInfo Handler = AccessTools.Method(typeof(SessionController), "OnDisconnect");
+
+        private static void Prefix(SessionController __instance, bool success)
+        {
+            if (!success || __instance == null || Handler == null) return;
+            try
+            {
+                var connection = NetworkConnection.Instance;
+                if (connection == null) return;
+                var handler = (Action<EFatalErrorType, string>)Delegate.CreateDelegate(typeof(Action<EFatalErrorType, string>), __instance, Handler);
+                int stale = Count(connection, __instance);
+                if (stale < 0) stale = 1;
+                for (int i = 0; i < stale; i++) connection.DisconnectEvent -= handler;
+                if (stale > 0 && Listeners != null) Plugin.Trace("[character] dropped " + stale + " stale disconnect listener(s) before subscribing again");
+            }
+            catch (Exception e) { Plugin.Trace("[character] disconnect listeners: " + e.Message); }
+        }
+
+        private static int Count(object connection, SessionController session)
+        {
+            if (Listeners == null) return -1;
+            if (!(Listeners.GetValue(connection) is Delegate all)) return 0;
+            int count = 0;
+            foreach (var one in all.GetInvocationList())
+                if (ReferenceEquals(one.Target, session) && one.Method == Handler) count++;
+            return count;
+        }
     }
 }

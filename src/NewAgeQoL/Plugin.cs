@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -54,7 +54,6 @@ namespace NewAgeQoL
         internal static ConfigEntry<float> CfgCamZoom;
         internal static ConfigEntry<float> CfgCamPanExtra;
         internal static ConfigEntry<float> CfgCamRoomExtra;
-        internal static ConfigEntry<string> CfgExpowerSeen;
         internal static ConfigEntry<float> CfgDialogScale;
         internal static ConfigEntry<string> CfgOnlineLogin;
         internal static ConfigEntry<string> CfgOnlinePassword;
@@ -81,6 +80,7 @@ namespace NewAgeQoL
         internal static ConfigEntry<int> CfgTravelOuter;
         internal static ConfigEntry<bool> CfgMapLabels;
         internal static ConfigEntry<bool> CfgMapLabelType;
+        internal static ConfigEntry<bool> CfgPortalList;
         internal static ConfigEntry<bool> CfgMapLabelBillboard;
         internal static ConfigEntry<int> CfgMapLabelFont;
         internal static ConfigEntry<float> CfgMapLabelLift;
@@ -110,11 +110,15 @@ namespace NewAgeQoL
                 _off = true;
                 try { new Harmony(Guid).CreateClassProcessor(typeof(ModSwitchButtonPatch)).Patch(); }
                 catch (System.Exception e) { Log.LogError("Harmony: ModSwitchButtonPatch — " + e.Message); }
-                Log.LogInfo("Мод выключен: клиент работает как обычный, включить можно кнопкой «Включить мод» в настройках игры.");
+                Log.LogInfo("Mod is disabled: the client runs as usual, it can be enabled with the \"Enable mod\" button in the game settings.");
                 return;
             }
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
             Chars.Home(Config);
+            NightTown.Bind(Config);
+            MagicTower.Bind(Config);
+            Gothic.Bind(Config);
+            NightTheme.Bind(Config);
 
 
             Chars.Own("Town", "ButtonGoesToTournament", false,
@@ -190,6 +194,8 @@ namespace NewAgeQoL
                 "Подписывать точки внешнего мира их номером: «v12». По номеру видно, куда ведёт дорога, им удобно объяснять маршрут другим и задавать точки в списке похода.", e => CfgMapLabels = e);
             Chars.Own("Map", "VertexLabelType", false,
                 "Дописывать к номеру, что это за точка: «бой», «переход» (сохранение, вход в город или на соседний участок) или «дорога».", e => CfgMapLabelType = e);
+            Chars.Own("Map", "PortalList", true,
+                "В локации портала сразу показывать список направлений, доступных по рунам, вместо диалога. Нажатие переносит без подтверждения.", e => CfgPortalList = e);
             Chars.Own("Map", "VertexLabelBillboard", true,
                 "Держать метку повёрнутой к камере, чтобы она читалась при любом наклоне карты.", e => CfgMapLabelBillboard = e);
             Chars.Own("Map", "VertexLabelSharpness", 48,
@@ -288,8 +294,6 @@ namespace NewAgeQoL
             Chars.Own("Combat", "ResultDialogScale", 0.7f,
                 "Размер окон «Победа»/«Поражение» после боя и окна разведки «Нападение»: 1 — как в игре, 0.4 — меньше вдвое с лишним. Окно остаётся по центру экрана.", e => CfgDialogScale = e);
             CfgDialogScale.Value = UnityEngine.Mathf.Clamp(CfgDialogScale.Value, 0.4f, 1f);
-            Chars.Fresh("State", "ExpowerSeen", "",
-                "Служебное: наибольший предел зарядов, который игра показывала каждому персонажу. Заполняется само.", e => CfgExpowerSeen = e);
             Chars.Own("Quests", "DailyTaskPopups", false,
                 "Показывать всплывающие карточки хода ежедневных заданий над чатом: «Торжество IV, 1/10» и подобные. ВЫКЛ — не показывать, весь список всё равно открывается кнопкой заданий дня. Окно уже выполненного задания с наградой этой галкой не трогается, оно открывается как обычно.", e => CfgDailyToast = e);
             Chars.Own("Quests", "Window", "",
@@ -354,7 +358,7 @@ namespace NewAgeQoL
             }
             catch (System.Exception e) { Log.LogError("Harmony: " + e); }
 
-            Log.LogInfo("New Age QoL " + Version + " загружен.");
+            Log.LogInfo("New Age QoL " + Version + " loaded.");
         }
 
         private static void Upgrade(ConfigEntry<string> cfg, params string[] wasBefore)
@@ -399,7 +403,7 @@ namespace NewAgeQoL
 
         private static string Again(int hushed)
         {
-            return hushed > 0 ? " (и ещё " + hushed + " таких же подряд)" : "";
+            return hushed > 0 ? " (and " + hushed + " more like it)" : "";
         }
 
         internal static void Trace(string text,
@@ -456,7 +460,7 @@ namespace NewAgeQoL
                 Contracts.Wake();
                 CombatCam.Wake();
             }
-            catch (System.Exception e) { Trace("[сцена] пробуждение: " + e.Message); }
+            catch (System.Exception e) { Trace("[scene] awake: " + e.Message); }
         }
 
         private sealed class Part
@@ -509,6 +513,9 @@ namespace NewAgeQoL
                 new Part { Name = "Cards.Tick", Do = Cards.Tick },
                 new Part { Name = "WalkHex.Tick", Do = WalkHex.Tick },
                 new Part { Name = "Notice.Tick", Do = Notice.Tick },
+                new Part { Name = "TownFiles.Tick", Do = TownFiles.Tick },
+                new Part { Name = "TowerFiles.Tick", Do = TowerFiles.Tick },
+                new Part { Name = "GothicShop.Tick", Do = GothicShop.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
                 new Part { Name = "OnlineList.Tick", Do = OnlineList.Tick },
@@ -517,6 +524,7 @@ namespace NewAgeQoL
                 new Part { Name = "QuestWindow.Tick", Do = QuestWindow.Tick },
                 new Part { Name = "QuestTrack.Tick", Do = QuestTrack.Tick },
                 new Part { Name = "CultPotions.Tick", Do = CultPotions.Tick },
+                new Part { Name = "Portals.Tick", Do = Portals.Tick },
                 new Part { Name = "TravelEnter.Tick", Do = TravelEnter.Tick },
                 new Part { Name = "MovePace.Tick", Do = MovePace.Tick },
                 new Part { Name = "Spectate.Tick", Do = Spectate.Tick },
@@ -566,7 +574,7 @@ namespace NewAgeQoL
                 try { part.Do(); }
                 catch (System.Exception e) { Stumble(part, e); }
                 if (mark.At == 0L) continue;
-                if (part.Meter == null) part.Meter = Perf.Track("мод", part.Name);
+                if (part.Meter == null) part.Meter = Perf.Track("mod", part.Name);
                 Perf.Add(part.Meter, mark);
             }
         }
@@ -575,7 +583,7 @@ namespace NewAgeQoL
         {
             if (part.Said > 0f && UnityEngine.Time.unscaledTime - part.Said < 5f) return;
             part.Said = UnityEngine.Time.unscaledTime;
-            Log?.LogWarning("[кадр] " + part.Name + " споткнулся, остальное мод доделал: " + e);
+            Log?.LogWarning("[frame] " + part.Name + " failed, the mod finished the rest: " + e);
         }
 
         private static bool _off;

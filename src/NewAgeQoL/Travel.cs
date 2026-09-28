@@ -118,7 +118,7 @@ namespace NewAgeQoL
                 list.Add(new Spot { Name = name, Area = area, Path = new[] { vertex } });
                 Save(list);
                 Say("Точка «" + name + "» добавлена в список похода.");
-                Plugin.Trace("[travel] добавлена точка «" + name + "» " + area + ":" + vertex);
+                Plugin.Trace("[travel] added point '" + name + "' " + area + ":" + vertex);
             });
         }
 
@@ -132,7 +132,7 @@ namespace NewAgeQoL
                 if (at < 0) return;
                 list[at] = new Spot { Name = name, Area = spot.Area, Path = spot.Path };
                 Save(list);
-                Plugin.Trace("[travel] точка «" + spot.Name + "» переименована в «" + name + "»");
+                Plugin.Trace("[travel] point '" + spot.Name + "' renamed to '" + name + "'");
             });
         }
 
@@ -148,7 +148,7 @@ namespace NewAgeQoL
                 list.RemoveAt(at);
                 Save(list);
                 Notice.Show("Точка «" + spot.Name + "» убрана из списка", 3f);
-                Plugin.Trace("[travel] удалена точка «" + spot.Name + "»");
+                Plugin.Trace("[travel] removed point '" + spot.Name + "'");
             });
         }
 
@@ -162,7 +162,7 @@ namespace NewAgeQoL
             list.RemoveAt(from);
             list.Insert(to, spot);
             Save(list);
-            Plugin.Trace("[travel] точка «" + spot.Name + "» перенесена на место " + (to + 1));
+            Plugin.Trace("[travel] point '" + spot.Name + "' moved to position " + (to + 1));
         }
 
         private static bool SamePath(Spot a, Spot b)
@@ -199,7 +199,7 @@ namespace NewAgeQoL
         {
             if (_shared != null) return _shared;
             try { _shared = System.IO.File.Exists(SharedFile) ? System.IO.File.ReadAllText(SharedFile) : ""; }
-            catch (Exception e) { Plugin.Trace("[travel] общие переходы: " + e.Message); _shared = ""; }
+            catch (Exception e) { Plugin.Trace("[travel] shared gates: " + e.Message); _shared = ""; }
             return _shared;
         }
 
@@ -261,7 +261,7 @@ namespace NewAgeQoL
             if (spot == null || Plugin.Instance == null) return;
             if (Artifacts.Busy) { Say("Сейчас идёт работа с хранилищем — поход подождёт."); return; }
             if (TownWalk.Busy) { Say("Сейчас идёт возврат в город — поход подождёт."); return; }
-            if (SideButtons.ClaimLocked()) { Plugin.Trace("[travel] из заявки на бой поход запрещён"); return; }
+            if (SideButtons.ClaimLocked()) { Plugin.Trace("[travel] travel is not allowed from a fight claim"); return; }
             _wanted = spot;
             Plugin.Instance.StartCoroutine(Switch(spot));
         }
@@ -281,7 +281,7 @@ namespace NewAgeQoL
         private static IEnumerator Run(Spot spot)
         {
             _running = spot; _abort = false; AutoConfirm = false;
-            Plugin.Trace("[travel] «" + spot.Name + "» запущен; " + Where());
+            Plugin.Trace("[travel] '" + spot.Name + "' started; " + Where());
             try
             {
                 if (!Connected()) { Fail("нет соединения"); yield break; }
@@ -297,8 +297,8 @@ namespace NewAgeQoL
                         {
                             if (MapReady() && Area == Outer)
                             {
-                                Plugin.Trace("[travel] нет дороги с участка " + Area + " на " + spot.Area);
-                                RouteLog.Note("нет дороги " + Area + ">" + spot.Area, "поход не знает дороги с участка " + Area + " на " + spot.Area + " («" + spot.Name + "»)");
+                                Plugin.Trace("[travel] no road from area " + Area + " to " + spot.Area);
+                                RouteLog.Note("нет дороги " + Area + ">" + spot.Area, "travel knows no road from area " + Area + " to " + spot.Area + " ('" + spot.Name + "')");
                                 Fail("не знаю дороги туда");
                                 yield break;
                             }
@@ -332,7 +332,7 @@ namespace NewAgeQoL
                 }
 
                 Say("«" + spot.Name + "»: на месте.");
-                Plugin.Trace("[travel] «" + spot.Name + "» пройден; " + Where());
+                Plugin.Trace("[travel] '" + spot.Name + "' reached; " + Where());
             }
             finally { _running = null; AutoConfirm = false; }
         }
@@ -342,14 +342,14 @@ namespace NewAgeQoL
             if (Locked(vertex))
             {
                 Say("«" + spot.Name + "»: точка ещё не открыта.");
-                Plugin.Trace("[travel] v" + vertex + " закрыта");
-                RouteLog.Note("закрыта " + Area + ":" + vertex, "точка v" + vertex + " на участке " + Area + " закрыта");
+                Plugin.Trace("[travel] v" + vertex + " closed");
+                RouteLog.Note("закрыта " + Area + ":" + vertex, "point v" + vertex + " in area " + Area + " is closed");
                 _ok = false;
                 yield break;
             }
 
             Say("«" + spot.Name + "»: " + (enter ? "иду к переходу…" : "иду…"));
-            Plugin.Trace("[travel] «" + spot.Name + "» → v" + vertex + (enter ? " (переход)" : ""));
+            Plugin.Trace("[travel] '" + spot.Name + "' → v" + vertex + (enter ? " (gate)" : ""));
             AutoConfirm = enter;
             int arrived = ArrivedStamp, refused = RefusedStamp, load = LoadStamp;
             if (!Send(new BeginMoveRequest(vertex))) { _ok = false; yield break; }
@@ -363,7 +363,7 @@ namespace NewAgeQoL
                 if (RefusedAt != vertex)
                 {
                     _ok = false;
-                    Plugin.Trace("[travel] сервер не ведёт к v" + vertex + ", стою на v" + RefusedAt);
+                    Plugin.Trace("[travel] server does not lead to v" + vertex + ", standing at v" + RefusedAt);
                     if (Locked(vertex)) Say("«" + spot.Name + "»: точка ещё не открыта.");
                     else Stop(Blocked());
                     yield break;
@@ -397,10 +397,10 @@ namespace NewAgeQoL
                     best = one.Id;
                     length = road.Count;
                 }
-                if (best > 0) Plugin.Trace("[travel] из локации " + map.MapId + " есть свой выход на участок " + best + ", до цели переходов " + length);
+                if (best > 0) Plugin.Trace("[travel] location " + map.MapId + " has its own exit to area " + best + ", gates to target " + length);
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[travel] выходы локации: " + e.Message); return -1; }
+            catch (Exception e) { Plugin.Trace("[travel] location exits: " + e.Message); return -1; }
         }
 
         private static bool Allowed(int place, int area)
@@ -421,7 +421,7 @@ namespace NewAgeQoL
             yield return WaitFor(() => LoadStamp != leave && MapReady(), 90f);
             if (!_ok)
             {
-                RouteLog.Note("не выпустили " + Loc + ">" + area, "из локации " + Loc + " не удалось выйти на участок " + area);
+                RouteLog.Note("не выпустили " + Loc + ">" + area, "could not exit location " + Loc + " to area " + area);
                 Stop("не вышел на участок " + area);
                 yield break;
             }
@@ -558,8 +558,8 @@ namespace NewAgeQoL
         private static string Where()
         {
             var map = Gmc;
-            return "участок=" + Area + " loc=" + Loc
-                 + " карта=" + (map == null ? "нет" : "вершин " + (map.Vertices != null ? map.Vertices.Length : -1));
+            return "area=" + Area + " loc=" + Loc
+                 + " map=" + (map == null ? "none" : "vertices " + (map.Vertices != null ? map.Vertices.Length : -1));
         }
 
         private static bool Send(BaseRequest request)
@@ -573,7 +573,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Fault("[travel] отправка: " + e.Message);
+                Plugin.Fault("[travel] send: " + e.Message);
                 Fail("ошибка отправки: " + e.Message);
                 return false;
             }
@@ -647,10 +647,10 @@ namespace NewAgeQoL
                         Learn(_seenArea, area, _seenVertex);
                     else if (_mapType == 0 && _viaArea > 0 && area != _viaArea)
                         RouteLog.Note("через " + _viaArea + ":" + _viaVertex + ">" + _viaLocation + ">" + area,
-                            "с участка " + _viaArea + " (точка v" + _viaVertex + ") через локацию " + _viaLocation + " попал на участок " + area);
+                            "from area " + _viaArea + " (point v" + _viaVertex + ") through location " + _viaLocation + " reached area " + area);
                     if (_mapType == 0 && _lastPlace > 0)
-                        RouteLog.Note("выход " + _lastPlace + ">" + area, "из локации " + _lastPlace + " вышел на участок " + area);
-                    Plugin.Trace("[travel] загружена карта мира, участок " + area);
+                        RouteLog.Note("выход " + _lastPlace + ">" + area, "exited location " + _lastPlace + " to area " + area);
+                    Plugin.Trace("[travel] world map loaded, area " + area);
                     _viaArea = -1;
                 }
                 else
@@ -660,12 +660,12 @@ namespace NewAgeQoL
                         _viaArea = _seenArea;
                         _viaVertex = _seenVertex;
                         _viaLocation = map.MapId;
-                        Plugin.Trace("[travel] с участка " + _seenArea + " с точки v" + _seenVertex + " зашёл в локацию " + map.MapId);
+                        Plugin.Trace("[travel] from area " + _seenArea + " at point v" + _seenVertex + " entered location " + map.MapId);
                     }
                     else
                     {
                         if (_mapType == 0 && _lastPlace > 0 && _lastPlace != map.MapId) _viaArea = -1;
-                        Plugin.Trace("[travel] загружена локация " + map.MapId);
+                        Plugin.Trace("[travel] location loaded " + map.MapId);
                     }
                 }
                 _mapType = type;
@@ -679,7 +679,7 @@ namespace NewAgeQoL
             foreach (var gate in Gates())
                 if (gate.From == from && gate.To == to) return;
             string line = from + ">" + to + ":" + vertex;
-            RouteLog.Note("переход " + line, "нашёл переход с участка " + from + " на " + to + " через точку v" + vertex);
+            RouteLog.Note("переход " + line, "found a gate from area " + from + " to " + to + " through point v" + vertex);
             try
             {
                 string shared = Shared().Trim();
@@ -687,8 +687,8 @@ namespace NewAgeQoL
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SharedFile));
                 System.IO.File.WriteAllText(SharedFile, _shared);
             }
-            catch (Exception e) { Plugin.Trace("[travel] общие переходы не записаны: " + e.Message); }
-            Plugin.Trace("[travel] запомнил переход " + from + ">" + to + ":" + vertex);
+            catch (Exception e) { Plugin.Trace("[travel] shared gates not written: " + e.Message); }
+            Plugin.Trace("[travel] remembered gate " + from + ">" + to + ":" + vertex);
         }
 
         internal static void NotifyRefused(int vertex) { RefusedAt = vertex; RefusedStamp++; }
@@ -754,7 +754,7 @@ namespace NewAgeQoL
                 }
                 if (count == 1 && first == last) Travel.NotifyRefused(first);
             }
-            catch (Exception e) { Plugin.Fault("[travel] ответ на ход: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[travel] move response: " + e.Message); }
         }
     }
 
@@ -773,7 +773,7 @@ namespace NewAgeQoL
             Travel.AutoConfirm = false;
             __result = null;
             try { handler?.Invoke(EMessageBoxResult.MB_OK); }
-            catch (Exception e) { Plugin.Fault("[travel] подтверждение перехода: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[travel] gate confirmation: " + e.Message); }
             return false;
         }
     }

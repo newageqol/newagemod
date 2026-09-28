@@ -46,7 +46,7 @@ namespace NewAgeQoL
                 if (info == null || info.UserId <= 0) return;
                 Seen[info.UserId] = !string.IsNullOrEmpty(info.ClanName);
             }
-            catch (Exception e) { Plugin.Trace("[клан] ответ о игроке: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] player info response: " + e.Message); }
         }
 
         private static GeneralUserInfo Me()
@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 icon.color = Color.white;
                 icon.gameObject.SetActive(true);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon: " + e.Message); }
         }
     }
 }

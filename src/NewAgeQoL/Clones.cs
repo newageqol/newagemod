@@ -22,10 +22,10 @@ namespace NewAgeQoL
                     var original = Live(action);
                     if (original == null) original = InSource(source, action);
                     if (original != null) dispatcher.RegisterHandler(action, original);
-                    Plugin.Trace("[клон] снят перехват клавиши действия " + action + (original != null ? ", вернул исходной кнопке" : ""));
+                    Plugin.Trace("[clone] action key hook removed " + action + (original != null ? ", returned to original button" : ""));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[клон] горячие клавиши: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clone] hotkeys: " + e.Message); }
         }
 
         private static HotkeyHandler InSource(GameObject source, EHotkeyActions action)

@@ -17,7 +17,7 @@ namespace NewAgeQoL
                 if (who != "QoLSetupButton") Settings.Close();
                 if (who != Workshop.ButtonName) Workshop.Shut();
             }
-            catch (Exception e) { Plugin.Trace("[окна] закрытие соседних: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] closing neighbors: " + e.Message); }
         }
 
         private static void CloseMenu()
@@ -27,11 +27,11 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<UserMenuController>();
                 if (ctrl == null || !ctrl.IsWindowOpened) return;
                 var call = AccessTools.Method(typeof(UserMenuController), "CloseWindow");
-                if (call == null) { Plugin.Trace("[окна] у меню персонажа нет закрытия"); return; }
+                if (call == null) { Plugin.Trace("[windows] character menu has no close method"); return; }
                 call.Invoke(ctrl, null);
-                Plugin.Trace("[окна] меню персонажа закрыто");
+                Plugin.Trace("[windows] character menu closed");
             }
-            catch (Exception e) { Plugin.Trace("[окна] меню персонажа: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] character menu: " + e.Message); }
         }
 
         private static void CloseDaily()
@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 if (ctrl == null) return;
                 ctrl.Clear();
             }
-            catch (Exception e) { Plugin.Trace("[окна] задания дня: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] dailies: " + e.Message); }
         }
     }
 }

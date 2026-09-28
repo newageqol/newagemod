@@ -75,7 +75,13 @@ namespace NewAgeQoL
                 }
                 foreach (var grid in Grids) Fit(grid);
             }
-            catch (Exception e) { Plugin.Trace("[карточки] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cards] " + e.Message); }
+        }
+
+        internal static void FitNow(Component grid)
+        {
+            try { Fit(grid); }
+            catch (Exception e) { Plugin.Trace("[cards] " + e.Message); }
         }
 
         private static void Fit(Component grid)
@@ -94,7 +100,7 @@ namespace NewAgeQoL
             float room = sheet.rect.height;
             if (room < home.y * 0.5f) return;
             float scale = sheet.lossyScale.y > 0.001f ? sheet.lossyScale.y : 1f;
-            float hidden = ChatDock.Active ? ChatDock.PanelPixels / scale : 0f;
+            float hidden = ChatDock.Active && grid.GetComponentInParent<TradePanelContentWindow>() == null ? ChatDock.PanelPixels / scale : 0f;
             float open = Mathf.Max(home.y, room - hidden);
             float gap = layout.spacing.y;
             int fits = Mathf.Max(1, Mathf.FloorToInt((open + gap) / (home.y + gap)));
@@ -107,9 +113,9 @@ namespace NewAgeQoL
             field.SetValue(grid, cell);
             layout.cellSize = cell;
             Redo(grid);
-            Plugin.Trace("[карточки] " + grid.GetType().Name + ": " + Mathf.RoundToInt(home.x) + "x" + Mathf.RoundToInt(home.y)
+            Plugin.Trace("[cards] " + grid.GetType().Name + ": " + Mathf.RoundToInt(home.x) + "x" + Mathf.RoundToInt(home.y)
                 + " → " + Mathf.RoundToInt(cell.x) + "x" + Mathf.RoundToInt(cell.y)
-                + ", поле " + Mathf.RoundToInt(room) + ", видно " + Mathf.RoundToInt(open));
+                + ", field " + Mathf.RoundToInt(room) + ", visible " + Mathf.RoundToInt(open));
         }
 
         private static FieldInfo SizeField(Type type)

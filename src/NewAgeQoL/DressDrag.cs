@@ -119,7 +119,7 @@ namespace NewAgeQoL
                     drag.Slot = pair.Key;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[вещи] слоты: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] slots: " + e.Message); }
         }
 
         internal static void HookCell(InventoryThingItemRenderer cell)
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 var drag = cell.gameObject.GetComponent<DressDragHandle>() ?? cell.gameObject.AddComponent<DressDragHandle>();
                 drag.Cell = cell;
             }
-            catch (Exception e) { Plugin.Trace("[вещи] ячейка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] cell: " + e.Message); }
         }
 
         internal static bool Dragging;
@@ -190,19 +190,19 @@ namespace NewAgeQoL
             _pending = null;
             _pendingRun = null;
             try { single(); }
-            catch (Exception e) { Plugin.Trace("[вещи] одиночный клик: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] single click: " + e.Message); }
         }
 
         private static void Pass(InventoryThingItemRenderer cell)
         {
             try { CellClick?.Invoke(cell, null); }
-            catch (Exception e) { Plugin.Trace("[вещи] клик ячейки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] cell click: " + e.Message); }
         }
 
         private static void Pass(InteractiveIcon icon)
         {
             try { IconClick?.Invoke(icon, null); }
-            catch (Exception e) { Plugin.Trace("[вещи] клик слота: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] slot click: " + e.Message); }
         }
 
         private static void Run(IEnumerator job)
@@ -235,14 +235,22 @@ namespace NewAgeQoL
 
         private static IEnumerator Dress(int id, int kind, ESlots.SlotType? into)
         {
+            int backId = 0, backTab = 0;
             if (into.HasValue && Slots.TryGetValue(into.Value, out var there) && there != null && there.Id > 0 && there.Id != id && there.Kind == kind)
             {
                 ThingContextActionResponseMessage freed = null;
                 yield return Act(there.Id, EThingActionButton.TAKE_OFF, 0, r => freed = r);
                 if (freed == null || !freed.Success) yield break;
+                if (!Landed(freed, there.ThingId, out backId, out backTab)) backId = 0;
             }
             var button = into.HasValue ? Into(into.Value) : EThingActionButton.DRESS;
-            yield return Act(id, button, Tab(), null);
+            ThingContextActionResponseMessage dressed = null;
+            yield return Act(id, button, Tab(), r => dressed = r);
+            if (backId > 0 && dressed != null && !dressed.Success)
+            {
+                Plugin.Trace("[items] item " + id + " was not put on, returning item " + backId + " to slot " + into.Value);
+                yield return Act(backId, button, backTab, null);
+            }
         }
 
         private static IEnumerator Undress(int id)
@@ -305,11 +313,11 @@ namespace NewAgeQoL
             try
             {
                 SendAction.Invoke(hints, new object[] { id, button, EThingContextWindow.WINDOW_INVENTORY, (int?)tab, null, context, null });
-                Plugin.Trace("[вещи] " + button + " вещь " + id + " вкладка " + tab);
+                Plugin.Trace("[items] " + button + " item " + id + " tab " + tab);
             }
             catch (Exception e)
             {
-                Plugin.Warn("[вещи] отправка " + button + ": " + e.Message);
+                Plugin.Warn("[items] send " + button + ": " + e.Message);
                 Forget(context);
                 done?.Invoke(null);
                 yield break;
@@ -318,7 +326,7 @@ namespace NewAgeQoL
             while (_reply == null && Time.unscaledTime < until) yield return null;
             Forget(context);
             var reply = _reply;
-            if (reply == null) Plugin.Trace("[вещи] сервер не ответил на " + button + " вещи " + id);
+            if (reply == null) Plugin.Trace("[items] server did not respond to " + button + " for item " + id);
             _reply = null;
             _waitFor = 0;
             done?.Invoke(reply);
@@ -327,7 +335,7 @@ namespace NewAgeQoL
         private static void Forget(ResponseCallbackContext context)
         {
             try { context.Destroy(); }
-            catch (Exception e) { Plugin.Trace("[вещи] контекст ответа: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] reply context: " + e.Message); }
         }
 
         internal static void Heard(HintResolverContext from, EThingActionButton button, object msg)
@@ -353,7 +361,7 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) yield break;
                 int tab = Tab();
                 nc.SendRequest(new GetTabContentRequest(tab, (int)EThingContextWindow.WINDOW_INVENTORY));
-                Plugin.Trace("[вещи] перечитываю вкладку сумки " + tab);
+                Plugin.Trace("[items] rereading bag tab " + tab);
             }
             finally { _refreshing = false; }
         }
@@ -508,14 +516,14 @@ namespace NewAgeQoL
                     var item = from.Cell.Data;
                     if (target == null || item == null || item.InventoryId <= 0) return;
                     if (!Accepts((int)item.SubType, slot)) { Notice.Show("Эту вещь сюда не надеть", 3f); return; }
-                    Plugin.Trace("[вещи] перетащил вещь " + item.InventoryId + " на слот " + slot);
+                    Plugin.Trace("[items] dragged item " + item.InventoryId + " to slot " + slot);
                     Run(Dress(item.InventoryId, (int)item.SubType, slot));
                     return;
                 }
                 if (from.Icon == null || from.Icon.Id <= 0) return;
                 if (target == null)
                 {
-                    Plugin.Trace("[вещи] стащил вещь " + from.Icon.Id + " со слота " + from.Slot);
+                    Plugin.Trace("[items] dragged item " + from.Icon.Id + " off slot " + from.Slot);
                     Run(Undress(from.Icon.Id));
                     return;
                 }
@@ -526,10 +534,10 @@ namespace NewAgeQoL
                     Notice.Show("Переставить можно только между основными и запасными слотами", 4f);
                     return;
                 }
-                Plugin.Trace("[вещи] переношу вещь со слота " + from.Slot + " на слот " + slot);
+                Plugin.Trace("[items] moving item from slot " + from.Slot + " to slot " + slot);
                 Run(Move(from.Slot, slot));
             }
-            catch (Exception e) { Plugin.Trace("[вещи] бросок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[items] drop: " + e.Message); }
         }
     }
 

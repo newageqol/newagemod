@@ -87,13 +87,13 @@ namespace NewAgeQoL
                 var setup = UnityEngine.Object.FindObjectOfType<SetupDialog>();
                 if (setup != null) setup.Close();
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] окно настроек игры: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[report] game settings window: " + e.Message); }
             try
             {
                 Build();
                 Say("Опиши, что случилось. Журналы мода лягут в отчёт сами.");
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] окно: " + e.Message); Close(); }
+            catch (Exception e) { Plugin.Warn("[report] window: " + e.Message); Close(); }
         }
 
         internal static bool EscapeClose()
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 _told.ActivateInputField();
                 _told.caretPosition = _told.text != null ? _told.text.Length : 0;
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] поле ввода: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[report] input field: " + e.Message); }
         }
 
         internal static void Paste()
@@ -150,7 +150,7 @@ namespace NewAgeQoL
                 }
                 Marks();
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] буфер: " + e.Message); Say("Из буфера взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] clipboard: " + e.Message); Say("Из буфера взять не вышло: " + e.Message); }
         }
 
         internal static void Choose()
@@ -163,7 +163,7 @@ namespace NewAgeQoL
                 foreach (var path in paths) AddFile(path);
                 Marks();
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] выбор файла: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] file pick: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
             Focus();
         }
 
@@ -196,7 +196,7 @@ namespace NewAgeQoL
                 if (data == null) { Say("Прочитать не вышло: " + name); return; }
                 Add(name, data);
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] вложение: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] attachment: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
         }
 
         private static byte[] Read(string path, int cap)
@@ -220,7 +220,7 @@ namespace NewAgeQoL
                     return cut;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] чтение " + path + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[report] read " + path + ": " + e.Message); return null; }
         }
 
         private static void Add(string name, byte[] data)
@@ -265,7 +265,7 @@ namespace NewAgeQoL
             if (host == null || _busy) return;
             _busy = true;
             try { host.StartCoroutine(Work()); }
-            catch (Exception e) { _busy = false; Plugin.Warn("[отчёт] сбор: " + e.Message); }
+            catch (Exception e) { _busy = false; Plugin.Warn("[report] collect: " + e.Message); }
         }
 
         private static IEnumerator Work()
@@ -284,14 +284,26 @@ namespace NewAgeQoL
                 Say("Собираю отчёт…");
                 yield return null;
                 if (era != _era) yield break;
-                var box = Pack(told);
-                if (box.Zip == null)
+                var head = Encoding.UTF8.GetBytes(told + "\r\n\r\n" + Facts());
+                var files = new List<Item>(Files);
+                string player = Application.consoleLogPath;
+                Bundle box = null;
+                var packing = new System.Threading.Thread(() =>
                 {
-                    Say("Отчёт собрать не вышло: " + (box.Trouble ?? "неизвестно почему"));
+                    try { box = Pack(head, files, player); }
+                    catch (Exception e) { box = new Bundle { Trouble = e.Message }; Note("[report] build: " + e); }
+                }) { IsBackground = true, Name = "QoL report" };
+                packing.Start();
+                while (packing.IsAlive) yield return null;
+                Flush();
+                if (era != _era) yield break;
+                if (box == null || box.Zip == null)
+                {
+                    Say("Отчёт собрать не вышло: " + (box?.Trouble ?? "неизвестно почему"));
                     yield break;
                 }
-                Plugin.Log?.LogInfo("[отчёт] собран " + (box.File ?? "без файла") + ", " + (box.Zip.Length / 1024)
-                                    + " КБ, вложений " + Files.Count + ", записан " + (box.Saved ? "да" : "НЕТ"));
+                Plugin.Log?.LogInfo("[report] built " + (box.File ?? "no file") + ", " + (box.Zip.Length / 1024)
+                                    + " KB, attachments " + Files.Count + ", saved " + (box.Saved ? "yes" : "NO"));
 
                 Bind();
                 string url = _url != null && _url.Value != null ? _url.Value.Trim() : "";
@@ -317,7 +329,7 @@ namespace NewAgeQoL
                     bool taken = web.responseCode >= 200 && web.responseCode < 300 && answer.Replace(" ", "").Contains("\"ok\":true");
                     if (taken)
                     {
-                        Plugin.Log?.LogInfo("[отчёт] отправлен, ответ " + web.responseCode);
+                        Plugin.Log?.LogInfo("[report] sent, response " + web.responseCode);
                         Say("Отчёт ушёл. Спасибо!");
                         Thanks();
                         yield return new WaitForSecondsRealtime(1.2f);
@@ -327,9 +339,9 @@ namespace NewAgeQoL
                         yield break;
                     }
                     string where = web.GetResponseHeader("Location") ?? "";
-                    Plugin.Warn("[отчёт] не ушёл: код " + web.responseCode + ", " + (web.error ?? "")
-                                + (where.Length > 0 ? ", переадресация на " + (where.Length > 80 ? where.Substring(0, 80) : where) : "")
-                                + (answer.Length > 0 ? ", ответ " + (answer.Length > 120 ? answer.Substring(0, 120) : answer).Replace((char)10, ' ') : ""));
+                    Plugin.Warn("[report] not sent: code " + web.responseCode + ", " + (web.error ?? "")
+                                + (where.Length > 0 ? ", redirect to " + (where.Length > 80 ? where.Substring(0, 80) : where) : "")
+                                + (answer.Length > 0 ? ", response " + (answer.Length > 120 ? answer.Substring(0, 120) : answer).Replace((char)10, ' ') : ""));
                     string why = web.responseCode >= 300 && web.responseCode < 400 ? "приёмник закрыт переадресацией"
                         : web.responseCode >= 200 && web.responseCode < 300 ? "приёмник ответил не то" : web.responseCode.ToString();
                     Keep(box, "Отправить не вышло (" + why + "). Отчёт лежит в папке, пришли файл сам.");
@@ -359,7 +371,7 @@ namespace NewAgeQoL
                 if (key.Length > 0) web.SetRequestHeader("X-Report-Key", key);
                 return web;
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] запрос не собрался: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Warn("[report] request not built: " + e.Message); return null; }
         }
 
         private static string Short(string told)
@@ -381,10 +393,24 @@ namespace NewAgeQoL
                 string dir = Path.GetDirectoryName(box.File);
                 if (!string.IsNullOrEmpty(dir)) Application.OpenURL("file:///" + dir.Replace("\\", "/"));
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] папка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[report] folder: " + e.Message); }
         }
 
-        private static Bundle Pack(string told)
+        private static readonly List<string> Notes = new List<string>();
+
+        private static void Note(string text)
+        {
+            lock (Notes) Notes.Add(text);
+        }
+
+        private static void Flush()
+        {
+            string[] all;
+            lock (Notes) { all = Notes.ToArray(); Notes.Clear(); }
+            foreach (var one in all) Plugin.Trace(one);
+        }
+
+        private static Bundle Pack(byte[] head, List<Item> files, string player)
         {
             var box = new Bundle();
             try
@@ -393,9 +419,9 @@ namespace NewAgeQoL
                 {
                     using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true, Encoding.UTF8))
                     {
-                        Put(zip, "описание.txt", Encoding.UTF8.GetBytes(told + "\r\n\r\n" + Facts()));
-                        foreach (var one in Files) Put(zip, "вложения/" + one.Name, one.Data);
-                        Logs(zip);
+                        Put(zip, "описание.txt", head);
+                        foreach (var one in files) Put(zip, "вложения/" + one.Name, one.Data);
+                        Logs(zip, player);
                     }
                     box.Zip = ms.ToArray();
                 }
@@ -403,7 +429,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 box.Trouble = e.Message;
-                Plugin.Warn("[отчёт] сборка: " + e);
+                Note("[report] build: " + e);
                 return box;
             }
 
@@ -418,12 +444,12 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 box.Trouble = e.Message;
-                Plugin.Warn("[отчёт] запись файла: " + e.Message);
+                Note("[report] file write: " + e.Message);
             }
             return box;
         }
 
-        private static void Logs(ZipArchive zip)
+        private static void Logs(ZipArchive zip, string player)
         {
             string flash = Path.Combine(Paths.CachePath, "NewAge2D");
             Tail(zip, Path.Combine(DiskJournal.Folder, "qol.log"), "мод/qol.log", 4000000);
@@ -437,7 +463,6 @@ namespace NewAgeQoL
             foreach (var path in Latest(Path.Combine(Paths.ConfigPath, "NewAgeQoL-replays"), "*.natape", 3))
                 Whole(zip, path, "записи-боёв/" + Path.GetFileName(path), 8000000);
             Tail(zip, Path.Combine(Paths.BepInExRootPath, "LogOutput.log"), "игра/LogOutput.log", 2000000);
-            string player = Application.consoleLogPath;
             Tail(zip, player, "игра/Player.log", 2000000);
             string near = Path.GetDirectoryName(player);
             if (!string.IsNullOrEmpty(near)) Tail(zip, Path.Combine(near, "Player-prev.log"), "игра/Player-prev.log", 1000000);
@@ -457,7 +482,7 @@ namespace NewAgeQoL
                     Whole(zip, path, "карты/" + Path.GetFileName(path), (int)size + 1);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] карты: " + e.Message); }
+            catch (Exception e) { Note("[report] maps: " + e.Message); }
         }
 
         private static void Put(ZipArchive zip, string name, byte[] data)
@@ -480,14 +505,14 @@ namespace NewAgeQoL
                 long high = new FileInfo(path).Length;
                 if (high > cap)
                 {
-                    Plugin.Trace("[отчёт] " + Path.GetFileName(path) + " на " + Size(high) + " — целиком не влезает, обрезать её нельзя, пропускаю");
+                    Note("[report] " + Path.GetFileName(path) + " is " + Size(high) + " - does not fit whole and cannot be trimmed, skipping");
                     return;
                 }
                 var data = Read(path, cap);
                 if (data == null) return;
                 Put(zip, name, data);
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] файл " + name + ": " + e.Message); }
+            catch (Exception e) { Note("[report] file " + name + ": " + e.Message); }
         }
 
         private static void Tail(ZipArchive zip, string path, string name, long cap)
@@ -504,7 +529,7 @@ namespace NewAgeQoL
                     Put(zip, name, buf, got);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] журнал " + name + ": " + e.Message); }
+            catch (Exception e) { Note("[report] log " + name + ": " + e.Message); }
         }
 
         private static List<string> Latest(string dir, string mask, int count)
@@ -517,7 +542,7 @@ namespace NewAgeQoL
                 all.Sort((a, b) => File.GetLastWriteTimeUtc(b).CompareTo(File.GetLastWriteTimeUtc(a)));
                 for (int i = 0; i < all.Count && i < count; i++) got.Add(all[i]);
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] папка " + dir + ": " + e.Message); }
+            catch (Exception e) { Note("[report] folder " + dir + ": " + e.Message); }
             return got;
         }
 
@@ -584,7 +609,7 @@ namespace NewAgeQoL
         private static void Say(string text)
         {
             if (_state != null) _state.text = text;
-            Plugin.Trace("[отчёт] " + text);
+            Plugin.Trace("[report] " + text);
         }
 
         private static void Marks()
@@ -956,12 +981,12 @@ namespace NewAgeQoL
                     Flags = 0x00081A0C,
                 };
                 dialog.Size = Marshal.SizeOf(dialog);
-                Plugin.Trace("[отчёт] открываю окно выбора файлов, хозяин окна " + dialog.Owner);
+                Plugin.Trace("[report] opening file picker, owner window " + dialog.Owner);
                 if (!GetOpenFileName(ref dialog))
                 {
                     int trouble = CommDlgExtendedError();
-                    if (trouble != 0) Plugin.Warn("[отчёт] окно выбора файлов не открылось, код 0x" + trouble.ToString("X"));
-                    else Plugin.Trace("[отчёт] окно выбора закрыто без выбора");
+                    if (trouble != 0) Plugin.Warn("[report] file picker did not open, code 0x" + trouble.ToString("X"));
+                    else Plugin.Trace("[report] picker closed without a choice");
                     return got;
                 }
 
@@ -977,7 +1002,7 @@ namespace NewAgeQoL
                 if (parts.Count == 1) got.Add(parts[0]);
                 else for (int i = 1; i < parts.Count && i <= 12; i++) got.Add(System.IO.Path.Combine(parts[0], parts[i]));
             }
-            catch (Exception e) { Plugin.Warn("[отчёт] окно выбора файла: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] file picker: " + e.Message); }
             finally { Marshal.FreeHGlobal(room); }
             return got;
         }
@@ -998,7 +1023,7 @@ namespace NewAgeQoL
                 if (size == 0UL) return null;
                 if (size > (ulong)cap)
                 {
-                    Plugin.Trace("[отчёт] в буфере " + (size / 1024UL / 1024UL) + " МБ, столько не беру");
+                    Plugin.Trace("[report] clipboard holds " + (size / 1024UL / 1024UL) + " MB, too much, skipping");
                     return null;
                 }
                 var data = new byte[(int)size];
@@ -1018,7 +1043,7 @@ namespace NewAgeQoL
                 ulong size = GlobalSize(handle).ToUInt64();
                 if (size < 40UL || size > (ulong)Biggest)
                 {
-                    Plugin.Trace("[отчёт] картинка в буфере на " + size + " байт, не беру");
+                    Plugin.Trace("[report] clipboard image is " + size + " bytes, skipping");
                     return false;
                 }
                 var head = new byte[40];
@@ -1028,17 +1053,17 @@ namespace NewAgeQoL
                 int bits = BitConverter.ToInt16(head, 14);
                 if (wide <= 0 || wide > Widest || high == 0 || Math.Abs(high) > Widest)
                 {
-                    Plugin.Trace("[отчёт] картинка в буфере " + wide + "×" + high + ", не беру");
+                    Plugin.Trace("[report] clipboard image " + wide + "×" + high + ", skipping");
                     return false;
                 }
                 if (bits != 24 && bits != 32)
                 {
-                    Plugin.Trace("[отчёт] картинка в буфере на " + bits + " бит, не беру");
+                    Plugin.Trace("[report] clipboard image is " + bits + " bits, skipping");
                     return false;
                 }
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] шапка картинки: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[report] image header: " + e.Message); return false; }
             finally { GlobalUnlock(handle); }
         }
 
@@ -1078,7 +1103,7 @@ namespace NewAgeQoL
                 pic.Apply();
                 return pic.EncodeToPNG();
             }
-            catch (Exception e) { Plugin.Trace("[отчёт] картинка из буфера: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[report] clipboard image: " + e.Message); return null; }
             finally { if (pic != null) UnityEngine.Object.Destroy(pic); }
         }
     }

@@ -61,7 +61,7 @@ namespace NewAgeQoL
 
                 if (team) Team(); else Pm();
             }
-            catch (Exception e) { Plugin.Trace("[звук] чат: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[sound] chat: " + e.Message); }
         }
 
         internal static void Tick()
@@ -88,7 +88,7 @@ namespace NewAgeQoL
                 _phase = t;
                 if (fightEnded && Time.unscaledTime - _fightAt > 2f) Play("round_end");
             }
-            catch (Exception e) { Plugin.Trace("[звук] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[sound] " + e.Message); }
         }
 
         internal static void Pm()
@@ -132,7 +132,7 @@ namespace NewAgeQoL
                 _own.volume = 1f;
                 _own.PlayOneShot(clip, volume);
             }
-            catch (Exception e) { Plugin.Trace("[звук] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[sound] " + e.Message); }
         }
 
         private static AudioClip Clip(string name)
@@ -146,7 +146,7 @@ namespace NewAgeQoL
                 string res = null;
                 foreach (var r in asm.GetManifestResourceNames())
                     if (r.EndsWith("." + name + ".wav", StringComparison.OrdinalIgnoreCase)) { res = r; break; }
-                if (res == null) { Plugin.Warn("[звук] ресурс " + name + " не найден в dll"); Clips[name] = null; return null; }
+                if (res == null) { Plugin.Warn("[sound] resource " + name + " not found in dll"); Clips[name] = null; return null; }
                 using (var s = asm.GetManifestResourceStream(res))
                 using (var ms = new MemoryStream())
                 {
@@ -154,14 +154,14 @@ namespace NewAgeQoL
                     clip = FromWav(name, ms.ToArray());
                 }
             }
-            catch (Exception e) { Plugin.Warn("[звук] " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[sound] " + name + ": " + e.Message); }
             Clips[name] = clip;
             return clip;
         }
 
         private static AudioClip FromWav(string name, byte[] wav)
         {
-            if (wav.Length < 44 || wav[0] != 'R' || wav[1] != 'I' || wav[2] != 'F' || wav[3] != 'F') throw new Exception("не WAV");
+            if (wav.Length < 44 || wav[0] != 'R' || wav[1] != 'I' || wav[2] != 'F' || wav[3] != 'F') throw new Exception("not a WAV");
             int p = 12;
             int channels = 1, rate = 22050, bits = 16;
             int dataAt = -1, dataLen = 0;
@@ -178,7 +178,7 @@ namespace NewAgeQoL
                 else if (id == "data") { dataAt = p + 8; dataLen = Math.Min(len, wav.Length - dataAt); break; }
                 p += 8 + len + (len & 1);
             }
-            if (dataAt < 0 || bits != 16) throw new Exception("нужен PCM16");
+            if (dataAt < 0 || bits != 16) throw new Exception("PCM16 required");
             int count = dataLen / 2;
             var data = new float[count];
             for (int i = 0; i < count; i++) data[i] = BitConverter.ToInt16(wav, dataAt + i * 2) / 32768f;

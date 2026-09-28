@@ -136,7 +136,7 @@ namespace NewAgeQoL
                 _busy = true;
                 Plugin.Instance.StartCoroutine(Work());
             }
-            catch (Exception e) { Plugin.Trace("[ветки] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[branches] " + e.Message); }
         }
 
         internal static void NewFight()
@@ -231,8 +231,8 @@ namespace NewAgeQoL
             }
             finally { _busy = false; }
             if (_searches > 0 || _pages > 0)
-                Plugin.Trace("[ветки] за бой: поисков " + _searches + ", логов " + _pages
-                    + ", в очереди осталось " + Pending.Count + ", в памяти " + Known.Count);
+                Plugin.Trace("[branches] per fight: searches " + _searches + ", logs " + _pages
+                    + ", left in queue " + Pending.Count + ", in memory " + Known.Count);
         }
 
         private static IEnumerator Hunt(int userId, int era)
@@ -257,7 +257,7 @@ namespace NewAgeQoL
             if (era != _era) yield break;
             Rec(userId).Hour = Hours();
             _dirty = true;
-            Plugin.Trace("[ветки] " + login + ": " + Text(userId));
+            Plugin.Trace("[branches] " + login + ": " + Text(userId));
         }
 
         private static IEnumerator Mine(int userId, List<Row> rows, long since, int era)
@@ -305,19 +305,19 @@ namespace NewAgeQoL
                 if (sent.Body.IndexOf(Detail, StringComparison.Ordinal) < 0)
                 {
                     _session = false;
-                    Plugin.Trace("[ветки] поиск по " + login + ": ответ " + sent.Code + ", переход не пришёл, боёв в ответе нет");
+                    Plugin.Trace("[branches] search for " + login + ": response " + sent.Code + ", no redirect, no fights in response");
                     yield break;
                 }
                 List(sent.Body, rows);
-                Plugin.Trace("[ветки] поиск по " + login + ": боёв " + rows.Count + " (из ответа на отправку)");
+                Plugin.Trace("[branches] search for " + login + ": fights " + rows.Count + " (from the submit response)");
                 yield break;
             }
             if (go.StartsWith("/")) go = Site + go;
             var page = new Reply();
             yield return Get(go, page);
             List(page.Body, rows);
-            Plugin.Trace("[ветки] поиск по " + login + " " + from.ToString("dd.MM", CultureInfo.InvariantCulture)
-                + "…" + to.ToString("dd.MM", CultureInfo.InvariantCulture) + ": страница " + page.Body.Length + " знаков, боёв " + rows.Count);
+            Plugin.Trace("[branches] search for " + login + " " + from.ToString("dd.MM", CultureInfo.InvariantCulture)
+                + "…" + to.ToString("dd.MM", CultureInfo.InvariantCulture) + ": page " + page.Body.Length + " chars, fights " + rows.Count);
         }
 
         private static void List(string html, List<Row> rows)
@@ -438,7 +438,7 @@ namespace NewAgeQoL
             }
             if (fresh == 0) return;
             _dirty = true;
-            Plugin.Trace("[ветки] из боя разобрано бойцов: " + fresh + (bad.Count > 0 ? ", спорных пропущено: " + bad.Count : ""));
+            Plugin.Trace("[branches] fighters parsed from fight: " + fresh + (bad.Count > 0 ? ", ambiguous skipped: " + bad.Count : ""));
         }
 
         private static int Before(string s, int a, int i)
@@ -548,7 +548,7 @@ namespace NewAgeQoL
                 if (r.Elite > 1) r.Elite = -1;
                 Known[id] = r;
             }
-            if (Known.Count > 0) Plugin.Trace("[ветки] в памяти бойцов: " + Known.Count);
+            if (Known.Count > 0) Plugin.Trace("[branches] fighters in memory: " + Known.Count);
         }
 
         private static void Flush()
@@ -581,7 +581,7 @@ namespace NewAgeQoL
             yield return Get(Archive, r);
             if (r.Body.Length == 0)
             {
-                Plugin.Trace("[ветки] архив битв не ответил: " + (r.Error.Length > 0 ? r.Error : "пусто") + ", код " + r.Code);
+                Plugin.Trace("[branches] combat archive did not respond: " + (r.Error.Length > 0 ? r.Error : "empty") + ", code " + r.Code);
                 yield break;
             }
             int i = r.Cookie.IndexOf("JSESSIONID=", StringComparison.Ordinal);
@@ -591,8 +591,8 @@ namespace NewAgeQoL
                 _cookie = j < 0 ? r.Cookie.Substring(i) : r.Cookie.Substring(i, j - i);
             }
             _session = true;
-            Plugin.Trace("[ветки] сессия открыта, страница " + r.Body.Length + " знаков"
-                + (_cookie.Length > 0 ? ", ключ виден" : ", ключ ведёт сам клиент"));
+            Plugin.Trace("[branches] session opened, page " + r.Body.Length + " chars"
+                + (_cookie.Length > 0 ? ", cookie visible" : ", cookie kept by the client"));
         }
 
         private static IEnumerator Pause()
@@ -635,7 +635,7 @@ namespace NewAgeQoL
         private static void Head(UnityWebRequest req, string name, string value)
         {
             try { req.SetRequestHeader(name, value); }
-            catch (Exception e) { Plugin.Trace("[ветки] заголовок " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[branches] header " + name + ": " + e.Message); }
         }
 
         private static void Grab(UnityWebRequest req, Reply reply)
@@ -665,7 +665,7 @@ namespace NewAgeQoL
                         return Encoding.UTF8.GetString(dst.ToArray());
                     }
                 }
-                catch (Exception e) { Plugin.Trace("[ветки] распаковка: " + e.Message); return ""; }
+                catch (Exception e) { Plugin.Trace("[branches] decompress: " + e.Message); return ""; }
             }
             return Encoding.UTF8.GetString(data);
         }

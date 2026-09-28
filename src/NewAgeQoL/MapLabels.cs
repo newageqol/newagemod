@@ -49,7 +49,7 @@ namespace NewAgeQoL
                 Remember(label, vertex);
                 Dress(label, vertex);
             }
-            catch (Exception e) { Plugin.Fault("[map] метка точки: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[map] point label: " + e.Message); }
         }
 
         internal static void Refresh()
@@ -148,7 +148,7 @@ namespace NewAgeQoL
         {
             if (_font != null) return _font;
             try { _font = Font.CreateDynamicFontFromOSFont("Arial", 32); }
-            catch (Exception e) { Plugin.Warn("[map] шрифт метки: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[map] label font: " + e.Message); }
             return _font;
         }
     }

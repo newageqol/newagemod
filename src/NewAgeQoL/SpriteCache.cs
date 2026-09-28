@@ -83,13 +83,13 @@ namespace NewAgeQoL
                 var rect = new Rect(info.X * sx, info.Y * sy, info.Width * sx, info.Height * sy);
                 if (rect.xMin < 0f || rect.yMin < 0f || rect.xMax > texture.width || rect.yMax > texture.height) return null;
                 if (Told.Add(atlas))
-                    Plugin.Log?.LogInfo("[иконки] атлас " + atlas + " лежит в игре размером " + texture.width + "x" + texture.height +
-                                        ", а координаты в базе рассчитаны на " + wide + "x" + high + ": картинки из него берутся с пересчётом");
+                    Plugin.Log?.LogInfo("[icons] atlas " + atlas + " is in the game at size " + texture.width + "x" + texture.height +
+                                        ", but database coordinates assume " + wide + "x" + high + ": images from it are rescaled");
                 return Sprite.Create(texture, rect, new Vector2(0.5f, 0.5f), 100f * sx, 0u, SpriteMeshType.FullRect);
             }
             catch (Exception e)
             {
-                if (atlas != null && Told.Add(atlas)) Plugin.Log?.LogWarning("[иконки] пересчёт атласа " + atlas + ": " + e.Message);
+                if (atlas != null && Told.Add(atlas)) Plugin.Log?.LogWarning("[icons] atlas rescale " + atlas + ": " + e.Message);
                 return null;
             }
         }

@@ -48,18 +48,30 @@ namespace NewAgeQoL
                 bool want = SideButtons.InWorld() && !SideButtons.InCombat() && ChatDock.Active && CharacterPick.Known.Count > 1;
                 if (!want) { Drop(); return; }
                 bool hide = Shopping();
-                if (_canvasGo != null && _canvasGo.activeSelf == hide) _canvasGo.SetActive(!hide);
-                if (hide) return;
+                float target = hide ? 1f : 0f;
+                bool moving = !Mathf.Approximately(_away, target);
+                bool bare = moving && SideButtons.Bare();
+                if (_canvasGo != null)
+                {
+                    var group = _canvasGo.GetComponent<CanvasGroup>() ?? _canvasGo.AddComponent<CanvasGroup>();
+                    float e = _away * _away * (3f - 2f * _away);
+                    float shade = bare ? 0f : 1f - e;
+                    if (group.alpha != shade) group.alpha = shade;
+                }
+                if (moving && !bare) _away = Mathf.MoveTowards(_away, target, Time.unscaledDeltaTime / 0.28f);
+                bool gone = hide && _away >= 1f;
+                if (_canvasGo != null && _canvasGo.activeSelf == gone) _canvasGo.SetActive(!gone);
+                if (gone || (hide && _canvasGo == null)) return;
                 if (_canvasGo == null) Build();
                 if (_panel == null) return;
-                Wheel();
+                if (!hide) Wheel();
                 Place();
                 if (Time.unscaledTime < _nextAt) return;
                 _nextAt = Time.unscaledTime + 0.25f;
                 Fill();
                 foreach (var face in Faces) Dress(face);
             }
-            catch (Exception e) { Plugin.Trace("[персонажи] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Trace("[characters] " + e.Message); Drop(); }
         }
 
         private static bool _shop;
@@ -73,6 +85,8 @@ namespace NewAgeQoL
                 for (int i = Windows.Count - 1; i >= 0; i--)
                     if (Windows[i] == null) Windows.RemoveAt(i);
             Windows.Add(window);
+            _shopAt = 0f;
+            SideButtons.WindowsMoved();
         }
 
         private static bool Shopping()
@@ -88,8 +102,8 @@ namespace NewAgeQoL
             }
             bool now = open != null;
             if (now != _shop)
-                Plugin.Trace(now ? "[персонажи] открыто окно " + open + ", колонка персонажей спрятана, чтобы не закрывать крестик"
-                                 : "[персонажи] окно закрыто, колонка персонажей снова видна");
+                Plugin.Trace(now ? "[characters] window " + open + " opened, character column hidden to keep the close button free"
+                                 : "[characters] window closed, character column visible again");
             _shop = now;
             return now;
         }
@@ -126,7 +140,7 @@ namespace NewAgeQoL
             _down = Arrow(false);
             _sig = "";
             _nextAt = 0f;
-            Plugin.Trace("[персонажи] колонка собрана справа сверху, персонажей " + CharacterPick.Known.Count);
+            Plugin.Trace("[characters] column built at top right, characters " + CharacterPick.Known.Count);
         }
 
         private static GameObject Arrow(bool up)
@@ -290,7 +304,7 @@ namespace NewAgeQoL
                 if (art != null)
                 {
                     face.Pic.sprite = art;
-                    if (face.Had) Plugin.Trace("[персонажи] игра выгрузила иконки классов, взял заново");
+                    if (face.Had) Plugin.Trace("[characters] game unloaded class icons, fetched again");
                     face.Had = true;
                 }
             }
@@ -311,7 +325,7 @@ namespace NewAgeQoL
                 }, text);
                 if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             }
-            catch (Exception e) { Plugin.Warn("[персонажи] подтверждение: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[characters] confirmation: " + e.Message); }
         }
 
         private static void Confirm()
@@ -321,7 +335,7 @@ namespace NewAgeQoL
             var ok = AccessTools.Field(typeof(ConfirmMessageBox), "MbOkButton")?.GetValue(_confirm) as Button;
             if (ok == null || !ok.isActiveAndEnabled || !ok.interactable) return;
             _enterFrame = Time.frameCount;
-            Plugin.Trace("[персонажи] смена подтверждена по Enter");
+            Plugin.Trace("[characters] switch confirmed with Enter");
             ok.onClick.Invoke();
         }
 
@@ -329,18 +343,18 @@ namespace NewAgeQoL
         {
             try
             {
-                if (SideButtons.InCombat()) { Plugin.Trace("[персонажи] в бою персонажа не меняю"); return; }
+                if (SideButtons.InCombat()) { Plugin.Trace("[characters] not switching character in combat"); return; }
                 var session = DependencyContainer.GetContainer()?.Resolve<SessionController>();
-                if (session == null) { Plugin.Trace("[персонажи] сессия игры не найдена"); return; }
+                if (session == null) { Plugin.Trace("[characters] game session not found"); return; }
                 CharacterPick.Target = one.UserId;
-                Plugin.Trace((one.UserId == Mine() ? "[персонажи] перезахожу персонажем " : "[персонажи] смена персонажа на ") + one.Login + " (" + one.UserId + ")");
+                Plugin.Trace((one.UserId == Mine() ? "[characters] relogging as " : "[characters] switching character to ") + one.Login + " (" + one.UserId + ")");
                 Drop();
                 session.ChangeCharacter(true);
             }
             catch (Exception e)
             {
                 CharacterPick.Target = 0;
-                Plugin.Warn("[персонажи] смена: " + e.Message);
+                Plugin.Warn("[characters] switch: " + e.Message);
             }
         }
 
@@ -350,10 +364,14 @@ namespace NewAgeQoL
             catch { return 0; }
         }
 
+        private static float _away;
+
         private static void Place()
         {
             float wide = HelpColumn.Wide;
             var want = new Vector2(wide > 0f ? -(wide + Edge) : -HelpColumn.SideGap, -HelpColumn.Head);
+            float e = _away * _away * (3f - 2f * _away);
+            want.x += e * (_panel.rect.width + Mathf.Abs(want.x) + 20f);
             if ((_panel.anchoredPosition - want).sqrMagnitude > 0.25f) _panel.anchoredPosition = want;
         }
 
@@ -379,7 +397,7 @@ namespace NewAgeQoL
         private static void Postfix(BasePanelContentWindow __instance)
         {
             try { Roster.Born(__instance); }
-            catch (Exception e) { Plugin.Trace("[персонажи] окно игры: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[characters] game window: " + e.Message); }
         }
     }
 }

@@ -30,12 +30,12 @@ internal static class Journal
             var info = new FileInfo(Path);
             if (info.Exists && info.Length > Limit) Rotate();
             Open();
-            _writer.WriteLine($"===== запуск {DateTime.Now:yyyy-MM-dd HH:mm:ss} =====");
+            _writer.WriteLine($"===== start {DateTime.Now:yyyy-MM-dd HH:mm:ss} =====");
             source.LogEvent += OnLog;
         }
         catch (Exception ex)
         {
-            source.LogWarning("журнал не открылся: " + ex.Message);
+            source.LogWarning("log did not open: " + ex.Message);
         }
     }
 

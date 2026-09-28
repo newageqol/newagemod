@@ -47,9 +47,9 @@ namespace NewAgeQoL
                             sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
                         else UnityEngine.Object.Destroy(texture);
                     }
-                if (sprite == null) Plugin.Trace("[значки] картинка «" + name + "» не нашлась");
+                if (sprite == null) Plugin.Trace("[icons] image \"" + name + "\" not found");
             }
-            catch (Exception e) { Plugin.Trace("[значки] " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[icons] " + name + ": " + e.Message); }
             Drawn[name] = sprite;
             return sprite;
         }
@@ -259,7 +259,7 @@ namespace NewAgeQoL
                 tex.wrapMode = TextureWrapMode.Clamp;
                 return Sprite.Create(tex, new Rect(0f, 0f, Side, Side), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[значки] цветной значок: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[icons] colored icon: " + e.Message); return null; }
         }
 
         internal static Sprite Quest()
@@ -341,7 +341,7 @@ namespace NewAgeQoL
                 tex.wrapMode = TextureWrapMode.Clamp;
                 return Sprite.Create(tex, new Rect(0f, 0f, Wide, Wide), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[значки] цветной: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[icons] colored: " + e.Message); return null; }
         }
 
         internal static Sprite Scroll()
@@ -450,7 +450,7 @@ namespace NewAgeQoL
                 tex.wrapMode = TextureWrapMode.Clamp;
                 return Sprite.Create(tex, new Rect(0f, 0f, Side, Side), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[значки] " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[icons] " + e.Message); return null; }
         }
     }
 }

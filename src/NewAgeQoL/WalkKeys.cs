@@ -59,7 +59,7 @@ namespace NewAgeQoL
                 if ((Input.mousePosition - _mouse).sqrMagnitude > 64f) { Drop(); return; }
                 if (!Walkable(cd, _pick)) { Drop(); return; }
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] выбор клетки: " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Trace("[walk] hex pick: " + e.Message); Drop(); }
         }
 
         private static void Keys()
@@ -76,11 +76,11 @@ namespace NewAgeQoL
                 bool pad = Input.GetKeyDown(KeyCode.KeypadEnter);
                 bool typed = !main && !pad && Crlf();
                 if (!main && !pad && !typed) return;
-                Plugin.Trace("[ходьба] ввод: " + (main ? "Enter" : pad ? "Enter на намлоке" : "Enter по символу")
-                    + ", клетка " + (_pick != null ? _pick.clientX + ";" + _pick.clientY : "не выбрана"));
+                Plugin.Trace("[walk] input: " + (main ? "Enter" : pad ? "numpad Enter" : "Enter by character")
+                    + ", hex " + (_pick != null ? _pick.clientX + ";" + _pick.clientY : "not picked"));
                 Go();
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] клавиши: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] keys: " + e.Message); }
         }
 
         private static bool Crlf()
@@ -111,12 +111,12 @@ namespace NewAgeQoL
                 if (!SideButtons.InCombat() || Spectate.Peeking || SkillList.Armed) return;
                 var cd = FighterHint.Cd();
                 if (cd == null) return;
-                if (cd.RoundType != RoundType.WALK_ROUND) { Plugin.Trace("[ходьба] сейчас не фаза ходьбы"); return; }
+                if (cd.RoundType != RoundType.WALK_ROUND) { Plugin.Trace("[walk] not a walk phase now"); return; }
                 var me = cd.MyCharacter;
                 if (me == null) return;
 
                 Build(cd, me.HexGridPosition);
-                if (Zone.Count == 0) { Plugin.Trace("[ходьба] ходить некуда"); return; }
+                if (Zone.Count == 0) { Plugin.Trace("[walk] nowhere to walk"); return; }
 
                 if (_pick != null && (cd.RoundNum != _round || !Walkable(cd, _pick))) Drop();
                 var from = _pick;
@@ -127,10 +127,10 @@ namespace NewAgeQoL
                 }
 
                 Vector2 home;
-                if (!Spot(from, out home)) { Plugin.Trace("[ходьба] клетку не перевести в экранную точку"); return; }
+                if (!Spot(from, out home)) { Plugin.Trace("[walk] cannot map hex to a screen point"); return; }
 
                 float wide, high;
-                if (!Scale(from, home, out wide, out high)) { Plugin.Trace("[ходьба] размер клетки на экране не посчитать"); return; }
+                if (!Scale(from, home, out wide, out high)) { Plugin.Trace("[walk] cannot compute on-screen hex size"); return; }
 
                 bool tall = way == Up || way == Down;
                 float wantX = way == Right ? 1f : way == Left ? -1f : 0f;
@@ -159,14 +159,14 @@ namespace NewAgeQoL
                     best = one;
                 }
 
-                if (best == null) { Plugin.Trace("[ходьба] в эту сторону идти некуда"); return; }
-                Plugin.Trace("[ходьба] выбор " + best.clientX + ";" + best.clientY + ", шагов " + HexUtils.range(from, best));
+                if (best == null) { Plugin.Trace("[walk] nowhere to go in this direction"); return; }
+                Plugin.Trace("[walk] pick " + best.clientX + ";" + best.clientY + ", steps " + HexUtils.range(from, best));
 
                 _pick = best;
                 _round = cd.RoundNum;
                 _mouse = Input.mousePosition;
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] выбор клетки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] hex pick: " + e.Message); }
         }
 
         internal static void Go()
@@ -185,7 +185,7 @@ namespace NewAgeQoL
                 Drop();
                 Ring(hex);
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] шаг: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] step: " + e.Message); }
         }
 
         private static void Build(ICombatData cd, OffsetCoord centre)
@@ -243,7 +243,7 @@ namespace NewAgeQoL
         {
             if (_pad != null) return _pad;
             try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-            catch (Exception e) { Plugin.Trace("[ходьба] поле боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] battlefield: " + e.Message); }
             return _pad;
         }
 
@@ -257,7 +257,7 @@ namespace NewAgeQoL
                 if (_rig == null) _rig = UnityEngine.Object.FindObjectOfType<CameraControl>();
                 _grid = _rig != null ? AccessTools.Property(typeof(BaseUserInput), "gridTransform")?.GetValue(_rig) as Transform : null;
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] сетка боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] combat grid: " + e.Message); }
             return _grid;
         }
 
@@ -271,10 +271,10 @@ namespace NewAgeQoL
         private static void Ring(OffsetCoord hex)
         {
             var pad = Pad();
-            if (pad == null) { Plugin.Trace("[ходьба] поля боя нет, шаг не отправить"); return; }
+            if (pad == null) { Plugin.Trace("[walk] no battlefield, cannot send step"); return; }
             var call = Bell(pad);
-            if (call == null) { Plugin.Trace("[ходьба] отклика поля нет, шаг не отправить"); return; }
-            Plugin.Trace("[ходьба] шаг на клетку " + hex.clientX + ";" + hex.clientY);
+            if (call == null) { Plugin.Trace("[walk] no field handler, cannot send step"); return; }
+            Plugin.Trace("[walk] step to hex " + hex.clientX + ";" + hex.clientY);
             call(new HexClickInfo(hex));
         }
 
@@ -288,7 +288,7 @@ namespace NewAgeQoL
                     if (typeof(Action<HexClickInfo>).IsAssignableFrom(one.FieldType))
                         return one.GetValue(pad) as Action<HexClickInfo>;
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] отклик поля: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] field handler: " + e.Message); }
             return null;
         }
     }

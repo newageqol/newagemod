@@ -64,7 +64,7 @@ namespace NewAgeQoL
                 if (trouble != null)
                 {
                     Notice.Show(trouble, 7f);
-                    Plugin.Warn("[онлайн] " + trouble);
+                    Plugin.Warn("[online] " + trouble);
                     return;
                 }
                 _query = "";
@@ -74,7 +74,7 @@ namespace NewAgeQoL
                 if (!OnlineList.Busy) OnlineList.Refresh();
                 Rebuild();
             }
-            catch (Exception e) { Plugin.Fault("[онлайн] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[online] window: " + e); Close(); }
         }
 
         private static void Reopen()
@@ -84,9 +84,9 @@ namespace NewAgeQoL
                 Build();
                 _seenVersion = -1;
                 Rebuild();
-                Plugin.Trace("[онлайн] окно пересоздано после смены сцены");
+                Plugin.Trace("[online] window recreated after scene change");
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] пересоздание: " + e.Message); Teardown(); }
+            catch (Exception e) { Plugin.Trace("[online] recreate: " + e.Message); Teardown(); }
         }
 
         internal static void Close()
@@ -104,7 +104,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[онлайн] закрытие: " + e.Message);
+                Plugin.Trace("[online] close: " + e.Message);
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
             _canvasGo = null;
@@ -161,7 +161,7 @@ namespace NewAgeQoL
 
             var holder = VisualPrefabsHolder.Instance.ChatUserListPanelContentPrefab?.GetComponent<ChatUserListPanelContent>();
             _rowPrefab = holder != null ? AccessTools.Field(typeof(ChatUserListPanelContent), "SmallUserRowPrefab")?.GetValue(holder) as GameObject : null;
-            if (_rowPrefab == null) throw new Exception("не нашёл префаб строки игрока");
+            if (_rowPrefab == null) throw new Exception("player row prefab not found");
             _resolver = Controllers.Get<UserContextMenuController>().UserContextMenuResolver;
 
             _panelGo = new GameObject("QoLOnlineWindow", typeof(RectTransform), typeof(Image), typeof(Outline));
@@ -421,7 +421,7 @@ namespace NewAgeQoL
         private static void Line(OnlinePlayer p, Transform host)
         {
             try { AddRow(p, host); }
-            catch (Exception e) { Plugin.Trace("[онлайн] строка " + p.Login + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] row " + p.Login + ": " + e.Message); }
         }
 
         private static void ByClans(List<OnlinePlayer> list)
@@ -542,7 +542,7 @@ namespace NewAgeQoL
             le.preferredHeight = h; le.minHeight = h; le.flexibleWidth = 1f;
 
             var w = go.GetComponent<UserRowWidget>();
-            if (w == null) throw new Exception("в префабе нет UserRowWidget");
+            if (w == null) throw new Exception("no UserRowWidget in prefab");
             var msg = Row(p);
             bool drawn = !msg.ClanIconCode.HasValue || ClanArt(msg.ClanIconCode.Value) != null;
             w.Data = msg;
@@ -550,11 +550,11 @@ namespace NewAgeQoL
             MarkAway(w, p.Away);
             OnlineCharms.Decorate(w, p, (RectTransform)_panelGo.transform);
             var resolver = _resolver;
-            w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Trace("[онлайн] клик: " + e.Message); } };
+            w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Trace("[online] click: " + e.Message); } };
             w.OnRightButtonClickDelegate = item =>
             {
                 try { ContextMenu.ShowContextMenu(go, resolver, item.Data, EContextMenuSide.Left); }
-                catch (Exception e) { Plugin.Trace("[онлайн] меню: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[online] menu: " + e.Message); }
             };
             if (!drawn) Pending.Add(new KeyValuePair<UserRowWidget, OnlinePlayer>(w, p));
         }
@@ -612,7 +612,7 @@ namespace NewAgeQoL
                     go.SetActive(true);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] крестик игры не взялся: " + e.Message); if (go != null) UnityEngine.Object.Destroy(go); go = null; }
+            catch (Exception e) { Plugin.Trace("[online] game close button failed: " + e.Message); if (go != null) UnityEngine.Object.Destroy(go); go = null; }
             if (go != null) return;
 
             var closeGo = new GameObject("close", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -683,7 +683,7 @@ namespace NewAgeQoL
                 var clan = AccessTools.Field(typeof(UserRowWidget), "ClanIconImage")?.GetValue(widget) as Image;
                 if (clan != null) clan.enabled = !Quickslots.Faded(clan.sprite);
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] оформление строки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] row styling: " + e.Message); }
         }
 
         internal static void MarkAway(UserRowWidget widget, bool away)
@@ -699,7 +699,7 @@ namespace NewAgeQoL
                 var label = AccessTools.Field(typeof(UserRowWidget), "LoginText")?.GetValue(widget) as Text;
                 if (label != null) label.color = new Color32(150, 150, 150, 255);
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] отметка афк: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] afk mark: " + e.Message); }
         }
 
         internal static void Extras(UserRowInfoMessage row)
@@ -721,7 +721,7 @@ namespace NewAgeQoL
                 row.Vip = full.Vip;
                 row.Dealer = full.Dealer;
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] добавки к строке: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] row extras: " + e.Message); }
         }
 
         private static readonly Dictionary<string, KeyValuePair<bool, float>> Atlas = new Dictionary<string, KeyValuePair<bool, float>>();
@@ -775,7 +775,7 @@ namespace NewAgeQoL
                 catch { }
             }
             RightsNames[rights] = found;
-            Plugin.Trace("[онлайн] значок прав «" + rights + "» → " + (found ?? "нет"));
+            Plugin.Trace("[online] rights icon '" + rights + "' → " + (found ?? "none"));
             return found;
         }
 

@@ -68,7 +68,7 @@ namespace NewAgeQoL
             Hide();
             if (_dialog == null) return;
             try { _dialog.Close(); }
-            catch (Exception e) { Plugin.Trace("[мастерская] закрытие окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[workshop] window close: " + e.Message); }
             _dialog = null;
             _mine = false;
         }
@@ -98,7 +98,7 @@ namespace NewAgeQoL
                 {
                     _mine = false;
                     _askAt = 0f;
-                    Plugin.Trace("[мастерская] сервер не прислал список, жду дальше не буду");
+                    Plugin.Trace("[workshop] server did not send the list, not waiting any longer");
                 }
                 if (!ready || !_open || Here()) { Hide(); return; }
                 if (_root == null) Build();
@@ -108,7 +108,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Fault("[мастерская] меню: " + e.Message);
+                Plugin.Fault("[workshop] menu: " + e.Message);
                 _open = false;
             }
         }
@@ -234,31 +234,31 @@ namespace NewAgeQoL
         {
             try
             {
-                if (Here()) { Plugin.Trace("[мастерская] я в мастерской, окно откроет сама игра"); return; }
-                if (_dialog != null) { Plugin.Trace("[мастерская] окно уже открыто"); return; }
+                if (Here()) { Plugin.Trace("[workshop] I am in the workshop, the game will open the window itself"); return; }
+                if (_dialog != null) { Plugin.Trace("[workshop] window already open"); return; }
                 Listen();
                 _mine = true;
                 if (op == 1) { Show(1); return; }
                 _askAt = Time.unscaledTime + 8f;
                 NetworkConnection.Instance.SendRequest(new ArtefactListForOperationRequest(op));
-                Plugin.Trace("[мастерская] спросил список вещей для операции " + op);
+                Plugin.Trace("[workshop] requested item list for operation " + op);
             }
             catch (Exception e)
             {
                 _mine = false;
-                Plugin.Warn("[мастерская] операция " + op + ": " + e.Message);
+                Plugin.Warn("[workshop] operation " + op + ": " + e.Message);
             }
         }
 
         private static void Show(int op)
         {
             _dialog = DialogFactory.ShowCreateArtDialog(op);
-            if (_dialog == null) { _mine = false; Plugin.Warn("[мастерская] окно не создалось"); return; }
+            if (_dialog == null) { _mine = false; Plugin.Warn("[workshop] window was not created"); return; }
             _dialog.RequestArtInfoEvent += Ask;
             _dialog.WizardCompletedEvent += Ready;
             _dialog.OnDialogDestroy += Gone;
             _dialog.ShowCurrentPanel();
-            Plugin.Trace("[мастерская] окно операции " + op + " открыто");
+            Plugin.Trace("[workshop] operation window " + op + " opened");
         }
 
         private static void Gone()
@@ -275,7 +275,7 @@ namespace NewAgeQoL
                 NetworkConnection.Instance.SendRequest(
                     new ArtefactInfoRequest(_dialog.Operation, _dialog.ThingSubtypeInventory, _dialog.SelectedLevel));
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] запрос параметров: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] parameters request: " + e.Message); }
         }
 
         private static void Ready()
@@ -301,7 +301,7 @@ namespace NewAgeQoL
                         break;
                 }
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] подтверждение: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] confirmation: " + e.Message); }
         }
 
         private static void Pay(EMessageBoxResult result)
@@ -313,9 +313,9 @@ namespace NewAgeQoL
                 short id = _dialog.Operation == 1 ? (short)362 : _dialog.Operation == 2 ? (short)363 : (short)364;
                 NetworkConnection.Instance.SendRequest(
                     new CreateArtRequest(id, _dialog.ArtName, _dialog.ArtefactInfo, _dialog.ThingSubtypeInventory));
-                Plugin.Trace("[мастерская] отправил запрос " + id);
+                Plugin.Trace("[workshop] sent request " + id);
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] отправка: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] send: " + e.Message); }
         }
 
         private static void Listen()
@@ -359,9 +359,9 @@ namespace NewAgeQoL
                 _askAt = 0f;
                 Show(tab.TabNumber);
                 if (_dialog != null) _dialog.SetInventory(list);
-                Plugin.Trace("[мастерская] пришёл список, вещей " + list.Count);
+                Plugin.Trace("[workshop] list received, items " + list.Count);
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] список вещей: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] item list: " + e.Message); }
         }
 
         private static void OnInfo(object msg)
@@ -374,7 +374,7 @@ namespace NewAgeQoL
                 _dialog.ArtefactInfo = info;
                 _dialog.ShowCurrentPanel();
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] параметры: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] parameters: " + e.Message); }
         }
 
         private static void OnDone(object msg)
@@ -387,14 +387,14 @@ namespace NewAgeQoL
                 if (done.Success)
                 {
                     try { DependencyContainer.GetContainer()?.Resolve<GeneralThingInfoDescriptionManager>()?.Clear(); }
-                    catch (Exception e) { Plugin.Trace("[мастерская] сброс описаний: " + e.Message); }
+                    catch (Exception e) { Plugin.Trace("[workshop] descriptions reset: " + e.Message); }
                     _dialog.Close();
                 }
                 else _dialog.EnableButtons();
                 AirMessageScript.ShowErrorNotification(done.Message);
-                Plugin.Trace("[мастерская] ответ сервера: " + (done.Success ? "готово" : "отказ"));
+                Plugin.Trace("[workshop] server reply: " + (done.Success ? "done" : "refused"));
             }
-            catch (Exception e) { Plugin.Warn("[мастерская] ответ: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[workshop] reply: " + e.Message); }
         }
 
         private static void OnPoor(object msg)
@@ -403,9 +403,9 @@ namespace NewAgeQoL
             {
                 if (!_mine || _dialog == null) return;
                 _dialog.EnableButtons();
-                Plugin.Trace("[мастерская] сервер сказал, что оплаты не хватает");
+                Plugin.Trace("[workshop] server says payment is insufficient");
             }
-            catch (Exception e) { Plugin.Trace("[мастерская] нехватка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[workshop] shortage: " + e.Message); }
         }
     }
 }

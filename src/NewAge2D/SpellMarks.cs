@@ -53,9 +53,9 @@ internal static class SpellMarks
             float now = Time.time;
             foreach (var target in targets)
                 Live.Add(new Mark { Caster = caster, Target = target, Name = name, Spell = spell, Asked = now });
-            if (Trace.On) Trace.Write($"«{caster.Login}» {name}, заклинание {spell}: значок цели над {string.Join(", ", targets.Select(one => one.Login))}");
+            if (Trace.On) Trace.Write($"'{caster.Login}' {name}, spell {spell}: target mark above {string.Join(", ", targets.Select(one => one.Login))}");
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[цели заклинания] " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[spell targets] " + ex.Message); }
     }
 
     private static void Add(List<AbstractCharacter> list, AbstractCharacter one)
@@ -88,7 +88,7 @@ internal static class SpellMarks
                     continue;
                 }
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("[цели заклинания] " + ex.Message); }
+            catch (Exception ex) { Plugin.Log.LogWarning("[spell targets] " + ex.Message); }
             Drop(mark);
             Live.RemoveAt(i--);
         }
@@ -176,7 +176,7 @@ internal static class SpellMarks
         if (shader == null)
         {
             _noFloor = true;
-            Plugin.Log.LogInfo("[цели заклинания] у игры нет шейдера для земли под лучом, луч остаётся как есть");
+            Plugin.Log.LogInfo("[spell targets] game has no shader for ground under beam, beam stays as is");
             return null;
         }
         _floorSkin = new Material(shader) { name = "NewAge2D.SpellFloor", renderQueue = 2000, color = new Color(0f, 0f, 0f, 1f / 255f) };
@@ -203,7 +203,7 @@ internal static class SpellMarks
         if (selector != null && Prefabs?.GetValue(selector) is GameObject[] all)
             foreach (var one in all)
                 if (one != null && one.name == name) return one;
-        if (Missing.Add(name ?? "")) Plugin.Log.LogInfo($"[цели заклинания] у игры нет значка цели для «{name}»");
+        if (Missing.Add(name ?? "")) Plugin.Log.LogInfo($"[spell targets] game has no target mark for '{name}'");
         return null;
     }
 
@@ -227,7 +227,7 @@ internal static class SpellMarks
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning($"[цели заклинания] значок заклинания {spell}: {ex.Message}");
+            Plugin.Log.LogWarning($"[spell targets] spell mark {spell}: {ex.Message}");
             if (made != null) UnityEngine.Object.Destroy(made);
             made = null;
         }

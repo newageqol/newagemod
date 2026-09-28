@@ -32,7 +32,7 @@ namespace NewAgeQoL
                     if (result == EMessageBoxResult.MB_OK) TurnOff();
                 }, "Выключить мод? После перезапуска игры клиент будет обычным, без изменений мода и вида как во Flash. Включить обратно: настройки игры, кнопка «Включить мод».");
             }
-            catch (Exception e) { Plugin.Log?.LogWarning("[мод] окно выключения: " + e.Message); }
+            catch (Exception e) { Plugin.Log?.LogWarning("[mod] disable dialog: " + e.Message); }
         }
 
         internal static void AskOn()
@@ -44,7 +44,7 @@ namespace NewAgeQoL
                     if (result == EMessageBoxResult.MB_OK) TurnOn();
                 }, "Включить мод? Он заработает после перезапуска игры.");
             }
-            catch (Exception e) { Plugin.Log?.LogWarning("[мод] окно включения: " + e.Message); }
+            catch (Exception e) { Plugin.Log?.LogWarning("[mod] enable dialog: " + e.Message); }
         }
 
         private static void TurnOff()
@@ -55,7 +55,7 @@ namespace NewAgeQoL
             if (_flashWas != null) _flashWas.Value = look;
             if (look) flash.Value = false;
             Enabled.Value = false;
-            Plugin.Log?.LogInfo("[мод] выключен со следующего запуска игры" + (look ? ", вид как во Flash тоже выключен" : ""));
+            Plugin.Log?.LogInfo("[mod] disabled from the next game start" + (look ? ", Flash look disabled too" : ""));
             Tell("Мод выключен. Перезапусти игру, и клиент будет обычным.");
         }
 
@@ -67,14 +67,14 @@ namespace NewAgeQoL
             bool look = _flashWas != null && _flashWas.Value;
             if (look && flash != null) flash.Value = true;
             if (_flashWas != null) _flashWas.Value = false;
-            Plugin.Log?.LogInfo("[мод] включён со следующего запуска игры" + (look && flash != null ? ", вид как во Flash возвращён" : ""));
+            Plugin.Log?.LogInfo("[mod] enabled from the next game start" + (look && flash != null ? ", Flash look restored" : ""));
             Tell("Мод включён. Перезапусти игру, чтобы он заработал.");
         }
 
         private static void Tell(string text)
         {
             try { DialogFactory.ShowMessageBox(Caption, null, result => { }, text); }
-            catch (Exception e) { Plugin.Log?.LogWarning("[мод] сообщение: " + e.Message); }
+            catch (Exception e) { Plugin.Log?.LogWarning("[mod] message: " + e.Message); }
         }
     }
 
@@ -87,7 +87,7 @@ namespace NewAgeQoL
             try
             {
                 var reset = AccessTools.Field(typeof(SetupDialog), "ResetChatButton")?.GetValue(__instance) as Button;
-                if (reset == null) { Plugin.Log?.LogWarning("[мод] кнопку «Сбросить положение чата» не нашёл, «Включить мод» не добавлена"); return; }
+                if (reset == null) { Plugin.Log?.LogWarning("[mod] 'Reset chat position' button not found, 'Enable mod' not added"); return; }
 
                 var src = (RectTransform)reset.transform;
                 var go = UnityEngine.Object.Instantiate(reset.gameObject, src.parent);
@@ -107,7 +107,7 @@ namespace NewAgeQoL
                 btn.onClick.RemoveAllListeners();
                 btn.onClick.AddListener(ModSwitch.AskOn);
             }
-            catch (Exception e) { Plugin.Log?.LogWarning("[мод] кнопка «Включить мод» не добавлена: " + e.Message); }
+            catch (Exception e) { Plugin.Log?.LogWarning("[mod] 'Enable mod' button not added: " + e.Message); }
         }
     }
 }

@@ -113,7 +113,7 @@ public class Plugin : BaseUnityPlugin
             if (CfgEnabled.Value)
             {
                 CfgEnabled.Value = false;
-                Log.LogInfo("Вид переведён на модели Unity: Flash-кукла больше не включена по умолчанию, вернуть можно ключом General/Enabled");
+                Log.LogInfo("View switched to Unity models: Flash doll is no longer on by default, re-enable with General/Enabled");
             }
         }
 
@@ -130,7 +130,7 @@ public class Plugin : BaseUnityPlugin
             CacheDir = Path.Combine(Paths.CachePath, "NewAge2D", "swf"),
             BundleDir = Path.Combine(Path.GetDirectoryName(Info.Location) ?? "", "swf"),
             Server = CfgServer.Value,
-            Log = text => Log.LogInfo("[файлы] " + text),
+            Log = text => Log.LogInfo("[files] " + text),
         };
         DollWorker.Store = Store;
         DollWorker.Compress = CfgCompress.Value;
@@ -141,7 +141,7 @@ public class Plugin : BaseUnityPlugin
             Doll.Packer = CfgCompress.Value ? new Action<DollPicture>(Dxt.PackOne) : null;
         };
 
-        if (!SkiaWorks()) Log.LogError("Skia не завёлся, кукла рисоваться не будет");
+        if (!SkiaWorks()) Log.LogError("Skia failed to start, doll will not be drawn");
 
         Doll.Vivid = UnityEngine.Mathf.Clamp(CfgVivid.Value, 1f, 2f);
         CfgVivid.SettingChanged += (_, _) => Doll.Vivid = UnityEngine.Mathf.Clamp(CfgVivid.Value, 1f, 2f);
@@ -160,7 +160,7 @@ public class Plugin : BaseUnityPlugin
         CfgCombat.SettingChanged += (_, _) => Apply();
         CfgField.SettingChanged += (_, _) => Apply();
         CfgKeepMagic.SettingChanged += (_, _) => Effects.Set(HideMagic);
-        Log.LogInfo($"New Age 2D {Version} загружен, кэш роликов: {Store.CacheDir}, потоков рисования {DollWorker.WorkerCount}");
+        Log.LogInfo($"New Age 2D {Version} loaded, clip cache: {Store.CacheDir}, draw threads {DollWorker.WorkerCount}");
     }
 
     internal static bool FlashLook => CfgEnabled != null && CfgEnabled.Value;
@@ -200,9 +200,9 @@ public class Plugin : BaseUnityPlugin
             Fighters.Set(FlashFight);
             Effects.Set(HideMagic);
             Field.Set(FlashField);
-            Log.LogInfo($"Flash-вид: окно {(FlashLook ? "вкл" : "выкл")}, бой {(FlashFight ? "вкл" : "выкл")}, поле {(FlashField ? "вкл" : "выкл")}");
+            Log.LogInfo($"Flash view: window {(FlashLook ? "on" : "off")}, combat {(FlashFight ? "on" : "off")}, field {(FlashField ? "on" : "off")}");
         }
-        catch (Exception ex) { Log.LogError("переключение вида: " + ex); }
+        catch (Exception ex) { Log.LogError("view switch: " + ex); }
     }
 
     private void OnDestroy()
@@ -228,7 +228,7 @@ public class Plugin : BaseUnityPlugin
         {
             using var surface = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(4, 4));
             surface.Canvas.Clear(SkiaSharp.SKColors.Red);
-            Log.LogInfo("Skia работает");
+            Log.LogInfo("Skia works");
             return true;
         }
         catch (Exception ex)

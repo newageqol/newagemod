@@ -79,12 +79,12 @@ namespace NewAgeQoL
             try
             {
                 string file = WardrobeData.CacheFile;
-                stale = !File.Exists(file) || (DateTime.Now - File.GetLastWriteTime(file)).TotalDays >= 3;
+                stale = !File.Exists(file) || (DateTime.Now - File.GetLastWriteTime(file)).TotalDays >= 3 || WardrobeData.Unnumbered;
             }
             catch { }
             if (!need && !stale) return;
             _autoTried = true;
-            Plugin.Trace("[переодевалка] обновляю базу сама: " + (need ? "в манекене есть вещи не из базы" : "база старше трёх дней"));
+            Plugin.Trace("[wardrobe] updating the base on my own: " + (need ? "manikin has items not in the base" : "base older than three days"));
             Start();
         }
 
@@ -106,7 +106,7 @@ namespace NewAgeQoL
             bool kept = false;
             if (baseText == null)
             {
-                Plugin.Warn("[переодевалка] база вещей не пришла: " + Why(db));
+                Plugin.Warn("[wardrobe] item base not received: " + Why(db));
                 if (WardrobeData.Current != null)
                 {
                     baseText = WardrobeData.Current;
@@ -150,7 +150,7 @@ namespace NewAgeQoL
             }
             if (siteError != null)
             {
-                Plugin.Warn("[переодевалка] " + siteError);
+                Plugin.Warn("[wardrobe] " + siteError);
                 pages.Clear();
             }
             if (baseText == null && pages.Count == 0)
@@ -178,7 +178,7 @@ namespace NewAgeQoL
                 Fail("вещей пришло слишком мало, оставил прежние");
                 yield break;
             }
-            try
+            if (baseText != null) try
             {
                 string file = WardrobeData.CacheFile;
                 Directory.CreateDirectory(Path.GetDirectoryName(file));
@@ -187,19 +187,19 @@ namespace NewAgeQoL
                 if (File.Exists(file)) File.Delete(file);
                 File.Move(temp, file);
             }
-            catch (Exception e) { Plugin.Warn("[переодевалка] кэш вещей не записан: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[wardrobe] item cache not written: " + e.Message); }
 
             int now = WardrobeData.Things.Count;
             var status = new StringBuilder("Вещей ").Append(now);
             if (was > 0 && now > was) status.Append(", новых ").Append(now - was);
             else if (was > 0 && now == was) status.Append(", новых нет");
             if (kept) status.Append(". Базу скачать не вышло, оставлена прежняя");
-            else if (baseText == null) status.Append(". Базу скачать не вышло, вещи только с сайта игры");
+            else if (baseText == null) status.Append(". Базу скачать не вышло, вещи только с сайта игры до перезапуска, потом попробую снова");
             if (job.Added > 0) status.Append(". С сайта игры добавлено ").Append(job.Added);
             if (job.Skipped > 0) status.Append(", без слота ").Append(job.Skipped);
             if (siteError != null) status.Append(". С сайтом игры сверить не вышло");
             Status = status.ToString();
-            Plugin.Trace("[переодевалка] " + Status);
+            Plugin.Trace("[wardrobe] " + Status);
             Busy = false;
             Wardrobe.Reloaded();
         }
@@ -207,7 +207,7 @@ namespace NewAgeQoL
         private static void Fail(string text)
         {
             Status = "Не обновилось: " + text;
-            Plugin.Warn("[переодевалка] " + Status);
+            Plugin.Warn("[wardrobe] " + Status);
             Busy = false;
             Wardrobe.Reloaded();
         }
@@ -260,7 +260,7 @@ namespace NewAgeQoL
         private static void Head(UnityWebRequest req, string name, string value)
         {
             try { req.SetRequestHeader(name, value); }
-            catch (Exception e) { Plugin.Trace("[переодевалка] заголовок " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[wardrobe] header " + name + ": " + e.Message); }
         }
 
         private static void Grab(UnityWebRequest req, Reply reply)

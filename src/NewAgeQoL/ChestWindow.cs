@@ -30,7 +30,7 @@ namespace NewAgeQoL
                         cam.fieldOfView = Mathf.Clamp(Mathf.Atan(half) * 2f * Mathf.Rad2Deg, 1f, 170f);
                     }
                 }
-                else Plugin.Trace("[сундук] у окна нет камеры, сундуки оставлены как есть");
+                else Plugin.Trace("[chest] window has no camera, chests left as is");
 
                 var ui = window.transform.Find("DailyBonusUICanvas");
                 int moved = 0;
@@ -44,9 +44,9 @@ namespace NewAgeQoL
                         moved++;
                     }
                 }
-                Plugin.Trace("[сундук] окно уменьшено до " + k.ToString("0.00") + ", частей интерфейса " + moved);
+                Plugin.Trace("[chest] window scaled to " + k.ToString("0.00") + ", UI parts " + moved);
             }
-            catch (Exception e) { Plugin.Trace("[сундук] размер окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chest] window size: " + e.Message); }
         }
 
         private static float Scale()

@@ -31,11 +31,11 @@ internal static class Fighters
         if (!Plugin.FlashFight || !Dollable(__instance)) return;
         var character = __instance;
         try { Veil(character); }
-        catch (Exception ex) { Plugin.Log.LogError("[бой] скрыть 3D: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[combat] hide 3D: " + ex); }
         MainThread.Post(() =>
         {
             try { Attach(character); }
-            catch (Exception ex) { Plugin.Log.LogError("[бой] " + ex); }
+            catch (Exception ex) { Plugin.Log.LogError("[combat] " + ex); }
         });
     }
 
@@ -87,7 +87,7 @@ internal static class Fighters
                     foreach (string line in File.ReadAllLines(SummonRacesFile))
                         if (int.TryParse(line.Trim(), out int known)) SummonRaces.Add(known);
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("[призыв] расы призывов: " + ex.Message); }
+            catch (Exception ex) { Plugin.Log.LogWarning("[summon] summon races: " + ex.Message); }
         }
         return SummonRaces.Contains(race);
     }
@@ -101,8 +101,8 @@ internal static class Fighters
             Directory.CreateDirectory(Path.GetDirectoryName(SummonRacesFile));
             File.WriteAllLines(SummonRacesFile, SummonRaces.OrderBy(one => one).Select(one => one.ToString()));
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[призыв] расы призывов: " + ex.Message); }
-        if (Trace.On) Trace.Write($"призыв: раса {race} запомнена как призываемая, такие существа рисуются Flash и при входе в идущий бой");
+        catch (Exception ex) { Plugin.Log.LogWarning("[summon] summon races: " + ex.Message); }
+        if (Trace.On) Trace.Write($"summon: race {race} remembered as summoned, such creatures are drawn in Flash also when joining a running fight");
     }
     private static Dictionary<int, string> _clips;
 
@@ -114,13 +114,13 @@ internal static class Fighters
         bool byPlayer = combat != null && combat.Characters.Values.Any(character => character is PlayerCharacter && character.Team == message.Team);
         if (!byPlayer)
         {
-            if (Trace.On) Trace.Write($"призыв: существо {message.UserId}, раса {message.Race}, модель {message.AssetBundle}, команда {message.Team} — в этой команде нет игроков, значит это монстр, а не призыв: остаётся 3D");
+            if (Trace.On) Trace.Write($"summon: creature {message.UserId}, race {message.Race}, model {message.AssetBundle}, team {message.Team} - no players in this team, so it is a monster, not a summon: stays 3D");
             return;
         }
         Summoned.Add(message.UserId);
         LearnSummonRace(message.Race);
         if (combat?.MyCharacter != null && combat.MyCharacter.Team == message.Team) SummonWarm.Summoned(message.Race);
-        if (Trace.On) Trace.Write($"призыв: существо {message.UserId}, раса {message.Race}, модель {message.AssetBundle}, команда {message.Team}, призвал игрок, ролик Flash {ClipFor(message.Race) ?? "нет, останется 3D"}");
+        if (Trace.On) Trace.Write($"summon: creature {message.UserId}, race {message.Race}, model {message.AssetBundle}, team {message.Team}, summoned by a player, Flash clip {ClipFor(message.Race) ?? "none, stays 3D"}");
     }
 
     internal static string ClipFor(int race)
@@ -137,9 +137,9 @@ internal static class Fighters
                         int space = line.IndexOf(' ');
                         if (space > 0 && int.TryParse(line.Substring(0, space), out int id)) _clips[id] = line.Substring(space + 1).Trim();
                     }
-                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[призыв] роликов Flash по расам: {_clips.Count}");
+                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[summon] Flash clips by race: {_clips.Count}");
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("[призыв] таблица роликов: " + ex.Message); }
+            catch (Exception ex) { Plugin.Log.LogWarning("[summon] clip table: " + ex.Message); }
         }
         return _clips.TryGetValue(race, out string clip) ? clip : null;
     }
@@ -198,7 +198,7 @@ internal static class Fighters
             {
                 var material = renderer.sharedMaterial;
                 int queue = material != null ? material.renderQueue : 0;
-                parts.Add($"{renderer.GetType().Name} «{renderer.name}» очередь {queue} порядок {renderer.sortingOrder}");
+                parts.Add($"{renderer.GetType().Name} '{renderer.name}' queue {queue} order {renderer.sortingOrder}");
                 renderer.sortingLayerID = layerId;
                 renderer.sortingOrder = short.MinValue + 2;
                 if (queue <= 3000) continue;
@@ -211,12 +211,12 @@ internal static class Fighters
             int ground = __instance.parent != null ? __instance.parent.gameObject.layer : -1;
             foreach (var projector in ring.GetComponentsInChildren<Projector>(true))
             {
-                parts.Add($"Projector «{projector.name}» слои-исключения {projector.ignoreLayers}");
+                parts.Add($"Projector '{projector.name}' ignored layers {projector.ignoreLayers}");
                 if (doll != null && doll.gameObject.layer != ground) projector.ignoreLayers |= 1 << doll.gameObject.layer;
             }
-            if (Trace.On) Trace.Write($"«{NameOf(__instance)}» Unity: кружок выделения опущен под кукол: {string.Join("; ", parts)}");
+            if (Trace.On) Trace.Write($"'{NameOf(__instance)}' Unity: selection circle lowered below dolls: {string.Join("; ", parts)}");
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[бой] кружок выделения: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[combat] selection circle: " + ex.Message); }
     }
 
     internal static OffsetCoord[] PathOf(AbstractCharacter owner)
@@ -253,7 +253,7 @@ internal static class Fighters
         float share = Mathf.Clamp(length / hex, 0.05f, 1f);
         DistanceField.SetValue(__instance, 3f * seconds * share);
         if (Trace.On && owner is PlayerCharacter player)
-            Trace.Write($"«{player.Login}» Unity: шаг замедлен до {seconds * share:0.00} с на участок ({share:0.00} клетки), фаза {Combat()?.RoundType}");
+            Trace.Write($"'{player.Login}' Unity: step slowed to {seconds * share:0.00} s per segment ({share:0.00} cell), phase {Combat()?.RoundType}");
     }
 
     private static string NameOf(AbstractCharacter character) =>
@@ -269,7 +269,7 @@ internal static class Fighters
         if (!Paced(__instance) || PathField == null || PathIndexField == null || CurrentTargetField == null) return true;
         if (__instance.State == MoverState.Idle || PathField.GetValue(__instance) == null) return true;
         PendingPaths.GetValue(__instance, _ => new Queue<OffsetCoord[]>()).Enqueue(path);
-        if (Trace.On) Trace.Write($"«{NameOf(__instance.Owner)}» Unity: новый путь ({(path?.Length ?? 1) - 1} клеток) ждёт конца текущего хода");
+        if (Trace.On) Trace.Write($"'{NameOf(__instance.Owner)}' Unity: new path ({(path?.Length ?? 1) - 1} cells) waits for current move to end");
         return false;
     }
 
@@ -287,7 +287,7 @@ internal static class Fighters
             __instance.Owner.position = reached;
         PathField.SetValue(__instance, next);
         PathIndexField.SetValue(__instance, 1);
-        if (Trace.On) Trace.Write($"«{NameOf(__instance.Owner)}» Unity: ход дошёл до клетки, отложенный путь пошёл ({next.Length - 1} клеток)");
+        if (Trace.On) Trace.Write($"'{NameOf(__instance.Owner)}' Unity: move reached cell, deferred path started ({next.Length - 1} cells)");
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(CharacterMover), "Reset")]
@@ -296,7 +296,7 @@ internal static class Fighters
         if (PendingPaths.TryGetValue(__instance, out var pending)) pending.Clear();
         if (!Plugin.FlashFight || PathField == null || PathField.GetValue(__instance) == null) return;
         PathField.SetValue(__instance, null);
-        if (Trace.On) Trace.Write($"«{NameOf(__instance.Owner)}» Unity: старый путь стёрт при переносе на клетку");
+        if (Trace.On) Trace.Write($"'{NameOf(__instance.Owner)}' Unity: old path cleared on move to cell");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(AbstractCharacter), "MoveTo")]
@@ -305,11 +305,11 @@ internal static class Fighters
         if (!Plugin.FlashFight || (path != null && path.Count >= 2)) return true;
         try
         {
-            if (Trace.On) Trace.Write($"«{NameOf(__instance)}» Unity: маршрут не найден (точек {path?.Count ?? 0}), перенос на клетку сразу");
+            if (Trace.On) Trace.Write($"'{NameOf(__instance)}' Unity: route not found (points {path?.Count ?? 0}), moved to cell at once");
             __instance.ValidateGameObjectPosition(false);
-            DollOf(__instance)?.Jump("маршрут не найден");
+            DollOf(__instance)?.Jump("route not found");
         }
-        catch (Exception ex) { Plugin.Log.LogError("[бой] перенос без маршрута: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[combat] move without route: " + ex); }
         return false;
     }
 
@@ -317,23 +317,23 @@ internal static class Fighters
     private static void AfterTeleport(CombatData __instance, int characterId)
     {
         if (!Plugin.FlashFight || !__instance.Characters.TryGetValue(characterId, out var character)) return;
-        if (Trace.On) Trace.Write($"«{NameOf(character)}» Unity: телепорт на клетку {character.HexGridPosition?.clientX},{character.HexGridPosition?.clientY}");
+        if (Trace.On) Trace.Write($"'{NameOf(character)}' Unity: teleport to cell {character.HexGridPosition?.clientX},{character.HexGridPosition?.clientY}");
         var doll = DollOf(character);
-        if (doll != null && !doll.Hold.HasValue) doll.Jump("телепорт");
+        if (doll != null && !doll.Hold.HasValue) doll.Jump("teleport");
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(CombatData), "CharacterMoved")]
     private static void AfterMove(CombatData __instance, int characterId, bool decreaseAp)
     {
         if (!Trace.On || !Plugin.FlashFight || !__instance.Characters.TryGetValue(characterId, out var character)) return;
-        Trace.Write($"«{NameOf(character)}» Unity: ход на клетку {character.HexGridPosition?.clientX},{character.HexGridPosition?.clientY}, фаза {__instance.RoundType}, {(decreaseAp ? "за очки хода" : "без очков хода")}");
+        Trace.Write($"'{NameOf(character)}' Unity: move to cell {character.HexGridPosition?.clientX},{character.HexGridPosition?.clientY}, phase {__instance.RoundType}, {(decreaseAp ? "for move points" : "without move points")}");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(CharacterMover), "State", MethodType.Setter)]
     private static void TraceState(CharacterMover __instance, MoverState value)
     {
         if (!Trace.On || !Dolled(__instance) || __instance.State == value) return;
-        Trace.Write($"«{NameOf(__instance.Owner)}» Unity: шаг {__instance.State} → {value}");
+        Trace.Write($"'{NameOf(__instance.Owner)}' Unity: step {__instance.State} → {value}");
     }
 
     [HarmonyPostfix, HarmonyPatch(typeof(AbstractCharacter), "RotateTo")]
@@ -365,7 +365,7 @@ internal static class Fighters
             }
             StartMovingMethod.Invoke(__instance, null);
         }
-        catch (Exception ex) { Plugin.Log.LogError("[бой] разворот: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[combat] turn: " + ex); }
     }
 
     internal static ICombatData Combat()
@@ -386,8 +386,8 @@ internal static class Fighters
         var doll = child != null ? child.GetComponent<FighterDoll>() : null;
         if (doll != null && !ReferenceEquals(doll.Owner, player))
         {
-            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] контейнер «{player.Login}» занят куклой «{doll.Owner?.Login}», убираю её");
-            if (Trace.On) Trace.Write($"«{player.Login}» контейнер занят куклой «{doll.Owner?.Login}», чужая кукла удаляется");
+            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] container '{player.Login}' taken by doll '{doll.Owner?.Login}', removing it");
+            if (Trace.On) Trace.Write($"'{player.Login}' container taken by doll '{doll.Owner?.Login}', foreign doll removed");
             child.name = DollName + ".old";
             UnityEngine.Object.Destroy(child.gameObject);
             doll = null;
@@ -400,9 +400,9 @@ internal static class Fighters
             doll = go.AddComponent<FighterDoll>();
             doll.Init(player, container, ClipOf(player));
             Alive.Add(doll);
-            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] кукла для «{player.Login}» (id {player.UserId})");
+            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] doll for '{player.Login}' (id {player.UserId})");
         }
-        else if (Trace.On) Trace.Write($"«{player.Login}» модель пересоздана игрой, кукла та же");
+        else if (Trace.On) Trace.Write($"'{player.Login}' model recreated by game, same doll");
         doll.Refresh();
         SpellFx.Prewarm();
         FlashNumbers.Prewarm();
@@ -433,7 +433,7 @@ internal static class Fighters
             list.Add(renderer);
         }
         Veils[player] = (list, Time.unscaledTime);
-        if (Trace.On) Trace.Write($"«{player.Login}» игра создала 3D-модель, спрятано рендеров {list.Count - before}");
+        if (Trace.On) Trace.Write($"'{player.Login}' game created 3D model, renderers hidden {list.Count - before}");
     }
 
     private static float _sortAt;
@@ -491,7 +491,7 @@ internal static class Fighters
                 changed++;
             }
             if (changed > 0 && Trace.On && Traced.Add(character))
-                Trace.Write($"«{NameOf(character)}» 3D-модель без куклы: рендерам {changed} порядок по глубине {order}, как у кукол");
+                Trace.Write($"'{NameOf(character)}' 3D model without doll: {changed} renderers get depth order {order}, as dolls");
         }
     }
 
@@ -547,8 +547,8 @@ internal static class Fighters
                 }
                 if (Plugin.FlashFight && (DollOf(player) != null || Time.unscaledTime - Veils[player].At < 3f)) continue;
                 Unveil(player);
-                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{player.Login}»: куклы нет, 3D-модель возвращена");
-                if (Trace.On) Trace.Write($"«{player.Login}» 3D-модель ВОЗВРАЩЕНА: за 3 с кукла не появилась");
+                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{player.Login}': no doll, 3D model restored");
+                if (Trace.On) Trace.Write($"'{player.Login}' 3D model RESTORED: doll did not appear within 3 s");
             }
         }
         if (Alive.Count > 0 || _emptySince <= 0f || Time.unscaledTime - _emptySince < 180f) return;
@@ -556,7 +556,7 @@ internal static class Fighters
         FrameCache.Clear();
         SpellFx.Reset();
         Summoned.Clear();
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo("[кадры] боёв давно не было, кадры кукол выгружены");
+        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo("[frames] no fights for a long time, doll frames unloaded");
     }
 
     internal static int Layer(Camera eye, Vector3 point, OffsetCoord spot)
@@ -591,12 +591,12 @@ internal static class Fighters
                 if (Mathf.Abs(first - second) >= 16) continue;
                 if (first == second)
                 {
-                    Trace.Write($"«{one.Owner?.Login}» и «{two.Owner?.Login}» делят порядок отрисовки {first} — кто сверху, решает Unity");
+                    Trace.Write($"'{one.Owner?.Login}' and '{two.Owner?.Login}' share draw order {first} - Unity decides which is on top");
                     continue;
                 }
                 var top = first > second ? one : two;
                 var under = first > second ? two : one;
-                Trace.Write($"«{top.Owner?.Login}» поверх «{under.Owner?.Login}»: одна глубина, порядок {first} и {second}");
+                Trace.Write($"'{top.Owner?.Login}' over '{under.Owner?.Login}': same depth, order {first} and {second}");
             }
     }
 
@@ -670,7 +670,7 @@ internal static class Fighters
         {
             if (character == null || !character.Initialized || !Dollable(character)) continue;
             try { Attach(character); }
-            catch (Exception ex) { Plugin.Log.LogError("[бой] " + ex); }
+            catch (Exception ex) { Plugin.Log.LogError("[combat] " + ex); }
         }
     }
 
@@ -689,7 +689,7 @@ internal static class Fighters
         else { loop = true; label = "stop"; rank = name.Length == 0 || name.StartsWith("idle") ? 0 : 1; }
 
         if (Plugin.CfgVerbose.Value && name.Length > 0 && SeenClips.Add(name))
-            Plugin.Log.LogInfo($"[бой] клип аниматора «{clip}» → метка {label}");
+            Plugin.Log.LogInfo($"[combat] animator clip '{clip}' → label {label}");
         return label;
     }
 
@@ -877,7 +877,7 @@ internal static class FrameCache
 
     internal static bool IsPending(string sequence) => Pending.Contains(sequence);
 
-    internal static string StateOf(string sequence) => Ready.Contains(sequence) ? "готовы" : Pending.Contains(sequence) ? "рисуются" : "не заказаны";
+    internal static string StateOf(string sequence) => Ready.Contains(sequence) ? "ready" : Pending.Contains(sequence) ? "drawing" : "not ordered";
 
     internal static bool BeginSequence(string sequence) => !Ready.Contains(sequence) && Pending.Add(sequence);
 
@@ -982,7 +982,7 @@ internal static class FrameCache
 
     internal static long VideoBytes => _bytes;
 
-    internal static string Stats() => $"срочно {Batches.Count}, позже {Later.Count}, кадров осталось {Remaining()}, спрайтов {Sprites.Count}, видеопамять {_bytes / 1048576.0:0} МБ";
+    internal static string Stats() => $"urgent {Batches.Count}, later {Later.Count}, frames left {Remaining()}, sprites {Sprites.Count}, video memory {_bytes / 1048576.0:0} MB";
 
     private static long Ms(long from, long to) => (to - from) * 1000 / System.Diagnostics.Stopwatch.Frequency;
 
@@ -995,7 +995,7 @@ internal static class FrameCache
             if (Trace.On && item is Sprite)
             {
                 string who = Fighters.WhoShows(item);
-                if (who != null) Trace.Write($"«{who}» уничтожается спрайт, который сейчас на экране");
+                if (who != null) Trace.Write($"'{who}' destroying a sprite that is on screen now");
             }
             UnityEngine.Object.Destroy(item);
         }
@@ -1037,10 +1037,10 @@ internal static class FrameCache
             if (Trace.On)
             {
                 long now = System.Diagnostics.Stopwatch.GetTimestamp();
-                Trace.Write($"выгружено {batch.Label} облик {Trace.Look(batch.Look)}: кадров {batch.Frames.Count}, ждало выгрузки {Ms(batch.Queued, batch.Began)} мс, выгрузка {Ms(batch.Began, now)} мс, очередь {(queue == Batches ? "срочная" : "поздняя")}");
+                Trace.Write($"uploaded {batch.Label} look {Trace.Look(batch.Look)}: frames {batch.Frames.Count}, waited for upload {Ms(batch.Queued, batch.Began)} ms, upload {Ms(batch.Began, now)} ms, queue {(queue == Batches ? "urgent" : "late")}");
             }
             try { batch.Done?.Invoke(); }
-            catch (Exception ex) { Plugin.Log.LogError("[кадры] " + ex); }
+            catch (Exception ex) { Plugin.Log.LogError("[frames] " + ex); }
         }
     }
 
@@ -1074,8 +1074,8 @@ internal static class FrameCache
             foreach (string sequence in Hits.Keys.Where(s => s.StartsWith(prefix, StringComparison.Ordinal)).ToList()) Hits.Remove(sequence);
             foreach (string sequence in Maps.Keys.Where(s => s.StartsWith(prefix, StringComparison.Ordinal)).ToList()) Maps.Remove(sequence);
         }
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[кадры] освобождены облики: {string.Join(", ", dead)}; спрайтов осталось {Sprites.Count}");
-        if (Trace.On) Trace.Write($"выгружены из памяти облики {string.Join(", ", dead.Select(Trace.Look))}; спрайтов осталось {Sprites.Count}");
+        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[frames] looks freed: {string.Join(", ", dead)}; sprites left {Sprites.Count}");
+        if (Trace.On) Trace.Write($"looks unloaded from memory {string.Join(", ", dead.Select(Trace.Look))}; sprites left {Sprites.Count}");
     }
 
     internal static bool TryGet(string key, out Sprite sprite)
@@ -1137,7 +1137,7 @@ internal static class FrameCache
         }
         long budget = Plugin.FrameMemory;
         if (_bytes > budget) Spill(budget);
-        if (evicted > 0 && Trace.On) Trace.Write($"предел кэша {Cap}: выброшено кадров {evicted}");
+        if (evicted > 0 && Trace.On) Trace.Write($"cache limit {Cap}: frames evicted {evicted}");
         return sprite;
     }
 
@@ -1172,7 +1172,7 @@ internal static class FrameCache
         if (spilled > 0 && Trace.On && Time.unscaledTime - _spilledAt > 1f)
         {
             _spilledAt = Time.unscaledTime;
-            Trace.Write($"предел видеопамяти {budget / 1048576L} МБ: выброшено наборов {series} (из них нужных сейчас {forced}), кадров {spilled}, осталось {_bytes / 1048576.0:0} МБ");
+            Trace.Write($"video memory limit {budget / 1048576L} MB: sets evicted {series} (of them needed now {forced}), frames {spilled}, left {_bytes / 1048576.0:0} MB");
         }
     }
 
@@ -1278,7 +1278,7 @@ internal static class FrameCache
         Hot.Clear();
         Generation++;
         Pixels.Clear();
-        if (Trace.On) Trace.Write("кэш кадров полностью очищен");
+        if (Trace.On) Trace.Write("frame cache fully cleared");
     }
 }
 
@@ -1385,7 +1385,7 @@ internal sealed class FighterDoll : MonoBehaviour
     {
         _placed = false;
         _gliding = false;
-        if (Trace.On) Trace.Write($"«{Who}» {why}: кукла переставлена сразу, без дохода");
+        if (Trace.On) Trace.Write($"'{Who}' {why}: doll moved at once, without glide");
     }
 
     internal bool Placed => _placed;
@@ -1419,19 +1419,19 @@ internal sealed class FighterDoll : MonoBehaviour
             if (_skin != null) _shade.sharedMaterial = _skin;
             _shade.sprite = Fighters.ShadeSprite;
             _shade.color = new Color(0f, 0f, 0f, 0.55f);
-            if (Trace.On) Trace.Write($"«{Who}» тень под ногами поставлена");
+            if (Trace.On) Trace.Write($"'{Who}' shadow under feet placed");
         }
         ThingImages.Learned += OnLearned;
         _arrived = file => MainThread.Post(() => OnArrived(file));
         if (Plugin.Store != null) Plugin.Store.Arrived += _arrived;
         Camera.onPreCull += BeforeCull;
-        string hands = _player != null ? $"правая {Fighters.Describe(_player.RightHandWeapon)}, левая {Fighters.Describe(_player.LeftHandWeapon)}" : "ролик Flash " + clip;
-        if (Trace.On) Trace.Write($"«{Who}» кукла создана (id {owner.UserId}, раса {owner.Race}, пол {(int)owner.Gender}, {hands})");
+        string hands = _player != null ? $"right {Fighters.Describe(_player.RightHandWeapon)}, left {Fighters.Describe(_player.LeftHandWeapon)}" : "Flash clip " + clip;
+        if (Trace.On) Trace.Write($"'{Who}' doll created (id {owner.UserId}, race {owner.Race}, gender {(int)owner.Gender}, {hands})");
     }
 
     private void OnDestroy()
     {
-        if (Trace.On) Trace.Write($"«{Who}» кукла УДАЛЕНА");
+        if (Trace.On) Trace.Write($"'{Who}' doll REMOVED");
         ThingImages.Learned -= OnLearned;
         if (Plugin.Store != null && _arrived != null) Plugin.Store.Arrived -= _arrived;
         Camera.onPreCull -= BeforeCull;
@@ -1446,7 +1446,7 @@ internal sealed class FighterDoll : MonoBehaviour
     private void OnLearned(int thingId)
     {
         if (!_needs.Contains(thingId)) return;
-        if (Trace.On) Trace.Write($"«{Who}» пришла картинка вещи {thingId}");
+        if (Trace.On) Trace.Write($"'{Who}' item image arrived {thingId}");
         Refresh();
     }
 
@@ -1454,7 +1454,7 @@ internal sealed class FighterDoll : MonoBehaviour
     {
         if (this == null || !_files.Contains(file)) return;
         string failure = Plugin.Store?.Failure(file);
-        if (Trace.On) Trace.Write(failure == null ? $"«{Who}» ролик вещи {file} готов" : $"«{Who}» ролик вещи {file} НЕ ПОЛУЧЕН, вещь не рисуется: {failure}");
+        if (Trace.On) Trace.Write(failure == null ? $"'{Who}' item clip {file} ready" : $"'{Who}' item clip {file} NOT RECEIVED, item not drawn: {failure}");
         Refresh();
     }
 
@@ -1490,7 +1490,7 @@ internal sealed class FighterDoll : MonoBehaviour
         string look = plan.Look;
         if (look != _look)
         {
-            if (Trace.On) Trace.Write($"«{Who}» облик {Trace.Look(_look)} → {Trace.Look(look)}: вещей {plan.Wear.Count}, картинок ждём {_needs.Count}, роликов ждём {_files.Count}, кадры stop {FrameCache.StateOf(FrameCache.SequenceKey(look, "stop"))}");
+            if (Trace.On) Trace.Write($"'{Who}' look {Trace.Look(_look)} → {Trace.Look(look)}: items {plan.Wear.Count}, images pending {_needs.Count}, clips pending {_files.Count}, stop frames {FrameCache.StateOf(FrameCache.SequenceKey(look, "stop"))}");
             string was = _look;
             string wasOther = _otherLook;
             _look = look;
@@ -1553,11 +1553,11 @@ internal sealed class FighterDoll : MonoBehaviour
             string side = hand ?? "-";
             Weapon weapon = null;
             if (_player != null) weapon = Fighters.WeaponOf(_player, hand, out side);
-            Trace.Write($"«{Who}» Unity: действие «{animation}», рука {hand ?? "-"} ({side}), оружие {Fighters.Describe(weapon)} → {wanted}");
+            Trace.Write($"'{Who}' Unity: action '{animation}', hand {hand ?? "-"} ({side}), weapon {Fighters.Describe(weapon)} → {wanted}");
         }
         if (loop || rank < 4)
         {
-            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{_owner.Login}»: действие «{animation}» без анимации Flash");
+            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{_owner.Login}': action '{animation}' has no Flash animation");
             return;
         }
         Launch(wanted, animation);
@@ -1571,10 +1571,10 @@ internal sealed class FighterDoll : MonoBehaviour
         {
             _queue.Clear();
             _playing = null;
-            if (Trace.On) Trace.Write($"«{Who}» был мёртв ещё до того, как я его увидел: сразу лежит, ролик смерти не играю");
+            if (Trace.On) Trace.Write($"'{Who}' was dead before first seen: lies down at once, death clip not played");
             return;
         }
-        Launch("die", "смерть");
+        Launch("die", "death");
     }
 
     public void Rise()
@@ -1583,7 +1583,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _queue.Clear();
         _finishedRequest = _requestCounter;
         if (_playing == "die") _playing = null;
-        if (Trace.On) Trace.Write($"«{Who}» поднят");
+        if (Trace.On) Trace.Write($"'{Who}' raised");
     }
 
     private readonly Queue<(string Wanted, string Reason, int Serial, int Request)> _queue = new();
@@ -1620,12 +1620,12 @@ internal sealed class FighterDoll : MonoBehaviour
         {
             _queue.Enqueue((wanted, reason, serial, request));
             _queuedAt = Time.time;
-            if (Trace.On) Trace.Write($"«{Who}» действие «{reason}» → {wanted} ждёт в очереди за {_playing ?? "очередью"} (удар №{serial})");
+            if (Trace.On) Trace.Write($"'{Who}' action '{reason}' → {wanted} queued behind {_playing ?? "queue"} (strike #{serial})");
             return;
         }
         if (_labels == null)
         {
-            if (Trace.On) Trace.Write($"«{Who}» действие «{reason}» → {wanted} ОТЛОЖЕНО: у облика {Trace.Look(_look)} ещё нет меток (первые кадры не готовы)");
+            if (Trace.On) Trace.Write($"'{Who}' action '{reason}' → {wanted} DEFERRED: look {Trace.Look(_look)} has no labels yet (first frames not ready)");
             _pending = wanted;
             _pendingSerial = serial;
             _pendingRequest = request;
@@ -1634,7 +1634,7 @@ internal sealed class FighterDoll : MonoBehaviour
         string label = Keyed(wanted, out var range);
         if (label == null)
         {
-            if (Trace.On) Trace.Write($"«{Who}» действие «{reason}» → {wanted}: такой метки у тела нет");
+            if (Trace.On) Trace.Write($"'{Who}' action '{reason}' → {wanted}: body has no such label");
             _landedSerial = Math.Max(_landedSerial, serial);
             _finishedRequest = Math.Max(_finishedRequest, request);
             return;
@@ -1650,8 +1650,8 @@ internal sealed class FighterDoll : MonoBehaviour
         _measuring = !Plugin.FlashSpeed;
         _measureUntil = Time.time + 1f;
         _idleHash = StateHash();
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{_owner.Login}»: «{reason}» → {label}{(_left ? "" : " (тело " + Fighters.Mirror(label) + ")")}, кадров {range.Count}");
-        if (Trace.On) Trace.Write($"«{Who}» действие «{reason}» → {label}{(_left ? "" : " (тело " + Fighters.Mirror(label) + ")")}, кадров {range.Count}, облик {Trace.Look(_look)}, кадры {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}");
+        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{_owner.Login}': '{reason}' → {label}{(_left ? "" : " (body " + Fighters.Mirror(label) + ")")}, frames {range.Count}");
+        if (Trace.On) Trace.Write($"'{Who}' action '{reason}' → {label}{(_left ? "" : " (body " + Fighters.Mirror(label) + ")")}, frames {range.Count}, look {Trace.Look(_look)}, frames {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}");
         Need(label, true);
     }
 
@@ -1691,7 +1691,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _playScale = scale;
         _measuring = false;
         if (Plugin.CfgVerbose.Value)
-            Plugin.Log.LogInfo($"[бой] «{_owner.Login}»: {_playing} у Flash {flash:0.00} с, у Unity {unity:0.00} с → скорость ×{scale:0.00}");
+            Plugin.Log.LogInfo($"[combat] '{_owner.Login}': {_playing} Flash {flash:0.00} s, Unity {unity:0.00} s → speed ×{scale:0.00}");
     }
 
     private void FreeCapsule()
@@ -1699,7 +1699,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (!_capsuleTouched || _owner == null) return;
         _capsuleTouched = false;
         try { _owner.RecalculateCapsuleHeight(); }
-        catch (Exception ex) { Plugin.Log.LogError("[бой] капсула: " + ex); }
+        catch (Exception ex) { Plugin.Log.LogError("[combat] capsule: " + ex); }
     }
 
     private void FitCapsule(Camera eye)
@@ -1754,7 +1754,7 @@ internal sealed class FighterDoll : MonoBehaviour
         {
             var veiled = Fighters.TakeVeil(_owner);
             if (veiled != null) _hidden.AddRange(veiled);
-            if (Trace.On && (!_modelHidden || own > 0)) Trace.Write($"«{Who}» 3D-модель скрыта куклой: видимых было {own}, из покрова {veiled?.Count ?? 0}");
+            if (Trace.On && (!_modelHidden || own > 0)) Trace.Write($"'{Who}' 3D model hidden by doll: visible were {own}, from veil {veiled?.Count ?? 0}");
             _modelHidden = true;
         }
         float box = any ? bounds.size.y : 0f;
@@ -1793,7 +1793,7 @@ internal sealed class FighterDoll : MonoBehaviour
                     renderer.enabled = true;
                     shown++;
                 }
-        if (Trace.On && shown > 0) Trace.Write($"«{Who}» 3D-модель ВОЗВРАЩЕНА куклой: рендеров {shown}{(_broken ? ", кукла сломана" : "")}");
+        if (Trace.On && shown > 0) Trace.Write($"'{Who}' 3D model RESTORED by doll: renderers {shown}{(_broken ? ", doll broken" : "")}");
         _modelHidden = false;
         if (_view != null) _view.sprite = null;
     }
@@ -1852,8 +1852,8 @@ internal sealed class FighterDoll : MonoBehaviour
         {
             if (_failed) return;
             _failed = true;
-            Plugin.Log.LogError($"[бой] «{_owner?.Login}»: кукла сломалась: {ex}");
-            if (Trace.On) Trace.Write($"«{Who}» кукла СЛОМАЛАСЬ: {ex.GetType().Name} {ex.Message}");
+            Plugin.Log.LogError($"[combat] '{_owner?.Login}': doll broke: {ex}");
+            if (Trace.On) Trace.Write($"'{Who}' doll BROKE: {ex.GetType().Name} {ex.Message}");
         }
     }
 
@@ -1864,13 +1864,13 @@ internal sealed class FighterDoll : MonoBehaviour
         if (visible != _wasVisible)
         {
             _wasVisible = visible;
-            Trace.Write($"«{Who}» кукла {(visible ? "появилась" : "ПРОПАЛА")}: метка {_lastLabel ?? "-"}, облик на экране {Trace.Look(_viewLook)}, нужный облик {Trace.Look(_look)}, 3D {(_modelHidden ? "скрыта" : "не скрыта")}");
+            Trace.Write($"'{Who}' doll {(visible ? "appeared" : "VANISHED")}: label {_lastLabel ?? "-"}, look on screen {Trace.Look(_viewLook)}, wanted look {Trace.Look(_look)}, 3D {(_modelHidden ? "hidden" : "not hidden")}");
         }
         if (_owner == null || !_owner.Initialized) return;
         var mover = _owner.MoverState;
         if (mover != _lastMover || _gliding != _lastGliding)
         {
-            Trace.Write($"«{Who}» движение {_lastMover}{(_lastGliding ? "+доход" : "")} → {mover}{(_gliding ? "+доход" : "")}, кадры move {FrameCache.StateOf(FrameCache.SequenceKey(_look, "move"))}");
+            Trace.Write($"'{Who}' movement {_lastMover}{(_lastGliding ? "+glide" : "")} → {mover}{(_gliding ? "+glide" : "")}, move frames {FrameCache.StateOf(FrameCache.SequenceKey(_look, "move"))}");
             _lastMover = mover;
             _lastGliding = _gliding;
         }
@@ -2036,7 +2036,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _look = _otherLook ?? Plan().Look;
         _otherLook = was;
         _warmedWeapon = null;
-        if (Trace.On) Trace.Write($"«{Who}» разворот {(left ? "влево" : "вправо")}: облик {Trace.Look(was)} → {Trace.Look(_look)}, кадры stop {FrameCache.StateOf(FrameCache.SequenceKey(_look, "stop"))}, move {FrameCache.StateOf(FrameCache.SequenceKey(_look, "move"))}");
+        if (Trace.On) Trace.Write($"'{Who}' turn {(left ? "left" : "right")}: look {Trace.Look(was)} → {Trace.Look(_look)}, stop frames {FrameCache.StateOf(FrameCache.SequenceKey(_look, "stop"))}, move {FrameCache.StateOf(FrameCache.SequenceKey(_look, "move"))}");
     }
 
     private void Tick()
@@ -2052,8 +2052,8 @@ internal sealed class FighterDoll : MonoBehaviour
             var combat = Fighters.Combat();
             if (combat != null && (!combat.Characters.TryGetValue(_owner.UserId, out var current) || !ReferenceEquals(current, _owner)))
             {
-                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{_owner.Login}»: персонаж заменён или убран, кукла снята");
-                if (Trace.On) Trace.Write($"«{Who}» персонаж заменён или убран из боя, кукла снимается");
+                if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{_owner.Login}': character replaced or removed, doll taken off");
+                if (Trace.On) Trace.Write($"'{Who}' character replaced or removed from fight, doll taken off");
                 Destroy(gameObject);
                 return;
             }
@@ -2062,8 +2062,8 @@ internal sealed class FighterDoll : MonoBehaviour
                 if (_orphanedAt <= 0f) _orphanedAt = Time.unscaledTime;
                 else if (Time.unscaledTime - _orphanedAt > 1.5f)
                 {
-                    if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{_owner.Login}»: модель убрана игрой, кукла снята");
-                    if (Trace.On) Trace.Write($"«{Who}» модель убрана игрой 1,5 с назад, кукла снимается");
+                    if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{_owner.Login}': model removed by game, doll taken off");
+                    if (Trace.On) Trace.Write($"'{Who}' model removed by game 1.5 s ago, doll taken off");
                     Destroy(gameObject);
                     return;
                 }
@@ -2101,20 +2101,20 @@ internal sealed class FighterDoll : MonoBehaviour
             {
                 string pending = _pending;
                 _pending = null;
-                Launch(pending, "отложенное", _pendingSerial, _pendingRequest);
+                Launch(pending, "deferred", _pendingSerial, _pendingRequest);
             }
         }
         if (_appear)
         {
             _appear = false;
-            if (_labels.ContainsKey("prizuv")) Launch("prizuv", "появление");
+            if (_labels.ContainsKey("prizuv")) Launch("prizuv", "appearance");
             else _fade = true;
         }
         if (_shown && (Settled || !_warmedOnce) && Time.unscaledTime - _lookSince >= 0.2f && !(_playing == "prizuv" && !Has("prizuv"))) Prewarm();
         Decide(out string label, out int frame);
         if (label != _lastLabel)
         {
-            if (Trace.On) Trace.Write($"«{Who}» метка {_lastLabel ?? "-"} → {label}, кадры {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}, облик {Trace.Look(_look)}");
+            if (Trace.On) Trace.Write($"'{Who}' label {_lastLabel ?? "-"} → {label}, frames {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}, look {Trace.Look(_look)}");
             _lastLabel = label;
         }
         Need(label, true);
@@ -2157,20 +2157,20 @@ internal sealed class FighterDoll : MonoBehaviour
         bool moving = _owner.Initialized && (_owner.MoverState != MoverState.Idle || _gliding);
         if (_diagReady && (moving || _moving))
         {
-            string at = $"{label}:{frame}, облик {Trace.Look(_look)}, ход {_owner.MoverState}{(_gliding ? "+доход" : "")}";
-            if (flip != _diagFlip) Trace.Write($"«{Who}» ДИАГ отражение куклы сменилось на {(flip ? "flipX" : "без flipX")} ({at})");
-            if (Mathf.Abs(order - _diagOrder) > 128) Trace.Write($"«{Who}» ДИАГ порядок отрисовки {_diagOrder} → {order} ({at})");
+            string at = $"{label}:{frame}, look {Trace.Look(_look)}, move {_owner.MoverState}{(_gliding ? "+glide" : "")}";
+            if (flip != _diagFlip) Trace.Write($"'{Who}' DIAG doll mirroring changed to {(flip ? "flipX" : "no flipX")} ({at})");
+            if (Mathf.Abs(order - _diagOrder) > 128) Trace.Write($"'{Who}' DIAG draw order {_diagOrder} → {order} ({at})");
             float jump = Vector3.Distance(_feet, _diagFeet);
-            if (jump > 0.15f) Trace.Write($"«{Who}» ДИАГ ноги прыгнули на {jump:0.00} ({at})");
-            if (_lastTurned != _diagTurned) Trace.Write($"«{Who}» ДИАГ поворот модели Unity на ходу → {(_lastTurned ? "вправо" : "влево")}, кукла смотрит {(_facingRight ? "вправо" : "влево")} ({at})");
-            if (sprite != _diagSprite) Trace.Write($"«{Who}» ДИАГ спрайт {(sprite ? "появился" : "ПРОПАЛ")} ({at})");
+            if (jump > 0.15f) Trace.Write($"'{Who}' DIAG feet jumped by {jump:0.00} ({at})");
+            if (_lastTurned != _diagTurned) Trace.Write($"'{Who}' DIAG Unity model turn while moving → {(_lastTurned ? "right" : "left")}, doll faces {(_facingRight ? "right" : "left")} ({at})");
+            if (sprite != _diagSprite) Trace.Write($"'{Who}' DIAG sprite {(sprite ? "appeared" : "VANISHED")} ({at})");
             if (Time.unscaledTime >= _diagRendererAt)
             {
                 foreach (var renderer in _hidden)
                 {
                     if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                     _diagRendererAt = Time.unscaledTime + 1f;
-                    Trace.Write($"«{Who}» ДИАГ рендерер скрытой 3D-модели «{renderer.name}» снова включён ({at})");
+                    Trace.Write($"'{Who}' DIAG renderer of hidden 3D model '{renderer.name}' enabled again ({at})");
                     break;
                 }
             }
@@ -2194,7 +2194,7 @@ internal sealed class FighterDoll : MonoBehaviour
                 foreach (var renderer in model.GetComponentsInChildren<Renderer>())
                     if (renderer.enabled) visible3d++;
             var place = transform.position;
-            Trace.Write($"«{Who}» КАДР +{Time.time - _diagWalkAt:0.000} {label}:{frame} показан {shown} flip {(flip ? 1 : 0)} порядок {order} ноги {_feet.x:0.00},{_feet.z:0.00} кукла {place.x:0.00},{place.y:0.00},{place.z:0.00} масштаб {transform.localScale.x:0.000} видна {(_view.enabled && gameObject.activeInHierarchy ? 1 : 0)} 3D {visible3d} поворот {(_lastTurned ? "П" : "Л")} ход {_owner.MoverState}{(_gliding ? "+доход" : "")}");
+            Trace.Write($"'{Who}' FRAME +{Time.time - _diagWalkAt:0.000} {label}:{frame} shown {shown} flip {(flip ? 1 : 0)} order {order} feet {_feet.x:0.00},{_feet.z:0.00} doll {place.x:0.00},{place.y:0.00},{place.z:0.00} scale {transform.localScale.x:0.000} visible {(_view.enabled && gameObject.activeInHierarchy ? 1 : 0)} 3D {visible3d} turn {(_lastTurned ? "R" : "L")} move {_owner.MoverState}{(_gliding ? "+glide" : "")}");
         }
         else _diagWalking = false;
         _diagReady = true;
@@ -2242,7 +2242,7 @@ internal sealed class FighterDoll : MonoBehaviour
         float gap = Vector3.Distance(_feet, target);
         if (gap > 6f || gap < 0.01f)
         {
-            if (gap > 6f && Trace.On) Trace.Write($"«{Who}» перенос на {gap:0.0} без дохода");
+            if (gap > 6f && Trace.On) Trace.Write($"'{Who}' moved by {gap:0.0} without glide");
             _feet = target;
             _gliding = false;
             return target;
@@ -2254,7 +2254,7 @@ internal sealed class FighterDoll : MonoBehaviour
             if (_stepWait < 0f)
             {
                 _stepWait = Time.time;
-                if (Trace.On) Trace.Write($"«{Who}» ходьба облика {Trace.Look(_look)} ещё рисуется, ноги ждут до {StepGrace:0.0} с");
+                if (Trace.On) Trace.Write($"'{Who}' walk of look {Trace.Look(_look)} still drawing, feet wait up to {StepGrace:0.0} s");
             }
             if (Time.time - _stepWait < StepGrace)
             {
@@ -2297,7 +2297,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _walked = true;
         float across = Vector3.Dot(_container.transform.forward, eye.transform.right);
         if (turned == _facingRight || Mathf.Abs(across) < 0.05f) return _facingRight;
-        if (Trace.On) Trace.Write($"«{Who}» шаг {(turned ? "вправо" : "влево")}: разворот по шагу, как во Flash");
+        if (Trace.On) Trace.Write($"'{Who}' step {(turned ? "right" : "left")}: turn by step, as in Flash");
         _facingRight = turned;
         return _facingRight;
     }
@@ -2390,7 +2390,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (Trace.On && Time.unscaledTime >= _skewLoggedAt && Mine)
         {
             _skewLoggedAt = Time.unscaledTime + 0.2f;
-            Trace.Write($"«{Who}» ДИАГ перед кадром куклу сбил поворот модели Unity: {angle:0} град., сдвиг {shift:0.00}, возвращена на место");
+            Trace.Write($"'{Who}' DIAG before frame the doll was knocked by Unity model turn: {angle:0} deg, shift {shift:0.00}, put back");
         }
         transform.SetPositionAndRotation(_worldPosition, _worldRotation);
         if (_shade != null) _shade.transform.SetPositionAndRotation(_shadeAt, Flat);
@@ -2405,7 +2405,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _warmedWeapon = weapon;
         _warmedOnce = true;
         _warm.Clear();
-        if (Trace.On) Trace.Write($"«{Who}» прогрев облика {Trace.Look(_look)} и {Trace.Look(_otherLook)}: удар {main}{(spare != null ? ", вторая рука " + spare : "")}");
+        if (Trace.On) Trace.Write($"'{Who}' warming look {Trace.Look(_look)} and {Trace.Look(_otherLook)}: strike {main}{(spare != null ? ", second hand " + spare : "")}");
         string strike = Keyed(main, out _);
         string second = spare != null ? Keyed(spare, out _) : null;
         if (_labels.ContainsKey("move")) Need("move", false, false, true);
@@ -2492,7 +2492,7 @@ internal sealed class FighterDoll : MonoBehaviour
             if (now - _playRequested <= patience) _playStart = now;
             else
             {
-                if (Trace.On) Trace.Write($"«{Who}» действие {_playing} ВЫБРОШЕНО: кадры облика {Trace.Look(_look)} {FrameCache.StateOf(sequence)} уже {now - _playRequested:0.0} с");
+                if (Trace.On) Trace.Write($"'{Who}' action {_playing} DROPPED: frames of look {Trace.Look(_look)} {FrameCache.StateOf(sequence)} for {now - _playRequested:0.0} s already");
                 _landedSerial = Math.Max(_landedSerial, _playingSerial);
                 _finishedRequest = Math.Max(_finishedRequest, _playingRequest);
                 _playing = null;
@@ -2561,7 +2561,7 @@ internal sealed class FighterDoll : MonoBehaviour
         string alive = "stop" + Fighters.Living;
         if (Settled && !FrameCache.HasSequence(FrameCache.SequenceKey(_look, alive)) && FrameCache.HasSequence(FrameCache.SequenceKey(_look, "stop")))
         {
-            if (_stillLook != _look && Trace.On) Trace.Write($"«{Who}» живая стойка облика {Trace.Look(_look)} ещё рисуется, пока стоит его простая стойка, а не старый облик");
+            if (_stillLook != _look && Trace.On) Trace.Write($"'{Who}' live stance of look {Trace.Look(_look)} still drawing, its plain stance is shown meanwhile, not the old look");
             _stillLook = _look;
             label = "stop";
             frame = 0;
@@ -2601,7 +2601,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (!urgent && !_warm.Contains(sequence)) _warm.Add(sequence);
         if (!FrameCache.BeginSequence(sequence))
         {
-            if (urgent && (DollWorker.Promote(sequence) || FrameCache.Hurry(sequence)) && Trace.On) Trace.Write($"«{Who}» заказ {label} облик {Trace.Look(look)} поднят в срочную очередь");
+            if (urgent && (DollWorker.Promote(sequence) || FrameCache.Hurry(sequence)) && Trace.On) Trace.Write($"'{Who}' order {label} look {Trace.Look(look)} raised to urgent queue");
             return;
         }
 
@@ -2609,7 +2609,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (request.Look != look)
         {
             FrameCache.EndSequence(sequence, false);
-            if (Trace.On) Trace.Write($"«{Who}» заказ {label} облика {Trace.Look(look)} пересчитан: облик уже {Trace.Look(request.Look)}");
+            if (Trace.On) Trace.Write($"'{Who}' order {label} of look {Trace.Look(look)} recalculated: look is now {Trace.Look(request.Look)}");
             if (other)
             {
                 _otherLook = request.Look;
@@ -2625,7 +2625,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (!request.Left) real = Fighters.Mirror(real);
         int priority = urgent ? 0 : soon ? (Mine ? 0 : 1) : late ? 3 : 2;
         string who = Who;
-        if (Trace.On) Trace.Write($"«{who}» заказ {label}{(real != label.Split('/')[0].TrimEnd('~') ? " (тело " + real + ")" : "")} облик {Trace.Look(look)}, очередь {(priority == 0 ? "срочная" : priority == 1 ? "скорая" : priority == 2 ? "фоновая" : "последняя")}");
+        if (Trace.On) Trace.Write($"'{who}' order {label}{(real != label.Split('/')[0].TrimEnd('~') ? " (body " + real + ")" : "")} look {Trace.Look(look)}, queue {(priority == 0 ? "urgent" : priority == 1 ? "soon" : priority == 2 ? "background" : "last")}");
         DollWorker.EnqueueSequence(request, real, kick, alive, result => MainThread.Post(() =>
         {
             if (FrameCache.Generation != generation) return;
@@ -2633,20 +2633,20 @@ internal sealed class FighterDoll : MonoBehaviour
             if (!ok)
             {
                 FrameCache.EndSequence(sequence, false);
-                if (Trace.On) Trace.Write($"«{who}» {label} облик {Trace.Look(look)} НЕ НАРИСОВАН: {result.Error ?? "нет кадров"}");
+                if (Trace.On) Trace.Write($"'{who}' {label} look {Trace.Look(look)} NOT DRAWN: {result.Error ?? "no frames"}");
                 if (this == null) return;
                 if (label == "stop" && look == _look)
                 {
                     _broken = true;
                     RestoreModel();
-                    Plugin.Log.LogWarning($"[бой] «{_owner?.Login}»: {result.Error ?? "нет кадров"} — оставляю 3D");
+                    Plugin.Log.LogWarning($"[combat] '{_owner?.Login}': {result.Error ?? "no frames"} - keeping 3D");
                 }
-                else if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[бой] «{_owner?.Login}»: {label}: {result.Error ?? "нет кадров"}");
+                else if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': {label}: {result.Error ?? "no frames"}");
                 return;
             }
             FrameCache.Remember(look, result.Labels, result.FrameRate);
             FrameCache.SetHit(sequence, result.HitShare);
-            if (Trace.On && !float.IsNaN(result.HitShare)) Trace.Write($"«{who}» касание оружием в {label} облика {Trace.Look(look)}: {result.HitShare * 100f:0}% анимации");
+            if (Trace.On && !float.IsNaN(result.HitShare)) Trace.Write($"'{who}' weapon contact in {label} of look {Trace.Look(look)}: {result.HitShare * 100f:0}% of animation");
             if (label == "stop" || label == "stop" + Fighters.Living)
             {
                 var idle = result.Frames[0];
@@ -2661,18 +2661,18 @@ internal sealed class FighterDoll : MonoBehaviour
                     _labels = result.Labels;
                     _rate = FrameCache.RateFor(look);
                     if (Plugin.CfgVerbose.Value)
-                        foreach (string note in result.Notes) Plugin.Log.LogInfo($"[бой] «{_owner?.Login}»: {note}");
+                        foreach (string note in result.Notes) Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': {note}");
                 }
                 if (!_shown)
                 {
                     _shown = true;
                     var first = result.Frames[0];
-                    Plugin.Log.LogInfo($"[бой] «{_owner?.Login}»: кукла показана, {first.Width}x{first.Height}, {ppu:0} px на единицу");
+                    Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': doll shown, {first.Width}x{first.Height}, {ppu:0} px per unit");
                     if (_view == null || _view.sprite == null) Show("stop", 0);
                     Fighters.Prune();
                 }
                 else if (Plugin.CfgVerbose.Value)
-                    Plugin.Log.LogInfo($"[бой] «{_owner?.Login}»: {label} готова, кадров {result.Frames.Count}, {clock.ElapsedMilliseconds} мс");
+                    Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': {label} ready, frames {result.Frames.Count}, {clock.ElapsedMilliseconds} ms");
             }, urgent || soon || (this != null && look == _look && _playing == label));
         }), priority, who, sequence);
     }
@@ -2705,7 +2705,7 @@ internal sealed class FighterDoll : MonoBehaviour
             if (!_fallbackLogged && Trace.On)
             {
                 _fallbackLogged = true;
-                Trace.Write($"«{Who}» кадр {label}:{frame} облика {Trace.Look(_look)} не готов, показан кадр облика {Trace.Look(spare)}");
+                Trace.Write($"'{Who}' frame {label}:{frame} of look {Trace.Look(_look)} not ready, showing frame of look {Trace.Look(spare)}");
             }
             _view.sprite = old;
             _shownKey = stale;
@@ -2750,12 +2750,12 @@ internal sealed class FighterDoll : MonoBehaviour
         if (Trace.On && _shownLabel == label)
         {
             if (_shownLook != _look)
-                Trace.Write($"«{Who}» кадр {label}:{frame} сменил облик {Trace.Look(_shownLook)} → {Trace.Look(_look)}");
+                Trace.Write($"'{Who}' frame {label}:{frame} changed look {Trace.Look(_shownLook)} → {Trace.Look(_look)}");
             else if (label == "move")
             {
                 int cycle = Math.Max(1, FrameCache.CountOf(FrameCache.SequenceKey(_look, label)));
                 int step = ((frame - _shownFrame) % cycle + cycle) % cycle;
-                if (step > 3) Trace.Write($"«{Who}» ходьба перескочила {_shownFrame} → {frame} ({step} кадров)");
+                if (step > 3) Trace.Write($"'{Who}' walk skipped {_shownFrame} → {frame} ({step} frames)");
             }
         }
         _shownLabel = label;
@@ -2770,12 +2770,12 @@ internal sealed class FighterDoll : MonoBehaviour
         {
             _missSince = now;
             _missLogged = false;
-            _missWhat = $"{label}:{frame} облик {Trace.Look(_look)}";
+            _missWhat = $"{label}:{frame} look {Trace.Look(_look)}";
             return;
         }
         if (_missLogged || now - _missSince < 1f || !Trace.On) return;
         _missLogged = true;
-        Trace.Write($"«{Who}» кадр {_missWhat} НЕ ГОТОВ уже 1 с, на экране {(_view.sprite != null ? "старый кадр облика " + Trace.Look(_viewLook) : "ничего")}, последовательность {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}");
+        Trace.Write($"'{Who}' frame {_missWhat} NOT READY for 1 s, on screen {(_view.sprite != null ? "old frame of look " + Trace.Look(_viewLook) : "nothing")}, sequence {FrameCache.StateOf(FrameCache.SequenceKey(_look, label))}");
     }
 
     private void Settle()
@@ -2783,7 +2783,7 @@ internal sealed class FighterDoll : MonoBehaviour
         if (_missSince <= 0f) return;
         float waited = Time.unscaledTime - _missSince;
         _missSince = 0f;
-        if (waited >= 0.15f && Trace.On) Trace.Write($"«{Who}» кадр {_missWhat} дождались через {waited * 1000f:0} мс");
+        if (waited >= 0.15f && Trace.On) Trace.Write($"'{Who}' frame {_missWhat} arrived after {waited * 1000f:0} ms");
     }
 }
 

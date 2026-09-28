@@ -74,7 +74,7 @@ namespace NewAgeQoL
                 Prune();
                 Show();
             }
-            catch (Exception e) { Plugin.Trace("[бои] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fights] " + e.Message); }
         }
 
         private static void Listen()
@@ -100,7 +100,7 @@ namespace NewAgeQoL
                         && !info.MinLevel.HasValue && !info.MaxLevel.HasValue;
             if (over)
             {
-                if (Live.Remove(info.Id)) Plugin.Trace("[бои] бой " + info.Id + " закончился, строка снята");
+                if (Live.Remove(info.Id)) Plugin.Trace("[fights] fight " + info.Id + " ended, row removed");
                 Drop(info.Id);
                 return;
             }
@@ -131,7 +131,7 @@ namespace NewAgeQoL
             fight.Count = info.FighterCount ?? 0;
             fight.Seen = Time.unscaledTime;
             fight.Room = Map();
-            if (fresh) Plugin.Trace("[бои] идёт бой " + info.Id + " «" + fight.Desc + "»");
+            if (fresh) Plugin.Trace("[fights] fight in progress " + info.Id + " '" + fight.Desc + "'");
         }
 
         private static void OnAnnounce(object message)
@@ -157,7 +157,7 @@ namespace NewAgeQoL
             if (_watched <= 0 || Time.unscaledTime - _watchedAt < 15f) return;
             int gone = _watched;
             _watched = 0;
-            if (Live.Remove(gone)) Plugin.Trace("[бои] бой " + gone + " не открылся, строка снята");
+            if (Live.Remove(gone)) Plugin.Trace("[fights] fight " + gone + " did not open, row removed");
             Drop(gone);
         }
 
@@ -166,7 +166,7 @@ namespace NewAgeQoL
             if (_watched <= 0) return;
             int id = _watched;
             _watched = 0;
-            if (Live.Remove(id)) Plugin.Trace("[бои] бой " + id + " закончился при мне, строка снята");
+            if (Live.Remove(id)) Plugin.Trace("[fights] fight " + id + " ended while I watched, row removed");
             Drop(id);
             if (_backTo > 0) _leaveAt = Time.unscaledTime + 2.5f;
         }
@@ -236,7 +236,7 @@ namespace NewAgeQoL
                 if (cd == null || cd.MyCharacter == null) return;
                 _backTo = 0;
                 _leaveAt = 0f;
-                Plugin.Trace("[бои] это мой бой, метка просмотра снята");
+                Plugin.Trace("[fights] this is my fight, spectate mark cleared");
             }
             catch { }
         }
@@ -250,7 +250,7 @@ namespace NewAgeQoL
                 if (SideButtons.InCombat())
                 {
                     nc.SendRequest(new ChangeMapRequest(0));
-                    Plugin.Trace("[бои] выход из просмотра боя");
+                    Plugin.Trace("[fights] leaving fight spectating");
                     _backTo = 0;
                     _leaveAt = 0f;
                     return;
@@ -259,7 +259,7 @@ namespace NewAgeQoL
                 _leaveAt = Time.unscaledTime;
                 Leave();
             }
-            catch (Exception e) { Plugin.Warn("[бои] выход из просмотра: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[fights] leaving spectating: " + e.Message); }
         }
 
         private static void Leave()
@@ -272,9 +272,9 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) return;
                 nc.SendRequest(new ChangeMapRequest(_backTo));
-                Plugin.Trace("[бои] бой досмотрен, возвращаюсь на карту " + _backTo);
+                Plugin.Trace("[fights] fight watched to the end, returning to map " + _backTo);
             }
-            catch (Exception e) { Plugin.Warn("[бои] выход из просмотра: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[fights] leaving spectating: " + e.Message); }
             _backTo = 0;
         }
 
@@ -289,7 +289,7 @@ namespace NewAgeQoL
             Missed.Clear();
             _asking = false;
             _askAt = Time.unscaledTime + Every;
-            if (old > 0) Plugin.Trace("[бои] карта " + map + ": старые строки боёв сняты (" + old + "), список пришлёт сервер");
+            if (old > 0) Plugin.Trace("[fights] map " + map + ": old fight rows removed (" + old + "), server will send the list");
         }
 
         private static void Ask()
@@ -301,12 +301,12 @@ namespace NewAgeQoL
                 {
                     if (Time.unscaledTime < _askUntil + GiveUp) return;
                     _asking = false;
-                    Plugin.Trace("[бои] ответ на обновление списка не затих за " + GiveUp + " с, строки не трогаю");
+                    Plugin.Trace("[fights] list refresh reply did not settle within " + GiveUp + " s, rows left untouched");
                     return;
                 }
                 _asking = false;
                 if (_answered) Settle();
-                else Plugin.Trace("[бои] на обновление списка сервер ничего не прислал, строки не трогаю");
+                else Plugin.Trace("[fights] server sent nothing on list refresh, rows left untouched");
                 return;
             }
             if (Time.unscaledTime < _askAt) return;
@@ -365,8 +365,8 @@ namespace NewAgeQoL
             }
 
             if (fights.Count > 0 || claims.Count > 0)
-                Plugin.Trace("[бои] обновление списка: сервер прислал боёв " + HeardFights.Count + ", заявок " + HeardClaims.Count
-                    + "; снято боёв " + fights.Count + " [" + string.Join(",", fights) + "], заявок " + claims.Count + " [" + string.Join(",", claims) + "]");
+                Plugin.Trace("[fights] list refresh: server sent fights " + HeardFights.Count + ", claims " + HeardClaims.Count
+                    + "; removed fights " + fights.Count + " [" + string.Join(",", fights) + "], claims " + claims.Count + " [" + string.Join(",", claims) + "]");
         }
 
         private static int Map()
@@ -396,7 +396,7 @@ namespace NewAgeQoL
             {
                 Live.Remove(id);
                 Drop(id);
-                Plugin.Trace("[бои] бой " + id + " давно не подтверждался, строка снята");
+                Plugin.Trace("[fights] fight " + id + " not confirmed for a long time, row removed");
             }
         }
 
@@ -483,7 +483,7 @@ namespace NewAgeQoL
                 enter.onClick.RemoveAllListeners();
                 enter.onClick.AddListener(() => Watch(id));
             }
-            Plugin.Trace("[бои] строка идущего боя " + fight.Id + " добавлена в список заявок");
+            Plugin.Trace("[fights] row of ongoing fight " + fight.Id + " added to the claims list");
             return slot;
         }
 
@@ -573,9 +573,9 @@ namespace NewAgeQoL
                 nc.SendRequest(new ChangeMapRequest(id));
                 _watched = id;
                 _watchedAt = Time.unscaledTime;
-                Plugin.Trace("[бои] иду смотреть бой " + id);
+                Plugin.Trace("[fights] going to watch fight " + id);
             }
-            catch (Exception e) { Plugin.Warn("[бои] переход в бой: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[fights] moving to fight: " + e.Message); }
         }
     }
 }

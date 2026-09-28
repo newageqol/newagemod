@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 foreach (var one in Rows) if (ReferenceEquals(one.Rt, rt)) return;
                 Rows.Add(new Row { Rt = rt, Told = true });
             }
-            catch (System.Exception e) { Plugin.Trace("[tabs] подгонка: " + e.Message); }
+            catch (System.Exception e) { Plugin.Trace("[tabs] fit: " + e.Message); }
         }
 
         internal static void Tick()
@@ -88,7 +88,7 @@ namespace NewAgeQoL
                 }
                 if (!row.Rt.gameObject.activeInHierarchy) continue;
                 try { Fit(row); }
-                catch (System.Exception e) { Plugin.Trace("[tabs] ряд: " + e.Message); }
+                catch (System.Exception e) { Plugin.Trace("[tabs] row: " + e.Message); }
             }
         }
 
@@ -192,10 +192,10 @@ namespace NewAgeQoL
             if (!row.Told) return;
             row.Told = false;
             if (Plugin.CfgVerbose == null || !Plugin.CfgVerbose.Value) return;
-            Plugin.Trace("[tabs] ряд " + row.Rt.name + ": вкладок " + seen + ", их ширина " + Mathf.RoundToInt(wide)
-                + ", нужно " + Mathf.RoundToInt(need) + ", место " + Mathf.RoundToInt(have)
-                + ", сжатие " + fit.ToString("0.00") + ", сдвиг " + Mathf.RoundToInt(slide)
-                + ", точка привязки " + row.Rt.pivot.x.ToString("0.00"));
+            Plugin.Trace("[tabs] row " + row.Rt.name + ": tabs " + seen + ", their width " + Mathf.RoundToInt(wide)
+                + ", needed " + Mathf.RoundToInt(need) + ", room " + Mathf.RoundToInt(have)
+                + ", squeeze " + fit.ToString("0.00") + ", shift " + Mathf.RoundToInt(slide)
+                + ", pivot " + row.Rt.pivot.x.ToString("0.00"));
         }
     }
 }

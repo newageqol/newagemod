@@ -36,11 +36,11 @@ namespace NewAgeQoL
                     try
                     {
                         var an = character.CharacterAnimator;
-                        if (an != null) state = an.GetCurrentAnimatorStateInfo(0).shortNameHash + (an.IsInTransition(0) ? " (переход)" : "");
+                        if (an != null) state = an.GetCurrentAnimatorStateInfo(0).shortNameHash + (an.IsInTransition(0) ? " (transition)" : "");
                     }
                     catch { }
-                    Plugin.Warn("[бой] " + character.GetType().Name + " id " + character.UserId + " «" + character.Login
-                                            + "» не возвращается в idle дольше " + Limit + " с (состояние " + state + ") — дальше не ждём");
+                    Plugin.Warn("[combat] " + character.GetType().Name + " id " + character.UserId + " '" + character.Login
+                                            + "' has not returned to idle for over " + Limit + " s (state " + state + ") - not waiting any longer");
                 }
             }
             catch { }

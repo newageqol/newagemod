@@ -100,7 +100,7 @@ namespace NewAgeQoL
                 var yes = _yes;
                 Close();
                 try { yes(); }
-                catch (Exception e) { Plugin.Warn("[travel] подтверждение: " + e.Message); }
+                catch (Exception e) { Plugin.Warn("[travel] confirmation: " + e.Message); }
                 return;
             }
             if (_input == null) return;
@@ -114,7 +114,7 @@ namespace NewAgeQoL
             var done = _done;
             Close();
             try { done?.Invoke(name); }
-            catch (Exception e) { Plugin.Warn("[travel] точка: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[travel] point: " + e.Message); }
         }
 
         internal static void Close()
@@ -145,7 +145,7 @@ namespace NewAgeQoL
         private void Update()
         {
             try { TravelEdit.Tick(); }
-            catch (Exception e) { Plugin.Warn("[travel] окно точки: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[travel] point window: " + e.Message); }
         }
     }
 }

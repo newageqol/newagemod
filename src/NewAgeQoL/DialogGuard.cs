@@ -11,7 +11,7 @@ namespace NewAgeQoL
         {
             try
             {
-                Plugin.Trace("[системное] окно скрыто: " + (msg != null ? msg.Text : ""));
+                Plugin.Trace("[system] window hidden: " + (msg != null ? msg.Text : ""));
                 return false;
             }
             catch { return true; }
@@ -25,7 +25,7 @@ namespace NewAgeQoL
         {
             if (requestByButton) return true;
             __result = false;
-            Plugin.Trace("[задания дня] окно при входе не показываю");
+            Plugin.Trace("[dailies] not showing the window on login");
             return false;
         }
     }
@@ -42,7 +42,7 @@ namespace NewAgeQoL
             {
                 if (__instance == null)
                 {
-                    Plugin.Trace("[dialog] цена пришла в закрытое окно докупки — пропускаю");
+                    Plugin.Trace("[dialog] price arrived for a closed top-up window - skipping");
                     return false;
                 }
 
@@ -56,7 +56,7 @@ namespace NewAgeQoL
                 var button = _okButton.GetValue(__instance) as UnityEngine.Object;
                 if (button == null)
                 {
-                    Plugin.Trace("[dialog] кнопка окна докупки уже уничтожена — пропускаю обновление цены");
+                    Plugin.Trace("[dialog] top-up window button already destroyed - skipping price update");
                     return false;
                 }
                 return true;

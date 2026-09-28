@@ -33,6 +33,6 @@ internal static class Warmup
 
         _done = true;
         Plugin.Store.Pull(want);
-        Plugin.Log.LogInfo($"[файлы] вход в игру: проверяю {want.Count} файлов, чего нет — качаю заранее, чтобы к бою всё было на месте");
+        Plugin.Log.LogInfo($"[files] login: checking {want.Count} files, downloading missing ones in advance so everything is ready for combat");
     }
 }

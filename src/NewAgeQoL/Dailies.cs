@@ -19,16 +19,16 @@ namespace NewAgeQoL
                 float k = Scale;
                 if (k > 0.995f) return;
                 var eye = window.GetComponentInChildren<Camera>(true);
-                if (eye == null) { Plugin.Trace("[задания] своей камеры у окна нет, размер оставлен как есть"); return; }
+                if (eye == null) { Plugin.Trace("[quests] window has no own camera, size left as is"); return; }
                 if (eye.orthographic) eye.orthographicSize /= k;
                 else
                 {
                     float half = Mathf.Tan(eye.fieldOfView * 0.5f * Mathf.Deg2Rad) / k;
                     eye.fieldOfView = Mathf.Clamp(Mathf.Atan(half) * 2f * Mathf.Rad2Deg, 1f, 170f);
                 }
-                Plugin.Trace("[задания] свитки уменьшены до " + k + " от игрового размера");
+                Plugin.Trace("[quests] scrolls shrunk to " + k + " of game size");
             }
-            catch (Exception e) { Plugin.Trace("[задания] размер окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] window size: " + e.Message); }
         }
     }
 
@@ -51,9 +51,9 @@ namespace NewAgeQoL
                 int was = got.ProgressTasks.Count;
                 got.ProgressTasks.RemoveAll(one => one == null || one.TaskId <= 0 || one.Counter != one.MaxCounter);
                 int gone = was - got.ProgressTasks.Count;
-                if (gone > 0) Plugin.Trace("[задания] карточек прогресса убрано: " + gone);
+                if (gone > 0) Plugin.Trace("[quests] progress cards removed: " + gone);
             }
-            catch (Exception e) { Plugin.Trace("[задания] карточка прогресса: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] progress card: " + e.Message); }
         }
     }
 }

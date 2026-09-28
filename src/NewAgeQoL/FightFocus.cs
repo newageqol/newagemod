@@ -20,9 +20,9 @@ namespace NewAgeQoL
                 var rich = picked.GetComponent<TMPro.TMP_InputField>();
                 if (rich != null) rich.DeactivateInputField();
                 system.SetSelectedGameObject(null);
-                Plugin.Trace("[бой] начало боя: строка чата отпущена, клавиши работают сразу");
+                Plugin.Trace("[combat] fight start: chat input released, keys work right away");
             }
-            catch (Exception e) { Plugin.Trace("[бой] строка чата: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[combat] chat input: " + e.Message); }
         }
     }
 

@@ -26,8 +26,8 @@ namespace NewAgeQoL
             if (tenth == _told) return;
             _told = tenth;
             Plugin.Trace(tenth == 10
-                ? "[часы] время игры снова идёт с обычной скоростью"
-                : "[часы] время игры идёт ×" + (tenth / 10f).ToString("0.0") + " от настоящего, ожидания сервера мод считает по настоящим часам");
+                ? "[clock] game time runs at normal speed again"
+                : "[clock] game time runs ×" + (tenth / 10f).ToString("0.0") + " of real time, the mod counts server waits by the real clock");
         }
     }
 }

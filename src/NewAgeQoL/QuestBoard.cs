@@ -104,7 +104,7 @@ namespace NewAgeQoL
                 if (_talkAt > 0f && Time.unscaledTime >= _talkAt && !CultPotions.Running)
                 {
                     _talkAt = 0f;
-                    Watched("после разговора");
+                    Watched("after talk,");
                 }
                 Strip();
                 if (Time.unscaledTime >= _pollAt)
@@ -115,11 +115,11 @@ namespace NewAgeQoL
                 if (_arrived && Cards.Count > 0)
                 {
                     _arrived = false;
-                    Watched("после входа");
+                    Watched("after login,");
                 }
                 Ask();
             }
-            catch (Exception e) { Plugin.Trace("[задания] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] " + e.Message); }
         }
 
         internal static void Reask()
@@ -168,7 +168,7 @@ namespace NewAgeQoL
             if (!any) return;
             _askAt = 0f;
             Version++;
-            Plugin.Trace("[задания] " + why + " перечитываю отслеживаемые");
+            Plugin.Trace("[quests] " + why + " rereading tracked");
         }
 
         private static void Listen()
@@ -181,9 +181,9 @@ namespace NewAgeQoL
                 nc.AddAfterMessageListener(365, Listener);
                 nc.AddAfterMessageListener(245, Talked);
                 nc.AddAfterMessageListener(431, Talked);
-                Plugin.Trace("[задания] слушаю ответы по заданиям");
+                Plugin.Trace("[quests] listening for quest responses");
             }
-            catch (Exception e) { Plugin.Trace("[задания] подписка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] subscription: " + e.Message); }
         }
 
         private static void OnDetail(object msg)
@@ -197,7 +197,7 @@ namespace NewAgeQoL
                 _asked = 0;
                 if (!Hooked()) Own(msg);
             }
-            catch (Exception e) { Plugin.Trace("[задания] ответ: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] response: " + e.Message); }
         }
 
         private static bool Hooked()
@@ -228,9 +228,9 @@ namespace NewAgeQoL
                     return;
                 }
                 AccessTools.Method(typeof(QuestController), "OnDetailInfoResponse")?.Invoke(ctrl, new[] { msg });
-                Plugin.Trace("[задания] окно задания открыто модом");
+                Plugin.Trace("[quests] quest window opened by the mod");
             }
-            catch (Exception e) { Plugin.Warn("[задания] окно задания: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[quests] quest window: " + e.Message); }
         }
 
         internal static int NewOnes()
@@ -267,7 +267,7 @@ namespace NewAgeQoL
                 if (isNew) _newMark = got; else _goMark = got;
                 return got;
             }
-            catch (Exception e) { Plugin.Trace("[задания] значок статуса: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[quests] status icon: " + e.Message); return null; }
         }
 
         internal static void Talk(int questId)
@@ -281,9 +281,9 @@ namespace NewAgeQoL
                 Wake(questId);
                 _asked = questId;
                 nc.SendRequest(new DetailInfoFaceRequest(questId));
-                Plugin.Trace("[задания] открываю разговор по заданию " + questId);
+                Plugin.Trace("[quests] opening talk for quest " + questId);
             }
-            catch (Exception e) { Plugin.Warn("[задания] разговор: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[quests] talk: " + e.Message); }
         }
 
         private static void Wake(int questId)
@@ -426,12 +426,12 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) { Waiting.Remove(questId); return true; }
                 nc.SendRequest(new DetailInfoFaceRequest(questId));
                 Sent[questId] = Time.unscaledTime;
-                Plugin.Trace("[задания] спрашиваю " + questId);
+                Plugin.Trace("[quests] asking " + questId);
             }
             catch (Exception e)
             {
                 Waiting.Remove(questId);
-                Plugin.Trace("[задания] запрос " + questId + ": " + e.Message);
+                Plugin.Trace("[quests] request " + questId + ": " + e.Message);
             }
             return true;
         }
@@ -472,9 +472,9 @@ namespace NewAgeQoL
                 Tries[msg.QuestId] = 0;
                 _dirty = true;
                 _pollAt = 0f;
-                Plugin.Trace("[задания] " + msg.QuestId + " «" + detail.Name + "»");
+                Plugin.Trace("[quests] " + msg.QuestId + " '" + detail.Name + "'");
             }
-            catch (Exception e) { Plugin.Trace("[задания] разбор ответа: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] response parse: " + e.Message); }
         }
 
         private static void Strip()
@@ -498,7 +498,7 @@ namespace NewAgeQoL
                         if (Time.unscaledTime >= _missAt)
                         {
                             _missAt = Time.unscaledTime + 30f;
-                            Plugin.Trace("[задания] колонка лиц не найдена");
+                            Plugin.Trace("[quests] faces column not found");
                         }
                         return;
                     }
@@ -508,9 +508,9 @@ namespace NewAgeQoL
                 _strip.SetActive(false);
                 if (_told) return;
                 _told = true;
-                Plugin.Trace("[задания] лица справа убраны");
+                Plugin.Trace("[quests] faces on the right removed");
             }
-            catch (Exception e) { Plugin.Trace("[задания] колонка лиц: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] faces column: " + e.Message); }
         }
     }
 
@@ -525,7 +525,7 @@ namespace NewAgeQoL
                 if (detail == null) return true;
                 return !QuestBoard.Ours(detail);
             }
-            catch (Exception e) { Plugin.Trace("[задания] перехват ответа: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[quests] response intercept: " + e.Message); return true; }
         }
     }
 }

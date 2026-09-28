@@ -154,9 +154,9 @@ namespace NewAgeQoL
                 _file = file;
                 _who = userId;
                 Forget();
-                Plugin.Log?.LogInfo("[персонаж] настройки " + (all ? "переехали в свой файл" : fresh ? "заведены" : "подхвачены") + ": " + userId + ".cfg");
+                Plugin.Log?.LogInfo("[character] settings " + (all ? "moved to own file" : fresh ? "created" : "loaded") + ": " + userId + ".cfg");
             }
-            catch (Exception e) { Plugin.Fault("[персонаж] настройки: " + e); }
+            catch (Exception e) { Plugin.Fault("[character] settings: " + e); }
         }
 
         private static void Forget()

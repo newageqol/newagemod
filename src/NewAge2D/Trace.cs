@@ -27,7 +27,7 @@ internal static class Trace
     {
         if (!On) return;
         double seconds = Clock.Elapsed.TotalSeconds - _battleAt;
-        string thread = Thread.CurrentThread.ManagedThreadId == MainThreadId ? "главный" : "поток" + Thread.CurrentThread.ManagedThreadId;
+        string thread = Thread.CurrentThread.ManagedThreadId == MainThreadId ? "main" : "thread" + Thread.CurrentThread.ManagedThreadId;
         Lines.Enqueue($"{DateTime.Now:HH:mm:ss.fff} +{seconds,8:0.000} {thread,-8} {text}");
     }
 
@@ -39,7 +39,7 @@ internal static class Trace
             if (LookIds.TryGetValue(look, out int id)) return "L" + id;
             id = LookIds.Count + 1;
             LookIds[look] = id;
-            Write($"облик L{id} = {look}");
+            Write($"look L{id} = {look}");
             return "L" + id;
         }
     }
@@ -47,7 +47,7 @@ internal static class Trace
     private const int Kept = 20;
     private const long Room = 20000000;
     private const long Cap = 4000000;
-    private const string Ending = "===== журнал боя обрезан по размеру, дальше этот бой не записывается =====";
+    private const string Ending = "===== combat log truncated by size, the rest of this fight is not recorded =====";
 
     private static readonly long Tail = System.Text.Encoding.UTF8.GetByteCount(Ending) + 2;
     private static long _wrote;
@@ -66,11 +66,11 @@ internal static class Trace
                 files[i].Delete();
                 gone++;
             }
-            if (gone > 0) Plugin.Log.LogInfo($"[журнал боя] старых журналов удалено: {gone}, осталось {files.Count - gone}");
+            if (gone > 0) Plugin.Log.LogInfo($"[combat log] old logs deleted: {gone}, kept {files.Count - gone}");
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[журнал боя] старые файлы не удалились: " + ex.Message);
+            Plugin.Log.LogWarning("[combat log] old files not deleted: " + ex.Message);
         }
     }
 
@@ -94,12 +94,12 @@ internal static class Trace
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning("[журнал боя] файл не открылся: " + ex.Message);
+                Plugin.Log.LogWarning("[combat log] file did not open: " + ex.Message);
             }
             LookIds.Clear();
         }
         _battleAt = Clock.Elapsed.TotalSeconds;
-        Write($"===== бой: {title}, {DateTime.Now:yyyy-MM-dd HH:mm:ss}, NewAge2D {Plugin.Version}, потоков рисования {DollWorker.WorkerCount}, кадров в секунду {20 * Plugin.Smooth}, масштаб кадра {Plugin.CombatScale:0.#}, память под кадры {Plugin.FrameMemory / 1048576L} МБ, FlashSpeed {Plugin.FlashSpeed}, поле {Plugin.FlashField} =====");
+        Write($"===== fight: {title}, {DateTime.Now:yyyy-MM-dd HH:mm:ss}, NewAge2D {Plugin.Version}, draw threads {DollWorker.WorkerCount}, frames per second {20 * Plugin.Smooth}, frame scale {Plugin.CombatScale:0.#}, frame memory {Plugin.FrameMemory / 1048576L} MB, FlashSpeed {Plugin.FlashSpeed}, field {Plugin.FlashField} =====");
     }
 
     private static string Safe(string title)
@@ -118,14 +118,14 @@ internal static class Trace
         float delta = Time.unscaledDeltaTime;
         _frames++;
         _frameTime += delta;
-        if (delta > 0.1f && Fighters.Count > 0) Write($"кадр игры длился {delta * 1000f:0} мс");
+        if (delta > 0.1f && Fighters.Count > 0) Write($"game frame took {delta * 1000f:0} ms");
         if (Time.unscaledTime >= _statsAt && (Fighters.Count > 0 || DollWorker.Busy || FrameCache.Busy))
         {
             _statsAt = Time.unscaledTime + 1f;
             float fps = _frameTime > 0f ? _frames / _frameTime : 0f;
             _frames = 0;
             _frameTime = 0f;
-            Write($"очереди: рисование [{DollWorker.Stats()}]; выгрузка [{FrameCache.Stats()}]; кукол {Fighters.Count}; fps {fps:0}");
+            Write($"queues: drawing [{DollWorker.Stats()}]; upload [{FrameCache.Stats()}]; dolls {Fighters.Count}; fps {fps:0}");
         }
         if (Time.unscaledTime >= _flushAt)
         {
@@ -159,7 +159,7 @@ internal static class Trace
                     _writer.Dispose();
                     _writer = null;
                     while (Lines.TryDequeue(out _)) { }
-                    Plugin.Log.LogWarning($"[журнал боя] журнал дорос до {Cap / 1048576} МБ, запись этого боя остановлена");
+                    Plugin.Log.LogWarning($"[combat log] log reached {Cap / 1048576} MB, recording of this fight stopped");
                     return;
                 }
                 _writer.Flush();

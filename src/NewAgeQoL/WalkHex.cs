@@ -38,7 +38,7 @@ namespace NewAgeQoL
             {
                 _why = why;
                 if (why.Length > 0 && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                    Plugin.Trace("[ходьба] обвода нет: " + why
+                    Plugin.Trace("[walk] no outline: " + why
                         + (hex != null ? ", " + hex.clientX + ";" + hex.clientY : ""));
             }
             Hide();
@@ -52,24 +52,24 @@ namespace NewAgeQoL
                 bool keyed = hex != null;
                 if (!Enabled && !keyed) { Off(""); return; }
                 if (!SideButtons.InCombat()) { Off(""); return; }
-                if (Spectate.Peeking) { Off("смотрю чужой бой"); return; }
+                if (Spectate.Peeking) { Off("spectating another fight"); return; }
                 var cd = FighterHint.Cd();
-                if (cd == null) { Off("нет данных боя"); return; }
+                if (cd == null) { Off("no combat data"); return; }
                 if (cd.RoundType != RoundType.WALK_ROUND) { Off(""); return; }
-                if (SkillList.Armed) { Off("наведено умение"); return; }
+                if (SkillList.Armed) { Off("skill armed"); return; }
                 if (!keyed)
                 {
-                    if (Unity3DHelper.IsOverInterface()) { Off("мышь над окном"); return; }
-                    if (!SkillList.HexUnder(out hex)) { Off("клетку под мышью не посчитать"); return; }
+                    if (Unity3DHelper.IsOverInterface()) { Off("mouse over a window"); return; }
+                    if (!SkillList.HexUnder(out hex)) { Off("cannot compute hex under mouse"); return; }
                 }
-                if (!Walkable(cd, hex)) { Off("клетка не в зоне хода", hex); return; }
+                if (!Walkable(cd, hex)) { Off("hex outside move zone", hex); return; }
 
                 var grid = Grid();
-                if (grid == null) { Off("сетка боя не найдена"); return; }
+                if (grid == null) { Off("combat grid not found"); return; }
                 _why = "";
                 Draw(grid, hex, keyed);
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] клетка под мышью: " + e.Message); Hide(); }
+            catch (Exception e) { Plugin.Trace("[walk] hex under mouse: " + e.Message); Hide(); }
         }
 
         internal static bool Walkable(ICombatData cd, OffsetCoord hex)
@@ -77,7 +77,7 @@ namespace NewAgeQoL
             try { return cd.IsCellInActionSelection(hex); }
             catch (IndexOutOfRangeException) { return false; }
             catch (ArgumentOutOfRangeException) { return false; }
-            catch (Exception e) { Plugin.Trace("[ходьба] проверка клетки: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[walk] hex check: " + e.Message); return false; }
         }
 
         private static Transform Grid()
@@ -87,7 +87,7 @@ namespace NewAgeQoL
             {
                 _padAt = Time.unscaledTime + 0.25f;
                 try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-                catch (Exception e) { Plugin.Trace("[ходьба] поле боя: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[walk] battlefield: " + e.Message); }
                 if (_pad != null) return _pad.transform;
             }
             if (_grid != null && _grid.gameObject.activeInHierarchy) return _grid;
@@ -96,7 +96,7 @@ namespace NewAgeQoL
                 if (_rig == null || !_rig.isActiveAndEnabled) _rig = UnityEngine.Object.FindObjectOfType<CameraControl>();
                 _grid = _rig != null ? AccessTools.Property(typeof(BaseUserInput), "gridTransform")?.GetValue(_rig) as Transform : null;
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] сетка боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[walk] combat grid: " + e.Message); }
             return _grid;
         }
 
@@ -196,7 +196,7 @@ namespace NewAgeQoL
                 _eyeAt = at;
                 return _thick;
             }
-            catch (Exception e) { Plugin.Trace("[ходьба] толщина обвода: " + e.Message); _thickKnown = false; return want; }
+            catch (Exception e) { Plugin.Trace("[walk] outline width: " + e.Message); _thickKnown = false; return want; }
         }
 
         private static void Build(Transform grid)
@@ -239,7 +239,7 @@ namespace NewAgeQoL
             _under.sortingOrder = -1;
 
             _go.SetActive(false);
-            Plugin.Trace("[ходьба] обвод клетки собран, шейдер " + (shader != null ? shader.name : "нет"));
+            Plugin.Trace("[walk] hex outline built, shader " + (shader != null ? shader.name : "none"));
         }
 
         private static void Hide()

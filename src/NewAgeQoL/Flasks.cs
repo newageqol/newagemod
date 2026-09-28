@@ -316,9 +316,9 @@ namespace NewAgeQoL
         {
             int stacks;
             lock (Scanned) stacks = Scanned.Count;
-            return "опрос идёт " + _scanBusy + ", ряд занят " + AnyBusy
-                 + ", до опроса " + Mathf.Max(0f, _nextScan - RealTime.Now).ToString("0.0")
-                 + " с, стопок в памяти " + stacks;
+            return "scan running " + _scanBusy + ", row busy " + AnyBusy
+                 + ", until scan " + Mathf.Max(0f, _nextScan - RealTime.Now).ToString("0.0")
+                 + " s, stacks in memory " + stacks;
         }
 
         internal static int Consumables(List<int> ids, Dictionary<int, int> subtypes, Dictionary<int, int> quantities)
@@ -420,7 +420,7 @@ namespace NewAgeQoL
                 RemoteImageLoader.Instance.Load(
                     "https://files.nura.biz/site/images/things100x100/" + image + ".png",
                     sprite => { if (sprite != null) Sharp[image] = sprite; },
-                    error => Plugin.Trace("[flasks] картинка «" + image + "» не загрузилась: " + error));
+                    error => Plugin.Trace("[flasks] image '" + image + "' failed to load: " + error));
             }
             catch { }
         }
@@ -482,9 +482,9 @@ namespace NewAgeQoL
                 name.Value = "";
                 WatchedId[row] = id;
                 WatchedWish[row] = "";
-                Plugin.Trace("[банки] " + Titles[row] + ": «" + want + "» теперь хранится как id " + id);
+                Plugin.Trace("[flasks] " + Titles[row] + ": '" + want + "' now stored as id " + id);
             }
-            catch (System.Exception e) { Plugin.Trace("[банки] перевод названия в id: " + e.Message); }
+            catch (System.Exception e) { Plugin.Trace("[flasks] name to id conversion: " + e.Message); }
         }
 
         private static int Find(string want)
@@ -570,8 +570,8 @@ namespace NewAgeQoL
                 if (Picking && RealTime.Now >= _whyAt)
                 {
                     _whyAt = RealTime.Now + 3f;
-                    Plugin.Trace("[банки] опрос не начат: " + (Plugin.Instance == null ? "мод не готов"
-                        : combat ? "идёт бой" : "игра считает, что я не в мире"));
+                    Plugin.Trace("[flasks] scan not started: " + (Plugin.Instance == null ? "mod not ready"
+                        : combat ? "in combat" : "game thinks I am not in the world"));
                 }
                 return;
             }
@@ -580,20 +580,20 @@ namespace NewAgeQoL
             {
                 _chestAgain = 0f;
                 RequestScanNow();
-                Plugin.Trace("[банки] награда: повторный пересчёт остатков");
+                Plugin.Trace("[flasks] reward: recounting stock again");
             }
             if (_scanBusy && RealTime.Now - _busySince > 15f)
             {
                 _scanBusy = false;
-                Plugin.Trace("[банки] прошлый опрос завис дольше 15 с, снимаю замок");
+                Plugin.Trace("[flasks] previous scan stuck over 15 s, releasing lock");
             }
             if (_scanBusy || AnyBusy || RealTime.Now < _nextScan)
             {
                 if (Picking && RealTime.Now >= _whyAt)
                 {
                     _whyAt = RealTime.Now + 3f;
-                    Plugin.Trace("[банки] опрос отложен: " + (_scanBusy ? "предыдущий ещё идёт"
-                        : AnyBusy ? "ряд занят" : "жду ещё " + (_nextScan - RealTime.Now).ToString("0.0") + " с"));
+                    Plugin.Trace("[flasks] scan postponed: " + (_scanBusy ? "previous one still running"
+                        : AnyBusy ? "row busy" : "waiting " + (_nextScan - RealTime.Now).ToString("0.0") + " s more"));
                 }
                 return;
             }
@@ -602,7 +602,7 @@ namespace NewAgeQoL
             for (int row = 0; row < Rows; row++) if (Shown(row)) any = true;
             if (!any)
             {
-                if (Picking && !Fresh) Plugin.Trace("[банки] опрос пропущен: ни один ряд не настроен, а окно выбора не в счёт");
+                if (Picking && !Fresh) Plugin.Trace("[flasks] scan skipped: no row configured, and the picker window does not count");
                 return;
             }
 
@@ -612,7 +612,7 @@ namespace NewAgeQoL
                 if (RealTime.Now >= _waited)
                 {
                     _waited = RealTime.Now + 10f;
-                    Plugin.Trace("[банки] сумка открыта: пересчёт остатков подождёт");
+                    Plugin.Trace("[flasks] bag open: stock recount will wait");
                 }
                 return;
             }
@@ -620,7 +620,7 @@ namespace NewAgeQoL
             _urgent = false;
             _wanted = false;
             _nextScan = RealTime.Now + (_scanOk ? RescanEvery : 3f);
-            Plugin.Trace("[банки] запускаю опрос сумки");
+            Plugin.Trace("[flasks] starting bag scan");
             Plugin.Instance.StartCoroutine(RefreshRoutine());
         }
 
@@ -665,7 +665,7 @@ namespace NewAgeQoL
                 if (!spent || RealTime.Now - _purseAt < 3f) return;
                 _purseAt = RealTime.Now;
                 RequestScanNow();
-                Plugin.Trace("[банки] денег стало меньше: пересчитываю остатки");
+                Plugin.Trace("[flasks] money decreased: recounting stock");
             }
             catch { }
         }
@@ -682,7 +682,7 @@ namespace NewAgeQoL
         {
             if (!Connected())
             {
-                Plugin.Trace("[банки] опрос: связи с сервером нет");
+                Plugin.Trace("[flasks] scan: no server connection");
                 yield break;
             }
             yield return Plugin.Instance.StartCoroutine(EnsureScan(0f));
@@ -696,12 +696,12 @@ namespace NewAgeQoL
             if (Plugin.Instance == null || row < 0 || row >= Rows) return;
             if (RowBusy[row])
             {
-                Tell(Titles[row] + ": нажатие пропущено — прошлое питьё ещё идёт " + (RealTime.Now - RowSince[row]).ToString("0.0") + " с");
+                Tell(Titles[row] + ": press skipped - previous drinking still in progress " + (RealTime.Now - RowSince[row]).ToString("0.0") + " s");
                 return;
             }
             if (!Shown(row))
             {
-                Tell(Titles[row] + ": нажатие пропущено — банка для этой кнопки не выбрана в настройках");
+                Tell(Titles[row] + ": press skipped - no flask chosen for this button in settings");
                 return;
             }
             Plugin.Instance.StartCoroutine(UseRoutine(row, -1, null));
@@ -709,7 +709,7 @@ namespace NewAgeQoL
 
         private static void Tell(string text)
         {
-            Plugin.Log?.LogInfo("[банки] " + text);
+            Plugin.Log?.LogInfo("[flasks] " + text);
             DiskJournal.Flush();
         }
 
@@ -873,9 +873,9 @@ namespace NewAgeQoL
                         string why = !got ? "сервер не ответил"
                                    : string.IsNullOrEmpty(err) ? "дальше сервер не даёт, похоже уже полное" : err;
                         Say(row, title + ": использовано " + used + ", " + why);
-                        Plugin.Log?.LogInfo("[банки] " + title + ": выпито " + used + ", стоп — " + why
-                            + (got ? "" : " (ждал " + spent.ToString("0.0") + " с, из них с открытой очередью " + (wait - budget).ToString("0.0") + ")")
-                            + ", запись " + st.Inv + ", вещь " + thingId + ", было " + startCur + " / " + max);
+                        Plugin.Log?.LogInfo("[flasks] " + title + ": drunk " + used + ", stop - " + why
+                            + (got ? "" : " (waited " + spent.ToString("0.0") + " s, of which with open queue " + (wait - budget).ToString("0.0") + ")")
+                            + ", entry " + st.Inv + ", item " + thingId + ", was " + startCur + " / " + max);
                         DiskJournal.Flush();
                         told = true;
                         break;
@@ -916,8 +916,8 @@ namespace NewAgeQoL
                         ? title + ": использовано " + used + " шт., предметы кончились (" + cur + " / " + max + ")"
                         : title + ": использовано " + used + " шт." + (used < count ? ", предметы кончились" : ""));
                     if (fill && cur < max)
-                        Plugin.Log?.LogInfo("[банки] " + title + ": выпито " + used + ", до полного не хватило — в сумке больше нет, было "
-                            + startCur + ", стало " + cur + " / " + max + ", вещь " + thingId);
+                        Plugin.Log?.LogInfo("[flasks] " + title + ": drunk " + used + ", not enough to fill - none left in bag, was "
+                            + startCur + ", now " + cur + " / " + max + ", item " + thingId);
                     DiskJournal.Flush();
                 }
             }
@@ -928,7 +928,7 @@ namespace NewAgeQoL
                 RowMsg[row] = null;
                 _nextScan = RealTime.Now + 2f;
                 if (counted && used > 0) clock.Say(title, used, row);
-                else if (!told && StatusRow == row && !string.IsNullOrEmpty(Status)) Tell("не выпито — " + Status);
+                else if (!told && StatusRow == row && !string.IsNullOrEmpty(Status)) Tell("not drunk - " + Status);
                 done?.Invoke(used, ranOut);
             }
         }
@@ -962,18 +962,18 @@ namespace NewAgeQoL
             {
                 float now = RealTime.Now;
                 var line = new System.Text.StringBuilder();
-                line.Append("[банки] замер: ").Append(title).Append(" — выпито ").Append(used)
-                    .Append(" за ").Append((now - From).ToString("0.00")).Append(" с");
-                if (From - Began > 0.05f) line.Append(" (+ ").Append((From - Began).ToString("0.00")).Append(" с на сумку до первой)");
+                line.Append("[flasks] timing: ").Append(title).Append(" - drunk ").Append(used)
+                    .Append(" in ").Append((now - From).ToString("0.00")).Append(" s");
+                if (From - Began > 0.05f) line.Append(" (+ ").Append((From - Began).ToString("0.00")).Append(" s on bag before the first)");
                 if (_replies > 0)
-                    line.Append(", ответ сервера ").Append((_replySum / _replies).ToString("0.00"))
-                        .Append(" с, худший ").Append(_replyWorst.ToString("0.00"));
+                    line.Append(", server reply ").Append((_replySum / _replies).ToString("0.00"))
+                        .Append(" s, worst ").Append(_replyWorst.ToString("0.00"));
                 if (_bars > 0)
-                    line.Append(", полоска ").Append((_barSum / _bars).ToString("0.00"))
-                        .Append(" с, худшая ").Append(_barWorst.ToString("0.00"));
-                if (_missed > 0) line.Append(", полоска не сдвинулась за 1,5 с: ").Append(_missed).Append(" раз");
-                if (_silent > 0) line.Append(", на лишнюю банку сервер промолчал — уже полное");
-                if (Gauge(row, out int cur, out int max)) line.Append(", итог ").Append(cur).Append(" / ").Append(max);
+                    line.Append(", bar ").Append((_barSum / _bars).ToString("0.00"))
+                        .Append(" s, worst ").Append(_barWorst.ToString("0.00"));
+                if (_missed > 0) line.Append(", bar did not move within 1.5 s: ").Append(_missed).Append(" times");
+                if (_silent > 0) line.Append(", server stayed silent on the extra flask - already full");
+                if (Gauge(row, out int cur, out int max)) line.Append(", result ").Append(cur).Append(" / ").Append(max);
                 Plugin.Log?.LogInfo(line.ToString());
                 DiskJournal.Flush();
             }
@@ -1033,10 +1033,10 @@ namespace NewAgeQoL
         {
             if (!EnsureListeners())
             {
-                Plugin.Trace("[банки] опрос сумки: нет связи с игрой, слушатели не встали");
+                Plugin.Trace("[flasks] bag scan: no game connection, listeners not attached");
                 yield break;
             }
-            Plugin.Trace("[банки] опрос сумки начат" + (BagOpen() ? ", сумка открыта" : ""));
+            Plugin.Trace("[flasks] bag scan started" + (BagOpen() ? ", bag open" : ""));
             _tabs = null;
             _seen = 0;
             _scanFull = false;
@@ -1051,7 +1051,7 @@ namespace NewAgeQoL
             {
                 if (!Send(new GetThingsTabsRequest(WinInventory)))
                 {
-                    Plugin.Trace("[банки] опрос сумки: запрос вкладок не ушёл");
+                    Plugin.Trace("[flasks] bag scan: tabs request not sent");
                     yield break;
                 }
 
@@ -1059,24 +1059,24 @@ namespace NewAgeQoL
                 while (_tabs == null && RealTime.Now < wait) yield return null;
                 if (_tabs == null)
                 {
-                    Plugin.Trace("[банки] опрос сумки: вкладки не пришли за 3 с");
+                    Plugin.Trace("[flasks] bag scan: tabs did not arrive within 3 s");
                     yield break;
                 }
                 if (_tabs.Count == 0)
                 {
                     _scanFull = true;
-                    Plugin.Trace("[банки] опрос сумки: игра прислала пустой список вкладок");
+                    Plugin.Trace("[flasks] bag scan: game sent an empty tab list");
                     yield break;
                 }
                 tabs = new List<int>(_tabs);
             }
 
-            Plugin.Trace("[банки] опрос сумки: вкладок " + tabs.Count + " (" + string.Join(",", tabs) + ")");
+            Plugin.Trace("[flasks] bag scan: tabs " + tabs.Count + " (" + string.Join(",", tabs) + ")");
             foreach (int tab in tabs)
             {
                 if (!Send(new GetTabContentRequest(tab, WinInventory)))
                 {
-                    Plugin.Trace("[банки] опрос сумки: запрос вкладки " + tab + " не ушёл");
+                    Plugin.Trace("[flasks] bag scan: request for tab " + tab + " not sent");
                     yield break;
                 }
                 yield return null;
@@ -1103,8 +1103,8 @@ namespace NewAgeQoL
                 foreach (var s in Scanned)
                     if (Consumable(s.SubType) && s.Qty > 0 && seen.Add(s.ThingId)) kinds++;
             }
-            Plugin.Trace("[банки] опрос сумки закончен: вкладок пришло " + GotTabs.Count + " из " + tabs.Count
-                         + ", вещей " + _seen + ", стопок " + stacks + ", из них банок " + kinds);
+            Plugin.Trace("[flasks] bag scan finished: tabs received " + GotTabs.Count + " of " + tabs.Count
+                         + ", items " + _seen + ", stacks " + stacks + ", of them flasks " + kinds);
             yield return null;
         }
 
@@ -1196,12 +1196,12 @@ namespace NewAgeQoL
 
         private static void OnChest(object m)
         {
-            Gift("сундук открыт");
+            Gift("chest opened");
         }
 
         private static void OnGift(object m)
         {
-            Gift("награда за задание");
+            Gift("quest reward");
         }
 
         private static void Gift(string why)
@@ -1210,7 +1210,7 @@ namespace NewAgeQoL
             {
                 _chestAgain = RealTime.Now + 6f;
                 RequestScanNow();
-                Plugin.Trace("[банки] " + why + ": пересчитываю остатки");
+                Plugin.Trace("[flasks] " + why + ": recounting stock");
             }
             catch { }
         }
@@ -1255,12 +1255,12 @@ namespace NewAgeQoL
             {
                 bool buy = r.ButtonId == (int)EThingActionButton.BUY;
                 bool got = !AnyBusy && (r.ButtonId == (int)EThingActionButton.USE || r.ButtonId == (int)EThingActionButton.GET_FROM_BOX);
-                string why = buy ? "покупка" : "вещь использована не нашей кнопкой";
+                string why = buy ? "purchase" : "item used not by our button";
                 if (r.ChangesInTab == null || r.ChangesInTab.Count == 0)
                 {
                     if (!buy && !got) return;
                     RequestScanNow();
-                    Plugin.Trace("[банки] " + why + " без списка изменений: пересчитываю остатки");
+                    Plugin.Trace("[flasks] " + why + " without change list: recounting stock");
                     return;
                 }
 
@@ -1307,9 +1307,9 @@ namespace NewAgeQoL
                 }
 
                 RequestScanNow();
-                Plugin.Trace("[банки] " + (ours ? "изменились наши остатки" : why) + ": пересчитываю остатки");
+                Plugin.Trace("[flasks] " + (ours ? "our stock changed" : why) + ": recounting stock");
             }
-            catch (System.Exception e) { Plugin.Trace("[банки] покупка: " + e.Message); }
+            catch (System.Exception e) { Plugin.Trace("[flasks] purchase: " + e.Message); }
         }
 
         private const float Answer = 6f;

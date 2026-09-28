@@ -25,7 +25,7 @@ public static class DollWorker
 
     internal static string Stats()
     {
-        lock (Jobs) return $"срочно {Jobs.Count}, скоро {Soon.Count}, фон {Idle.Count}, последние {Later.Count}, рисуют {_running}/{Threads.Count}";
+        lock (Jobs) return $"urgent {Jobs.Count}, soon {Soon.Count}, background {Idle.Count}, last {Later.Count}, drawing {_running}/{Threads.Count}";
     }
 
     public static void Clear()
@@ -96,7 +96,7 @@ public static class DollWorker
             Packed(sequence);
             long packed = System.Diagnostics.Stopwatch.GetTimestamp();
             if (Trace.On)
-                Trace.Write($"«{who}» нарисовано {label}{(alive ? "~" : "")}{(kick != 0 ? "/" + kick : "")} облик {Trace.Look(request.Look)}: кадров {sequence.Frames.Count}, ждало {Ms(queued, started)} мс, рисование {Ms(started, drawn)} мс (таймлайн {Ms(0, sequence.AdvanceTicks)}, позы {Ms(0, sequence.BlendTicks)}, растр {Ms(0, sequence.RasterTicks)}, сжатие по ходу {Ms(0, sequence.PackTicks)}), досжатие {Ms(drawn, packed)} мс{(sequence.Error != null ? ", ошибка: " + sequence.Error : "")}");
+                Trace.Write($"'{who}' drawn {label}{(alive ? "~" : "")}{(kick != 0 ? "/" + kick : "")} look {Trace.Look(request.Look)}: frames {sequence.Frames.Count}, waited {Ms(queued, started)} ms, drawing {Ms(started, drawn)} ms (timeline {Ms(0, sequence.AdvanceTicks)}, poses {Ms(0, sequence.BlendTicks)}, raster {Ms(0, sequence.RasterTicks)}, packing on the fly {Ms(0, sequence.PackTicks)}), final packing {Ms(drawn, packed)} ms{(sequence.Error != null ? ", error: " + sequence.Error : "")}");
             return sequence;
         };
         if (key != null)
@@ -106,7 +106,7 @@ public static class DollWorker
 
     private static long Ms(long from, long to) => (to - from) * 1000 / System.Diagnostics.Stopwatch.Frequency;
 
-    private static string Describe(object result) => result is Exception ex ? ex.ToString() : "пустой результат";
+    private static string Describe(object result) => result is Exception ex ? ex.ToString() : "empty result";
 
     public static void Run(Func<object> work, Action<object> done, bool urgent) => Run(work, done, urgent ? 0 : 2);
 

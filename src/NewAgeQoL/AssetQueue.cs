@@ -41,10 +41,10 @@ namespace NewAgeQoL
                     Leaving.RemoveAt(i);
                     if (!Loaded(old)) continue;
                     old.Unload(false);
-                    Plugin.Log?.LogInfo("[загрузка] " + System.IO.Path.GetFileName(path) + " попросили снова до выгрузки прошлой копии — выгрузил её сразу");
+                    Plugin.Log?.LogInfo("[loading] " + System.IO.Path.GetFileName(path) + " requested again before the previous copy was unloaded - unloaded it right away");
                 }
             }
-            catch (Exception e) { Plugin.Warn("[загрузка] повторная модель: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[loading] repeated model: " + e.Message); }
         }
 
         private static bool Loaded(FileAssetBundle b) => Held != null && (Held.Invoke(b, null) as UnityEngine.Object) != null;
@@ -58,16 +58,16 @@ namespace NewAgeQoL
         private static readonly MethodInfo Next = AccessTools.Method(typeof(AssetLoader), "LoadNext");
 
         [HarmonyPostfix, HarmonyPatch(typeof(AssetLoader), "LoadNext")]
-        private static void Queue(AssetLoader __instance, ref IEnumerator __result) => __result = Run(__result, "очередь", __instance);
+        private static void Queue(AssetLoader __instance, ref IEnumerator __result) => __result = Run(__result, "queue", __instance);
 
         [HarmonyPostfix, HarmonyPatch(typeof(AssetLoader), "HandleAssetBundle")]
-        private static void Handle(ref IEnumerator __result) => __result = Run(__result, "разбор", null);
+        private static void Handle(ref IEnumerator __result) => __result = Run(__result, "handle", null);
 
         [HarmonyPostfix, HarmonyPatch(typeof(AssetData), "LoadAssetBundleData", new Type[] { })]
-        private static void Whole(ref IEnumerator __result) => __result = Run(__result, "модель", null);
+        private static void Whole(ref IEnumerator __result) => __result = Run(__result, "model", null);
 
         [HarmonyPostfix, HarmonyPatch(typeof(AssetData), "LoadAssetBundleData", new[] { typeof(string) })]
-        private static void Part(ref IEnumerator __result) => __result = Run(__result, "часть модели", null);
+        private static void Part(ref IEnumerator __result) => __result = Run(__result, "model part", null);
 
         private static IEnumerator Run(IEnumerator inner, string what, AssetLoader loader)
         {
@@ -83,7 +83,7 @@ namespace NewAgeQoL
                 catch (Exception e)
                 {
                     failed = true;
-                    Plugin.Warn("[загрузка] " + what + " упала, без мода игра бы встала на вечной загрузке: " + e.GetType().Name + ": " + e.Message);
+                    Plugin.Warn("[loading] " + what + " crashed, without the mod the game would hang on endless loading: " + e.GetType().Name + ": " + e.Message);
                 }
                 if (failed)
                 {
@@ -102,13 +102,13 @@ namespace NewAgeQoL
                 if (Current?.GetValue(loader) is AssetLoadResults stuck && stuck.keepWaiting)
                 {
                     try { stuck.FireAssetsLoadedEvent(); }
-                    catch (Exception e) { Plugin.Warn("[загрузка] ждавшие модели: " + e.Message); }
+                    catch (Exception e) { Plugin.Warn("[loading] waiting models: " + e.Message); }
                 }
                 if (Empty != null && Next != null && !(bool)Empty.Invoke(loader, null))
                     loader.StartCoroutine((IEnumerator)Next.Invoke(loader, null));
                 else Current?.SetValue(loader, null);
             }
-            catch (Exception e) { Plugin.Warn("[загрузка] очередь не поднялась: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[loading] queue did not recover: " + e.Message); }
         }
     }
 }

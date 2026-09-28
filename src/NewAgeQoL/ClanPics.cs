@@ -91,7 +91,7 @@ namespace NewAgeQoL
                 req.timeout = 15;
                 yield return req.SendWebRequest();
                 if (req.responseCode == 200 && req.downloadHandler != null) data = req.downloadHandler.data;
-                else Plugin.Trace("[клан] значка «" + icon + "» нет и на сайте: " + (req.error ?? "код " + req.responseCode));
+                else Plugin.Trace("[clan] icon '" + icon + "' is not on the site either: " + (req.error ?? "code " + req.responseCode));
                 req.Dispose();
             }
             Busy.Remove(icon);
@@ -106,7 +106,7 @@ namespace NewAgeQoL
                     sprite.name = icon;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок «" + icon + "» не разобрался: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon '" + icon + "' failed to parse: " + e.Message); }
             if (sprite == null)
             {
                 Failed[icon] = Time.unscaledTime;
@@ -115,7 +115,7 @@ namespace NewAgeQoL
             }
             if (fresh) Save(icon, data);
             Got[icon] = sprite;
-            Plugin.Trace("[клан] значок «" + icon + "» взят " + (fresh ? "с сайта" : "из кэша") + ": " + sprite.texture.width + "x" + sprite.texture.height);
+            Plugin.Trace("[clan] icon '" + icon + "' taken " + (fresh ? "from the site" : "from cache") + ": " + sprite.texture.width + "x" + sprite.texture.height);
             Settle(icon, sprite);
         }
 
@@ -161,7 +161,7 @@ namespace NewAgeQoL
                 Directory.CreateDirectory(Folder);
                 File.WriteAllBytes(PathOf(icon), data);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок «" + icon + "» не сохранился: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon '" + icon + "' was not saved: " + e.Message); }
         }
     }
 
@@ -177,7 +177,7 @@ namespace NewAgeQoL
                 if (message == null || message.ClanName == null || message.ClanIcon == null) return;
                 ClanPics.Fill(image, message.ClanIcon);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок в карточке: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon in card: " + e.Message); }
         }
     }
 
@@ -194,7 +194,7 @@ namespace NewAgeQoL
                 if (user == null || user.ClanIcon == null) return;
                 ClanPics.Fill(image, user.ClanIcon);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок в подзорной трубе: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon in spyglass: " + e.Message); }
         }
     }
 
@@ -210,7 +210,7 @@ namespace NewAgeQoL
                 if (value == null || value.IconCode.HasValue || value.Icon == null) return;
                 ClanPics.Fill(image, value.Icon);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок в списке кланов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon in clan list: " + e.Message); }
         }
     }
 
@@ -227,7 +227,7 @@ namespace NewAgeQoL
                 if (image == null || !image.gameObject.activeSelf) return;
                 ClanPics.Fill(image, value.Icon);
             }
-            catch (Exception e) { Plugin.Trace("[клан] значок в отношениях кланов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[clan] icon in clan relations: " + e.Message); }
         }
     }
 }

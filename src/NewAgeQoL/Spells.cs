@@ -21,19 +21,19 @@ namespace NewAgeQoL
             try
             {
                 var ctrl = Controllers.Get<UserMenuController>();
-                if (ctrl == null) { Plugin.Trace("[книга] меню персонажа не найдено"); return; }
+                if (ctrl == null) { Plugin.Trace("[spellbook] character menu not found"); return; }
                 if (ctrl.IsWindowOpened)
                 {
                     bool ours = _solo;
                     Shut();
                     if (ours) return;
-                    if (ctrl.IsWindowOpened) { Plugin.Trace("[книга] окно меню не закрылось"); return; }
+                    if (ctrl.IsWindowOpened) { Plugin.Trace("[spellbook] menu window did not close"); return; }
                 }
                 _solo = true;
                 ctrl.Open(UserMenuController.ETabs.SpellBook);
                 if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(Bare(ctrl));
             }
-            catch (Exception e) { _solo = false; Plugin.Warn("[книга] открытие: " + e.Message); }
+            catch (Exception e) { _solo = false; Plugin.Warn("[spellbook] open: " + e.Message); }
         }
 
         internal static void Forget()
@@ -55,7 +55,7 @@ namespace NewAgeQoL
                 }
                 ctrl.Open(tab);
             }
-            catch (Exception e) { Plugin.Warn("[меню] открыть вкладку " + tab + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[menu] open tab " + tab + ": " + e.Message); }
         }
 
         private static int Current(UserMenuController ctrl)
@@ -94,10 +94,10 @@ namespace NewAgeQoL
                 }
                 foreach (var arrow in tabs.GetComponentsInChildren<TabScrollButton>(true))
                     if (arrow != null && arrow.gameObject.activeSelf) { arrow.gameObject.SetActive(false); hidden++; }
-                Plugin.Trace("[книга] полоса вкладок убрана, спрятано " + hidden);
+                Plugin.Trace("[spellbook] tab bar removed, hidden " + hidden);
                 yield break;
             }
-            Plugin.Trace("[книга] вкладки не нашлись, оставляю как есть");
+            Plugin.Trace("[spellbook] tabs not found, leaving as is");
         }
 
         internal static bool Pick(int spellId)
@@ -108,17 +108,17 @@ namespace NewAgeQoL
                 Shut();
                 if (SkillList.UseSpell(spellId))
                 {
-                    Plugin.Trace("[книга] заклинание " + spellId + " наведено полосой умений, цель выбираешь мышью");
+                    Plugin.Trace("[spellbook] spell " + spellId + " armed via the skills bar, pick the target with the mouse");
                     return true;
                 }
                 var ctrl = Controllers.Get<CombatButtonsController>();
                 var arm = AccessTools.Method(typeof(CombatButtonsController), "ActivateSpellButtonHandler");
-                if (ctrl == null || arm == null) { Plugin.Trace("[книга] выбрать заклинание нечем"); return true; }
+                if (ctrl == null || arm == null) { Plugin.Trace("[spellbook] nothing to select the spell with"); return true; }
                 arm.Invoke(ctrl, new object[] { spellId });
-                Plugin.Trace("[книга] заклинание " + spellId + " выбрано");
+                Plugin.Trace("[spellbook] spell " + spellId + " selected");
                 return true;
             }
-            catch (Exception e) { Plugin.Warn("[книга] выбор заклинания: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Warn("[spellbook] spell select: " + e.Message); return true; }
         }
 
         private static UserMenuSpellBookPanelContent Book(object resolver)
@@ -135,7 +135,7 @@ namespace NewAgeQoL
                 if (panel == null) return;
                 var go = AccessTools.Field(typeof(BaseGridContentPanel<UserMenuSpellBookPanelContentDto>), "GoTabContentGrid")?.GetValue(panel)
                          as GameObject;
-                if (go == null) { Plugin.Trace("[книга] сетка заклинаний не найдена, заготовки не прячу"); return; }
+                if (go == null) { Plugin.Trace("[spellbook] spell grid not found, not hiding placeholders"); return; }
                 var veil = go.GetComponent<CanvasGroup>();
                 if (veil == null) veil = go.AddComponent<CanvasGroup>();
                 veil.alpha = 0f;
@@ -143,7 +143,7 @@ namespace NewAgeQoL
                 if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(Unveil(panel, go, veil));
                 else { veil.alpha = 1f; veil.blocksRaycasts = true; }
             }
-            catch (Exception e) { Plugin.Trace("[книга] прятать заготовки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[spellbook] hide placeholders: " + e.Message); }
         }
 
         private static IEnumerator Unveil(UserMenuSpellBookPanelContent panel, GameObject go, CanvasGroup veil)
@@ -168,7 +168,7 @@ namespace NewAgeQoL
             if (veil == null) yield break;
             veil.alpha = 1f;
             veil.blocksRaycasts = true;
-            Plugin.Trace(late ? "[книга] список заклинаний не пришёл вовремя, показываю как есть" : "[книга] список заклинаний разложен, показываю");
+            Plugin.Trace(late ? "[spellbook] spell list did not arrive in time, showing as is" : "[spellbook] spell list laid out, showing");
         }
 
         internal static void Trim(object resolver)
@@ -177,7 +177,7 @@ namespace NewAgeQoL
             {
                 if (!SideButtons.InCombat()) return;
                 var panel = Book(resolver);
-                if (panel == null) { Plugin.Trace("[книга] панель книги не найдена, приёмы остаются"); return; }
+                if (panel == null) { Plugin.Trace("[spellbook] book panel not found, dodges stay"); return; }
 
                 var toggle = Grab<Toggle>(panel, "DodgesToggle");
                 var image = Grab<Image>(panel, "DodgesImage");
@@ -185,7 +185,7 @@ namespace NewAgeQoL
                 var row = toggle != null ? toggle.gameObject : null;
                 if (row == null && image != null) row = Owner(image.transform);
                 if (row == null && label != null) row = Owner(label.transform);
-                if (row == null) { Plugin.Trace("[книга] пункт приёмов не найден"); return; }
+                if (row == null) { Plugin.Trace("[spellbook] dodges entry not found"); return; }
 
                 if (panel.CurrentButton == UserMenuSpellBookPanelContentResolver.EUserMenuSpellBookSelectionButton.DODGES)
                     panel.CurrentButton = UserMenuSpellBookPanelContentResolver.EUserMenuSpellBookSelectionButton.SPELL_SCHOOL_WHITE;
@@ -193,9 +193,9 @@ namespace NewAgeQoL
                 row.SetActive(false);
                 if (image != null) Tuck(image.transform, row.transform);
                 if (label != null) Tuck(label.transform, row.transform);
-                Plugin.Trace("[книга] пункт приёмов убран, в бою книга только с заклинаниями");
+                Plugin.Trace("[spellbook] dodges entry removed, in combat the book has spells only");
             }
-            catch (Exception e) { Plugin.Trace("[книга] приёмы: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[spellbook] dodges: " + e.Message); }
         }
 
         private static T Grab<T>(UserMenuSpellBookPanelContent panel, string name) where T : Component
@@ -224,7 +224,7 @@ namespace NewAgeQoL
                 if (ctrl == null || !ctrl.IsWindowOpened) return;
                 AccessTools.Method(typeof(UserMenuController), "CloseWindow")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[книга] закрытие: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[spellbook] close: " + e.Message); }
         }
     }
 
@@ -253,7 +253,7 @@ namespace NewAgeQoL
                 if (data.ContentType == UserMenuSpellBookPanelContentResolver.EUserMenuSpellBookSelectionButton.DODGES) return true;
                 return !Spells.Pick(data.Id);
             }
-            catch (Exception e) { Plugin.Trace("[книга] клик: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[spellbook] click: " + e.Message); return true; }
         }
     }
 

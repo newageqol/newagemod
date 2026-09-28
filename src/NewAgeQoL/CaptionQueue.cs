@@ -51,12 +51,12 @@ namespace NewAgeQoL
                     line.Draining = true;
                     __instance.StartCoroutine(Drain(__instance, line, line.Generation));
                 }
-                Plugin.Trace("[надписи] «" + text + "» ждёт, пока доиграет предыдущая надпись");
+                Plugin.Trace("[labels] \"" + text + "\" waits for the previous label to finish");
                 return false;
             }
             catch (System.Exception e)
             {
-                Plugin.Trace("[надписи] " + e.Message);
+                Plugin.Trace("[labels] " + e.Message);
                 return true;
             }
         }

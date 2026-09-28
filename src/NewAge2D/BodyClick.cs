@@ -58,7 +58,7 @@ internal static class BodyClick
         if (!Alone) return;
         bool over = false;
         try { over = Plugin.FlashFight && Fighters.Combat() != null && !OverUi() && Body() != null; }
-        catch (Exception ex) { Plugin.Log.LogWarning("[курсор] " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[cursor] " + ex.Message); }
         if (over == _shown) return;
         _shown = over;
         try
@@ -66,7 +66,7 @@ internal static class BodyClick
             if (over) Cursor.SetCursor(Hand(), new Vector2(6f * _scale, 0f), CursorMode.Auto);
             else Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[курсор] " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[cursor] " + ex.Message); }
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(HexGridControl), "OnPointerClick")]
@@ -81,13 +81,13 @@ internal static class BodyClick
             var hex = body != null ? body.HexGridPosition : null;
             if (hex == null) return true;
             BaseStateButton.CloseDefaultButtonGroup();
-            if (Trace.On) Trace.Write($"«{body.Login}» клик по телу, выбрана клетка {hex.clientX};{hex.clientY}");
+            if (Trace.On) Trace.Write($"'{body.Login}' body click, cell selected {hex.clientX};{hex.clientY}");
             Fire.Invoke(__instance, new object[] { hex });
             return false;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[клик по телу] " + ex.Message);
+            Plugin.Log.LogWarning("[body click] " + ex.Message);
             return true;
         }
     }

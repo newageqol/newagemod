@@ -44,7 +44,7 @@ namespace NewAgeQoL
                 Held[key] = new Veil { Group = group, Was = group.alpha, At = Time.unscaledTime, Own = own, Patient = patient };
                 group.alpha = 0f;
             }
-            catch (Exception e) { Plugin.Trace("[занавес] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[curtain] " + e.Message); }
         }
 
         internal static void Show(Component part)
@@ -65,7 +65,7 @@ namespace NewAgeQoL
         internal static void Raise()
         {
             for (int i = 0; i < Staged.Count; i++) Show(Staged[i]);
-            if (Staged.Count > 0) Plugin.Trace("[занавес] прошлая сцена не досчиталась, снял панелей: " + Staged.Count);
+            if (Staged.Count > 0) Plugin.Trace("[curtain] previous scene did not finish, panels released: " + Staged.Count);
             Staged.Clear();
             _staging = true;
             _keyed = false;
@@ -118,7 +118,7 @@ namespace NewAgeQoL
 
             _staging = false;
             for (int i = 0; i < Staged.Count; i++) Show(Staged[i]);
-            if (Staged.Count > 0) Plugin.Trace("[занавес] показано разом панелей: " + Staged.Count);
+            if (Staged.Count > 0) Plugin.Trace("[curtain] panels shown at once: " + Staged.Count);
             Staged.Clear();
         }
 
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 if (veil.Own) UnityEngine.Object.Destroy(veil.Group);
                 else veil.Group.alpha = veil.Was;
             }
-            catch (Exception e) { Plugin.Trace("[занавес] снятие: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[curtain] release: " + e.Message); }
         }
     }
 }

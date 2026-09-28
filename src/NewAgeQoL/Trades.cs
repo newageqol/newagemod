@@ -39,7 +39,7 @@ namespace NewAgeQoL
         private static void Postfix(ProfessionDescriptionData __instance, UserProfessionListResponseMessageItem item)
         {
             try { Trades.Keep(item, __instance.IsIntValue); }
-            catch (Exception e) { Plugin.Trace("[профессии] значение: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[professions] value: " + e.Message); }
         }
     }
 
@@ -60,7 +60,7 @@ namespace NewAgeQoL
                 label.supportRichText = true;
                 label.text = data.Label + "  <color=#8a5a1e>" + total + "</color>";
             }
-            catch (Exception e) { Plugin.Trace("[профессии] строка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[professions] row: " + e.Message); }
         }
     }
 }

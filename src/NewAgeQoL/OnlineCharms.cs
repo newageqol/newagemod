@@ -134,10 +134,10 @@ namespace NewAgeQoL
                     OnlinePlayer p;
                     if (byId.TryGetValue(pair.Key, out p)) p.Charms = pair.Value;
                 }
-                Plugin.Trace("[онлайн] состояния игроков: списков " + found.Count + " из " + byId.Count
-                             + ", сроков " + heard + " из " + sent + ", " + clock.ElapsedMilliseconds + " мс");
+                Plugin.Trace("[online] player states: lists " + found.Count + " of " + byId.Count
+                             + ", durations " + heard + " of " + sent + ", " + clock.ElapsedMilliseconds + " ms");
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] состояния игроков: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] player states: " + e.Message); }
         }
 
         private static void Send(NetworkStream s, string xml)
@@ -154,7 +154,7 @@ namespace NewAgeQoL
             while (s.DataAvailable)
             {
                 int n = s.Read(tmp, 0, tmp.Length);
-                if (n <= 0) throw new IOException("сервер закрыл соединение");
+                if (n <= 0) throw new IOException("server closed the connection");
                 any = true;
                 for (int i = 0; i < n; i++)
                 {
@@ -292,7 +292,7 @@ namespace NewAgeQoL
                     Live.Add(new Badge { Image = image, Id = charm.Id, Picture = charm.Picture, Charm = charm, Count = count });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] значки состояний " + p?.Login + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] state icons " + p?.Login + ": " + e.Message); }
         }
 
         private static void Mark(Text label, int copies)
@@ -417,11 +417,11 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] картинка состояния " + picture + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[online] state picture " + picture + ": " + e.Message); }
             if (sprite == null)
             {
                 Failed[picture] = Time.unscaledTime;
-                Plugin.Trace("[онлайн] картинки состояния " + picture + " нет: " + (error ?? "не разобралась"));
+                Plugin.Trace("[online] no state picture " + picture + ": " + (error ?? "failed to parse"));
                 yield break;
             }
             Got[picture] = sprite;
@@ -487,7 +487,7 @@ namespace NewAgeQoL
                 _paintAt = Time.unscaledTime + 0.5f;
                 Paint();
             }
-            catch (Exception e) { Plugin.Trace("[онлайн] подсказка состояния: " + e.Message); _hover = null; Hide(); }
+            catch (Exception e) { Plugin.Trace("[online] state hint: " + e.Message); _hover = null; Hide(); }
         }
 
         private static void Paint()

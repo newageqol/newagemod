@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 Paint();
                 Clamp();
             }
-            catch (Exception e) { Plugin.Trace("[культ] " + e.Message); Stop("ошибка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] " + e.Message); Stop("ошибка: " + e.Message); }
         }
 
         private static Cult Where()
@@ -162,7 +162,7 @@ namespace NewAgeQoL
                 old.RemoveMessageListener(245, OnDialog);
                 old.RemoveMessageListener(440, OnFavor);
             }
-            catch (Exception e) { Plugin.Trace("[культ] отписка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] unsubscribe: " + e.Message); }
         }
 
         internal static void Shutdown()
@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 var prefix = AccessTools.Method(typeof(CultPotionsDialogPatch), "Prefix");
                 if (original != null && prefix != null) new Harmony(Plugin.Guid).Unpatch(original, prefix);
             }
-            catch (Exception e) { Plugin.Trace("[культ] снятие патча: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] unpatch: " + e.Message); }
             if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             _canvasGo = null;
             _canvas = null;
@@ -224,7 +224,7 @@ namespace NewAgeQoL
                 _favorAskedAt = Time.unscaledTime;
                 NetworkConnection.Instance.SendRequest(new UserProfessionListRequest());
             }
-            catch (Exception e) { Plugin.Trace("[культ] запрос благосклонности: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] favor request: " + e.Message); }
         }
 
         private static string NameOf(int ability)
@@ -300,7 +300,7 @@ namespace NewAgeQoL
                 }, text);
                 if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
             }
-            catch (Exception e) { Plugin.Warn("[культ] подтверждение: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[cult] confirmation: " + e.Message); }
         }
 
         private static void Confirm()
@@ -326,7 +326,7 @@ namespace NewAgeQoL
             Close();
             Send(0, 1, 0);
             _said = "говорю со служителем…";
-            Plugin.Trace("[культ] начинаю: культ " + _here.Name + ", нужно " + (_all ? "все" : want.ToString()) + ", благосклонность " + _favor);
+            Plugin.Trace("[cult] starting: cult " + _here.Name + ", wanted " + (_all ? "all" : want.ToString()) + ", favor " + _favor);
         }
 
         private static void Stop(string why)
@@ -334,7 +334,7 @@ namespace NewAgeQoL
             if (_step == Step.Idle) return;
             _step = Step.Idle;
             _said = (_got > 0 ? "забрано зелий: " + _got + " · " : "") + why;
-            Plugin.Trace("[культ] " + _said);
+            Plugin.Trace("[cult] " + _said);
             AskFavor();
         }
 
@@ -342,7 +342,7 @@ namespace NewAgeQoL
         {
             _step = Step.Idle;
             _said = "забрано зелий: " + _got + (string.IsNullOrEmpty(why) ? "" : " · " + why);
-            Plugin.Trace("[культ] " + _said);
+            Plugin.Trace("[cult] " + _said);
         }
 
         private static void Send(int fid, int type, int quest)
@@ -471,7 +471,7 @@ namespace NewAgeQoL
                     {
                         _rescue++;
                         _reopen = true;
-                        Plugin.Log?.LogInfo("[культ] незнакомая страница — закрываю разговор вариантом " + f.ForwardId + " и открываю заново");
+                        Plugin.Log?.LogInfo("[cult] unknown page - closing dialog with option " + f.ForwardId + " and reopening");
                         Send(f.ForwardId, f.ForwardType, reply.QuestId);
                         return;
                     }
@@ -490,8 +490,8 @@ namespace NewAgeQoL
             {
                 if (reply == null) return;
                 var told = new System.Text.StringBuilder();
-                told.Append("[культ] ответ служителя ").Append(reply.NpcId).Append(", задание ").Append(reply.QuestId)
-                    .Append(": ").Append(Flat(reply.NpcPhrase)).Append(" | варианты:");
+                told.Append("[cult] priest reply ").Append(reply.NpcId).Append(", quest ").Append(reply.QuestId)
+                    .Append(": ").Append(Flat(reply.NpcPhrase)).Append(" | options:");
                 if (reply.Forwards != null)
                     foreach (var f in reply.Forwards)
                         if (f != null) told.Append(" [").Append(f.ForwardId).Append('/').Append(f.ForwardType).Append("] ").Append(Flat(f.ForwardText));
@@ -513,7 +513,7 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<QuestController>();
                 if (ctrl != null) AccessTools.Method(typeof(QuestController), "CloseQuestDialog")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[культ] закрыть окно диалога: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] close dialog window: " + e.Message); }
         }
 
         private static void Build()

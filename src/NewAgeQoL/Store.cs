@@ -51,7 +51,7 @@ namespace NewAgeQoL
                     while (sent < batch.Count && !broke)
                     {
                         try { NetworkConnection.Instance.SendRequest(new GeneralThingHintRequest(batch[sent])); sent++; }
-                        catch (System.Exception e) { broke = true; Plugin.Trace("[названия] запрос " + batch[sent] + " не ушёл: " + e.Message); }
+                        catch (System.Exception e) { broke = true; Plugin.Trace("[names] request " + batch[sent] + " was not sent: " + e.Message); }
                     }
                     if (broke) { Rewind(batch, sent); yield break; }
                     float t = 0f;

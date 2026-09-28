@@ -37,7 +37,7 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             try { Listen(); }
-            catch (Exception e) { Plugin.Trace("[броня] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[armor] " + e.Message); }
         }
 
         private static void Listen()
@@ -55,7 +55,7 @@ namespace NewAgeQoL
         private static void OnInfo(object message)
         {
             try { Remember(message as Unity3DUserInfoResponseMessage); }
-            catch (Exception e) { Plugin.Trace("[броня] ответ: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[armor] response: " + e.Message); }
         }
 
         internal static void Remember(Unity3DUserInfoResponseMessage m)
@@ -76,7 +76,7 @@ namespace NewAgeQoL
             Known[m.UserId] = rec;
             HeardAt[m.UserId] = Time.unscaledTime;
             Version++;
-            if (!had) Plugin.Trace("[броня] " + (m.Login ?? m.UserId.ToString()) + ": " + Zones(m.UserId));
+            if (!had) Plugin.Trace("[armor] " + (m.Login ?? m.UserId.ToString()) + ": " + Zones(m.UserId));
         }
 
         private static void OnBeast(object message)
@@ -88,9 +88,9 @@ namespace NewAgeQoL
                 bool had = Beasts.ContainsKey(m.Id);
                 Beasts[m.Id] = m.Armor;
                 Version++;
-                if (!had) Plugin.Trace("[броня] порода " + m.Id + ": " + m.Armor + " по всем зонам");
+                if (!had) Plugin.Trace("[armor] breed " + m.Id + ": " + m.Armor + " on all zones");
             }
-            catch (Exception e) { Plugin.Trace("[броня] монстр: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[armor] monster: " + e.Message); }
         }
 
         internal static void AskBeast(int race)
@@ -163,10 +163,10 @@ namespace NewAgeQoL
             ArmorRec r;
             if (!Known.TryGetValue(userId, out r)) return "";
             var sb = new StringBuilder();
-            sb.Append("голова ").Append(r.Head);
-            sb.Append("   корпус ").Append(r.Body);
-            sb.Append("   руки ").Append(r.Left).Append('/').Append(r.Right);
-            sb.Append("   ноги ").Append(r.Legs);
+            sb.Append("head ").Append(r.Head);
+            sb.Append("   body ").Append(r.Body);
+            sb.Append("   arms ").Append(r.Left).Append('/').Append(r.Right);
+            sb.Append("   legs ").Append(r.Legs);
             return sb.ToString();
         }
 
@@ -192,7 +192,7 @@ namespace NewAgeQoL
                 Armor.Remember(message);
                 PlayerCard.Show(__instance, message);
             }
-            catch (Exception e) { Plugin.Trace("[броня] карточка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[armor] card: " + e.Message); }
         }
     }
 }

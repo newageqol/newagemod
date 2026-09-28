@@ -47,12 +47,12 @@ internal static class FlashTeleport
                 Begin(jump);
             }
             else if (jump.Phase == 3) jump.More++;
-            if (Trace.On) Trace.Write($"«{NameOf(who)}» перемещение умением на {message.X};{message.Y}: клетка сменилась сразу, кукла исчезает и появляется, как во Flash");
+            if (Trace.On) Trace.Write($"'{NameOf(who)}' skill teleport to {message.X};{message.Y}: cell changed at once, doll vanishes and reappears, as in Flash");
             return false;
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[бой] перемещение: " + ex.Message);
+            Plugin.Log.LogWarning("[combat] teleport: " + ex.Message);
             return true;
         }
     }
@@ -79,7 +79,7 @@ internal static class FlashTeleport
             }
             if (jump.Phase < 3 && jump.Who.Initialized && jump.Who.MoverState != MoverState.Idle)
             {
-                if (Trace.On) Trace.Write($"«{NameOf(jump.Who)}» пошёл до конца перемещения: кукла переставлена сразу");
+                if (Trace.On) Trace.Write($"'{NameOf(jump.Who)}' walked before teleport ended: doll moved at once");
                 Finish(doll);
                 Jumps.RemoveAt(i);
                 continue;
@@ -93,7 +93,7 @@ internal static class FlashTeleport
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError("[бой] перемещение: " + ex);
+                Plugin.Log.LogError("[combat] teleport: " + ex);
                 Finish(doll);
                 Jumps.RemoveAt(i);
             }
@@ -122,7 +122,7 @@ internal static class FlashTeleport
                     return false;
                 }
                 doll.Hold = null;
-                doll.Jump("перемещение умением");
+                doll.Jump("skill teleport");
                 jump.Phase = 3;
                 return false;
             default:
@@ -134,7 +134,7 @@ internal static class FlashTeleport
                 }
                 if (jump.More == 0)
                 {
-                    if (Trace.On) Trace.Write($"«{NameOf(jump.Who)}» перемещение закончено");
+                    if (Trace.On) Trace.Write($"'{NameOf(jump.Who)}' teleport finished");
                     return true;
                 }
                 jump.More--;
@@ -148,6 +148,6 @@ internal static class FlashTeleport
         doll.TeleportAlpha = 1f;
         if (!doll.Hold.HasValue) return;
         doll.Hold = null;
-        doll.Jump("перемещение умением");
+        doll.Jump("skill teleport");
     }
 }

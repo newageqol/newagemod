@@ -26,7 +26,7 @@ internal static class Glow
                 if (body != null) want = Fighters.DollOf(body);
             }
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[подсветка] " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[highlight] " + ex.Message); }
         if (ReferenceEquals(want, _lit)) return;
         if (_lit != null) _lit.Glow(false);
         _lit = want;

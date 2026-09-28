@@ -15,7 +15,7 @@ namespace NewAgeQoL
         internal static void Go()
         {
             if (Busy || Plugin.Instance == null) return;
-            if (SideButtons.InCombat()) { Plugin.Trace("[город] из боя не уходим"); return; }
+            if (SideButtons.InCombat()) { Plugin.Trace("[town] not leaving from combat"); return; }
             Plugin.Instance.StartCoroutine(Run());
         }
 
@@ -96,9 +96,9 @@ namespace NewAgeQoL
                 if (found == 0 && door.ObjectType == EObjectType.Link && Matches(door, words)) found = door.Id;
             }
 
-            if (found > 0) Plugin.Trace("[town] дверь найдена: id=" + found + "; двери: " + seen);
-            else Plugin.Warn("[town] дверь не найдена по словам «"
-                                        + (byWords != null ? byWords.Value : "") + "»; двери: " + seen);
+            if (found > 0) Plugin.Trace("[town] door found: id=" + found + "; doors: " + seen);
+            else Plugin.Warn("[town] door not found by words '"
+                                        + (byWords != null ? byWords.Value : "") + "'; doors: " + seen);
             return found;
         }
 
@@ -124,7 +124,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Fault("[town] отправка: " + e.Message);
+                Plugin.Fault("[town] send: " + e.Message);
                 Travel.Say("Ошибка отправки: " + e.Message);
                 return false;
             }

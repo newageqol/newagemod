@@ -30,7 +30,7 @@ namespace NewAgeQoL
                 {
                     if (++_tried < Tries) return;
                     _done = true;
-                    Plugin.Trace("[осмотр] окно заявок в сцене " + scene + " не появилось, больше не ищу");
+                    Plugin.Trace("[inspect] claims window did not appear in scene " + scene + ", no longer looking");
                     return;
                 }
                 _done = true;
@@ -38,11 +38,11 @@ namespace NewAgeQoL
                 var canvas = view.GetComponentInParent<Canvas>();
                 var root = canvas != null ? canvas.transform : view.transform.root;
                 var text = new StringBuilder();
-                text.Append("[осмотр] сцена ").Append(scene).Append(", окно заявок:\n");
+                text.Append("[inspect] scene ").Append(scene).Append(", claims window:\n");
                 Walk(root, 0, 8, text);
                 Plugin.Log?.LogInfo(text.ToString());
             }
-            catch (Exception e) { Plugin.Trace("[осмотр] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[inspect] " + e.Message); }
         }
 
         private static void Walk(Transform node, int depth, int limit, StringBuilder text)
@@ -50,7 +50,7 @@ namespace NewAgeQoL
             if (node == null || depth > limit) return;
             var rt = node as RectTransform;
             text.Append(new string(' ', depth * 2)).Append(node.name);
-            if (!node.gameObject.activeSelf) text.Append(" [скрыт]");
+            if (!node.gameObject.activeSelf) text.Append(" [hidden]");
             if (rt != null)
                 text.Append(" ").Append(Mathf.RoundToInt(rt.rect.width)).Append("x").Append(Mathf.RoundToInt(rt.rect.height));
             foreach (var part in node.GetComponents<Component>())

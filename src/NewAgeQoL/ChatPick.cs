@@ -32,7 +32,7 @@ namespace NewAgeQoL
                 if (view == null) return;
                 var body = AccessTools.Field(view.GetType(), "Text")?.GetValue(view) as Component;
                 var text = body as TMP_Text;
-                if (text == null) { Plugin.Trace("[чат] выделение: поле текста не найдено"); return; }
+                if (text == null) { Plugin.Trace("[chat] selection: text field not found"); return; }
                 var handler = AccessTools.Field(view.GetType(), "ClickHandler")?.GetValue(view) as Component;
                 var host = text.raycastTarget || handler == null ? text.gameObject : handler.gameObject;
                 var pick = host.GetComponent<ChatPick>();
@@ -40,9 +40,9 @@ namespace NewAgeQoL
                 pick._text = text;
                 pick._rt = text.rectTransform;
                 _live = pick;
-                Plugin.Trace("[чат] выделение включено на " + host.name);
+                Plugin.Trace("[chat] selection enabled on " + host.name);
             }
-            catch (Exception e) { Plugin.Trace("[чат] выделение: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] selection: " + e.Message); }
         }
 
         internal static void Forget()
@@ -60,7 +60,7 @@ namespace NewAgeQoL
                 if (!ctrl) return;
                 if (Input.GetKeyDown(KeyCode.C)) pick.Copy();
             }
-            catch (Exception e) { Plugin.Trace("[чат] копирование: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[chat] copy: " + e.Message); }
         }
 
         public void OnPointerDown(PointerEventData e)
@@ -93,7 +93,7 @@ namespace NewAgeQoL
             if (e == null || e.button != PointerEventData.InputButton.Left) return;
             if (e.clickCount < 2 || _moved) return;
             try { Whole(Spot(e.position)); }
-            catch (Exception err) { Plugin.Trace("[чат] выделение строки: " + err.Message); }
+            catch (Exception err) { Plugin.Trace("[chat] line selection: " + err.Message); }
         }
 
         private static bool Breaks(char one)
@@ -117,7 +117,7 @@ namespace NewAgeQoL
             _from = a;
             _to = b;
             Paint();
-            Plugin.Trace("[чат] строка выделена двойным кликом, знаков " + (b - a + 1));
+            Plugin.Trace("[chat] line selected by double click, chars " + (b - a + 1));
         }
 
         private int Spot(Vector2 screen)
@@ -227,7 +227,7 @@ namespace NewAgeQoL
             string all = made.ToString();
             if (all.Length == 0) return;
             GUIUtility.systemCopyBuffer = all;
-            Plugin.Trace("[чат] скопировано знаков: " + all.Length);
+            Plugin.Trace("[chat] chars copied: " + all.Length);
         }
     }
 }

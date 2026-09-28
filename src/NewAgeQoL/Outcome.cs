@@ -51,7 +51,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 Now.Clear();
-                Plugin.Trace("[итог] очередь анимаций: " + e.Message);
+                Plugin.Trace("[outcome] animation queue: " + e.Message);
             }
         }
 
@@ -65,7 +65,7 @@ namespace NewAgeQoL
                 _playing = AccessTools.FieldRefAccess<AnimationProcessor, List<AnimationGroup>>("activeGroups");
                 _started = AccessTools.FieldRefAccess<ChangeLifeAnimationItem, float?>("_startTime");
             }
-            catch (Exception e) { Plugin.Trace("[итог] поля очереди анимаций: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[outcome] animation queue fields: " + e.Message); }
         }
 
         private static void Walk(List<AnimationGroup> groups)

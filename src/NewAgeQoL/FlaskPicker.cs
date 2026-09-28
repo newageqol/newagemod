@@ -69,7 +69,7 @@ namespace NewAgeQoL
             _anchor = anchor;
             _bornFrame = Time.frameCount;
             string title = Flasks.Title(row);
-            Show(Flasks.NameEntry(row), byId, title, () => Plugin.Trace("[банки] слот «" + title + "» сменён из списка у кнопки"));
+            Show(Flasks.NameEntry(row), byId, title, () => Plugin.Trace("[flasks] slot '" + title + "' changed from the button list"));
         }
 
         private static void Show(ConfigEntry<string> byName, ConfigEntry<int> byId, string title, Action onPicked)
@@ -78,8 +78,8 @@ namespace NewAgeQoL
             _byId = byId;
             _onPicked = onPicked;
             _row = Flasks.RowOf(byId);
-            Plugin.Trace("[банки] окно выбора открыто: «" + title + "», бой " + SideButtons.InCombat()
-                         + ", в мире " + SideButtons.InWorld() + ", " + Flasks.State());
+            Plugin.Trace("[flasks] picker opened: '" + title + "', combat " + SideButtons.InCombat()
+                         + ", in world " + SideButtons.InWorld() + ", " + Flasks.State());
             try
             {
                 Flasks.RequestScanNow();
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 Flasks.Picking = true;
                 Apply(Filtered());
             }
-            catch (Exception e) { Plugin.Fault("[банки] выбор: " + e.Message); Close(); }
+            catch (Exception e) { Plugin.Fault("[flasks] pick: " + e.Message); Close(); }
         }
 
         internal static void Close()
@@ -118,7 +118,7 @@ namespace NewAgeQoL
         {
             if (_canvas == null)
             {
-                if (Flasks.Picking) { Flasks.Picking = false; Plugin.Trace("[банки] окно выбора исчезло вместе со сценой, снимаю признак выбора"); }
+                if (Flasks.Picking) { Flasks.Picking = false; Plugin.Trace("[flasks] picker vanished with the scene, clearing the picking flag"); }
                 return;
             }
             if (_near && (_anchor == null || !_anchor.gameObject.activeInHierarchy)) { Close(); return; }
@@ -393,7 +393,7 @@ namespace NewAgeQoL
                 if (!loud) continue;
                 int sub;
                 _subs.TryGetValue(thingId, out sub);
-                Plugin.Trace("[банки] выбор: " + thingId + " «" + name + "» подтип " + sub);
+                Plugin.Trace("[flasks] pick: " + thingId + " '" + name + "' subtype " + sub);
             }
 
             for (int i = things.Count; i < _cells.Count; i++)
@@ -496,7 +496,7 @@ namespace NewAgeQoL
                 Settings.Keep(_byId);
                 Settings.Keep(_byName);
             }
-            catch (Exception e) { Plugin.Fault("[банки] выбор: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[flasks] pick: " + e.Message); }
             var cb = _onPicked;
             Close();
             try { cb?.Invoke(); } catch { }

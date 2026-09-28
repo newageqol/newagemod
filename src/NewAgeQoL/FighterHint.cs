@@ -101,7 +101,7 @@ namespace NewAgeQoL
                 float at;
                 if (!AskedAt.TryGetValue(id, out at) || Time.unscaledTime - at > Fresh) Ask(id);
             }
-            catch (Exception e) { Plugin.Trace("[боец] подсказка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] hint: " + e.Message); }
         }
 
         private static void Hide()
@@ -182,7 +182,7 @@ namespace NewAgeQoL
                     if (!aliveOnly && corpse == null) corpse = ch;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[боец] клетка под мышью: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] cell under mouse: " + e.Message); }
             return corpse;
         }
 
@@ -291,7 +291,7 @@ namespace NewAgeQoL
             bool same = States.TryGetValue(msg.UserId, out was) && was != null && was.Count == fresh.Count;
             States[msg.UserId] = fresh;
             FirstAsk.Remove(msg.UserId);
-            if (!same) Plugin.Trace("[боец] состояния " + msg.UserId + ": " + fresh.Count);
+            if (!same) Plugin.Trace("[fighter] states " + msg.UserId + ": " + fresh.Count);
         }
 
         private static void Forget()
@@ -331,7 +331,7 @@ namespace NewAgeQoL
                 Ask(kv.Key);
                 fresh++;
             }
-            if (fresh > 0) Plugin.Trace("[боец] спрошены состояния у " + fresh + " бойцов");
+            if (fresh > 0) Plugin.Trace("[fighter] requested states for " + fresh + " fighters");
         }
 
         private static void OnRound(object m)
@@ -360,7 +360,7 @@ namespace NewAgeQoL
                 nc.SendRequest(new GetStateGroupsOnUserRequest(userId));
                 nc.SendRequest(new UserEnchantmentsRequest(userId));
             }
-            catch (Exception e) { Plugin.Trace("[боец] толчок " + userId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] nudge " + userId + ": " + e.Message); }
         }
 
         private static void OnGroups(object m)
@@ -376,7 +376,7 @@ namespace NewAgeQoL
             bool same = Rough.TryGetValue(msg.UserId, out had) && had != null && had.Count == list.Count;
             Rough[msg.UserId] = list;
             FirstAsk.Remove(msg.UserId);
-            if (!same) Plugin.Trace("[боец] группы состояний " + msg.UserId + ": " + list.Count);
+            if (!same) Plugin.Trace("[fighter] state groups " + msg.UserId + ": " + list.Count);
         }
 
         private static void OnWho(object m)
@@ -408,7 +408,7 @@ namespace NewAgeQoL
                 nc.SendRequest(new UserInfoRequest(userId, null));
                 AskedNames.Add(userId);
             }
-            catch (Exception e) { Plugin.Trace("[боец] имя " + userId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] name " + userId + ": " + e.Message); }
         }
 
         internal static bool Silent(int userId)
@@ -430,7 +430,7 @@ namespace NewAgeQoL
                 NudgedAt[userId] = Time.unscaledTime;
                 nc.SendRequest(new GetStateGroupsOnUserRequest(userId));
             }
-            catch (Exception e) { Plugin.Trace("[боец] запрос состояний: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] state request: " + e.Message); }
         }
 
         private static void Fill(AbstractCharacter ch, ICombatData cd)
@@ -475,11 +475,11 @@ namespace NewAgeQoL
                         _watchPower = expower;
                         _watchQueue = later.Life;
                         _watchFriend = friend;
-                        Plugin.Trace("[боец] показатели " + ch.UserId + ": жизнь " + life + "/" + ind.MaxLife
-                            + ", мана " + mana + "/" + ind.MaxMana
-                            + (friend ? ", энергия " + stamina + "/" + ind.MaxStamina : "")
-                            + ", заряды " + expower + "/" + ind.MaxExpower
-                            + (later.Life != 0 ? ", из них жизнь " + later.Life + " ещё в очереди анимаций" : ""));
+                        Plugin.Trace("[fighter] stats " + ch.UserId + ": life " + life + "/" + ind.MaxLife
+                            + ", mana " + mana + "/" + ind.MaxMana
+                            + (friend ? ", energy " + stamina + "/" + ind.MaxStamina : "")
+                            + ", charges " + expower + "/" + ind.MaxExpower
+                            + (later.Life != 0 ? ", of which life " + later.Life + " still in the animation queue" : ""));
                     }
                 }
             }
@@ -531,7 +531,7 @@ namespace NewAgeQoL
             var mine = cd != null ? cd.MyCharacter : null;
             if (mine == null) return -1;
             try { return HexUtils.range(mine.HexGridPosition, ch.HexGridPosition); }
-            catch (Exception e) { Plugin.Trace("[боец] расстояние: " + e.Message); return -1; }
+            catch (Exception e) { Plugin.Trace("[fighter] distance: " + e.Message); return -1; }
         }
 
         internal static string Steps(AbstractCharacter ch, ICombatData cd, bool me)
@@ -933,14 +933,14 @@ namespace NewAgeQoL
                 tex.filterMode = FilterMode.Bilinear;
                 _heart = Sprite.Create(tex, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[боец] сердце: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[fighter] heart: " + e.Message); }
             return _heart;
         }
 
         private static Sprite Icon(EActionParamIconType type)
         {
             try { return AtlasUtils.GetActionParamIcon(type); }
-            catch (Exception e) { Plugin.Trace("[боец] значок: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[fighter] icon: " + e.Message); return null; }
         }
 
         private static void Rule(Transform host)

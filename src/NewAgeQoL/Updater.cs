@@ -78,13 +78,13 @@ namespace NewAgeQoL
             {
                 State = Stage.Failed;
                 Message = "не удалось проверить: " + (error ?? "нет ответа");
-                Plugin.Trace("[обновление] " + Message);
+                Plugin.Trace("[update] " + Message);
                 yield break;
             }
 
             Release release = null;
             try { release = JsonUtility.FromJson<Release>(json); }
-            catch (Exception e) { Plugin.Trace("[обновление] разбор ответа: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[update] parsing response: " + e.Message); }
 
             string tag = release != null ? release.tag_name : null;
             _dllUrl = "";
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 State = Stage.Newer;
                 Message = "вышла версия " + LatestVersion;
             }
-            Plugin.Trace("[обновление] установлена " + Plugin.Version + ", на сервере " + LatestVersion);
+            Plugin.Trace("[update] installed " + Plugin.Version + ", on server " + LatestVersion);
         }
 
         private static readonly char[] Cuts = { '/', '\\' };
@@ -186,7 +186,7 @@ namespace NewAgeQoL
             {
                 State = Stage.Failed;
                 Message = "не удалось заменить файл: " + e.Message;
-                Plugin.Warn("[обновление] " + e);
+                Plugin.Warn("[update] " + e);
             }
         }
 
@@ -222,7 +222,7 @@ namespace NewAgeQoL
                         break;
                     }
                 }
-                catch (Exception e) { Plugin.Trace("[обновление] поиск файла: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[update] file lookup: " + e.Message); }
             }
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception("не нашёл файл мода на диске");
             if (data.Length < 20000) throw new Exception("файл подозрительно маленький");
@@ -243,15 +243,15 @@ namespace NewAgeQoL
                 File.Replace(fresh, path, old);
                 return;
             }
-            catch (Exception e) { Plugin.Trace("[обновление] заменить одним действием не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[update] atomic replace failed: " + e.Message); }
 
             File.Move(path, old);
             try { File.Move(fresh, path); }
             catch (Exception e)
             {
-                Plugin.Fault("[обновление] новый файл не встал, возвращаю прежний: " + e.Message);
+                Plugin.Fault("[update] new file did not install, restoring the previous one: " + e.Message);
                 try { File.Move(old, path); }
-                catch (Exception back) { Plugin.Fault("[обновление] прежний файл вернуть не вышло: " + back.Message); }
+                catch (Exception back) { Plugin.Fault("[update] could not restore the previous file: " + back.Message); }
                 throw;
             }
         }

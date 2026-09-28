@@ -123,20 +123,20 @@ namespace NewAgeQoL
             req.Dispose();
             if (text == null || !Read(text).Full)
             {
-                Plugin.Trace("[калькулятор ку] умения с GitHub не пришли: " + (string.IsNullOrEmpty(error) ? "код " + code : error));
+                Plugin.Trace("[ku calc] skills from GitHub did not arrive: " + (string.IsNullOrEmpty(error) ? "code " + code : error));
                 yield break;
             }
             text = text.Replace("\r\n", "\n");
             if (text == Cached())
             {
-                Plugin.Trace("[калькулятор ку] умения на GitHub те же, что в кэше");
+                Plugin.Trace("[ku calc] skills on GitHub are the same as in cache");
                 yield break;
             }
             if (!Store(text)) yield break;
             _loaded = false;
             Load();
             Version++;
-            Plugin.Trace("[калькулятор ку] умения обновлены с GitHub");
+            Plugin.Trace("[ku calc] skills updated from GitHub");
         }
 
         private static bool Store(string text)
@@ -153,7 +153,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Warn("[калькулятор ку] кэш умений не записан: " + e.Message);
+                Plugin.Warn("[ku calc] skills cache not written: " + e.Message);
                 return false;
             }
         }
@@ -237,15 +237,15 @@ namespace NewAgeQoL
             try
             {
                 string rules = WardrobeData.Rules();
-                if (rules == null) { Plugin.Warn("[калькулятор ку] в сборке нет правил"); return; }
+                if (rules == null) { Plugin.Warn("[ku calc] no rules in the build"); return; }
                 var own = Read(rules);
                 var tree = own;
-                string from = "вшитые";
+                string from = "built-in";
                 string cached = Cached();
                 if (cached != null)
                 {
                     var got = Read(cached);
-                    if (got.Full) { tree = got; from = "из кэша GitHub"; }
+                    if (got.Full) { tree = got; from = "from GitHub cache"; }
                 }
                 foreach (var cell in own.Classes) ClassList.Add(new KuClass { Id = Int(cell[1]), Name = cell[2] });
                 foreach (var cell in own.Subs)
@@ -275,13 +275,13 @@ namespace NewAgeQoL
                     for (int i = 0; i < Top; i++) skill.Costs[i] = Ids(cell[2 + i]);
                 }
                 ClassList.RemoveAll(k => k.Left.Length != 8 || k.Right.Length != 8);
-                Plugin.Trace("[калькулятор ку] классов " + ClassList.Count + ", умений " + Skills.Count + ", данные " + from);
+                Plugin.Trace("[ku calc] classes " + ClassList.Count + ", skills " + Skills.Count + ", data " + from);
             }
             catch (Exception e)
             {
                 ClassList.Clear();
                 Skills.Clear();
-                Plugin.Warn("[калькулятор ку] правила не прочитаны: " + e.Message);
+                Plugin.Warn("[ku calc] rules not read: " + e.Message);
             }
         }
 

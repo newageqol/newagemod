@@ -56,7 +56,7 @@ namespace NewAgeQoL
                 if (view == null || !view.IsAttackDialog) return;
                 Paint(view);
             }
-            catch (Exception e) { Plugin.Trace("[удар] заголовок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] header: " + e.Message); }
         }
 
         private static PropertyInfo _dialogProp;
@@ -76,7 +76,7 @@ namespace NewAgeQoL
                 _kicksField = AccessTools.Field(typeof(AttackDescription), "Kicks");
                 _captionField = AccessTools.Field(typeof(AttackDialogRow), "CaptionText");
             }
-            catch (Exception e) { Plugin.Trace("[удар] поля окна: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[strike] window fields: " + e.Message); }
         }
 
         private static ConfirmActionDialog Dialog(ConfirmActionDialogController ctrl)
@@ -166,7 +166,7 @@ namespace NewAgeQoL
                 text.raycastTarget = false;
                 return text;
             }
-            catch (Exception e) { Plugin.Trace("[удар] колонка: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[strike] column: " + e.Message); return null; }
         }
 
         private static string Spot(TargetBody part)

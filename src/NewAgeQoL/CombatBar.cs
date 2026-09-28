@@ -130,7 +130,7 @@ namespace NewAgeQoL
             try
             {
                 if (!On) { Drop(); return; }
-                if (_strip != null && Stale()) { Plugin.Trace("[полоса] бой сменился без выхода, собираю заново"); Drop(); }
+                if (_strip != null && Stale()) { Plugin.Trace("[bar] fight changed without exit, rebuilding"); Drop(); }
                 if (_strip == null) Build();
                 if (_strip == null) return;
                 Grab();
@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 Place();
                 Shade();
             }
-            catch (Exception e) { Plugin.Trace("[полоса] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Trace("[bar] " + e.Message); Drop(); }
         }
 
         private static void Build()
@@ -167,7 +167,7 @@ namespace NewAgeQoL
 
             _top = Zone("clock", new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), Vector2.zero, ClockHigh);
             _mid = Zone("center", new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-PairHalf, 0f), High);
-            Plugin.Trace("[полоса] собрана");
+            Plugin.Trace("[bar] built");
         }
 
         private static RectTransform Zone(string name, Vector2 anchor, Vector2 pivot, Vector2 spot, float tall)
@@ -239,23 +239,23 @@ namespace NewAgeQoL
                 if (cd == null) return;
                 int id = FighterHint.Under(cd, false);
                 var who = id != 0 ? cd.GetCharacter(id) : cd.SelectedCharacter;
-                if (who == null) { Plugin.Trace("[полоса] информация: боец не выбран"); return; }
+                if (who == null) { Plugin.Trace("[bar] info: no fighter selected"); return; }
 
                 if (who.UserId > 0)
                 {
                     var ctrl = Controllers.Get<UserInfoWindowController>();
                     if (ctrl == null) return;
                     ctrl.ShowUserInfoDialog(who.UserId, who.Login);
-                    Plugin.Trace("[полоса] информация по " + (who.Login ?? who.UserId.ToString()));
+                    Plugin.Trace("[bar] info on " + (who.Login ?? who.UserId.ToString()));
                     return;
                 }
 
                 var beast = Controllers.Get<MonsterInfoWindowController>();
                 if (beast == null) return;
                 beast.ShowMonsterInfoDialog(who.Race);
-                Plugin.Trace("[полоса] информация по мобу, раса " + who.Race);
+                Plugin.Trace("[bar] info on mob, race " + who.Race);
             }
-            catch (Exception e) { Plugin.Trace("[полоса] информация: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] info: " + e.Message); }
         }
 
         private static bool Stale()
@@ -279,11 +279,11 @@ namespace NewAgeQoL
             for (int i = 0; i < Pieces.Length; i++)
             {
                 try { found[i] = AccessTools.Field(typeof(PhaseTimerScript), Pieces[i]); }
-                catch (Exception e) { Plugin.Trace("[полоса] часы " + Pieces[i] + ": " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[bar] clock " + Pieces[i] + ": " + e.Message); }
             }
             _clockFields = found;
             try { _phaseField = AccessTools.Field(typeof(PhaseTimerScript), "_endPhaseButton"); }
-            catch (Exception e) { Plugin.Trace("[полоса] кнопка фазы: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] phase button: " + e.Message); }
         }
 
         private static PhaseTimerScript Script()
@@ -309,7 +309,7 @@ namespace NewAgeQoL
                 if (_clockFields[i] == null) continue;
                 Component part = null;
                 try { part = _clockFields[i].GetValue(script) as Component; }
-                catch (Exception e) { Plugin.Trace("[полоса] часы " + Pieces[i] + ": " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[bar] clock " + Pieces[i] + ": " + e.Message); }
                 var rt = part != null ? part.transform as RectTransform : null;
                 if (rt != null) parts.Add(rt);
             }
@@ -333,7 +333,7 @@ namespace NewAgeQoL
                 if (up.rect.height <= 0f || up.rect.height >= 120f) break;
                 node = up;
             }
-            if (!Held.ContainsKey(node)) Plugin.Trace("[полоса] часы фазы: " + Chain(node));
+            if (!Held.ContainsKey(node)) Plugin.Trace("[bar] phase clock: " + Chain(node));
             return node;
         }
 
@@ -354,14 +354,14 @@ namespace NewAgeQoL
             if (script == null) return null;
             WireClock();
             try { return _phaseField?.GetValue(script) as Component; }
-            catch (Exception e) { Plugin.Trace("[полоса] кнопка фазы: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[bar] phase button: " + e.Message); return null; }
         }
 
         private static Component Part(CombatButtonsController ctrl, string name)
         {
             if (ctrl == null) return null;
             try { return AccessTools.Property(typeof(CombatButtonsController), name)?.GetValue(ctrl) as Component; }
-            catch (Exception e) { Plugin.Trace("[полоса] " + name + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[bar] " + name + ": " + e.Message); return null; }
         }
 
         private static bool Ours(RectTransform rt)
@@ -400,7 +400,7 @@ namespace NewAgeQoL
             rt.pivot = new Vector2(0f, 0.5f);
             rt.sizeDelta = new Vector2(box.width, box.height);
             row.Add(rt);
-            Plugin.Trace("[полоса] взял " + rt.name + " " + Mathf.RoundToInt(box.width) + "x" + Mathf.RoundToInt(box.height));
+            Plugin.Trace("[bar] took " + rt.name + " " + Mathf.RoundToInt(box.width) + "x" + Mathf.RoundToInt(box.height));
         }
 
         private static void Seat(Component part, int index)
@@ -429,8 +429,8 @@ namespace NewAgeQoL
             Curtain.Show(rt);
             Picture(frame, still, still != null ? null : face, rt.gameObject);
             var shown = still != null ? still : face != null ? face.sprite : null;
-            Plugin.Trace("[полоса] посадил " + rt.name + " " + Mathf.RoundToInt(box.width) + "x" + Mathf.RoundToInt(box.height)
-                + (shown != null ? ", картинка " + shown.name + (still != null ? " своя" : " живая") : ", картинки нет"));
+            Plugin.Trace("[bar] placed " + rt.name + " " + Mathf.RoundToInt(box.width) + "x" + Mathf.RoundToInt(box.height)
+                + (shown != null ? ", image " + shown.name + (still != null ? " own" : " live") : ", no image"));
         }
 
         private static float Wide(int count)
@@ -504,7 +504,7 @@ namespace NewAgeQoL
                 var state = rt.GetComponent<BaseStateButton>();
                 if (state != null && state.NormalSprite != null) return state.NormalSprite;
             }
-            catch (Exception e) { Plugin.Trace("[полоса] своя картинка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] own image: " + e.Message); }
             return null;
         }
 
@@ -523,7 +523,7 @@ namespace NewAgeQoL
                 var sector = rt.GetComponent<SimpleSectorButtonSelector>();
                 if (sector != null) badge = AccessTools.Field(typeof(SimpleSectorButtonSelector), "RechargeImage")?.GetValue(sector) as Component;
             }
-            catch (Exception e) { Plugin.Trace("[полоса] части кнопки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] button parts: " + e.Message); }
 
             Image best = null, clean = null, top = null;
             var told = new StringBuilder();
@@ -537,14 +537,14 @@ namespace NewAgeQoL
                     || tag.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) >= 0
                     || tag.IndexOf("bottom", StringComparison.OrdinalIgnoreCase) >= 0
                     || art.color.a < 0.5f;
-                told.Append(tag).Append('=').Append(art.sprite.name).Append(art == own ? "(своя) " : skip ? "(мимо) " : " ");
+                told.Append(tag).Append('=').Append(art.sprite.name).Append(art == own ? "(own) " : skip ? "(skip) " : " ");
                 if (skip) continue;
                 best = art;
                 if (top == null && (tag.IndexOf("TopImage", StringComparison.OrdinalIgnoreCase) >= 0
                                     || tag.IndexOf("Icon", StringComparison.OrdinalIgnoreCase) >= 0)) top = art;
                 if (clean == null && art.sprite.name.IndexOf("fon", StringComparison.OrdinalIgnoreCase) < 0) clean = art;
             }
-            Plugin.Trace("[полоса] картинки " + rt.name + ": " + told);
+            Plugin.Trace("[bar] images " + rt.name + ": " + told);
             if (own != null && own.sprite != null) return own;
             return top != null ? top : clean != null ? clean : best;
         }
@@ -625,7 +625,7 @@ namespace NewAgeQoL
             press.targetGraphic = icon;
             press.onClick.AddListener(act);
             Extra[slot] = go;
-            Plugin.Trace("[полоса] кнопка «" + name + "» встала справа от боевых");
+            Plugin.Trace("[bar] button \"" + name + "\" placed right of the combat buttons");
         }
 
         private static int _chaseId = int.MinValue;
@@ -673,7 +673,7 @@ namespace NewAgeQoL
         private static void Chase()
         {
             var one = ChaseButton();
-            if (one == null) { Plugin.Trace("[полоса] преследования среди приёмов нет"); return; }
+            if (one == null) { Plugin.Trace("[bar] no pursuit among dodges"); return; }
             SkillList.Use(one.Id);
         }
 
@@ -697,7 +697,7 @@ namespace NewAgeQoL
                 var state = source.GetComponent<BaseStateButton>();
                 if (button == null && state != null) button = _stateField?.GetValue(state) as Button;
             }
-            catch (Exception e) { Plugin.Trace("[полоса] кнопка игры: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] game button: " + e.Message); }
             if (button == null) button = source.GetComponent<Button>();
             if (button == null) button = source.GetComponentInChildren<Button>(true);
             return button;
@@ -726,7 +726,7 @@ namespace NewAgeQoL
 
         private static void Click(GameObject source)
         {
-            if (Stuck(source)) { Spectate.Exit(); Plugin.Trace("[полоса] выход из просмотра"); return; }
+            if (Stuck(source)) { Spectate.Exit(); Plugin.Trace("[bar] leaving spectate"); return; }
             if (source == null) return;
             if (!Switch(source)) Pressed[source] = Time.unscaledTime;
             try
@@ -735,22 +735,22 @@ namespace NewAgeQoL
                 if (phase != null)
                 {
                     phase.OnClick();
-                    Plugin.Trace("[полоса] конец фазы через кнопку игры");
+                    Plugin.Trace("[bar] phase end via game button");
                     return;
                 }
                 var own = Knob(source);
                 if (own != null && own.interactable)
                 {
                     own.onClick.Invoke();
-                    Plugin.Trace("[полоса] нажал " + source.name + " через его кнопку");
+                    Plugin.Trace("[bar] pressed " + source.name + " via its button");
                     return;
                 }
                 if (!source.activeInHierarchy) return;
                 var pointer = new PointerEventData(EventSystem.current);
                 ExecuteEvents.Execute(source, pointer, ExecuteEvents.pointerClickHandler);
-                Plugin.Trace("[полоса] нажал " + source.name);
+                Plugin.Trace("[bar] pressed " + source.name);
             }
-            catch (Exception e) { Plugin.Trace("[полоса] нажатие " + source.name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] press " + source.name + ": " + e.Message); }
         }
 
         private static void Shade()
@@ -824,7 +824,7 @@ namespace NewAgeQoL
                 Strip(Face(ctrl, "MyCharacterPanel"));
                 Cover(Face(ctrl, "SelectedCharacterPanel"));
             }
-            catch (Exception e) { Plugin.Trace("[полоса] панели бойцов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] fighter panels: " + e.Message); }
         }
 
         private static void Strip(GameObject go)
@@ -838,7 +838,7 @@ namespace NewAgeQoL
                 if (grid == null) { Cover(go); return; }
                 var root = (RectTransform)go.transform;
                 _bare = new Bare { Root = root, Grid = (RectTransform)grid.transform, Home = root.anchoredPosition };
-                Plugin.Trace("[полоса] панель своего бойца спрятана, столбец эффектов оставлен");
+                Plugin.Trace("[bar] own fighter panel hidden, effects column kept");
             }
             Hollow(_bare, _bare.Root, _bare.Grid);
             Shift(_bare);
@@ -972,9 +972,9 @@ namespace NewAgeQoL
                     dispatcher.ClearHandler(action);
                 }
                 _muted = true;
-                Plugin.Trace("[полоса] клавиши приёмов и предметов больше не слушаем");
+                Plugin.Trace("[bar] no longer listening to dodge and item keys");
             }
-            catch (Exception e) { Plugin.Trace("[полоса] клавиша приёмов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] dodge key: " + e.Message); }
         }
 
         private static void Unmute()
@@ -992,9 +992,9 @@ namespace NewAgeQoL
                     if (back != null) dispatcher.RegisterHandler(action, back);
                 }
                 Kept.Clear();
-                Plugin.Trace("[полоса] клавиши приёмов и предметов вернулись игре");
+                Plugin.Trace("[bar] dodge and item keys returned to the game");
             }
-            catch (Exception e) { Plugin.Trace("[полоса] возврат клавиши: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[bar] key return: " + e.Message); }
         }
 
         private static HotkeyHandler Handler(EHotkeyActions action)
@@ -1027,7 +1027,7 @@ namespace NewAgeQoL
                     rt.anchoredPosition = was.Pos;
                     rt.sizeDelta = was.Size;
                 }
-                catch (Exception e) { Plugin.Trace("[полоса] возврат кнопки: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[bar] button return: " + e.Message); }
             }
             Held.Clear();
             Top.Clear();

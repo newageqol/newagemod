@@ -59,20 +59,20 @@ namespace NewAgeQoL
             if (!Is(skill)) return false;
             if (!Shift())
             {
-                Stop("сосредоточенность нажата без Shift");
+                Stop("focus pressed without Shift");
                 return false;
             }
             if (_on)
             {
-                Stop("снята по Shift");
+                Stop("cleared by Shift");
                 return true;
             }
             var cd = FighterHint.Cd();
             if (cd == null) return true;
             if (!ReferenceEquals(cd, _fight)) { _fight = cd; _last = cd.RoundNum; }
             _on = true;
-            Plugin.Trace("[связка] включена по Shift в раунде " + cd.RoundNum
-                + (Spent(cd) ? ", в этом раунде уже нажата" : ""));
+            Plugin.Trace("[combo] enabled by Shift in round " + cd.RoundNum
+                + (Spent(cd) ? ", already pressed this round" : ""));
             return true;
         }
 
@@ -111,7 +111,7 @@ namespace NewAgeQoL
             if (!SideButtons.InCombat())
             {
                 if (_fight == null) return;
-                Stop("бой закончился");
+                Stop("fight ended");
                 _fight = null;
                 _last = -1;
                 return;
@@ -137,7 +137,7 @@ namespace NewAgeQoL
             _fight = cd;
             _last = cd.RoundNum;
             _on = true;
-            Plugin.Trace("[связка] новый бой, связка включена сразу");
+            Plugin.Trace("[combo] new fight, combo enabled right away");
         }
 
         internal static void Before(CombatButtonsController ctrl, IQuickButton button)
@@ -154,29 +154,29 @@ namespace NewAgeQoL
             string why = Why(cd, focus, button);
             if (why != null)
             {
-                Plugin.Trace("[связка] приём " + button.Id + " уходит без сосредоточенности: " + why);
+                Plugin.Trace("[combo] dodge " + button.Id + " goes without focus: " + why);
                 return;
             }
 
             var send = AccessTools.Method(typeof(CombatButtonsController), "OnActionConfirmed");
-            if (send == null) { Plugin.Trace("[связка] отправлять нечем"); return; }
+            if (send == null) { Plugin.Trace("[combo] nothing to send with"); return; }
             _busy = true;
             try { send.Invoke(ctrl, new object[] { focus, null }); }
             finally { _busy = false; }
             Mark(cd);
-            Plugin.Trace("[связка] сосредоточенность ушла перед приёмом " + button.Id + " в раунде " + cd.RoundNum);
+            Plugin.Trace("[combo] focus sent before dodge " + button.Id + " in round " + cd.RoundNum);
         }
 
         private static string Why(ICombatData cd, IQuickButton focus, IQuickButton button)
         {
-            if (!QuickButtonHelper.CheckRoundType(focus, cd.RoundType)) return "не в этой фазе";
-            if (!focus.Enabled) return string.IsNullOrEmpty(focus.DisableCause) ? "недоступна" : focus.DisableCause;
-            if (!focus.CanActivate) return "уже нажата или перезаряжается";
+            if (!QuickButtonHelper.CheckRoundType(focus, cd.RoundType)) return "not in this phase";
+            if (!focus.Enabled) return string.IsNullOrEmpty(focus.DisableCause) ? "unavailable" : focus.DisableCause;
+            if (!focus.CanActivate) return "already pressed or on cooldown";
             var me = cd.MyCharacter;
             var ind = me != null ? me.Indicators : null;
             if (ind == null) return null;
-            if (focus.ManaCost + button.ManaCost > ind.CurrentMana) return "не хватает маны";
-            if (focus.ExpowerCost + button.ExpowerCost > ind.CurrentExpower) return "не хватает зарядов";
+            if (focus.ManaCost + button.ManaCost > ind.CurrentMana) return "not enough mana";
+            if (focus.ExpowerCost + button.ExpowerCost > ind.CurrentExpower) return "not enough charges";
             return null;
         }
 
@@ -195,7 +195,7 @@ namespace NewAgeQoL
         {
             if (!_on) return;
             _on = false;
-            Plugin.Trace("[связка] выключена: " + why);
+            Plugin.Trace("[combo] disabled: " + why);
         }
     }
 
@@ -226,7 +226,7 @@ namespace NewAgeQoL
         {
             if (!__runOriginal) return;
             try { Focus.Before(__instance, button); }
-            catch (Exception e) { Plugin.Trace("[связка] перед приёмом: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[combo] before dodge: " + e.Message); }
         }
     }
 
@@ -236,7 +236,7 @@ namespace NewAgeQoL
         private static void Postfix(CombatData __instance)
         {
             try { Focus.Round(__instance); }
-            catch (Exception e) { Plugin.Trace("[связка] новый раунд: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[combo] new round: " + e.Message); }
         }
     }
 }

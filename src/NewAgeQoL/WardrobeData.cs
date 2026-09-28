@@ -135,6 +135,7 @@ namespace NewAgeQoL
         internal static List<WardrobeRank> Ranks => _pack.Ranks;
         internal static List<WardrobeThing> Things => _pack.Things;
         internal static string Stamp => _pack.Stamp;
+        internal static bool Unnumbered => _pack.Things.Count > 0 && _pack.ById.Count < _pack.Things.Count / 2;
         internal static string Meta => _pack.Meta.ToString();
         internal static string Source = "";
         private static string _text;
@@ -142,6 +143,7 @@ namespace NewAgeQoL
         internal static string Error => _error;
 
         internal static string CacheFile => Path.Combine(Path.Combine(BepInEx.Paths.CachePath, "NewAgeQoL"), "wardrobe.txt");
+        internal static string ExtraFile => Path.Combine(Path.Combine(BepInEx.Paths.CachePath, "NewAgeQoL"), "wardrobe-extra.txt");
 
         internal static bool Ready()
         {
@@ -171,6 +173,119 @@ namespace NewAgeQoL
         {
             WardrobeThing thing;
             return _pack.ById.TryGetValue(id, out thing) ? thing : null;
+        }
+
+        internal static WardrobeThing Called(string name, int level, int rarity)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            string want = name.Trim();
+            WardrobeThing loose = null;
+            int count = 0;
+            foreach (var thing in _pack.Things)
+            {
+                if (thing.Art || thing.Name == null || !string.Equals(thing.Name.Trim(), want, StringComparison.OrdinalIgnoreCase)) continue;
+                if (level > 0 && thing.ItemLevel != level && thing.Level != level) continue;
+                if (thing.Rarity == rarity) return thing;
+                loose = thing;
+                count++;
+            }
+            return count == 1 ? loose : null;
+        }
+
+        internal static WardrobeThing FromGame(IGeneralThingInfoDescription about)
+        {
+            if (about == null) return null;
+            int level = about.Level ?? 0;
+            var thing = new WardrobeThing
+            {
+                Id = about.ThingId,
+                Sub = (int)about.ThingSubType,
+                Rarity = (int)about.Rarity,
+                Level = level,
+                ItemLevel = level,
+                Classes = about.PreferableClassMask ?? 0,
+                Name = string.IsNullOrEmpty(about.Name) ? "вещь " + about.ThingId : about.Name.Trim(),
+                Image = about.Image ?? ""
+            };
+            var add = about.AddedParams;
+            if (add != null)
+            {
+                thing.Bonus[0] = add.Strength ?? 0;
+                thing.Bonus[1] = add.Dexterity ?? 0;
+                thing.Bonus[2] = add.Constitution ?? 0;
+                thing.Bonus[3] = add.Intelligence ?? 0;
+                thing.Bonus[4] = add.Wisdom ?? 0;
+                thing.Bonus[5] = add.Luck ?? 0;
+                thing.Bonus[6] = add.Reaction ?? 0;
+                thing.Energy = add.AddStamina ?? 0;
+                thing.Magic[0] = add.WhiteMagicProtection ?? 0;
+                thing.Magic[1] = add.BlackMagicProtection ?? 0;
+                thing.Magic[2] = add.AstralMagicProtection ?? 0;
+                thing.DamageMin = add.MinDamage ?? 0;
+                thing.DamageMax = add.MaxDamage ?? 0;
+                thing.Range = add.Range ?? 0;
+                int armor = add.Armor ?? 0;
+                for (int p = 0; p < 5; p++) thing.Armor[p] = armor;
+            }
+            return thing;
+        }
+
+        internal static WardrobeThing Adopt(WardrobeThing thing)
+        {
+            if (thing == null || thing.Id <= 0) return thing;
+            WardrobeThing known;
+            if (_pack.ById.TryGetValue(thing.Id, out known)) return known;
+            _pack.Things.Add(thing);
+            _pack.ById[thing.Id] = thing;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(ExtraFile));
+                File.AppendAllText(ExtraFile, Line(thing) + "\n", new UTF8Encoding(false));
+            }
+            catch (Exception e) { Plugin.Trace("[wardrobe] item from the game not saved: " + e.Message); }
+            return thing;
+        }
+
+        private static string Line(WardrobeThing t)
+        {
+            return string.Join("\t", new[]
+            {
+                "I", t.Id.ToString(CultureInfo.InvariantCulture), t.Sub.ToString(CultureInfo.InvariantCulture),
+                t.Rarity.ToString(CultureInfo.InvariantCulture), t.Level.ToString(CultureInfo.InvariantCulture),
+                t.ItemLevel.ToString(CultureInfo.InvariantCulture), t.Classes.ToString(CultureInfo.InvariantCulture),
+                (t.Name ?? "").Replace('\t', ' '), (t.Image ?? "").Replace('\t', ' '),
+                Join(t.Req), Join(t.Bonus), t.Energy.ToString(CultureInfo.InvariantCulture), Join(t.Armor), Join(t.Magic),
+                t.DamageMin.ToString(CultureInfo.InvariantCulture) + "-" + t.DamageMax.ToString(CultureInfo.InvariantCulture),
+                t.Range.ToString(CultureInfo.InvariantCulture)
+            });
+        }
+
+        private static string Join(int[] values)
+        {
+            var parts = new string[values.Length];
+            for (int i = 0; i < values.Length; i++) parts[i] = values[i].ToString(CultureInfo.InvariantCulture);
+            return string.Join(",", parts);
+        }
+
+        private static int Extra(Pack pack)
+        {
+            int added = 0;
+            try
+            {
+                if (!File.Exists(ExtraFile)) return 0;
+                var scratch = new Pack();
+                foreach (var line in File.ReadAllLines(ExtraFile, Encoding.UTF8))
+                    if (line.StartsWith("I\t", StringComparison.Ordinal)) Parse(scratch, line);
+                foreach (var thing in scratch.Things)
+                {
+                    if (thing.Id <= 0 || pack.ById.ContainsKey(thing.Id)) continue;
+                    pack.Things.Add(thing);
+                    pack.ById[thing.Id] = thing;
+                    added++;
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[wardrobe] items from the game not read: " + e.Message); }
+            return added;
         }
 
         internal static WardrobeThing Named(string name, string image, int level)
@@ -347,10 +462,10 @@ namespace NewAgeQoL
                     string text = File.ReadAllText(CacheFile, Encoding.UTF8);
                     string when = File.GetLastWriteTime(CacheFile).ToString("dd.MM.yyyy");
                     if (Apply(text, "обновлены с сайта " + when)) return;
-                    Plugin.Warn("[переодевалка] кэш вещей битый, вещи скачаются заново");
+                    Plugin.Warn("[wardrobe] item cache is broken, items will be downloaded again");
                 }
             }
-            catch (Exception e) { Plugin.Warn("[переодевалка] кэш вещей не прочитан: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[wardrobe] item cache not read: " + e.Message); }
             try
             {
                 string rules = Rules();
@@ -364,7 +479,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 _error = "правила игры не прочитаны: " + e.Message;
-                Plugin.Fault("[переодевалка] " + _error);
+                Plugin.Fault("[wardrobe] " + _error);
             }
         }
 
@@ -392,13 +507,15 @@ namespace NewAgeQoL
             var pack = Read(text);
             if (pack.Races.Count == 0 || pack.Classes.Count == 0 || pack.Ranks.Count == 0 || pack.Things.Count < 500) return false;
             if (pack.ArtRules.Count == 0) Borrow(pack);
+            int extra = Extra(pack);
+            if (extra > 0) Plugin.Trace("[wardrobe] items from the game missing from the base: " + extra);
             _pack = pack;
             _error = null;
             _loaded = true;
             _text = text;
             Source = source;
-            Plugin.Trace("[переодевалка] данные " + pack.Stamp + " (" + source + "): рас " + pack.Races.Count
-                         + ", классов " + pack.Classes.Count + ", вещей " + pack.Things.Count);
+            Plugin.Trace("[wardrobe] data " + pack.Stamp + " (" + source + "): races " + pack.Races.Count
+                         + ", classes " + pack.Classes.Count + ", items " + pack.Things.Count);
             return true;
         }
 

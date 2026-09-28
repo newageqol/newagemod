@@ -85,7 +85,7 @@ internal static class Captions
         }
         catch (Exception ex)
         {
-            Plugin.Log.LogWarning("[подписи] порядок: " + ex.Message);
+            Plugin.Log.LogWarning("[captions] order: " + ex.Message);
         }
     }
 
@@ -118,7 +118,7 @@ internal static class Captions
             {
                 Logged[character.UserId] = doll.ViewLook;
                 var feet = location.CombatCamera.WorldToScreenPoint(doll.Feet + new Vector3(0f, lift, 0f));
-                Trace.Write($"«{(character is PlayerCharacter player ? player.Login : character.UserId.ToString())}» ник над головой: облик {Trace.Look(doll.ViewLook)}, голова {FrameCache.HeadPixels(doll.ViewLook):0} пикс. кадра, сдвиг от ног на экране {screen.x - feet.x:0} пикс., ноги x {feet.x:0}");
+                Trace.Write($"'{(character is PlayerCharacter player ? player.Login : character.UserId.ToString())}' nickname above head: look {Trace.Look(doll.ViewLook)}, head {FrameCache.HeadPixels(doll.ViewLook):0} frame px, offset from feet on screen {screen.x - feet.x:0} px, feet x {feet.x:0}");
             }
             float scale = Scale(__instance, character, doll.Feet, location.CombatCamera);
             screen.y += Fighters.Caption + Fighters.CaptionRaise * scale;
@@ -150,7 +150,7 @@ internal static class Captions
         if (Trace.On && Mathf.Abs(scale - board.Traced) > 0.1f)
         {
             board.Traced = scale;
-            Trace.Write($"«{(character is PlayerCharacter player ? player.Login : character.UserId.ToString())}» подписи над головой одного размера у всех, в размер сцены: шрифт {font:0.#} пикс. Flash = {font * pixel:0.#} пикс. экрана, масштаб ×{scale:0.00}");
+            Trace.Write($"'{(character is PlayerCharacter player ? player.Login : character.UserId.ToString())}' captions above heads same size for all, scaled to scene: font {font:0.#} Flash px = {font * pixel:0.#} screen px, scale ×{scale:0.00}");
         }
         return scale;
     }
@@ -217,7 +217,7 @@ internal static class Captions
         }
         board.Life = Label(display, login, "NewAge2D.Life", LifeColor);
         board.Mana = Label(display, login, "NewAge2D.Mana", ManaColor);
-        if (Trace.On) Trace.Write($"«{(display.Character is PlayerCharacter player ? player.Login : display.Character.UserId.ToString())}» над головой числа жизни и маны вместо полосок, как во Flash, выключено: {string.Join(", ", board.Muted.Select(graphic => graphic.name))}");
+        if (Trace.On) Trace.Write($"'{(display.Character is PlayerCharacter player ? player.Login : display.Character.UserId.ToString())}' HP and mana numbers above head instead of bars, as in Flash, disabled: {string.Join(", ", board.Muted.Select(graphic => graphic.name))}");
         return board;
     }
 

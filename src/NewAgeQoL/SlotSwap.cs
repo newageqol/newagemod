@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 Show(_weapons, Any(MainWeapons) || Any(SpareWeapons));
                 Show(_relics, Any(MainRelics) || Any(SpareRelics));
             }
-            catch (System.Exception e) { Plugin.Fault("[slots] окно снаряжения: " + e.Message); }
+            catch (System.Exception e) { Plugin.Fault("[slots] gear window: " + e.Message); }
         }
 
         internal static void LearnTabs(ThingTabInventoryResponseMessage content)
@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 }
 
                 Note("меняю " + what + "…", 6f);
-                Plugin.Trace("[slots] меняю " + what + ": надето " + dressed.Count + ", в запасе " + stash.Count);
+                Plugin.Trace("[slots] swapping " + what + ": worn " + dressed.Count + ", spare " + stash.Count);
                 _failed = null;
 
                 foreach (var piece in dressed) { if (_failed != null) break; yield return Strip(piece); }
@@ -214,7 +214,7 @@ namespace NewAgeQoL
 
             if (!reply.Success)
             {
-                Plugin.Warn("[slots] сервер отказал: " + reply.ErrorMessage);
+                Plugin.Warn("[slots] server refused: " + reply.ErrorMessage);
                 _failed = Said(reply.ErrorMessage);
                 return;
             }
@@ -232,12 +232,12 @@ namespace NewAgeQoL
                         Kind = change.SubType ?? 0,
                     };
                     if (piece != null && change.ThingId == piece.ThingId) piece.Id = change.InventoryId.Value;
-                    Plugin.Trace("[slots] слот " + slot + " ← вещь " + change.InventoryId);
+                    Plugin.Trace("[slots] slot " + slot + " ← item " + change.InventoryId);
                 }
                 else if (!change.IsDressed)
                 {
                     Held.Remove(slot);
-                    Plugin.Trace("[slots] слот " + slot + " опустел");
+                    Plugin.Trace("[slots] slot " + slot + " emptied");
                 }
             }
 
@@ -248,7 +248,7 @@ namespace NewAgeQoL
                 {
                     piece.Id = change.Id;
                     piece.Kind = change.SubType;
-                    Plugin.Trace("[slots] вещь " + change.ThingId + " в сумке под номером " + change.Id);
+                    Plugin.Trace("[slots] item " + change.ThingId + " in bag with id " + change.Id);
                 }
             }
         }
@@ -265,10 +265,10 @@ namespace NewAgeQoL
                 float t = 0f;
                 while (_reply == null && t < 0.8f) { yield return null; t += Time.unscaledDeltaTime; }
                 if (_reply != null) { Apply(piece); yield break; }
-                Plugin.Trace("[slots] молчание на " + action + " вещи " + piece.Id + " во вкладке " + tab);
+                Plugin.Trace("[slots] no reply to " + action + " of item " + piece.Id + " in tab " + tab);
             }
-            Plugin.Warn("[slots] сервер не принял " + action + ": вещь " + piece.Id
-                                   + " (предмет " + piece.ThingId + ", подтип " + piece.Kind + ")");
+            Plugin.Warn("[slots] server rejected " + action + ": item " + piece.Id
+                                   + " (thing " + piece.ThingId + ", subtype " + piece.Kind + ")");
             if (_failed == null) _failed = "сервер не ответил";
         }
 
@@ -310,7 +310,7 @@ namespace NewAgeQoL
                 });
                 _listening = true;
             }
-            catch (System.Exception e) { Plugin.Fault("[slots] слушатель ответов: " + e.Message); }
+            catch (System.Exception e) { Plugin.Fault("[slots] reply listener: " + e.Message); }
         }
 
         private static bool Send(int inventoryId, EThingActionButton action, int tab)
@@ -321,12 +321,12 @@ namespace NewAgeQoL
                 if (conn == null || !conn.IsConnected()) { Note("нет соединения", 3f); return false; }
                 conn.SendRequest(new ContextActionRequest(inventoryId, (int)action,
                                                           (int)EThingContextWindow.WINDOW_INVENTORY, tab, null));
-                Plugin.Trace("[slots] " + action + " вещь " + inventoryId + " вкладка " + tab);
+                Plugin.Trace("[slots] " + action + " item " + inventoryId + " tab " + tab);
                 return true;
             }
             catch (System.Exception e)
             {
-                Plugin.Fault("[slots] отправка: " + e.Message);
+                Plugin.Fault("[slots] send: " + e.Message);
                 Note("не вышло: " + e.Message, 4f);
                 return false;
             }
@@ -404,7 +404,7 @@ namespace NewAgeQoL
             button.interactable = true;
             button.onClick.AddListener(() =>
             {
-                Plugin.Trace("[slots] нажата кнопка " + name);
+                Plugin.Trace("[slots] button pressed " + name);
                 click();
             });
             return button;

@@ -87,9 +87,9 @@ namespace NewAgeQoL
                 Build();
                 Grow();
                 Refresh();
-                Plugin.Trace("[калькулятор ку] открыт: " + Describe());
+                Plugin.Trace("[ku calc] opened: " + Describe());
             }
-            catch (Exception e) { Plugin.Fault("[калькулятор ку] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[ku calc] window: " + e); Close(); }
         }
 
         internal static void Close()
@@ -690,7 +690,7 @@ namespace NewAgeQoL
         private void Update()
         {
             try { KuCalc.Tick(); }
-            catch (Exception e) { Plugin.Warn("[калькулятор ку] такт: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[ku calc] tick: " + e.Message); }
         }
     }
 }

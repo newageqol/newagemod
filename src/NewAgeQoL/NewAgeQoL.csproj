@@ -36,6 +36,10 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
@@ -116,6 +120,7 @@
     <EmbeddedResource Include="Sounds\*.wav" />
     <EmbeddedResource Include="Art\*.png" />
     <EmbeddedResource Include="Art\*.txt" />
+    <EmbeddedResource Include="Art\*.bundle" />
   </ItemGroup>
 
 </Project>

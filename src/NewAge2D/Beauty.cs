@@ -28,7 +28,7 @@ internal static class Beauty
         if (_applied == want) return;
         _applied = want;
         var eye = Camera.main;
-        Plugin.Log.LogInfo($"[красота] сглаживание ×{want} (у игры было ×{_original}), видеопамять {SystemInfo.graphicsMemorySize} МБ"
-            + (eye != null ? $", камера: {eye.actualRenderingPath}, MSAA {(eye.allowMSAA ? "разрешено" : "запрещено")}, HDR {(eye.allowHDR ? "да" : "нет")}" : ""));
+        Plugin.Log.LogInfo($"[beauty] antialiasing ×{want} (game had ×{_original}), video memory {SystemInfo.graphicsMemorySize} MB"
+            + (eye != null ? $", camera: {eye.actualRenderingPath}, MSAA {(eye.allowMSAA ? "allowed" : "disallowed")}, HDR {(eye.allowHDR ? "yes" : "no")}" : ""));
     }
 }

@@ -21,11 +21,11 @@ namespace NewAgeQoL
                 if (had && File.ReadAllText(file, Encoding.UTF8) == xml) return;
                 Directory.CreateDirectory(Folder);
                 File.WriteAllText(file, xml, new UTF8Encoding(false));
-                if (world) RouteLog.Note("карта участка " + id, "сохранил карту участка " + id);
-                else RouteLog.Note("карта локации " + id, "сохранил карту локации " + id);
-                if (had) Plugin.Trace("[дороги] карта " + (world ? "участка " : "локации ") + id + " изменилась, пересохранил");
+                if (world) RouteLog.Note("карта участка " + id, "saved map of area " + id);
+                else RouteLog.Note("карта локации " + id, "saved map of location " + id);
+                if (had) Plugin.Trace("[roads] map of " + (world ? "area " : "location ") + id + " changed, saved again");
             }
-            catch (Exception e) { Plugin.Trace("[дороги] карта: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[roads] map: " + e.Message); }
         }
     }
 }

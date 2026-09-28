@@ -44,7 +44,7 @@ namespace NewAgeQoL
                 Click = () =>
                 {
                     try { Spells.Menu(UserMenuController.ETabs.Inventory); }
-                    catch (System.Exception e) { Plugin.Warn("[кнопки] сумка: " + e.Message); }
+                    catch (System.Exception e) { Plugin.Warn("[buttons] bag: " + e.Message); }
                 },
             },
             new Entry
@@ -59,7 +59,7 @@ namespace NewAgeQoL
                 Click = () =>
                 {
                     try { Spectate.Exit(); }
-                    catch (System.Exception e) { Plugin.Warn("[кнопки] выход из просмотра: " + e.Message); }
+                    catch (System.Exception e) { Plugin.Warn("[buttons] leave spectate: " + e.Message); }
                 },
             },
             new Entry
@@ -93,7 +93,7 @@ namespace NewAgeQoL
                 Click = () =>
                 {
                     try { DependencyContainer.GetContainer()?.Resolve<DailyTasksWindowController>()?.OpenByButton(); }
-                    catch (System.Exception e) { Plugin.Warn("[кнопки] задания дня: " + e.Message); }
+                    catch (System.Exception e) { Plugin.Warn("[buttons] dailies: " + e.Message); }
                 },
             },
             new Entry
@@ -116,7 +116,7 @@ namespace NewAgeQoL
                 Click = () =>
                 {
                     try { DependencyContainer.GetContainer()?.Resolve<SetupDialogController>()?.ShowSetupDialog(); }
-                    catch (System.Exception e) { Plugin.Warn("[кнопки] настройки игры: " + e.Message); }
+                    catch (System.Exception e) { Plugin.Warn("[buttons] game settings: " + e.Message); }
                 },
             },
             new Entry
@@ -266,6 +266,7 @@ namespace NewAgeQoL
 
         internal static void Tick()
         {
+            Slide();
             TravelMenu.Hover();
             Workshop.Hover();
             Flashes();
@@ -362,7 +363,7 @@ namespace NewAgeQoL
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
             _deck = canvas;
-            Plugin.Trace("[buttons] свой холст кнопок, слой " + DeckHigh);
+            Plugin.Trace("[buttons] own button canvas, layer " + DeckHigh);
             return (RectTransform)go.transform;
         }
 
@@ -377,7 +378,11 @@ namespace NewAgeQoL
         private static float _shopHot;
         private static int _shopTurn;
 
-        internal static void WindowsMoved() => _shopHot = Time.unscaledTime + 2f;
+        internal static void WindowsMoved()
+        {
+            _shopHot = Time.unscaledTime + 2f;
+            _next = 0f;
+        }
 
         internal static bool WindowsHot => Time.unscaledTime < _shopHot;
 
@@ -393,6 +398,15 @@ namespace NewAgeQoL
                 {
                     if (now < _shopAt) return null;
                     _shopAt = now + 1f;
+                }
+                if (now < _shopHot)
+                {
+                    foreach (var type in ShopTypes)
+                    {
+                        _shop = Seen(type);
+                        if (_shop != null) break;
+                    }
+                    return _shop;
                 }
                 _shop = Seen(ShopTypes[_shopTurn]);
                 _shopTurn = (_shopTurn + 1) % ShopTypes.Length;
@@ -420,12 +434,165 @@ namespace NewAgeQoL
             return canvas != null && canvas.isActiveAndEnabled;
         }
 
+        private const float SlideTime = 0.28f;
+        private static RectTransform _slideLeft;
+        private static RectTransform _slideRight;
+        private static bool _wantAway;
+        private static float _away;
+
+        internal static float Away => _away;
+
+        private static RectTransform Slider(RectTransform parent, int which)
+        {
+            if (_deck == null || parent != (RectTransform)_deck.transform) return parent;
+            var had = which == 1 ? _slideRight : _slideLeft;
+            if (had != null) return had;
+            var rt = new GameObject(which == 1 ? "QoLSlideRight" : "QoLSlideLeft", typeof(RectTransform)).GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            if (which == 1) _slideRight = rt; else _slideLeft = rt;
+            return rt;
+        }
+
+        private static bool _told;
+        private static float _bareSince = -1f;
+        private static int _bareFrame = -1;
+        private static bool _bare;
+        private static CanvasGroup _deckGroup;
+
+        internal static bool Bare()
+        {
+            if (_bareFrame == Time.frameCount) return _bare;
+            _bareFrame = Time.frameCount;
+            _bare = true;
+            try
+            {
+                foreach (var cam in Camera.allCameras)
+                {
+                    if (cam.targetTexture != null || !cam.isActiveAndEnabled) continue;
+                    if (cam.clearFlags != CameraClearFlags.Skybox && cam.clearFlags != CameraClearFlags.SolidColor) continue;
+                    var r = cam.rect;
+                    if (r.width < 0.99f || r.height < 0.99f) continue;
+                    _bare = false;
+                    return false;
+                }
+            }
+            catch { _bare = false; }
+            return _bare;
+        }
+
+        private static void Cameras()
+        {
+            try
+            {
+                var line = new System.Text.StringBuilder();
+                foreach (var cam in Camera.allCameras)
+                    line.Append(" | ").Append(cam.name).Append(" clear ").Append(cam.clearFlags).Append(" depth ").Append(cam.depth)
+                        .Append(cam.targetTexture != null ? " to texture" : "").Append(" rect ").Append(cam.rect.width.ToString("0.00")).Append('x').Append(cam.rect.height.ToString("0.00"));
+                Plugin.Trace("[buttons] cameras when the window opened:" + (line.Length > 0 ? line.ToString() : " none") + ", screen bare " + Bare());
+            }
+            catch (System.Exception e) { Plugin.Trace("[buttons] cameras: " + e.Message); }
+        }
+
+        private static readonly System.Reflection.FieldInfo SnapshotCamera = HarmonyLib.AccessTools.Field(typeof(BackgroundScreenshotMaker), "_renderCamera");
+        private static Camera _borrowed;
+        private static Component _snap;
+        private static float _borrowUntil;
+
+        private static void GiveBack()
+        {
+            if (_borrowed == null || (Time.unscaledTime < _borrowUntil && _away < 1f && _snap != null)) return;
+            var cam = _borrowed;
+            _borrowed = null;
+            try
+            {
+                if (cam != null && SnapshotCamera?.GetValue(null) as Camera == cam && Object.FindObjectOfType<BackgroundScreenshotMaker>() != null)
+                    cam.gameObject.SetActive(false);
+            }
+            catch (System.Exception e) { Plugin.Trace("[buttons] camera back: " + e.Message); }
+        }
+
+        internal static void ScreenshotTaken(Component maker)
+        {
+            try
+            {
+                if (maker == null || _deck == null) return;
+                bool shop = false;
+                foreach (var type in ShopTypes)
+                    if (maker.GetComponentInChildren(type, true) != null || maker.GetComponentInParent(type) != null) { shop = true; break; }
+                if (!shop) return;
+                _snap = maker;
+                _wantAway = true;
+                _told = true;
+                WindowsMoved();
+                var cam = SnapshotCamera?.GetValue(null) as Camera;
+                if (cam != null && !cam.gameObject.activeSelf)
+                {
+                    cam.gameObject.SetActive(true);
+                    _borrowed = cam;
+                    _borrowUntil = Time.unscaledTime + 1.5f;
+                }
+                Plugin.Trace("[buttons] shop window took the scene snapshot, side buttons slide away" + (_borrowed != null ? " with the game camera kept on for the slide" : ""));
+            }
+            catch (System.Exception e) { Plugin.Trace("[buttons] snapshot: " + e.Message); }
+        }
+
+        private static void Veil(bool hide)
+        {
+            if (_deck == null) return;
+            if (_deckGroup == null) _deckGroup = _deck.GetComponent<CanvasGroup>() ?? _deck.gameObject.AddComponent<CanvasGroup>();
+            float e = _away * _away * (3f - 2f * _away);
+            float want = hide ? 0f : 1f - e;
+            if (_deckGroup.alpha != want) _deckGroup.alpha = want;
+        }
+
+        private static void Slide()
+        {
+            GiveBack();
+            float target = _wantAway ? 1f : 0f;
+            if (Mathf.Approximately(_away, target)) { Veil(false); _bareSince = -1f; return; }
+            if (_wantAway && Bare())
+            {
+                _away = 1f;
+                Veil(true);
+                if (!_told) { _told = true; Plugin.Trace("[buttons] game camera off under the window, side buttons hidden at once"); }
+                return;
+            }
+            if (Bare() && (_bareSince < 0f || Time.unscaledTime - _bareSince < 1.5f))
+            {
+                if (_bareSince < 0f) _bareSince = Time.unscaledTime;
+                Veil(true);
+                if (!_told) { _told = true; Plugin.Trace("[buttons] game camera off and window background not drawn yet, side buttons held still"); }
+                return;
+            }
+            Veil(false);
+            _away = Mathf.MoveTowards(_away, target, Time.unscaledDeltaTime / SlideTime);
+            float e = _away * _away * (3f - 2f * _away);
+            float half = _deck != null ? ((RectTransform)_deck.transform).rect.width * 0.5f : 960f;
+            if (_slideLeft != null && _panel != null) _slideLeft.anchoredPosition = new Vector2(e * Out(_panel, half), 0f);
+            if (_slideRight != null && _panelRight != null) _slideRight.anchoredPosition = new Vector2(e * Out(_panelRight, half), 0f);
+            if (_away <= 0f || _away >= 1f) Plugin.Trace("[buttons] side buttons " + (_away >= 1f ? "slid away under a window" : "slid back"));
+        }
+
+        private static float Out(RectTransform panel, float half)
+        {
+            float left = panel.anchoredPosition.x;
+            float right = left + panel.rect.width;
+            return left + right < 0f ? -(right + half + 20f) : half - left + 20f;
+        }
+
         private static void Layer()
         {
             if (_deck == null) return;
             int order = DeckHigh;
             var shop = Shopping();
-            if (shop != null)
+            if (shop == null && _snap != null && _snap.gameObject.activeInHierarchy) shop = _snap;
+            if (shop != null && !_wantAway) { _told = false; Cameras(); }
+            _wantAway = shop != null;
+            if (shop != null && _away >= 1f)
             {
                 var canvas = shop.GetComponentInParent<Canvas>();
                 var root = canvas != null ? canvas.rootCanvas : null;
@@ -434,7 +601,7 @@ namespace NewAgeQoL
             }
             if (_deck.sortingOrder == order) return;
             _deck.sortingOrder = order;
-            Plugin.Trace("[buttons] слой кнопок: " + order);
+            Plugin.Trace("[buttons] button layer: " + order);
         }
 
         private static int Side(Entry entry) => entry.Right ? 1 : 0;
@@ -450,7 +617,7 @@ namespace NewAgeQoL
             if (parent == null) return null;
 
             var go = new GameObject(which == 1 ? "QoLPanelRight" : "QoLPanel", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
+            go.transform.SetParent(Slider(parent, which), false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -920,7 +1087,7 @@ namespace NewAgeQoL
             if (Time.unscaledTime - _edgeAt < 0.5f) return null;
             _edgeAt = Time.unscaledTime;
             try { _edge = AtlasUtils.GetStateHighlightingSprite(EHighlightingType.Positive); }
-            catch (System.Exception e) { Plugin.Trace("[кнопки] рамка: " + e.Message); }
+            catch (System.Exception e) { Plugin.Trace("[buttons] frame: " + e.Message); }
             if (_edge != null && _edge.texture == null) _edge = null;
             return _edge;
         }
@@ -1142,9 +1309,9 @@ namespace NewAgeQoL
                 entry.Go = go;
                 go = null;
                 Layout();
-                Plugin.Trace("[buttons] " + entry.Name + " сторона " + side
-                                    + ", рамка " + (frame != null && frame.sprite != null ? frame.sprite.name : "нет")
-                                    + ", иконка " + (sprite != null ? sprite.name : "нет"));
+                Plugin.Trace("[buttons] " + entry.Name + " side " + side
+                                    + ", frame " + (frame != null && frame.sprite != null ? frame.sprite.name : "none")
+                                    + ", icon " + (sprite != null ? sprite.name : "none"));
             }
             catch (System.Exception e)
             {
@@ -1231,8 +1398,8 @@ namespace NewAgeQoL
         {
             try
             {
-                if (InCombat()) { Plugin.Trace("[кнопки] возврат в город из боя запрещён"); return; }
-                if (ClaimLocked()) { Plugin.Trace("[кнопки] возврат в город из заявки на бой запрещён"); return; }
+                if (InCombat()) { Plugin.Trace("[buttons] return to town from combat is not allowed"); return; }
+                if (ClaimLocked()) { Plugin.Trace("[buttons] return to town from a fight claim is not allowed"); return; }
                 Travel.Cancel("ты вернулся в город");
                 TownWalk.Go();
             }
@@ -1313,6 +1480,15 @@ namespace NewAgeQoL
                 return !IsScene(EUnityScene.Launch) && !IsScene(EUnityScene.CreateCharacter);
             }
             catch { return false; }
+        }
+    }
+
+    [HarmonyLib.HarmonyPatch(typeof(BackgroundScreenshotMaker), "Start")]
+    internal static class SideButtonsSnapshotPatch
+    {
+        private static void Postfix(BackgroundScreenshotMaker __instance)
+        {
+            SideButtons.ScreenshotTaken(__instance);
         }
     }
 }

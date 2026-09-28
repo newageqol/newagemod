@@ -70,7 +70,7 @@ namespace NewAgeQoL
                 QuestBoard.ReaskIfStale();
                 Fill();
             }
-            catch (Exception e) { Plugin.Fault("[задания] окно: " + e); Close(); }
+            catch (Exception e) { Plugin.Fault("[quests] window: " + e); Close(); }
         }
 
         internal static void Close()
@@ -88,7 +88,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[задания] закрытие: " + e.Message);
+                Plugin.Trace("[quests] closing: " + e.Message);
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
             _canvasGo = null;
@@ -129,7 +129,7 @@ namespace NewAgeQoL
                 _filledAt = Time.unscaledTime;
                 Fill();
             }
-            catch (Exception e) { Plugin.Trace("[задания] окно: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[quests] window: " + e.Message); }
         }
 
         private static void Reopen()
@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 QuestBoard.ReaskIfStale();
                 Fill();
             }
-            catch (Exception e) { Plugin.Trace("[задания] пересоздание: " + e.Message); Teardown(); }
+            catch (Exception e) { Plugin.Trace("[quests] rebuild: " + e.Message); Teardown(); }
         }
 
         private static void Build()

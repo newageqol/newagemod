@@ -40,8 +40,8 @@ namespace NewAgeQoL
             {
                 if (view == null || one == null || one.Id <= 0) return;
                 if (one.RoundTimeout > 0 && Kinds.Add(one.ClaimType) && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                    Plugin.Log?.LogInfo("[заявки] вид заявки " + one.ClaimType + " впервые: создатель " + one.LeaderLogin
-                        + ", игроков до " + one.MaxCount + ", раунд " + one.RoundTimeout + ", уровни " + one.MinLevel + "-" + one.MaxLevel);
+                    Plugin.Log?.LogInfo("[claims] claim type " + one.ClaimType + " first seen: creator " + one.LeaderLogin
+                        + ", players up to " + one.MaxCount + ", round " + one.RoundTimeout + ", levels " + one.MinLevel + "-" + one.MaxLevel);
                 if (one.Timeout <= 0) return;
                 for (int i = Live.Count - 1; i >= 0; i--)
                     if (Live[i].Id == one.Id) Live.RemoveAt(i);
@@ -53,7 +53,7 @@ namespace NewAgeQoL
                     Who = one.LeaderLogin,
                 });
             }
-            catch (Exception e) { Plugin.Trace("[заявки] запись: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[claims] record: " + e.Message); }
         }
 
         internal static void Tick()
@@ -74,10 +74,10 @@ namespace NewAgeQoL
                 try
                 {
                     one.View.RemoveWidgetById(one.Id);
-                    Plugin.Trace("[заявки] снял просроченную заявку " + one.Id
-                        + (string.IsNullOrEmpty(one.Who) ? "" : " от " + one.Who));
+                    Plugin.Trace("[claims] removed expired claim " + one.Id
+                        + (string.IsNullOrEmpty(one.Who) ? "" : " from " + one.Who));
                 }
-                catch (Exception e) { Plugin.Trace("[заявки] снятие " + one.Id + ": " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[claims] removal " + one.Id + ": " + e.Message); }
             }
         }
 
@@ -93,7 +93,7 @@ namespace NewAgeQoL
                 {
                     if (Count(view, one.Id) == 0) return true;
                     Note(view, one);
-                    Plugin.Trace("[заявки] заявка " + one.Id + " пришла повторно, вторую строку не добавляю");
+                    Plugin.Trace("[claims] claim " + one.Id + " arrived again, not adding a second row");
                     return false;
                 }
                 Remember(view, one.Id);
@@ -101,13 +101,13 @@ namespace NewAgeQoL
                 while (gone < 20 && view.RemoveWidgetById(one.Id)) gone++;
                 for (int i = Live.Count - 1; i >= 0; i--)
                     if (Live[i].Id == one.Id) Live.RemoveAt(i);
-                Plugin.Trace("[заявки] сервер снял заявку " + one.Id
-                    + (gone == 0 ? ", строки уже не было" : gone == 1 ? "" : ", убрано строк: " + gone));
+                Plugin.Trace("[claims] server removed claim " + one.Id
+                    + (gone == 0 ? ", row was already gone" : gone == 1 ? "" : ", rows removed: " + gone));
                 return false;
             }
             catch (Exception e)
             {
-                Plugin.Trace("[заявки] обновление: " + e.Message);
+                Plugin.Trace("[claims] update: " + e.Message);
                 return true;
             }
         }

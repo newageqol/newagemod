@@ -107,7 +107,7 @@ namespace NewAgeQoL
                 }
                 Note(cd, box);
             }
-            catch (Exception e) { Plugin.Trace("[подсветка] уборка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[highlight] cleanup: " + e.Message); }
         }
 
         private static void Bind(ICombatData cd)
@@ -127,7 +127,7 @@ namespace NewAgeQoL
             if (box == null && !_said)
             {
                 _said = true;
-                Plugin.Trace("[подсветка] списка выделений не видно");
+                Plugin.Trace("[highlight] selection list not found");
             }
             return box;
         }
@@ -149,7 +149,7 @@ namespace NewAgeQoL
             {
                 cd.ClearActionSelection();
                 cd.MakeCombatSelection();
-                Plugin.Trace("[подсветка] в фазе боя осталась зона ходьбы, своё выделение пересобрано");
+                Plugin.Trace("[highlight] walk zone left in combat phase, own selection rebuilt");
                 return;
             }
 
@@ -167,8 +167,8 @@ namespace NewAgeQoL
             if (Extra.Count == 0) return;
 
             foreach (int id in Extra) cd.ClearSelection(id);
-            Plugin.Trace("[подсветка] снято выделений, за которыми никто не стоит: " + Extra.Count
-                + (walking ? ", фаза ходьбы" : ", фаза боя"));
+            Plugin.Trace("[highlight] removed selections with no owner: " + Extra.Count
+                + (walking ? ", walk phase" : ", combat phase"));
         }
 
         private static int Aimed()
@@ -220,8 +220,8 @@ namespace NewAgeQoL
                 ring.X = spot.clientX;
                 ring.Y = spot.clientY;
                 if (fresh != 0) Kept.Add(fresh);
-                Plugin.Trace("[подсветка] круг вокруг бойца " + bot.UserId + " ушёл за ним в клетку "
-                    + spot.clientX + ";" + spot.clientY + (fresh == 0 ? ", заново не собрался" : ""));
+                Plugin.Trace("[highlight] circle around fighter " + bot.UserId + " followed it to cell "
+                    + spot.clientX + ";" + spot.clientY + (fresh == 0 ? ", was not rebuilt" : ""));
             }
 
             Lost.Clear();
@@ -235,7 +235,7 @@ namespace NewAgeQoL
             }
             if (Lost.Count == 0) return;
             foreach (int id in Lost) cd.ClearSelection(id);
-            Plugin.Trace("[подсветка] снято кругов без хозяина: " + Lost.Count);
+            Plugin.Trace("[highlight] removed ownerless circles: " + Lost.Count);
         }
 
         private static int Remake(ICombatData cd, BotCharacter bot, int id)
@@ -250,7 +250,7 @@ namespace NewAgeQoL
                     if (!_ringSaid)
                     {
                         _ringSaid = true;
-                        Plugin.Trace("[подсветка] круг заново не собрать: игра прячет сборку");
+                        Plugin.Trace("[highlight] circle cannot be rebuilt: game hides the builder");
                     }
                     return 0;
                 }
@@ -259,7 +259,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[подсветка] круг вокруг бойца " + bot.UserId + ": " + e.Message);
+                Plugin.Trace("[highlight] circle around fighter " + bot.UserId + ": " + e.Message);
                 return 0;
             }
         }
@@ -287,8 +287,8 @@ namespace NewAgeQoL
                 if (ReferenceEquals(pair.Value, picked) && Here(cd, pair.Value)) continue;
                 Stale.Add(ring);
                 UnityEngine.Object.Destroy(ring);
-                Plugin.Trace("[подсветка] снят кружок выделения без хозяина: боец "
-                    + (pair.Value != null ? pair.Value.UserId.ToString() : "?") + " в бою больше не выбран");
+                Plugin.Trace("[highlight] removed ownerless selection circle: fighter "
+                    + (pair.Value != null ? pair.Value.UserId.ToString() : "?") + " no longer selected in combat");
             }
             foreach (var ring in Stale) Marks.Remove(ring);
         }
@@ -327,7 +327,7 @@ namespace NewAgeQoL
             _miss = 0;
             cd.ClearActionSelection();
             cd.MakeWalkSelection();
-            Plugin.Trace("[подсветка] зона ходьбы пересчитана: было клеток " + Had.Count + ", можно дойти до " + Now.Count + ", дальность " + reach);
+            Plugin.Trace("[highlight] walk zone recalculated: cells were " + Had.Count + ", reachable " + Now.Count + ", range " + reach);
         }
 
         private static void Rub(ICombatData cd, Dictionary<int, GridSelection> box)
@@ -365,7 +365,7 @@ namespace NewAgeQoL
 
             Paint(cd, Fix.ToArray());
             _meshAt = 0f;
-            Plugin.Trace("[подсветка] возвращено к своему цвету клеток: " + Fix.Count);
+            Plugin.Trace("[highlight] cells restored to their color: " + Fix.Count);
         }
 
         private static void Canvas(ICombatData cd)
@@ -401,7 +401,7 @@ namespace NewAgeQoL
                 }
             if (redone == 0) return;
             mesh.SetColors(Paints);
-            Plugin.Trace("[подсветка] сетка расходилась с клетками, перекрашено клеток: " + redone);
+            Plugin.Trace("[highlight] grid diverged from cells, cells repainted: " + redone);
         }
 
         private static void Note(ICombatData cd, Dictionary<int, GridSelection> box)
@@ -411,8 +411,8 @@ namespace NewAgeQoL
             if (Time.unscaledTime - _phaseAt < Linger + 0.2f) return;
             _noted = true;
             var line = new StringBuilder();
-            line.Append("[подсветка] через секунду после начала фазы ").Append(cd.RoundType == RoundType.WALK_ROUND ? "ходьбы" : "боя")
-                .Append(": выделений ").Append(box.Count);
+            line.Append("[highlight] one second into the ").Append(cd.RoundType == RoundType.WALK_ROUND ? "walk" : "combat")
+                .Append(" phase: selections ").Append(box.Count);
             foreach (var pair in box)
             {
                 if (pair.Value == null) continue;
@@ -424,12 +424,12 @@ namespace NewAgeQoL
             if (cells != null)
                 foreach (var cell in cells)
                     if (cell != null && !Same(cell.CellColor, Blank)) tinted++;
-            line.Append(", закрашено клеток ").Append(tinted);
+            line.Append(", tinted cells ").Append(tinted);
             int grids = UnityEngine.Object.FindObjectsOfType<HexGrid>().Length;
-            if (grids != 1) line.Append(", сеток на сцене ").Append(grids);
+            if (grids != 1) line.Append(", grids in scene ").Append(grids);
             if (_gridField == null) _gridField = AccessTools.Field(typeof(HexGrid), "_combatData");
             if (_grid != null && !ReferenceEquals(_gridField != null ? _gridField.GetValue(_grid) : null, cd))
-                line.Append(", сетка слушает другие данные боя");
+                line.Append(", grid listens to other combat data");
             Plugin.Trace(line.ToString());
         }
 
@@ -437,15 +437,15 @@ namespace NewAgeQoL
         {
             if (Plugin.CfgVerbose == null || !Plugin.CfgVerbose.Value) return;
             var line = new StringBuilder();
-            line.Append("[подсветка] фаза ").Append(cd.RoundType == RoundType.WALK_ROUND ? "ходьбы" : "боя")
-                .Append(", раунд ").Append(cd.RoundNum)
-                .Append(", своё выделение ").Append(Own(cd))
-                .Append(", цвет ходьбы ").Append(Tone(cd.WalkSelectionColor))
-                .Append(", живых выделений ").Append(box.Count);
+            line.Append("[highlight] phase ").Append(cd.RoundType == RoundType.WALK_ROUND ? "walk" : "combat")
+                .Append(", round ").Append(cd.RoundNum)
+                .Append(", own selection ").Append(Own(cd))
+                .Append(", walk color ").Append(Tone(cd.WalkSelectionColor))
+                .Append(", live selections ").Append(box.Count);
             foreach (var pair in box)
             {
                 line.Append(" | ").Append(pair.Key).Append(':');
-                if (pair.Value == null) { line.Append("пусто"); continue; }
+                if (pair.Value == null) { line.Append("empty"); continue; }
                 line.Append(Tone(pair.Value.SelectionColor)).Append('×')
                     .Append(pair.Value.Cells == null ? 0 : pair.Value.Cells.Length);
             }
@@ -469,7 +469,7 @@ namespace NewAgeQoL
         {
             Bind(cd);
             var call = (_paintField != null ? _paintField.GetValue(cd) : null) as InvalidateCellsEventHandler;
-            if (call == null) { Plugin.Trace("[подсветка] перерисовку не вызвать"); return; }
+            if (call == null) { Plugin.Trace("[highlight] cannot trigger redraw"); return; }
             call(cells);
         }
 
@@ -498,7 +498,7 @@ namespace NewAgeQoL
         private static void Postfix(AbstractCharacter __instance)
         {
             try { WalkGlow.Mark(__instance); }
-            catch (Exception e) { Plugin.Trace("[подсветка] кружок выделения: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[highlight] selection circle: " + e.Message); }
         }
     }
 
@@ -528,13 +528,13 @@ namespace NewAgeQoL
         private static void Prefix()
         {
             try { WalkGlow.Phase(); }
-            catch (Exception e) { Plugin.Trace("[подсветка] начало фазы: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[highlight] phase start: " + e.Message); }
         }
 
         private static void Postfix()
         {
             try { WalkGlow.Soon(); }
-            catch (Exception e) { Plugin.Trace("[подсветка] новый раунд: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[highlight] new round: " + e.Message); }
         }
     }
 }

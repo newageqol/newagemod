@@ -46,7 +46,7 @@ namespace NewAgeQoL
                 if (MarketAirCenterPatch.Pending && Time.unscaledTime - MarketAirCenterPatch.PendingAt > 1f)
                     MarketAirCenterPatch.Pending = false;
             }
-            catch (Exception e) { Plugin.Fault("[рынок] " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[market] " + e.Message); }
         }
 
         private static void Listen()
@@ -103,7 +103,7 @@ namespace NewAgeQoL
                     });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[рынок] запятая в цене: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] comma in price: " + e.Message); }
         }
 
         internal static void Setup(PutOnMarketConfirmDialog dialog)
@@ -165,7 +165,7 @@ namespace NewAgeQoL
 
                 qty.OnValueChanged.AddListener(OnQuantityChanged);
             }
-            catch (Exception e) { Plugin.Warn("[рынок] поле лотов не добавлено: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[market] lots field not added: " + e.Message); }
         }
 
         private static IntegerInputField _field, _qty;
@@ -229,7 +229,7 @@ namespace NewAgeQoL
                     _remaining = _lots - 1;
                     _done = false;
                     Air("Рынок: выставляю лотов: " + _lots);
-                    Plugin.Trace("[рынок] лот 1/" + _lots + " ушёл, в очереди ещё " + _remaining);
+                    Plugin.Trace("[market] lot 1/" + _lots + " sent, still queued " + _remaining);
                     return;
                 }
 
@@ -249,10 +249,10 @@ namespace NewAgeQoL
                     }
                     _rDone = false;
                     Air("Рынок: снимаю лотов: " + _removeLots);
-                    Plugin.Trace("[рынок] снятие 1/" + _removeLots + ", в очереди ещё " + _rQueue.Count);
+                    Plugin.Trace("[market] removal 1/" + _removeLots + ", still queued " + _rQueue.Count);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[рынок] исходящий: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] outgoing: " + e.Message); }
         }
 
         private static void OnResult(object m)
@@ -267,7 +267,7 @@ namespace NewAgeQoL
             {
                 if (!resp.Success)
                 {
-                    Plugin.Trace("[рынок] сервер отказал, остановка: " + resp.ErrorMessage);
+                    Plugin.Trace("[market] server refused, stopping: " + resp.ErrorMessage);
                     _done = true;
                     _remaining = 0;
                     Refresh(WinPutOnMarket, _tab);
@@ -285,7 +285,7 @@ namespace NewAgeQoL
                         _done = true;
                         _remaining = 0;
                         Air("Рынок: вещи кончились, выставлено лотов: " + placed);
-                        Plugin.Trace("[рынок] запись " + _id + " опустела, остальные лоты не шлю");
+                        Plugin.Trace("[market] entry " + _id + " is empty, not sending the remaining lots");
                         Refresh(WinPutOnMarket, _tab);
                         return;
                     }
@@ -295,14 +295,14 @@ namespace NewAgeQoL
                         _ours = true;
                         var req = new ContextActionRequest(_id, PutOnMarket, WinPutOnMarket, _tab, _quantity, _talls, _gold, _single, 0);
                         NetworkConnection.Instance.SendRequest(req);
-                        Plugin.Trace("[рынок] лот " + (_lots - _remaining) + "/" + _lots + " ушёл");
+                        Plugin.Trace("[market] lot " + (_lots - _remaining) + "/" + _lots + " sent");
                     }
-                    catch (Exception e) { _ours = false; _done = true; _remaining = 0; Plugin.Fault("[рынок] отправка лота: " + e.Message); Refresh(WinPutOnMarket, _tab); }
+                    catch (Exception e) { _ours = false; _done = true; _remaining = 0; Plugin.Fault("[market] lot send: " + e.Message); Refresh(WinPutOnMarket, _tab); }
                     return;
                 }
                 _done = true;
                 Air("Рынок: выставлено лотов: " + _lots);
-                Plugin.Trace("[рынок] все " + _lots + " лотов выставлены");
+                Plugin.Trace("[market] all " + _lots + " lots listed");
                 Refresh(WinPutOnMarket, _tab);
                 return;
             }
@@ -311,7 +311,7 @@ namespace NewAgeQoL
             {
                 if (!resp.Success)
                 {
-                    Plugin.Trace("[рынок] снятие: сервер отказал, остановка: " + resp.ErrorMessage);
+                    Plugin.Trace("[market] removal: server refused, stopping: " + resp.ErrorMessage);
                     _rDone = true;
                     _rQueue.Clear();
                     Refresh(WinSellerOffers, _rTab);
@@ -325,14 +325,14 @@ namespace NewAgeQoL
                     {
                         _ours = true;
                         NetworkConnection.Instance.SendRequest(new ContextActionRequest(nextId, RemoveFromSale, WinSellerOffers, _rTab, null));
-                        Plugin.Trace("[рынок] снят лот, в очереди ещё " + _rQueue.Count);
+                        Plugin.Trace("[market] lot removed, still queued " + _rQueue.Count);
                     }
-                    catch (Exception e) { _ours = false; _rDone = true; _rQueue.Clear(); Plugin.Fault("[рынок] снятие лота: " + e.Message); Refresh(WinSellerOffers, _rTab); }
+                    catch (Exception e) { _ours = false; _rDone = true; _rQueue.Clear(); Plugin.Fault("[market] lot removal: " + e.Message); Refresh(WinSellerOffers, _rTab); }
                     return;
                 }
                 _rDone = true;
                 Air("Рынок: снято лотов: " + _removeLots);
-                Plugin.Trace("[рынок] снятие завершено");
+                Plugin.Trace("[market] removal finished");
                 Refresh(WinSellerOffers, _rTab);
             }
         }
@@ -347,7 +347,7 @@ namespace NewAgeQoL
                 AirMessageScript.ShowInformationNotification(text);
                 if (existing != null) Center(existing);
             }
-            catch (Exception e) { Plugin.Trace("[рынок] сообщение: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] message: " + e.Message); }
         }
 
         internal static void Center(AirMessageScript air)
@@ -377,7 +377,7 @@ namespace NewAgeQoL
         private static void Refresh(int window, int tab)
         {
             try { NetworkConnection.Instance.SendRequest(new GetTabContentRequest(tab, window)); }
-            catch (Exception e) { Plugin.Trace("[рынок] обновление вкладки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] tab refresh: " + e.Message); }
         }
 
         internal static void SetupRemove(ThingHintDialog dialog)
@@ -415,7 +415,7 @@ namespace NewAgeQoL
                 field.Initialize("Снять лотов", 1, cap, 1);
                 LayoutRebuilder.MarkLayoutForRebuild(qty.transform.parent as RectTransform);
             }
-            catch (Exception e) { Plugin.Warn("[рынок] поле снятия не добавлено: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[market] removal field not added: " + e.Message); }
         }
     }
 
@@ -462,7 +462,7 @@ namespace NewAgeQoL
                 }
                 fit.Show(text);
             }
-            catch (Exception e) { Plugin.Trace("[рынок] цена за 10, 50 и 100: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] price for 10, 50 and 100: " + e.Message); }
         }
 
         private static DialogPrice Price(MarketProposalListItemRowItemRenderer r, System.Reflection.FieldInfo field)
@@ -577,7 +577,7 @@ namespace NewAgeQoL
                 var layout = LayoutField != null ? LayoutField.GetValue(grid) as GridLayoutGroup : null;
                 if (layout != null) layout.cellSize = grid.ItemSize;
             }
-            catch (Exception e) { Plugin.Trace("[рынок] высота строк лотов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] lot row height: " + e.Message); }
         }
 
         private static void Postfix(MarketProposalListDialog __instance, MarketProposalListDialogParams dialogParams)
@@ -588,10 +588,13 @@ namespace NewAgeQoL
                 var height = HeightField != null ? HeightField.GetValue(__instance) as LayoutElement : null;
                 if (height == null) return;
                 int count = dialogParams.Proposals.Count;
-                height.preferredHeight = Mathf.Min(count, Seen) * (Usual + Extra);
-                Plugin.Trace("[рынок] строки лотов выше на " + Extra + " пикс. под цены за 10, 50 и 100 штук, лотов " + count);
+                var grid = GridField != null ? GridField.GetValue(__instance) as Grid<MarketProposalListItemDTO> : null;
+                var layout = grid != null && LayoutField != null ? LayoutField.GetValue(grid) as GridLayoutGroup : null;
+                float gap = layout != null ? layout.spacing.y : 0f;
+                height.preferredHeight = Mathf.Min(count, Seen) * (Usual + Extra + gap);
+                Plugin.Trace("[market] lot rows taller by " + Extra + " px for prices per 10, 50 and 100 pcs, lots " + count);
             }
-            catch (Exception e) { Plugin.Trace("[рынок] высота окна лотов: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[market] lot window height: " + e.Message); }
         }
     }
 
@@ -695,7 +698,7 @@ namespace NewAgeQoL
             Place(Packs, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(room, packsH));
             if (_told) return;
             _told = true;
-            Plugin.Trace("[рынок] лот: ник и цены за 10, 50 и 100 штук блоком по центру, места " + room + "×" + tall + " пикс., шрифт " + size + " из " + Biggest);
+            Plugin.Trace("[market] lot: nick and prices per 10, 50 and 100 pcs centered as a block, space " + room + "×" + tall + " px, font " + size + " of " + Biggest);
         }
     }
 

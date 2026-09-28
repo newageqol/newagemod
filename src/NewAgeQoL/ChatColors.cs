@@ -269,7 +269,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Fault("[цвета чата] окно выбора: " + e.Message);
+                Plugin.Fault("[chat colors] picker window: " + e.Message);
                 Close();
             }
         }

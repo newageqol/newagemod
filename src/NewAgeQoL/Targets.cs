@@ -16,7 +16,7 @@ namespace NewAgeQoL
                 if (cd == null || mine == null || cd.Characters == null) return;
 
                 var foes = Foes(cd, mine);
-                if (foes.Count == 0) { Plugin.Trace("[цели] врагов на поле нет"); return; }
+                if (foes.Count == 0) { Plugin.Trace("[targets] no enemies on the field"); return; }
 
                 int at = -1;
                 var now = cd.SelectedCharacter;
@@ -28,9 +28,9 @@ namespace NewAgeQoL
                 if (pick == now) return;
                 cd.SelectedCharacter = pick;
                 FighterHint.Ask(pick.UserId);
-                Plugin.Trace("[цели] " + (pick.Login ?? "?") + " id " + pick.UserId + ", до него " + Far(mine, pick) + ", всего врагов " + foes.Count);
+                Plugin.Trace("[targets] " + (pick.Login ?? "?") + " id " + pick.UserId + ", distance " + Far(mine, pick) + ", enemies total " + foes.Count);
             }
-            catch (Exception e) { Plugin.Warn("[цели] " + e); }
+            catch (Exception e) { Plugin.Warn("[targets] " + e); }
         }
 
         private static List<AbstractCharacter> Foes(ICombatData cd, AbstractCharacter mine)

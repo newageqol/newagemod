@@ -38,9 +38,9 @@ namespace NewAgeQoL
                 wrap.SetSiblingIndex(window.GetSiblingIndex());
                 window.SetParent(wrap, false);
                 wrap.localScale = new Vector3(k, k, 1f);
-                Plugin.Trace("[окна] " + root.name + " уменьшено до " + k);
+                Plugin.Trace("[windows] " + root.name + " scaled to " + k);
             }
-            catch (Exception e) { Plugin.Trace("[окна] уменьшение: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] scaling: " + e.Message); }
         }
 
         private const int High = 990;
@@ -64,12 +64,12 @@ namespace NewAgeQoL
                 if (helper == null) return;
                 if (_girl == null) _girl = AccessTools.Field(typeof(HelperBase), "WhoreWithASword");
                 var girl = _girl != null ? _girl.GetValue(helper) as Image : null;
-                if (girl == null) { Plugin.Trace("[окна] подсказка игры: картинки не видно"); return; }
+                if (girl == null) { Plugin.Trace("[windows] game hint: no picture found"); return; }
                 if (!girl.enabled) return;
                 girl.enabled = false;
-                Plugin.Trace("[окна] подсказка игры: картинка убрана, остался папирус");
+                Plugin.Trace("[windows] game hint: picture removed, papyrus kept");
             }
-            catch (Exception e) { Plugin.Trace("[окна] подсказка игры: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] game hint: " + e.Message); }
         }
 
         internal static void Raise(ConfirmActionDialog dialog)
@@ -96,7 +96,7 @@ namespace NewAgeQoL
                 if (k > 0.995f) return;
                 if (Mathf.Abs(rt.localScale.x - k) > 0.001f) rt.localScale = new Vector3(k, k, 1f);
             }
-            catch (Exception e) { Plugin.Trace("[окна] меню: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] menu: " + e.Message); }
         }
 
         private static void Menus()
@@ -155,9 +155,9 @@ namespace NewAgeQoL
                 if (gap.sqrMagnitude > 0.25f) rt.anchoredPosition += gap / unit;
                 if (_told) return;
                 _told = true;
-                Plugin.Trace("[окна] окно действия по центру, размер " + k + ", слой " + High);
+                Plugin.Trace("[windows] action window centered, scale " + k + ", layer " + High);
             }
-            catch (Exception e) { Plugin.Trace("[окна] окно действия: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] action window: " + e.Message); }
         }
     }
 
@@ -170,12 +170,12 @@ namespace NewAgeQoL
             {
                 if (__instance == null) return;
                 var scroll = __instance.GetComponentInChildren<ScrollRect>(true);
-                if (scroll == null) { Plugin.Trace("[окна] призыв: списка нет"); return; }
+                if (scroll == null) { Plugin.Trace("[windows] summon: no list"); return; }
                 var view = scroll.viewport != null ? scroll.viewport : scroll.transform as RectTransform;
                 if (view != null && view.GetComponent<RectMask2D>() == null && view.GetComponent<Mask>() == null)
                 {
                     view.gameObject.AddComponent<RectMask2D>();
-                    Plugin.Trace("[окна] призыв: список подрезан по окну");
+                    Plugin.Trace("[windows] summon: list clipped to window");
                 }
                 if (scroll.viewport == null) scroll.viewport = view;
                 scroll.vertical = true;
@@ -193,10 +193,10 @@ namespace NewAgeQoL
                     content.pivot = new Vector2(content.pivot.x, 1f);
                     LayoutRebuilder.ForceRebuildLayoutImmediate(content);
                     scroll.verticalNormalizedPosition = 1f;
-                    Plugin.Trace("[окна] призыв: строк " + content.childCount + ", высота " + content.rect.height.ToString("0"));
+                    Plugin.Trace("[windows] summon: rows " + content.childCount + ", height " + content.rect.height.ToString("0"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[окна] призыв: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[windows] summon: " + e.Message); }
         }
     }
 

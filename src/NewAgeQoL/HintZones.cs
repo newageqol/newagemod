@@ -29,7 +29,7 @@ namespace NewAgeQoL
         {
             On = !On;
             if (!On) Drop();
-            Plugin.Log?.LogInfo("[зоны] показ зон наведения " + (On ? "включён" : "выключен"));
+            Plugin.Log?.LogInfo("[zones] hover zone display " + (On ? "on" : "off"));
         }
 
         internal static void Tick()
@@ -63,7 +63,7 @@ namespace NewAgeQoL
 
                 if (!_canvasGo.activeSelf) _canvasGo.SetActive(true);
             }
-            catch (Exception e) { Plugin.Trace("[зоны] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[zones] " + e.Message); }
         }
 
         private static readonly Color Hot = new Color(0.35f, 1f, 0.45f);
@@ -181,7 +181,7 @@ namespace NewAgeQoL
             canvas.sortingOrder = Layer;
             _root = (RectTransform)_canvasGo.transform;
             Marks.Clear();
-            Plugin.Trace("[зоны] холст зон собран");
+            Plugin.Trace("[zones] zone canvas built");
         }
 
         private static void Drop()

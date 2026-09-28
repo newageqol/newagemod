@@ -70,19 +70,19 @@ internal static class SummonWarm
         if (!request.Left) real = Fighters.Mirror(real);
         float ppu = Field.PxPerUnit * request.Scale;
         int generation = FrameCache.Generation;
-        string who = "призыв " + request.Clip;
-        if (Trace.On) Trace.Write($"{who}: {label} облика {Trace.Look(look)} рисуется заранее, чтобы существо упало сразу после призыва");
+        string who = "summon " + request.Clip;
+        if (Trace.On) Trace.Write($"{who}: {label} of look {Trace.Look(look)} drawn in advance so the creature lands right after summoning");
         DollWorker.EnqueueSequence(request, real, 0, alive, result => MainThread.Post(() =>
         {
             if (FrameCache.Generation != generation) return;
             if (result.Error != null || result.Frames.Count == 0)
             {
                 FrameCache.EndSequence(sequence, false);
-                string why = result.Error ?? "нет кадров";
-                bool never = why.Contains("нет метки");
+                string why = result.Error ?? "no frames";
+                bool never = why.Contains("no label");
                 if (never) Empty.Add(sequence);
-                if (Trace.On) Trace.Write($"{who}: {label} облика {Trace.Look(look)} не нарисован: {why}"
-                    + (never ? ", больше не пробую" : ""));
+                if (Trace.On) Trace.Write($"{who}: {label} of look {Trace.Look(look)} not drawn: {why}"
+                    + (never ? ", not retrying" : ""));
                 return;
             }
             FrameCache.Remember(look, result.Labels, result.FrameRate);
@@ -106,9 +106,9 @@ internal static class SummonWarm
             if (!File.Exists(Saved)) return;
             foreach (string line in File.ReadAllLines(Saved))
                 if (int.TryParse(line.Trim(), out int race) && Fighters.ClipFor(race) != null) Races.Add(race);
-            if (Trace.On && Races.Count > 0) Trace.Write($"призыв: прошлые призывы игрока, рисуются заранее: расы {string.Join(", ", Races)}");
+            if (Trace.On && Races.Count > 0) Trace.Write($"summon: player's past summons, drawn in advance: races {string.Join(", ", Races)}");
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[призыв] список прошлых призывов: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[summon] past summons list: " + ex.Message); }
     }
 
     private static void Save()
@@ -118,6 +118,6 @@ internal static class SummonWarm
             Directory.CreateDirectory(Path.GetDirectoryName(Saved));
             File.WriteAllLines(Saved, Races.OrderBy(race => race).Select(race => race.ToString()));
         }
-        catch (Exception ex) { Plugin.Log.LogWarning("[призыв] список прошлых призывов: " + ex.Message); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[summon] past summons list: " + ex.Message); }
     }
 }

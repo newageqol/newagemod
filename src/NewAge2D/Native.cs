@@ -16,12 +16,12 @@ internal static class Native
             string path = Path.Combine(dir, "libSkiaSharp.dll");
             if (!File.Exists(path))
             {
-                log.LogError("нет файла " + path);
+                log.LogError("file missing " + path);
                 return;
             }
             var handle = LoadLibraryW(path);
-            if (handle == IntPtr.Zero) log.LogError($"libSkiaSharp.dll не загрузилась, код {Marshal.GetLastWin32Error()}");
-            else log.LogInfo("libSkiaSharp.dll загружена из " + dir);
+            if (handle == IntPtr.Zero) log.LogError($"libSkiaSharp.dll failed to load, code {Marshal.GetLastWin32Error()}");
+            else log.LogInfo("libSkiaSharp.dll loaded from " + dir);
         }
         catch (Exception ex)
         {

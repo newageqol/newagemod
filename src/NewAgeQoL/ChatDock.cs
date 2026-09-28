@@ -220,7 +220,7 @@ namespace NewAgeQoL
                 if (deep) { Watch(); Freshen(); Aim(SideButtons.InCombat(), false); ListAim(false); Paint(); More(); }
                 Bottom();
             }
-            catch (Exception e) { Plugin.Fault("[док] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Fault("[dock] " + e.Message); Drop(); }
         }
 
         private sealed class Posted
@@ -257,14 +257,14 @@ namespace NewAgeQoL
                 Sent.RemoveAt(at);
 
                 bool named = message.ReceiverId.HasValue && !string.IsNullOrEmpty(message.Receiver);
-                Plugin.Trace("[док] моё сообщение вернулось: тип " + message.Type
-                    + ", адресат " + (message.ReceiverId.HasValue ? message.ReceiverId.Value.ToString() : "нет")
-                    + " «" + (message.Receiver ?? "") + "»");
+                Plugin.Trace("[dock] my message came back: type " + message.Type
+                    + ", recipient " + (message.ReceiverId.HasValue ? message.ReceiverId.Value.ToString() : "none")
+                    + " '" + (message.Receiver ?? "") + "'");
                 if (named) return false;
-                Plugin.Trace("[док] адресата не видно — рисую пустые скобки");
+                Plugin.Trace("[dock] recipient not visible - drawing empty brackets");
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[док] адресат: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] recipient: " + e.Message); }
             return false;
         }
 
@@ -279,12 +279,12 @@ namespace NewAgeQoL
                 {
                     if (Twin(message))
                     {
-                        Plugin.Trace("[док] повтор сообщения после входа на карту от «" + (message.Sender ?? "?") + "» — пропускаю");
+                        Plugin.Trace("[dock] repeated message after entering the map from '" + (message.Sender ?? "?") + "' - skipping");
                         return;
                     }
                     if (Wiped.Contains(Key(message)))
                     {
-                        Plugin.Trace("[док] сервер прислал стёртое кнопкой сообщение от «" + (message.Sender ?? "?") + "» — не показываю");
+                        Plugin.Trace("[dock] server sent a message wiped by the button from '" + (message.Sender ?? "?") + "' - not showing");
                         return;
                     }
                 }
@@ -305,8 +305,8 @@ namespace NewAgeQoL
                 Trim();
                 _flushAt = Time.unscaledTime + 0.05f;
                 if (kind == EChatMessageType.MSG_TEAM && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                    Plugin.Trace("[док] командное сообщение от «" + (message.Sender ?? "?") + "» принято, открыта вкладка "
-                        + (_tab == 0 ? "«Чат»" : "«Системные»"));
+                    Plugin.Trace("[dock] team message from '" + (message.Sender ?? "?") + "' received, open tab "
+                        + (_tab == 0 ? "'Chat'" : "'System'"));
                 if (Loud(kind))
                 {
                     if (_tab == 0)
@@ -318,11 +318,11 @@ namespace NewAgeQoL
                     {
                         _unread = true;
                         TabMark();
-                        Plugin.Trace("[док] вкладка «Чат» помечена: сообщение пришло, а открыты «Системные»");
+                        Plugin.Trace("[dock] 'Chat' tab marked: a message arrived while 'System' is open");
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] сообщение: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] message: " + e.Message); }
         }
 
         internal static ChatContentHolder Board()
@@ -380,7 +380,7 @@ namespace NewAgeQoL
                 _seek = clean;
                 Sift();
             }
-            catch (Exception e) { Plugin.Trace("[док] поиск: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] search: " + e.Message); }
         }
 
         private static void SeekOpen()
@@ -394,8 +394,8 @@ namespace NewAgeQoL
                 if (show) _seekField.ActivateInputField();
             }
             SeekPaint();
-            Plugin.Trace(show ? "[док] поиск по системным строкам открыт, строк для поиска " + Sys.Count
-                              : "[док] поиск по системным строкам свёрнут");
+            Plugin.Trace(show ? "[dock] system line search opened, lines to search " + Sys.Count
+                              : "[dock] system line search collapsed");
         }
 
         private static void SeekPaint()
@@ -450,7 +450,7 @@ namespace NewAgeQoL
             Sys.Clear();
             Found.Clear();
             foreach (var message in kept) Log(message);
-            Plugin.Trace("[док] новый бой — прошлый боевой лог убран, начало нового оставлено: строк " + kept.Count);
+            Plugin.Trace("[dock] new fight - previous combat log removed, start of the new one kept: lines " + kept.Count);
         }
 
         internal static void Moved(int map, int type)
@@ -464,7 +464,7 @@ namespace NewAgeQoL
                     World.Clear();
                     World.AddRange(Line);
                     World.AddRange(Tail);
-                    Plugin.Trace("[док] бой с карты мира — чат карты " + _worldMap + " отложен до выхода: строк " + World.Count);
+                    Plugin.Trace("[dock] fight from the world map - chat of map " + _worldMap + " put aside until exit: lines " + World.Count);
                 }
                 Carry();
                 if (_stashed) _twinsUntil = Time.unscaledTime + 5f;
@@ -475,7 +475,7 @@ namespace NewAgeQoL
                 if (type == 2 && map == _worldMap) Unstash();
                 else
                 {
-                    Plugin.Trace("[док] после боя не та карта мира " + map + " (до боя " + _worldMap + ") — отложенный чат не нужен");
+                    Plugin.Trace("[dock] after the fight a different world map " + map + " (before the fight " + _worldMap + ") - deferred chat not needed");
                     Wiped.Clear();
                     Carry();
                 }
@@ -485,7 +485,7 @@ namespace NewAgeQoL
             else if (type == 2 && _mapType == 2 && map > 0 && map == _mapId)
             {
                 _twinsUntil = Time.unscaledTime + 5f;
-                Plugin.Trace("[док] снова карта мира " + map + " — общий чат оставляю");
+                Plugin.Trace("[dock] world map " + map + " again - keeping general chat");
             }
             else
             {
@@ -517,8 +517,8 @@ namespace NewAgeQoL
             Trim();
             _tailUntil = Time.unscaledTime + 2f;
             _twinsUntil = Time.unscaledTime + 5f;
-            Plugin.Trace("[док] вернулся из боя на карту " + _mapId + " — чат карты вернул: строк " + World.Count
-                + ", из боя оставил личных и прочих " + fresh.Count);
+            Plugin.Trace("[dock] returned from the fight to map " + _mapId + " - map chat restored: lines " + World.Count
+                + ", kept private and other lines from the fight " + fresh.Count);
         }
 
         private static bool Twin(ChatResponseMessage message)
@@ -570,7 +570,7 @@ namespace NewAgeQoL
                     if (!ChatStay.Held) _bottomAt = Time.unscaledTime + 0.4f;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] дописать ленту: " + e.Message); Fresh.Clear(); _redo = true; }
+            catch (Exception e) { Plugin.Trace("[dock] append to feed: " + e.Message); Fresh.Clear(); _redo = true; }
         }
 
         private static void Rebuild()
@@ -594,7 +594,7 @@ namespace NewAgeQoL
                     if (!ChatStay.Held) _bottomAt = Time.unscaledTime + 0.4f;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] пересборка ленты: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] feed rebuild: " + e.Message); }
         }
 
         private static void Pour(List<ChatResponseMessage> batch)
@@ -620,8 +620,8 @@ namespace NewAgeQoL
                 if (message != null && Kept((EChatMessageType)message.Type)) kept.Add(message);
             foreach (var message in Tail)
                 if (message != null && Kept((EChatMessageType)message.Type)) kept.Add(message);
-            Plugin.Trace("[док] смена локации: было строк " + (Line.Count + Tail.Count) + ", оставляю " + kept.Count
-                + ", в бою " + Battle.Content.Count);
+            Plugin.Trace("[dock] location change: lines were " + (Line.Count + Tail.Count) + ", keeping " + kept.Count
+                + ", in fight " + Battle.Content.Count);
             Line.Clear();
             Tail.Clear();
             Tail.AddRange(kept);
@@ -727,13 +727,13 @@ namespace NewAgeQoL
             _moreAt = Time.unscaledTime + 0.3f;
             _window = Mathf.Min(count, _window + Page);
             Redraw();
-            Plugin.Trace("[док] подгрузил строки выше: на экране " + _window + " из " + count);
+            Plugin.Trace("[dock] loaded lines above: on screen " + _window + " of " + count);
         }
 
         private static void Redraw()
         {
             try { AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null); }
-            catch (Exception e) { Plugin.Trace("[док] перерисовка ленты: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] feed redraw: " + e.Message); }
         }
 
         private static void Quiet(ChatContentHolder holder, Action fill)
@@ -780,7 +780,7 @@ namespace NewAgeQoL
                 if (tint != null) line = ChatLinks.Dress("<color=" + tint + ">" + line + "</color>");
                 field.SetValue(item, line);
             }
-            catch (Exception e) { Plugin.Trace("[док] цвет строки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] line color: " + e.Message); }
         }
 
         private static void Bottom()
@@ -794,10 +794,10 @@ namespace NewAgeQoL
                 {
                     _urgent = false;
                     ChatStay.Settle();
-                    Plugin.Trace("[док] личное или командное сообщение — прокрутил чат к нему");
+                    Plugin.Trace("[dock] private or team message - scrolled chat to it");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] прокрутка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] scroll: " + e.Message); }
         }
 
         internal static void Wipe()
@@ -808,7 +808,7 @@ namespace NewAgeQoL
                 WipeBoard();
                 if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
             }
-            catch (Exception e) { Plugin.Trace("[док] очистка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] clear: " + e.Message); }
         }
 
         private static void WipeOpen()
@@ -818,9 +818,9 @@ namespace NewAgeQoL
                 if (_tab == 1) WipeBoard();
                 else WipeTalk();
                 if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
-                Plugin.Trace("[док] очищена вкладка " + (_tab == 1 ? "«Системные»" : "«Чат»") + ", другая не тронута");
+                Plugin.Trace("[dock] cleared tab " + (_tab == 1 ? "'System'" : "'Chat'") + ", the other one untouched");
             }
-            catch (Exception e) { Plugin.Trace("[док] очистка вкладки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] tab clear: " + e.Message); }
         }
 
         private static void WipeTalk()
@@ -863,10 +863,10 @@ namespace NewAgeQoL
                 if (cw == null) return;
                 if (!cw.IsWindowOpened) cw.Open(null);
                 try { cw.ActiveTab = EChatTab.PRIVATE; }
-                catch (Exception e) { Plugin.Trace("[док] вкладка лички: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[dock] private tab: " + e.Message); }
                 cw.SetMessageRecipient(new UserContextMenuData(userId, login));
             }
-            catch (Exception e) { Plugin.Warn("[док] написать игроку: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[dock] write to player: " + e.Message); }
         }
 
         internal static void Recipient(int id, string login)
@@ -985,7 +985,7 @@ namespace NewAgeQoL
                 var slot = AccessTools.Field(typeof(ContextMenu), "_currentInstance");
                 if (slot != null) slot.SetValue(null, null);
             }
-            catch (Exception e) { Plugin.Trace("[док] закрыть меню: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] close menu: " + e.Message); }
         }
 
         private static void Probe()
@@ -997,7 +997,7 @@ namespace NewAgeQoL
                 if (!RectTransformUtility.RectangleContainsScreenPoint(irt, Input.mousePosition, null)) return;
                 _probeAt = Time.unscaledTime;
                 var system = EventSystem.current;
-                if (system == null) { Plugin.Trace("[док] клик по полю: нет EventSystem"); return; }
+                if (system == null) { Plugin.Trace("[dock] field click: no EventSystem"); return; }
                 var pointer = new PointerEventData(system) { position = Input.mousePosition };
                 var hits = new List<RaycastResult>();
                 system.RaycastAll(pointer, hits);
@@ -1008,7 +1008,7 @@ namespace NewAgeQoL
                     var canvas = go != null ? go.GetComponentInParent<Canvas>() : null;
                     told.Append(go != null ? go.name : "?").Append('@').Append(canvas != null ? canvas.rootCanvas.name + ":" + canvas.sortingOrder : "-").Append(' ');
                 }
-                Plugin.Trace("[док] клик по полю, под курсором: " + told);
+                Plugin.Trace("[dock] field click, under cursor: " + told);
                 return;
             }
             if (_probeAt > 0f && Time.unscaledTime - _probeAt > 0.2f)
@@ -1016,7 +1016,7 @@ namespace NewAgeQoL
                 _probeAt = -1f;
                 var system = EventSystem.current;
                 var picked = system != null ? system.currentSelectedGameObject : null;
-                Plugin.Trace("[док] после клика: фокус " + _input.isFocused + ", выбран " + (picked != null ? picked.name : "ничего")
+                Plugin.Trace("[dock] after click: focus " + _input.isFocused + ", selected " + (picked != null ? picked.name : "nothing")
                     + ", interactable " + _input.interactable);
             }
         }
@@ -1040,7 +1040,7 @@ namespace NewAgeQoL
                 _toName = "";
                 _emptyAt = Time.unscaledTime;
                 Chip();
-                Plugin.Trace("[док] адресат снят клавишей");
+                Plugin.Trace("[dock] recipient cleared by key");
             }
             if (_all)
             {
@@ -1065,7 +1065,7 @@ namespace NewAgeQoL
             if (shiftUp && _armed)
             {
                 _armed = false;
-                Plugin.Trace("[док] пробел и следом шифт");
+                Plugin.Trace("[dock] space followed by shift");
                 string now = _input.text ?? "";
                 if (_armedAt >= 0 && _armedAt < now.Length - 1 && now[_armedAt] == ' ')
                     _input.text = now.Remove(_armedAt, 1);
@@ -1123,7 +1123,7 @@ namespace NewAgeQoL
                 Chip();
                 Focus();
             }
-            catch (Exception e) { Plugin.Warn("[док] отправка: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[dock] send: " + e.Message); }
         }
 
         private static Canvas Sheet()
@@ -1161,40 +1161,7 @@ namespace NewAgeQoL
             Value(0, ind.CurrentLife, ind.MaxLife);
             Value(1, ind.CurrentMana, ind.MaxMana);
             Value(2, ind.CurrentStamina, ind.MaxStamina);
-            Value(3, ind.CurrentExpower, Remember(Mathf.Max(ind.MaxExpower, ind.CurrentExpower)));
-        }
-
-        private static int _seen;
-        private static string _seenFor = "";
-
-        private static int Remember(int now)
-        {
-            string who = "";
-            try { var info = Controllers.User?.UserInfo; if (info != null) who = info.Login ?? info.UserId.ToString(); } catch { }
-            if (who != _seenFor)
-            {
-                _seenFor = who;
-                _seen = 0;
-                foreach (var pair in (Plugin.CfgExpowerSeen != null ? Plugin.CfgExpowerSeen.Value : "").Split(';'))
-                {
-                    int at = pair.IndexOf('=');
-                    if (at <= 0 || pair.Substring(0, at) != who) continue;
-                    int.TryParse(pair.Substring(at + 1), out _seen);
-                }
-            }
-            if (now > _seen)
-            {
-                _seen = now;
-                if (Plugin.CfgExpowerSeen != null && who.Length > 0)
-                {
-                    var kept = new List<string>();
-                    foreach (var pair in Plugin.CfgExpowerSeen.Value.Split(';'))
-                        if (pair.Length > 0 && !pair.StartsWith(who + "=", StringComparison.Ordinal)) kept.Add(pair);
-                    kept.Add(who + "=" + now);
-                    Plugin.CfgExpowerSeen.Value = string.Join(";", kept.ToArray());
-                }
-            }
-            return Mathf.Max(_seen, 20);
+            Value(3, ind.CurrentExpower, Mathf.Max(ind.MaxExpower, ind.CurrentExpower));
         }
 
         private static void Clock()
@@ -1202,12 +1169,12 @@ namespace NewAgeQoL
             if (_clock == null) return;
             var at = Server();
             string now = at.HasValue ? at.Value.AddHours(3).ToString("HH:mm") : "--:--";
-            if (now != _shown) Plugin.Trace("[док] часы: " + now + ", метка " + (_clock.gameObject.activeInHierarchy ? "видна" : "скрыта")
-                + ", место " + _clock.rectTransform.anchoredPosition + " размер " + _clock.rectTransform.sizeDelta);
+            if (now != _shown) Plugin.Trace("[dock] clock: " + now + ", label " + (_clock.gameObject.activeInHierarchy ? "visible" : "hidden")
+                + ", position " + _clock.rectTransform.anchoredPosition + " size " + _clock.rectTransform.sizeDelta);
             if (at.HasValue && !_clockOk)
             {
                 _clockOk = true;
-                Plugin.Log?.LogInfo("[док] время сервера получено: " + at.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC");
+                Plugin.Log?.LogInfo("[dock] server time received: " + at.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC");
             }
             if (now == _shown) return;
             _shown = now;
@@ -1220,7 +1187,7 @@ namespace NewAgeQoL
         {
             if (why == _said) return;
             _said = why;
-            Plugin.Trace("[док] время сервера: " + why);
+            Plugin.Trace("[dock] server time: " + why);
         }
 
         private static DateTime? Server()
@@ -1228,11 +1195,11 @@ namespace NewAgeQoL
             try
             {
                 var time = DependencyContainer.GetContainer()?.Resolve<GameTime>();
-                if (time == null) { Once("часы игры не найдены"); return null; }
-                if (time.GetDifference() == 0L) { Once("сдвиг от сервера ещё не получен"); return null; }
+                if (time == null) { Once("game clock not found"); return null; }
+                if (time.GetDifference() == 0L) { Once("server offset not received yet"); return null; }
                 return time.CurrentServerUTCTime;
             }
-            catch (Exception e) { Plugin.Trace("[док] время сервера: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[dock] server time: " + e.Message); return null; }
         }
 
         internal static float CoverPixels
@@ -1259,7 +1226,7 @@ namespace NewAgeQoL
                 if (fallen != _fallen)
                 {
                     _fallen = fallen;
-                    if (fallen) Plugin.Trace("[док] свой боец мёртв или убран с поля, жизнь " + ind.CurrentLife + " не в счёт");
+                    if (fallen) Plugin.Trace("[dock] own fighter is dead or removed from the field, life " + ind.CurrentLife + " ignored");
                 }
                 int life = ind.CurrentLife + later.Life;
                 if (fallen && life > 0) life = 0;
@@ -1269,12 +1236,11 @@ namespace NewAgeQoL
                 var whole = Ind();
                 int top = whole != null ? whole.MaxExpower : 0;
                 if (top <= 0) top = ind.MaxExpower;
-                if (top <= 0) top = 20;
                 int expower = ind.CurrentExpower + later.Expower;
-                Value(3, expower, Remember(Mathf.Max(top, expower)));
+                Value(3, expower, Mathf.Max(top, expower));
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[док] показатели боя: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[dock] combat indicators: " + e.Message); return false; }
         }
 
         private const int ShroomFace = 16852;
@@ -1457,9 +1423,9 @@ namespace NewAgeQoL
                 var bottom = panel.GetComponentInChildren<BottomPanel>(true);
                 var go = bottom != null ? AccessTools.Field(typeof(BottomPanel), "returnButtonPanel")?.GetValue(bottom) as GameObject : null;
                 _back = go != null ? go.transform as RectTransform : null;
-                if (_back != null) Plugin.Trace("[док] панель кнопки возврата: " + _back.name);
+                if (_back != null) Plugin.Trace("[dock] return button panel: " + _back.name);
             }
-            catch (Exception e) { Plugin.Trace("[док] панель возврата: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] return panel: " + e.Message); }
             return _back;
         }
 
@@ -1487,7 +1453,7 @@ namespace NewAgeQoL
             if (count != _backCount)
             {
                 _backCount = count;
-                Plugin.Trace("[док] кнопок возврата в углу: " + count + ", прижимаю к краю всю группу");
+                Plugin.Trace("[dock] return buttons in the corner: " + count + ", pushing the whole group to the edge");
             }
             float edge = 8f * scale;
             float dx = Screen.width - edge - right;
@@ -1516,9 +1482,13 @@ namespace NewAgeQoL
                 var bottom = panel.GetComponentInChildren<BottomPanel>(true);
                 var go = bottom != null ? AccessTools.Field(typeof(BottomPanel), "buttonsPanel")?.GetValue(bottom) as GameObject : null;
                 _row = go != null ? go.transform as RectTransform : null;
-                if (_row != null) Plugin.Trace("[док] панель кнопок локации: " + _row.name);
+                if (_row != null)
+                {
+                    KeepRow(_row);
+                    Plugin.Trace("[dock] location buttons panel: " + _row.name);
+                }
             }
-            catch (Exception e) { Plugin.Trace("[док] панель кнопок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] buttons panel: " + e.Message); }
             return _row;
         }
 
@@ -1529,12 +1499,12 @@ namespace NewAgeQoL
         private static bool _rowKept;
         private static bool _rowTold;
 
-        private static void Tight(RectTransform row)
+        private static bool Tight(RectTransform row)
         {
             try
             {
                 var group = row.GetComponent<HorizontalOrVerticalLayoutGroup>();
-                if (group == null) { Pack(row); return; }
+                if (group == null) { Pack(row); return false; }
                 if (!ReferenceEquals(_rowGroup, group))
                 {
                     _rowGroup = group;
@@ -1556,22 +1526,24 @@ namespace NewAgeQoL
                     slack += kid.rect.width - (hi - lo);
                     seen++;
                 }
-                if (seen == 0) return;
+                if (seen == 0) return false;
 
                 float want = TightGap - slack / seen;
                 if (!_rowTold)
                 {
                     _rowTold = true;
-                    Plugin.Trace("[док] кнопки локации: " + seen + " шт, пустоты в слоте "
-                        + Mathf.RoundToInt(slack / seen) + ", промежуток " + Mathf.RoundToInt(group.spacing)
+                    Plugin.Trace("[dock] location buttons: " + seen + " pcs, empty space per slot "
+                        + Mathf.RoundToInt(slack / seen) + ", spacing " + Mathf.RoundToInt(group.spacing)
                         + " → " + Mathf.RoundToInt(want));
                 }
-                if (Mathf.Abs(group.spacing - want) > 1f) group.spacing = want;
+                bool changed = false;
+                if (Mathf.Abs(group.spacing - want) > 1f) { group.spacing = want; changed = true; }
                 int band = (int)group.childAlignment / 3;
                 var middle = (TextAnchor)(band * 3 + 1);
-                if (group.childAlignment != middle) group.childAlignment = middle;
+                if (group.childAlignment != middle) { group.childAlignment = middle; changed = true; }
+                return changed;
             }
-            catch (Exception e) { Plugin.Trace("[док] кнопки локации: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] location buttons: " + e.Message); return false; }
         }
 
         private static void Pack(RectTransform row)
@@ -1599,7 +1571,7 @@ namespace NewAgeQoL
                 }
                 x += hi - lo + TightGap;
             }
-            if (moved) Plugin.Trace("[док] кнопки локации сдвинуты вплотную");
+            if (moved) Plugin.Trace("[dock] location buttons moved close together");
         }
 
         private static bool Edges(RectTransform row, RectTransform kid, out float lo, out float hi)
@@ -1620,13 +1592,72 @@ namespace NewAgeQoL
             return hi > lo;
         }
 
+        private static bool _centerOn;
+        private static float _centerScale = 1f;
+        private static int _rowSig;
+
         private static void Center(RectTransform panel, float scale)
         {
+            _centerOn = true;
+            _centerScale = scale;
             var row = Row(panel);
             if (row == null) return;
-            Tight(row);
+            Recenter(row, scale);
+        }
+
+        private static void KeepRow(RectTransform row)
+        {
+            if (row != null && row.GetComponent<RowKeeper>() == null) row.gameObject.AddComponent<RowKeeper>();
+        }
+
+        internal static void ButtonAdded(BottomPanel bottom)
+        {
+            try
+            {
+                if (!_centerOn || bottom == null) return;
+                var go = AccessTools.Field(typeof(BottomPanel), "buttonsPanel")?.GetValue(bottom) as GameObject;
+                var row = go != null ? go.transform as RectTransform : null;
+                if (row == null) return;
+                if (_row != row) { _row = row; _rowSig = 0; }
+                KeepRow(row);
+                Recenter(row, _centerScale);
+            }
+            catch (Exception e) { Plugin.Trace("[dock] location button added: " + e.Message); }
+        }
+
+        internal sealed class RowKeeper : MonoBehaviour
+        {
+            private void LateUpdate()
+            {
+                if (!_centerOn || _row != transform) return;
+                try { Recenter(_row, _centerScale); }
+                catch (Exception e) { Plugin.Trace("[dock] location buttons each frame: " + e.Message); }
+            }
+        }
+
+        private static int Sig(RectTransform row)
+        {
+            int sig = 17;
+            for (int i = 0; i < row.childCount; i++)
+            {
+                var kid = row.GetChild(i);
+                if (kid.gameObject.activeSelf) sig = sig * 31 + kid.GetInstanceID();
+            }
+            return sig * 31 + Mathf.RoundToInt(row.rect.width);
+        }
+
+        private static void Recenter(RectTransform row, float scale)
+        {
+            int sig = Sig(row);
+            bool fresh = sig != _rowSig;
+            if (fresh)
+            {
+                _rowSig = sig;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(row);
+            }
+            if (Tight(row) || fresh) LayoutRebuilder.ForceRebuildLayoutImmediate(row);
             if (!Homes.ContainsKey(row)) Homes[row] = row.anchoredPosition;
-            var canvas = panel.GetComponentInParent<Canvas>();
+            var canvas = row.GetComponentInParent<Canvas>();
             var cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
             float left = float.MaxValue, right = float.MinValue;
             for (int i = 0; i < row.childCount; i++)
@@ -1647,6 +1678,8 @@ namespace NewAgeQoL
 
         private static void Uncenter()
         {
+            _centerOn = false;
+            _rowSig = 0;
             Vector2 home;
             if (_rowKept && _rowGroup != null)
             {
@@ -1725,7 +1758,7 @@ namespace NewAgeQoL
                 Unbind();
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
-            catch (Exception e) { Plugin.Trace("[док] снятие: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] teardown: " + e.Message); }
             _canvasGo = null;
             _canvas = null;
             _root = null;
@@ -1801,11 +1834,11 @@ namespace NewAgeQoL
                 Players(_root);
                 Show(_tab);
                 Chip();
-                Plugin.Trace("[док] панель собрана");
+                Plugin.Trace("[dock] panel built");
             }
             catch (Exception e)
             {
-                Plugin.Fault("[док] сборка панели: " + e.Message);
+                Plugin.Fault("[dock] panel build: " + e.Message);
                 Drop();
             }
         }
@@ -1958,7 +1991,7 @@ namespace NewAgeQoL
                     Draggable(_view);
                 }
             }
-            catch (Exception e) { Plugin.Fault("[док] окно чата: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[dock] chat window: " + e.Message); }
 
             _seekGo = Sieve(_viewRt);
             SeekShow(_tab == 1);
@@ -2157,7 +2190,7 @@ namespace NewAgeQoL
                 Bind(0);
                 if (_list > 0) Bind(_list);
             }
-            catch (Exception e) { Plugin.Warn("[док] список игроков: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[dock] player list: " + e.Message); }
             ListTabs(host);
         }
 
@@ -2216,7 +2249,7 @@ namespace NewAgeQoL
         {
             ListWrapper<UserRowInfoMessage> now = null;
             try { now = Fetch(kind); }
-            catch (Exception e) { Plugin.Trace("[док] список " + kind + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] list " + kind + ": " + e.Message); }
             var was = Lists[kind];
             if (was == now) return;
             if (was != null) was.OnChange -= ListHooks[kind];
@@ -2257,7 +2290,7 @@ namespace NewAgeQoL
                 int want = _list == 1 ? (int)EUserListType.PLAYER_LIST_CLAN : (int)EUserListType.PLAYER_LIST_ALIANCE;
                 if (m.Type == want) _listDue = Time.frameCount;
             }
-            catch (Exception e) { Plugin.Trace("[док] ответ 460: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] response 460: " + e.Message); }
         }
 
         private static void Freshen()
@@ -2280,7 +2313,7 @@ namespace NewAgeQoL
                 Refill();
                 Show(_tab);
             }
-            catch (Exception e) { Plugin.Trace("[док] пересборка списка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] list rebuild: " + e.Message); }
         }
 
         private const float RowScale = 0.72f;
@@ -2299,7 +2332,7 @@ namespace NewAgeQoL
                 at.x += 8f;
                 Soon(at);
             }
-            catch (Exception e) { Plugin.Trace("[док] меню по нику: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] nick menu: " + e.Message); }
         }
 
         private static void Nudge(GameObject row)
@@ -2362,7 +2395,7 @@ namespace NewAgeQoL
                 var skin = mrt.GetComponent<Image>();
                 if (skin != null && skin.sprite != null && skin.sprite.name != "round8")
                 {
-                    Plugin.Trace("[док] фон меню: " + skin.sprite.name + ", тип " + skin.type);
+                    Plugin.Trace("[dock] menu background: " + skin.sprite.name + ", type " + skin.type);
                     skin.sprite = OnlineWindow.Rounded(8);
                     skin.type = Image.Type.Sliced;
                 }
@@ -2372,7 +2405,7 @@ namespace NewAgeQoL
                     {
                         if (kin == null || kin == mrt) continue;
                         string mark = kin.name;
-                        told.Append("[сосед ").Append(mark).Append("] ");
+                        told.Append("[sibling ").Append(mark).Append("] ");
                         if (mark.IndexOf("arrow", StringComparison.OrdinalIgnoreCase) >= 0 || mark.IndexOf("pointer", StringComparison.OrdinalIgnoreCase) >= 0)
                             kin.gameObject.SetActive(false);
                     }
@@ -2389,10 +2422,10 @@ namespace NewAgeQoL
                         || tag.IndexOf("corner", StringComparison.OrdinalIgnoreCase) >= 0)
                         art.enabled = false;
                 }
-                Plugin.Trace("[док] части меню: " + told);
-                Plugin.Trace("[док] меню игрока: холст " + (canvas != null ? canvas.name + " порядок " + canvas.sortingOrder : "нет"));
+                Plugin.Trace("[dock] menu parts: " + told);
+                Plugin.Trace("[dock] player menu: canvas " + (canvas != null ? canvas.name + " order " + canvas.sortingOrder : "none"));
             }
-            catch (Exception e) { Plugin.Trace("[док] сдвиг меню: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] menu shift: " + e.Message); }
         }
 
         private const float RowHigh = 22f;
@@ -2467,7 +2500,7 @@ namespace NewAgeQoL
                 }
                 Watched.Sort((a, b) => string.Compare(a.Login, b.Login, StringComparison.CurrentCultureIgnoreCase));
             }
-            catch (Exception e) { Plugin.Trace("[док] состав боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] fight roster: " + e.Message); }
             return Watched;
         }
 
@@ -2537,11 +2570,11 @@ namespace NewAgeQoL
                             ContextMenu.ShowContextMenu(stage != null ? stage.gameObject : go, _resolver, item.Data, EContextMenuSide.Left);
                             Nudge(go);
                         }
-                        catch (Exception e) { Plugin.Trace("[док] меню игрока: " + e.Message); }
+                        catch (Exception e) { Plugin.Trace("[dock] player menu: " + e.Message); }
                     };
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] строки списка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] list rows: " + e.Message); }
         }
 
         private static readonly Color Clear = new Color(0f, 0f, 0f, 0f);
@@ -2560,7 +2593,7 @@ namespace NewAgeQoL
                 var level = AccessTools.Field(typeof(UserRowWidget), "LevelText")?.GetValue(widget) as Text;
                 if (level != null) level.color = WardrobeLook.Faint;
             }
-            catch (Exception e) { Plugin.Trace("[док] оформление строки игрока: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] player row styling: " + e.Message); }
         }
 
         private static void Draggable(ChatPanelContent view)
@@ -2569,7 +2602,7 @@ namespace NewAgeQoL
             {
                 var scroll = AccessTools.Field(typeof(ChatPanelContent), "ScrollRect")?.GetValue(view) as ScrollRect;
                 var bar = scroll != null ? scroll.verticalScrollbar : null;
-                if (bar == null) { Plugin.Trace("[док] ползунок чата не найден"); return; }
+                if (bar == null) { Plugin.Trace("[dock] chat scrollbar not found"); return; }
                 bar.interactable = true;
                 if (!bar.gameObject.activeSelf) bar.gameObject.SetActive(true);
                 foreach (var art in bar.GetComponentsInChildren<Image>(true))
@@ -2598,9 +2631,9 @@ namespace NewAgeQoL
                 tints.pressedColor = new Color(1.5f, 1.5f, 1.5f, 1f);
                 tints.selectedColor = Color.white;
                 bar.colors = tints;
-                Plugin.Trace("[док] ползунок чата: " + bar.name + ", ручка " + (bar.handleRect != null ? bar.handleRect.name : "нет"));
+                Plugin.Trace("[dock] chat scrollbar: " + bar.name + ", handle " + (bar.handleRect != null ? bar.handleRect.name : "none"));
             }
-            catch (Exception e) { Plugin.Trace("[док] ползунок чата: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] chat scrollbar: " + e.Message); }
         }
 
         private static void Smaller(ChatPanelContent view)
@@ -2614,7 +2647,7 @@ namespace NewAgeQoL
                 float now = (float)size.GetValue(body, null);
                 if (now > 1f) size.SetValue(body, Mathf.Max(9f, now * 0.6f), null);
             }
-            catch (Exception e) { Plugin.Trace("[док] шрифт чата: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] chat font: " + e.Message); }
         }
 
         private static void Clicked(IChatLinkData data)
@@ -2625,14 +2658,14 @@ namespace NewAgeQoL
                 if (player != null)
                 {
                     bool right = _asMenu || Input.GetMouseButton(1) || Input.GetMouseButtonUp(1);
-                    Plugin.Trace("[док] клик по нику " + player.Login + (right ? " правой" : " левой"));
+                    Plugin.Trace("[dock] click on nick " + player.Login + (right ? " right" : " left"));
                     if (right) { Menu(player.PlayerId, player.Login); return; }
                     Recipient(player.PlayerId, player.Login);
                     return;
                 }
                 if (data != null) data.Execute();
             }
-            catch (Exception e) { Plugin.Trace("[док] ссылка в чате: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] chat link: " + e.Message); }
         }
 
         private static bool _asMenu;
@@ -2654,7 +2687,7 @@ namespace NewAgeQoL
                 finally { _asMenu = false; }
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[док] меню по строке: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[dock] line menu: " + e.Message); return false; }
         }
 
         private static Sprite _capUp;
@@ -2782,7 +2815,7 @@ namespace NewAgeQoL
                 _tipGo.SetActive(true);
                 _tipGo.transform.SetAsLastSibling();
             }
-            catch (Exception e) { Plugin.Trace("[док] подсказка кнопки: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] button hint: " + e.Message); }
         }
 
         private static void HideTip()
@@ -2861,7 +2894,7 @@ namespace NewAgeQoL
             {
                 var click = data as PointerEventData;
                 if (click == null || click.button != PointerEventData.InputButton.Right || _to <= 0) return;
-                Plugin.Trace("[док] клик по адресату " + _toName + " правой");
+                Plugin.Trace("[dock] right click on recipient " + _toName);
                 Menu(_to, _toName);
             });
             trigger.triggers.Add(entry);
@@ -2903,7 +2936,7 @@ namespace NewAgeQoL
                 if (text == null || text.Trim().Length == 0) return;
                 _all = true;
             }
-            catch (Exception e) { Plugin.Trace("[док] конец ввода: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] end of input: " + e.Message); }
         }
 
         private static string Flat(string text)
@@ -2928,7 +2961,7 @@ namespace NewAgeQoL
                     return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[док] набор: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] typing: " + e.Message); }
         }
 
         private static GameObject Sieve(RectTransform host)
@@ -3014,13 +3047,19 @@ namespace NewAgeQoL
         }
     }
 
+    [HarmonyPatch(typeof(BottomPanel), "AddButton")]
+    public static class ChatDockBottomButtonPatch
+    {
+        private static void Postfix(BottomPanel __instance) => ChatDock.ButtonAdded(__instance);
+    }
+
     [HarmonyPatch(typeof(ChatController), "ChatMessageReceived")]
     public static class ChatDockFeedPatch
     {
         private static void Postfix(ChatResponseMessage message)
         {
             try { ChatDock.Feed(message); }
-            catch (Exception e) { Plugin.Trace("[док] приём: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] receive: " + e.Message); }
         }
     }
 
@@ -3030,7 +3069,7 @@ namespace NewAgeQoL
         private static void Postfix()
         {
             try { ChatDock.Wipe(); }
-            catch (Exception e) { Plugin.Trace("[док] сброс: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] reset: " + e.Message); }
         }
     }
 
@@ -3105,7 +3144,7 @@ namespace NewAgeQoL
                 foreach (var menu in UnityEngine.Object.FindObjectsOfType<ContextMenu>())
                     if (menu != null && menu != __instance) { slot.SetValue(null, menu); break; }
             }
-            catch (Exception e) { Plugin.Trace("[док] учёт меню: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] menu tracking: " + e.Message); }
         }
     }
 
@@ -3122,7 +3161,7 @@ namespace NewAgeQoL
                 ChatDock.NameMenu(__instance);
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[док] правый клик в чате: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[dock] right click in chat: " + e.Message); return true; }
         }
     }
 
@@ -3137,7 +3176,7 @@ namespace NewAgeQoL
                 __instance.MoveTextEnd(false);
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[док] выделение при фокусе: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[dock] selection on focus: " + e.Message); return true; }
         }
     }
 
@@ -3148,7 +3187,7 @@ namespace NewAgeQoL
         {
             string text;
             try { text = ChatDock.Lines(__instance); }
-            catch (Exception e) { Plugin.Trace("[док] строки на экране: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[dock] lines on screen: " + e.Message); return true; }
             if (text == null) return true;
             __result = text;
             return false;
@@ -3174,12 +3213,31 @@ namespace NewAgeQoL
                 var click = (Action<IChatLinkData>)Delegate.CreateDelegate(typeof(Action<IChatLinkData>), __instance, Fire);
                 made = new ChatContent(resp, click);
             }
-            catch (Exception e) { Plugin.Trace("[док] длинная лента: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[dock] long feed: " + e.Message); return true; }
             var lines = Lines(__instance);
             lines.Add(made);
             while (lines.Count > ChatDock.Keep) lines.RemoveAt(0);
             (Added?.GetValue(__instance) as Action)?.Invoke();
             return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(UserIndicators), "Assign")]
+    internal static class ChatDockChargesPatch
+    {
+        private static int _said = -1;
+
+        private static void Postfix(UserIndicators __instance, UserIndicatorsMessage message)
+        {
+            try
+            {
+                if (__instance == null || message == null || message.MaxCharges <= 0) return;
+                if (__instance.MaxExpower != message.MaxCharges) __instance.MaxExpower = message.MaxCharges;
+                if (_said == message.MaxCharges) return;
+                _said = message.MaxCharges;
+                Plugin.Trace("[dock] charge limit from server: " + message.MaxCharges + ", now " + message.CurrentCharges);
+            }
+            catch (Exception e) { Plugin.Trace("[dock] charge limit: " + e.Message); }
         }
     }
 
@@ -3202,7 +3260,7 @@ namespace NewAgeQoL
                 }
                 ChatDock.Moved(Number(head, "id"), Number(head, "mapType"));
             }
-            catch (Exception e) { Plugin.Trace("[док] смена локации: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[dock] location change: " + e.Message); }
         }
 
         private static int Number(string head, string name)

@@ -65,7 +65,7 @@ namespace NewAgeQoL
             _tricks = kind == Kind.Tricks;
             _things = kind == Kind.Things;
             _spells = kind == Kind.Spells;
-            _tag = _tricks ? "[приёмы]" : _things ? "[предметы]" : _spells ? "[магия]" : "[умения]";
+            _tag = _tricks ? "[dodges]" : _things ? "[things]" : _spells ? "[magic]" : "[skills]";
         }
 
         private bool Native => _tricks || _things || _spells;
@@ -99,7 +99,7 @@ namespace NewAgeQoL
                 one.Tap(skill);
                 return true;
             }
-            Plugin.Trace("[умения] по клавише не нашёл кнопку " + id);
+            Plugin.Trace("[skills] no button found for key " + id);
             return false;
         }
 
@@ -108,7 +108,7 @@ namespace NewAgeQoL
             var one = kind == "trick" ? Tricks : kind == "spell" ? Spells : kind == "skill" ? Abilities : null;
             if (one == null) return Use(id);
             var skill = one.Skill(id);
-            if (skill == null) { Plugin.Trace("[умения] по клавише нет кнопки " + kind + ":" + id); return false; }
+            if (skill == null) { Plugin.Trace("[skills] no button for key " + kind + ":" + id); return false; }
             one.Tap(skill);
             return true;
         }
@@ -265,7 +265,7 @@ namespace NewAgeQoL
                 Disarm();
                 Fire(skill);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " цель: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " target: " + e.Message); }
         }
 
         private static readonly Color Fits = new Color(0.2f, 1.3f, 0.25f, 1f);
@@ -302,7 +302,7 @@ namespace NewAgeQoL
             if (Time.unscaledTime < _padAt) return null;
             _padAt = Time.unscaledTime + 0.25f;
             try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-            catch (Exception e) { Plugin.Trace("[прицел] поле боя: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[aim] battlefield: " + e.Message); }
             return _pad;
         }
 
@@ -313,18 +313,18 @@ namespace NewAgeQoL
                 if (Time.unscaledTime < _rigAt) return null;
                 _rigAt = Time.unscaledTime + 0.25f;
                 try { _rig = UnityEngine.Object.FindObjectOfType<CameraControl>(); }
-                catch (Exception e) { Plugin.Trace("[прицел] камера: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[aim] camera: " + e.Message); }
                 if (_rig == null) return null;
             }
             if (!_gridAsked)
             {
                 _gridAsked = true;
                 _gridProp = AccessTools.Property(typeof(BaseUserInput), "gridTransform");
-                if (_gridProp == null) Plugin.Trace("[прицел] у игры нет gridTransform, клетку считаю только по полю боя");
+                if (_gridProp == null) Plugin.Trace("[aim] game has no gridTransform, computing hex from the battlefield only");
             }
             if (_gridProp == null) return null;
             try { return _gridProp.GetValue(_rig) as Transform; }
-            catch (Exception e) { Plugin.Trace("[прицел] сетка боя: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace("[aim] combat grid: " + e.Message); return null; }
         }
 
         internal static bool HexUnder(out OffsetCoord hex)
@@ -372,7 +372,7 @@ namespace NewAgeQoL
                     if (!_padSaid)
                     {
                         _padSaid = true;
-                        Plugin.Trace("[прицел] луч не задел поле боя, считаю клетку по плоскости");
+                        Plugin.Trace("[aim] ray missed the battlefield, computing hex from the plane");
                     }
                 }
 
@@ -382,7 +382,7 @@ namespace NewAgeQoL
                 hex = HexUtils.pixelToOffset(grid.InverseTransformPoint(ray.GetPoint(along)));
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[прицел] клетка под мышью: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace("[aim] hex under mouse: " + e.Message); return false; }
         }
 
         private void ClearCell()
@@ -390,7 +390,7 @@ namespace NewAgeQoL
             if (_cellPick != 0)
             {
                 try { var cd = FighterHint.Cd(); if (cd != null) cd.ClearSelection(_cellPick); }
-                catch (Exception e) { Plugin.Trace(_tag + " снять подсветку клетки: " + e.Message); }
+                catch (Exception e) { Plugin.Trace(_tag + " clear hex highlight: " + e.Message); }
                 _cellPick = 0;
             }
             _cellSet = false;
@@ -411,7 +411,7 @@ namespace NewAgeQoL
                 Ate();
                 cd.SelectedCharacter = target;
                 _first = target;
-                Plugin.Trace(_tag + " выбран боец " + target.Login + ", теперь клетка");
+                Plugin.Trace(_tag + " fighter " + target.Login + " picked, now the hex");
                 return;
             }
 
@@ -427,7 +427,7 @@ namespace NewAgeQoL
                 _cellSet = true;
                 var paint = fits ? Fits : Wrong;
                 try { _cellPick = cd.SetSelection(hex, 0, paint, true, true); }
-                catch (Exception e) { Plugin.Trace("[прицел] подсветка клетки: " + e.Message); }
+                catch (Exception e) { Plugin.Trace("[aim] hex highlight: " + e.Message); }
             }
             if (!Input.GetMouseButtonDown(0)) return;
             Ate();
@@ -447,9 +447,9 @@ namespace NewAgeQoL
                 var confirm = AccessTools.Method(typeof(CombatButtonsController), "OnActionConfirmed");
                 if (ctrl == null || confirm == null) return;
                 confirm.Invoke(ctrl, new object[] { skill, hex });
-                Plugin.Trace(_tag + " применяю " + skill.Id + " на клетку");
+                Plugin.Trace(_tag + " using " + skill.Id + " on hex");
             }
-            catch (Exception e) { Plugin.Warn(_tag + " применение на клетку " + skill.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " use on hex " + skill.Id + ": " + e.Message); }
         }
 
         private void Frame(AbstractCharacter target)
@@ -467,7 +467,7 @@ namespace NewAgeQoL
             _hexOk = fits;
             var paint = _hexOk ? Fits : Wrong;
             try { _hexPick = cd.SetSelection(spot, 0, paint, true, true); }
-            catch (Exception e) { Plugin.Trace(_tag + " клетка цели: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " target hex: " + e.Message); }
             Glow(target);
         }
 
@@ -511,7 +511,7 @@ namespace NewAgeQoL
                 float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
                 Tint(wave);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " подсветка модели: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " model highlight: " + e.Message); }
         }
 
         private void Tint(float wave)
@@ -533,7 +533,7 @@ namespace NewAgeQoL
                 skin.SetPropertyBlock(_paint);
                 _painted = skin;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " окраска модели: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " model tint: " + e.Message); }
         }
 
         private void Unglow()
@@ -541,7 +541,7 @@ namespace NewAgeQoL
             if (_painted != null)
             {
                 try { _painted.SetPropertyBlock(null); }
-                catch (Exception e) { Plugin.Trace(_tag + " вернуть материал бойца: " + e.Message); }
+                catch (Exception e) { Plugin.Trace(_tag + " restore fighter material: " + e.Message); }
                 _painted = null;
             }
             _lit = null;
@@ -570,7 +570,7 @@ namespace NewAgeQoL
                     {
                         _judgeAsked = true;
                         _judgeCall = AccessTools.Method(typeof(Spellbook), "GetValidator");
-                        if (_judgeCall == null) Plugin.Trace(_tag + " у книги нет GetValidator, проверку цели делает игра");
+                        if (_judgeCall == null) Plugin.Trace(_tag + " spellbook has no GetValidator, the game checks the target");
                     }
                     var spellJudge = _judgeCall != null ? _judgeCall.Invoke(book, null) as QuickButtonUsageValidator : null;
                     return spellJudge == null ? EQuickButtonValidationResult.Success : spellJudge.Validate(data, skill, hex);
@@ -582,7 +582,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace(_tag + " проверка цели: " + e.Message);
+                Plugin.Trace(_tag + " target check: " + e.Message);
                 return EQuickButtonValidationResult.Success;
             }
         }
@@ -594,9 +594,9 @@ namespace NewAgeQoL
                 string key = QuickButtonValidationResultExtension.GetValidationMessage(skill, verdict);
                 if (string.IsNullOrEmpty(key)) key = "combat.gui.combatbutton.disablecause.target_not_selected";
                 AirMessageScript.ShowErrorNotification(key);
-                Plugin.Trace(_tag + " цель не годится: " + verdict);
+                Plugin.Trace(_tag + " target not valid: " + verdict);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " отказ по цели: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " target refusal: " + e.Message); }
         }
 
         private void ClearHex()
@@ -608,7 +608,7 @@ namespace NewAgeQoL
                 var cd = FighterHint.Cd();
                 if (cd != null) cd.ClearSelection(_hexPick);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " снять клетку: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " clear hex: " + e.Message); }
             _hexPick = 0;
             _hexFor = 0;
         }
@@ -621,7 +621,7 @@ namespace NewAgeQoL
                 if (_cursor == null) _cursor = Crosshair();
                 if (_cursor != null) Cursor.SetCursor(_cursor, new Vector2(15f, 15f), CursorMode.Auto);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " курсор: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " cursor: " + e.Message); }
         }
 
         private Texture2D Crosshair()
@@ -678,9 +678,9 @@ namespace NewAgeQoL
                 var confirm = AccessTools.Method(typeof(CombatButtonsController), "OnActionConfirmed");
                 if (confirm == null) return;
                 confirm.Invoke(ctrl, new object[] { skill, null });
-                Plugin.Trace(_tag + " применяю " + skill.Id);
+                Plugin.Trace(_tag + " using " + skill.Id);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " применение " + skill.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " use " + skill.Id + ": " + e.Message); }
         }
 
         private IQuickButton Skill(int id)
@@ -691,7 +691,7 @@ namespace NewAgeQoL
                 var holder = Holder();
                 return holder == null ? null : holder.GetButton(id);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " умение " + id + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace(_tag + " skill " + id + ": " + e.Message); return null; }
         }
 
         private const float Narrowest = 22f;
@@ -763,11 +763,11 @@ namespace NewAgeQoL
                 }
                 if (field != null) return Convert.ToInt32(field.GetValue(spell));
                 if (_schoolProp.TryGetValue(type, out prop) && prop != null) return Convert.ToInt32(prop.GetValue(spell, null));
-                if (_schoolSaid.Add(type)) Plugin.Trace("[магия] у " + type.Name + " школы не видно, книга ляжет по номерам");
+                if (_schoolSaid.Add(type)) Plugin.Trace("[magic] " + type.Name + " has no visible school, book will be ordered by id");
             }
             catch (Exception e)
             {
-                if (_schoolSaid.Add(type)) Plugin.Trace("[магия] школа у " + type.Name + " не читается: " + e.Message);
+                if (_schoolSaid.Add(type)) Plugin.Trace("[magic] school of " + type.Name + " is unreadable: " + e.Message);
             }
             return 0;
         }
@@ -925,7 +925,7 @@ namespace NewAgeQoL
             if (_page == was) return;
             Sig.Clear();
             _pollAt = 0f;
-            Plugin.Trace(_tag + " прокрутка: с " + (_page + 1) + " из " + _total);
+            Plugin.Trace(_tag + " scroll: from " + (_page + 1) + " of " + _total);
         }
 
         private void Stop()
@@ -989,11 +989,11 @@ namespace NewAgeQoL
                 if (_hidden != null) return;
                 _ctrl = null;
                 var button = FromController() ?? FromContainer();
-                if (button == null) { Plugin.Trace(_tag + " кнопка умений не найдена"); return; }
+                if (button == null) { Plugin.Trace(_tag + " skills button not found"); return; }
                 _hidden = button.gameObject;
-                Plugin.Trace(_tag + " кнопка спрятана: " + button.name);
+                Plugin.Trace(_tag + " button hidden: " + button.name);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " источник: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " source: " + e.Message); }
         }
 
         private QuickButtonStateHolder Holder()
@@ -1062,7 +1062,7 @@ namespace NewAgeQoL
                 _ctrl = ctrl;
                 return AccessTools.Property(typeof(CombatButtonsController), Key)?.GetValue(ctrl) as Component;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " контроллер боя: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace(_tag + " combat controller: " + e.Message); return null; }
         }
 
         private Component FromContainer()
@@ -1074,7 +1074,7 @@ namespace NewAgeQoL
                 if (_spells) return box.Resolve<ComplexSectorButtonSelector>(Key);
                 return box.Resolve<SimpleSectorButtonSelector>(Key);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " кнопка " + Key + " из контейнера: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Trace(_tag + " button " + Key + " from container: " + e.Message); return null; }
         }
 
         internal static void Veil(GameObject go, bool hide)
@@ -1148,7 +1148,7 @@ namespace NewAgeQoL
         private void Repaint()
         {
             try { if (_cells != null) Paint(Shown()); }
-            catch (Exception e) { Plugin.Trace(_tag + " перерисовка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " redraw: " + e.Message); }
         }
 
         private List<IQuickButton> Shown()
@@ -1283,9 +1283,9 @@ namespace NewAgeQoL
                 var cd = FighterHint.Cd();
                 _overFight = cd;
                 _overRound = cd != null ? cd.RoundNum : -1;
-                Plugin.Trace("[умения] фаза сдана в раунде " + _overRound + ", кнопки остаются живыми");
+                Plugin.Trace("[skills] phase ended in round " + _overRound + ", buttons stay active");
             }
-            catch (Exception e) { Plugin.Trace("[умения] конец фазы: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[skills] phase end: " + e.Message); }
         }
 
         private static bool Over()
@@ -1315,6 +1315,7 @@ namespace NewAgeQoL
             if (Used.TryGetValue(skill.Id, out used) && Time.unscaledTime - used < (_tricks ? 0f : _things ? 0.08f : 0.15f)) return Sending;
             var cd = FighterHint.Cd();
             bool late = Late;
+            if (Strike.Calculating) return "идёт расчёт раунда";
             if (!late && cd != null && cd.RoundType != RoundType.WALK_ROUND && cd.RoundType != RoundType.COMBAT_ROUND) return "идёт расчёт раунда";
             if (cd != null && !QuickButtonHelper.CheckRoundType(skill, cd.RoundType)) return OffPhase;
             if (!skill.Enabled && !late) return string.IsNullOrEmpty(skill.DisableCause) ? "недоступно" : skill.DisableCause;
@@ -1378,7 +1379,7 @@ namespace NewAgeQoL
                 nc.AddMessageListener(409, OnEffect);
                 _listening = true;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " слушатель подсказок: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " hint listener: " + e.Message); }
         }
 
         private void OnHint(object message)
@@ -1398,17 +1399,17 @@ namespace NewAgeQoL
                     int items = effect.ActionEffectItems != null ? effect.ActionEffectItems.Count : 0;
                     int texts = effect.TextItems != null ? effect.TextItems.Count : 0;
                     if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                        Plugin.Trace(_tag + " подсказка " + id + ": эффектов " + items + ", строк " + texts
+                        Plugin.Trace(_tag + " hint " + id + ": effects " + items + ", lines " + texts
                             + (texts > 0 ? " [" + string.Join(" | ", effect.TextItems.ToArray()) + "]" : "")
-                            + ", итог: " + made);
+                            + ", result: " + made);
                     if (items == 0 && texts > 0 && made.IndexOf(effect.TextItems[0], StringComparison.Ordinal) < 0)
                         made = made + "\n" + string.Join(", ", effect.TextItems.ToArray());
                 }
-                else Plugin.Trace(_tag + " подсказка " + id + ": эффекта нет, итог: " + made);
+                else Plugin.Trace(_tag + " hint " + id + ": no effect, result: " + made);
                 Told[id] = made;
                 if (_tipFor == id) Fill(id);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " описание: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " description: " + e.Message); }
         }
 
         private EHintType HintKind => _things ? EHintType.THING : _tricks ? EHintType.DODGE : _spells ? EHintType.SPELL : EHintType.SKILL;
@@ -1457,7 +1458,7 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc != null && nc.IsConnected()) nc.SendRequest(new GetActionEffectDescriptionRequest(skill.QuickButtonType, id, who));
             }
-            catch (Exception e) { Plugin.Trace(_tag + " запрос эффекта " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " effect request " + id + ": " + e.Message); }
         }
 
         private void OnEffect(object message)
@@ -1473,10 +1474,10 @@ namespace NewAgeQoL
                 string made = DynamicHintHelper.PrepareActionDescription(raw, answer.ActionEffectMessage);
                 if (string.IsNullOrEmpty(made)) return;
                 Firm[answer.ButtonId] = made;
-                Plugin.Trace(_tag + " эффект " + answer.ButtonId + " по цели " + answer.TargetId + ": " + made);
+                Plugin.Trace(_tag + " effect " + answer.ButtonId + " on target " + answer.TargetId + ": " + made);
                 if (_tipFor == answer.ButtonId) Fill(answer.ButtonId);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " эффект: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " effect: " + e.Message); }
         }
 
         private void AskTold(int id)
@@ -1488,7 +1489,7 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc != null && nc.IsConnected()) nc.SendRequest(new DynamicHintRequest(HintKind, id, 0));
             }
-            catch (Exception e) { Plugin.Trace(_tag + " запрос описания " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " description request " + id + ": " + e.Message); }
         }
 
         private string Phase(int phase)
@@ -1548,7 +1549,7 @@ namespace NewAgeQoL
                     Inside(trt, root);
                 }
             }
-            catch (Exception e) { Plugin.Trace(_tag + " подсказка " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " hint " + id + ": " + e.Message); }
         }
 
         private static void Inside(RectTransform tip, RectTransform root)
@@ -1570,7 +1571,7 @@ namespace NewAgeQoL
                 if (low < floor) low = floor;
                 tip.anchoredPosition = new Vector2(left + size.x * tip.pivot.x, low + size.y * tip.pivot.y);
             }
-            catch (Exception e) { Plugin.Trace("[подсказка] место: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hint] position: " + e.Message); }
         }
 
         internal static string Spoken(string text)
@@ -1701,14 +1702,14 @@ namespace NewAgeQoL
             {
                 if (skill == null) return;
                 string why = Why(skill);
-                if (!Soft(why)) { Plugin.Trace(_tag + " по выделенному нельзя: " + why); return; }
+                if (!Soft(why)) { Plugin.Trace(_tag + " not allowed on selected: " + why); return; }
                 var cd = FighterHint.Cd();
                 var chosen = cd != null ? cd.SelectedCharacter : null;
                 if (chosen == null || chosen.UserId == 0)
                 {
                     try { AirMessageScript.ShowErrorNotification("combat.gui.combatbutton.disablecause.target_not_selected"); }
-                    catch (Exception e) { Plugin.Trace(_tag + " сообщение о цели: " + e.Message); }
-                    Plugin.Trace(_tag + " двойной клик: выделенного бойца нет");
+                    catch (Exception e) { Plugin.Trace(_tag + " target message: " + e.Message); }
+                    Plugin.Trace(_tag + " double click: no fighter selected");
                     return;
                 }
                 bool cell = TargetTypeExtension.IsActionHasCellTarget(skill);
@@ -1717,11 +1718,11 @@ namespace NewAgeQoL
                 if (Broke(verdict)) { Disarm(); if (!Topup(skill, verdict)) Hand(skill); return; }
                 if (verdict != EQuickButtonValidationResult.Success) { Refuse(skill, verdict); return; }
                 Disarm();
-                Plugin.Trace(_tag + " двойной клик по выделенному " + chosen.UserId + (cell ? ", по его клетке" : ""));
+                Plugin.Trace(_tag + " double click on selected " + chosen.UserId + (cell ? ", on its hex" : ""));
                 if (cell) FireAt(skill, hex);
                 else Fire(skill);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " двойной клик: " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " double click: " + e.Message); }
         }
 
         private bool Focused(IQuickButton skill)
@@ -1742,13 +1743,13 @@ namespace NewAgeQoL
                 bool twice = Twice(skill.Id);
                 bool single = Single(skill);
                 if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                    Plugin.Trace(_tag + " клавиша " + skill.Id + (twice ? ", второе нажатие" : ", первое нажатие")
-                        + ", цель " + skill.Target + ", по выделенному " + single
-                        + ", наведено " + (_armed != null ? _armed.Id.ToString() : "нет"));
+                    Plugin.Trace(_tag + " key " + skill.Id + (twice ? ", second press" : ", first press")
+                        + ", target " + skill.Target + ", on selected " + single
+                        + ", armed " + (_armed != null ? _armed.Id.ToString() : "none"));
                 if (twice && single) { AtChosen(skill); return; }
                 Pick(skill);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " нажатие " + skill.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " press " + skill.Id + ": " + e.Message); }
         }
 
         private void Pick(IQuickButton skill)
@@ -1768,11 +1769,11 @@ namespace NewAgeQoL
                     if (chosen == null || chosen.UserId == 0)
                     {
                         try { AirMessageScript.ShowErrorNotification("combat.gui.combatbutton.disablecause.target_not_selected"); }
-                        catch (Exception e) { Plugin.Trace(_tag + " сообщение о цели: " + e.Message); }
-                        Plugin.Trace(_tag + " преследование: выделенного бойца нет");
+                        catch (Exception e) { Plugin.Trace(_tag + " target message: " + e.Message); }
+                        Plugin.Trace(_tag + " pursuit: no fighter selected");
                         return;
                     }
-                    Plugin.Trace(_tag + " преследование по выделению: " + chosen.UserId);
+                    Plugin.Trace(_tag + " pursuit on selection: " + chosen.UserId);
                     Fire(skill);
                     return;
                 }
@@ -1792,7 +1793,7 @@ namespace NewAgeQoL
                 if (_armed != null && _armed.Id == skill.Id) { Disarm(); return; }
                 Arm(skill);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " выбор " + skill.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " pick " + skill.Id + ": " + e.Message); }
         }
 
         private static bool Counter(IQuickButton skill)
@@ -1828,10 +1829,10 @@ namespace NewAgeQoL
                         NetworkConnection.Instance.SendRequest(new BuyExpowerInCombatRequest());
                     },
                     EPriceKey.ExpowerMax, "messages.confirmsprice.buyexpowerincombat.buyexpower");
-                Plugin.Trace(_tag + " зарядов мало, открыл пополнение по " + skill.Id);
+                Plugin.Trace(_tag + " low on charges, opened refill for " + skill.Id);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " пополнение: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Trace(_tag + " refill: " + e.Message); return false; }
         }
 
         private void Paid()
@@ -1853,10 +1854,10 @@ namespace NewAgeQoL
                 var skill = _paid;
                 _paid = null;
                 if (skill == null) return;
-                Plugin.Trace(_tag + " заряды куплены, применяю " + skill.Id);
+                Plugin.Trace(_tag + " charges bought, using " + skill.Id);
                 Hand(skill);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " после пополнения: " + e.Message); }
+            catch (Exception e) { Plugin.Trace(_tag + " after refill: " + e.Message); }
         }
 
         private static bool Broke(EQuickButtonValidationResult verdict)
@@ -1898,11 +1899,11 @@ namespace NewAgeQoL
                 _pollAt = 0f;
                 string name = _things ? "ActivateUsedThingsButtonHandler" : _spells ? "ActivateSpellButtonHandler" : "ActivateDodgeButtonHandler";
                 var call = AccessTools.Method(typeof(CombatButtonsController), name);
-                if (call == null) { Plugin.Trace(_tag + " у игры нет " + name); return; }
+                if (call == null) { Plugin.Trace(_tag + " game has no " + name); return; }
                 call.Invoke(ctrl, new object[] { skill.Id });
-                Plugin.Trace(_tag + " отдал игре " + skill.Id);
+                Plugin.Trace(_tag + " handed to game " + skill.Id);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " применение " + skill.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " use " + skill.Id + ": " + e.Message); }
         }
         private void Dialog(int id)
         {
@@ -1913,7 +1914,7 @@ namespace NewAgeQoL
                 if (holder == null || dialog == null) return;
                 dialog.OpenDialog(holder, id);
             }
-            catch (Exception e) { Plugin.Warn(_tag + " окно выбора " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn(_tag + " pick window " + id + ": " + e.Message); }
         }
 
         private void Slot(IQuickButton skill)
@@ -2065,10 +2066,10 @@ namespace NewAgeQoL
             {
                 if (!SkillList.Eaten()) return true;
                 if (target != null) target.Handled = true;
-                Plugin.Trace("[прицел] клик по бойцу не проваливается на клетку под ним");
+                Plugin.Trace("[aim] click on fighter does not fall through to the hex below");
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[прицел] клик по клетке: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Trace("[aim] hex click: " + e.Message); return true; }
         }
     }
 

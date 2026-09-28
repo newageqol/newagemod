@@ -24,12 +24,12 @@ namespace NewAgeQoL
                         continue;
                     }
                     if (kept == null) kept = new List<CharacterIndicatorsMessage>(newIndicators.GetRange(0, i));
-                    Plugin.Trace("[бой] тело " + one.UserId + " истлело — убираю с поля");
+                    Plugin.Trace("[combat] body " + one.UserId + " decayed - removing from the field");
                     __instance.RemoveCharacter(one.UserId);
                 }
                 if (kept != null) newIndicators = kept;
             }
-            catch (Exception e) { Plugin.Trace("[бой] истлевшие тела: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[combat] decayed bodies: " + e.Message); }
         }
     }
 }

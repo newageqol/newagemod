@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 if (!string.IsNullOrEmpty(seeded) && Plugin.CfgHotkeySeeded != null && string.IsNullOrEmpty(Plugin.CfgHotkeySeeded.Value))
                 {
                     Plugin.CfgHotkeySeeded.Value = seeded;
-                    Plugin.Trace("[клавиши] отметки клавиш по умолчанию перенесены в общий файл");
+                    Plugin.Trace("[hotkeys] default key marks moved to the shared file");
                 }
                 if (Plugin.CfgHotkeysAll != null && string.IsNullOrEmpty(all) && !string.IsNullOrEmpty(mine))
                 {
@@ -51,7 +51,7 @@ namespace NewAgeQoL
                     {
                         Plugin.CfgHotkeysAll.Value = all;
                         moved = true;
-                        Plugin.Trace("[клавиши] общие клавиши аккаунта взяты у этого персонажа");
+                        Plugin.Trace("[hotkeys] account-wide keys taken from this character");
                     }
                 }
             }
@@ -101,7 +101,7 @@ namespace NewAgeQoL
             if (moved == 0) return all;
             old.Value = keep.ToString();
             if (Plugin.CfgHotkeysAll != null) Plugin.CfgHotkeysAll.Value = back.ToString();
-            Plugin.Trace("[клавиши] клавиш приёмов вернулось в общий список аккаунта: " + moved);
+            Plugin.Trace("[hotkeys] dodge keys returned to the account list: " + moved);
             return back.ToString();
         }
 
@@ -152,7 +152,7 @@ namespace NewAgeQoL
                 text.Append(key).Append('=').Append(map[key]);
             }
             old.Value = text.ToString();
-            Plugin.Trace("[клавиши] клавиш заклинаний вынуто из общего списка аккаунта: " + added);
+            Plugin.Trace("[hotkeys] spell keys taken out of the account list: " + added);
         }
 
         private static bool Adopt()
@@ -174,7 +174,7 @@ namespace NewAgeQoL
                 took++;
             }
             done.Value = true;
-            Plugin.Trace("[клавиши] персонажу достались его старые клавиши заклинаний: " + took);
+            Plugin.Trace("[hotkeys] character got its old spell keys: " + took);
             return took > 0;
         }
 
@@ -195,12 +195,12 @@ namespace NewAgeQoL
             if (clash.Count == 0) return;
             foreach (string key in clash)
             {
-                Plugin.Trace("[клавиши] у умения " + key + " клавиша " + Bound[key] + " занята общим действием, снял");
+                Plugin.Trace("[hotkeys] skill " + key + " key " + Bound[key] + " is taken by a shared action, removed");
                 Bound.Remove(key);
             }
             Save();
             try { Notice.Show("Снято клавиш у умений и заклинаний: " + clash.Count + ". Эти клавиши заняты общими для аккаунта, назначь им другие", 7f); }
-            catch (Exception e) { Plugin.Trace("[клавиши] сообщение о занятых клавишах: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] busy keys notice: " + e.Message); }
         }
 
         private static void Fill(string saved, bool own)
@@ -435,7 +435,7 @@ namespace NewAgeQoL
                     if (Fire(key, typing)) return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] " + e.Message); }
         }
 
         private static bool Fire(KeyCode key, bool typing)
@@ -458,9 +458,9 @@ namespace NewAgeQoL
         private static void Run(Act act)
         {
             if (act == null || act.Do == null) return;
-            Plugin.Trace("[клавиши] " + act.Title + " (" + act.Key + ")");
+            Plugin.Trace("[hotkeys] " + act.Title + " (" + act.Key + ")");
             try { act.Do(); }
-            catch (Exception e) { Plugin.Warn("[клавиши] " + act.Title + ": " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[hotkeys] " + act.Title + ": " + e.Message); }
         }
 
         private static KeyCode[] _keys;
@@ -586,9 +586,9 @@ namespace NewAgeQoL
                     entry.KeyCode = KeyCode.None;
                     off++;
                 }
-                if (off > 0) Plugin.Trace("[клавиши] игровых клавиш снято: " + off);
+                if (off > 0) Plugin.Trace("[hotkeys] game keys removed: " + off);
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] игровые клавиши: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] game keys: " + e.Message); }
         }
 
         private static float _learnAt;
@@ -628,9 +628,9 @@ namespace NewAgeQoL
                 if ((_heard & 2) == 0) nc.SendRequest(new UserSpellbookDodgesListRequest(Dodges));
                 for (int i = 0; i < Schools.Length; i++)
                     if ((_heard & (4 << i)) == 0) nc.SendRequest(new UserSpellbookDodgesListRequest(Schools[i]));
-                Plugin.Trace("[клавиши] спросил у игры умения, приёмы и заклинания персонажа " + Chars.Who + ", попытка " + _tries);
+                Plugin.Trace("[hotkeys] asked the game for skills, dodges and spells of character " + Chars.Who + ", attempt " + _tries);
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] запрос умений: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] skills request: " + e.Message); }
         }
 
         private static void OnMasteries(object m)
@@ -658,12 +658,12 @@ namespace NewAgeQoL
                         Learned[key] = name;
                         added++;
                     }
-                Plugin.Trace("[клавиши] классовых умений у персонажа " + saw + ": записал " + added
-                             + ", пассивных пропустил " + passive + ", без названия " + noName
-                             + "; общие умения не беру, они пассивные");
+                Plugin.Trace("[hotkeys] character class skills " + saw + ": stored " + added
+                             + ", passive skipped " + passive + ", unnamed " + noName
+                             + "; general skills skipped, they are passive");
                 if (added > 0) KeepKnown();
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] список умений: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] skills list: " + e.Message); }
         }
 
         private static void OnDodges(object m)
@@ -691,11 +691,11 @@ namespace NewAgeQoL
                     Learned[key] = name;
                     added++;
                 }
-                Plugin.Trace("[клавиши] " + (dodges ? "приёмов" : "заклинаний школы " + msg.Selector) + " у персонажа " + msg.Items.Count
-                             + ": записал " + added + ", без названия " + noName);
+                Plugin.Trace("[hotkeys] " + (dodges ? "dodges" : "spells of school " + msg.Selector) + " of the character " + msg.Items.Count
+                             + ": stored " + added + ", unnamed " + noName);
                 if (added > 0) KeepKnown();
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] список приёмов и заклинаний: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] dodges and spells list: " + e.Message); }
         }
 
         private static string Cast(int id)
@@ -765,7 +765,7 @@ namespace NewAgeQoL
                     fresh = true;
                 }
             }
-            Plugin.Trace("[клавиши] в бою видно кнопок: " + string.Join(", ", counted.ToArray()));
+            Plugin.Trace("[hotkeys] buttons visible in combat: " + string.Join(", ", counted.ToArray()));
             if (fresh) KeepKnown();
         }
 
@@ -801,7 +801,7 @@ namespace NewAgeQoL
             }
             Plugin.CfgHotkeySkills.Value = text.ToString();
             _parsed = false;
-            Plugin.Trace("[клавиши] запомнено умений и приёмов: " + Learned.Count);
+            Plugin.Trace("[hotkeys] skills and dodges remembered: " + Learned.Count);
         }
 
         private static List<Act> Fixed()
@@ -842,10 +842,10 @@ namespace NewAgeQoL
                 if (ctrl == null) return;
                 var button = HarmonyLib.AccessTools.Property(typeof(CombatButtonsController), "EndPhaseButton")
                     ?.GetValue(ctrl, null) as EndPhaseButton;
-                if (button == null) { Plugin.Trace("[клавиши] кнопки фазы нет"); return; }
+                if (button == null) { Plugin.Trace("[hotkeys] no phase button"); return; }
                 button.OnClick();
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] фаза: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] phase: " + e.Message); }
         }
 
         internal static List<Act> All()
@@ -921,7 +921,7 @@ namespace NewAgeQoL
                 if (input.GetButtonDown(__instance.submitButton) && !_told)
                 {
                     _told = true;
-                    Plugin.Trace("[клавиши] пробел и Enter не нажимают выбранную кнопку «" + picked.name + "», клавиши работают только по списку мода");
+                    Plugin.Trace("[hotkeys] Space and Enter do not press the selected button '" + picked.name + "', keys work only via the mod list");
                 }
                 if (input.GetButtonDown(__instance.cancelButton))
                 {
@@ -933,7 +933,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[клавиши] выбранная кнопка: " + e.Message);
+                Plugin.Trace("[hotkeys] selected button: " + e.Message);
                 return true;
             }
         }
@@ -972,7 +972,7 @@ namespace NewAgeQoL
                     if (go != null) go.SetActive(false);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[клавиши] настройки до входа: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] settings before login: " + e.Message); }
         }
     }
 
@@ -983,7 +983,7 @@ namespace NewAgeQoL
         {
             if (!SideButtons.InWorld()) return true;
             try { Settings.ToggleHotkeys(); return false; }
-            catch (Exception e) { Plugin.Fault("[клавиши] окно: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Fault("[hotkeys] window: " + e.Message); return true; }
         }
     }
 }
