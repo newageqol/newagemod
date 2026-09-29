@@ -72,11 +72,6 @@ namespace NewAgeQoL
                 Sl("Отдаление камеры в бою (3D-вид, не Flash)", Plugin.CfgCamZoom, 1f, 4f),
                 Sl("Размер окон итога боя и разведки", Plugin.CfgDialogScale, 0.4f, 1f),
 
-                new Header { Title = "Карта" },
-                B("Номера точек внешнего мира", Plugin.CfgMapLabels),
-                B("Подписывать, что это за точка", Plugin.CfgMapLabelType),
-                B("Порталы: сразу список направлений, перенос без диалога", Plugin.CfgPortalList),
-
                 new Header { Title = "Кто в игре" },
                 S("Логин запасного аккаунта", Plugin.CfgOnlineLogin),
                 S("Пароль запасного аккаунта", Plugin.CfgOnlinePassword, secret: true),

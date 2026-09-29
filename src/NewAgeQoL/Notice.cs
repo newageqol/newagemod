@@ -7,19 +7,19 @@ namespace NewAgeQoL
 {
     internal static class Notice
     {
-        private const int Queue = 4;
+        private const int Most = 5;
 
-        private struct Waiting
+        private sealed class Plate
         {
-            internal string Text;
-            internal float Seconds;
+            internal GameObject Go;
+            internal CanvasGroup Veil;
+            internal Text Text;
+            internal float Until;
         }
 
         private static GameObject _canvasGo;
-        private static CanvasGroup _veil;
-        private static Text _text;
-        private static float _until;
-        private static readonly Queue<Waiting> Line = new Queue<Waiting>();
+        private static RectTransform _stack;
+        private static readonly List<Plate> Plates = new List<Plate>();
 
         internal static void Show(string text, float seconds)
         {
@@ -27,36 +27,78 @@ namespace NewAgeQoL
             {
                 if (string.IsNullOrEmpty(text)) return;
                 Build();
-                if (_text == null) return;
-                if (_canvasGo.activeSelf && _until - Time.unscaledTime > 1f && _text.text != text)
+                if (_stack == null) return;
+                float until = Time.unscaledTime + Mathf.Max(1f, seconds);
+                foreach (var one in Plates)
                 {
-                    if (Line.Count < Queue) Line.Enqueue(new Waiting { Text = text, Seconds = seconds });
+                    if (one.Text.text != text) continue;
+                    one.Until = Mathf.Max(one.Until, until);
+                    one.Veil.alpha = 1f;
                     return;
                 }
-                Put(text, seconds);
+                while (Plates.Count >= Most) Drop(Plates[0]);
+                var plate = Make(text);
+                plate.Until = until;
+                Plates.Add(plate);
+                _canvasGo.SetActive(true);
             }
             catch (Exception e) { Plugin.Trace("[message] " + e.Message); }
-        }
-
-        private static void Put(string text, float seconds)
-        {
-            _text.text = text;
-            _until = Time.unscaledTime + Mathf.Max(1f, seconds);
-            if (_veil != null) _veil.alpha = 1f;
-            _canvasGo.SetActive(true);
         }
 
         internal static void Tick()
         {
             if (_canvasGo == null || !_canvasGo.activeSelf) return;
-            float left = _until - Time.unscaledTime;
-            if (left <= 0f)
+            float now = Time.unscaledTime;
+            for (int i = Plates.Count - 1; i >= 0; i--)
             {
-                if (Line.Count > 0) { var next = Line.Dequeue(); Put(next.Text, next.Seconds); return; }
-                _canvasGo.SetActive(false);
-                return;
+                var plate = Plates[i];
+                float left = plate.Until - now;
+                if (left <= 0f) { Drop(plate); continue; }
+                plate.Veil.alpha = left < 0.6f ? left / 0.6f : 1f;
             }
-            if (_veil != null) _veil.alpha = left < 0.6f ? left / 0.6f : 1f;
+            if (Plates.Count == 0) _canvasGo.SetActive(false);
+        }
+
+        private static void Drop(Plate plate)
+        {
+            Plates.Remove(plate);
+            if (plate.Go != null) UnityEngine.Object.Destroy(plate.Go);
+        }
+
+        private static Plate Make(string text)
+        {
+            var go = new GameObject("plate", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(HorizontalLayoutGroup), typeof(CanvasGroup));
+            go.transform.SetParent(_stack, false);
+
+            var back = go.GetComponent<Image>();
+            back.color = WardrobeLook.Popup;
+            back.sprite = OnlineWindow.Rounded(12);
+            back.type = Image.Type.Sliced;
+            back.raycastTarget = false;
+
+            var edge = go.GetComponent<Outline>();
+            edge.effectColor = WardrobeLook.Accent;
+            edge.effectDistance = new Vector2(2f, -2f);
+
+            var box = go.GetComponent<HorizontalLayoutGroup>();
+            box.padding = new RectOffset(18, 18, 10, 12);
+            box.childControlWidth = true;
+            box.childControlHeight = true;
+            box.childForceExpandWidth = false;
+            box.childForceExpandHeight = false;
+
+            var veil = go.GetComponent<CanvasGroup>();
+            veil.blocksRaycasts = false;
+            veil.interactable = false;
+
+            var label = OnlineWindow.Label(go.transform, text, 18, FontStyle.Bold, WardrobeLook.Bright);
+            label.alignment = TextAnchor.MiddleCenter;
+            label.raycastTarget = false;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            var le = label.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 620f;
+
+            return new Plate { Go = go, Veil = veil, Text = label };
         }
 
         private static void Build()
@@ -74,44 +116,28 @@ namespace NewAgeQoL
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
-            _veil = _canvasGo.GetComponent<CanvasGroup>();
-            _veil.blocksRaycasts = false;
-            _veil.interactable = false;
+            var group = _canvasGo.GetComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
 
-            var panelGo = new GameObject("plate", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
-            panelGo.transform.SetParent(_canvasGo.transform, false);
-            var prt = (RectTransform)panelGo.transform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 1f);
-            prt.pivot = new Vector2(0.5f, 1f);
-            prt.anchoredPosition = new Vector2(0f, -150f);
+            var stackGo = new GameObject("stack", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            stackGo.transform.SetParent(_canvasGo.transform, false);
+            _stack = (RectTransform)stackGo.transform;
+            _stack.anchorMin = _stack.anchorMax = new Vector2(0.5f, 1f);
+            _stack.pivot = new Vector2(0.5f, 1f);
+            _stack.anchoredPosition = new Vector2(0f, -150f);
 
-            var back = panelGo.GetComponent<Image>();
-            back.color = WardrobeLook.Popup;
-            back.sprite = OnlineWindow.Rounded(12);
-            back.type = Image.Type.Sliced;
-            back.raycastTarget = false;
+            var column = stackGo.GetComponent<VerticalLayoutGroup>();
+            column.spacing = 6f;
+            column.childAlignment = TextAnchor.UpperCenter;
+            column.childControlWidth = true;
+            column.childControlHeight = true;
+            column.childForceExpandWidth = false;
+            column.childForceExpandHeight = false;
 
-            var edge = panelGo.GetComponent<Outline>();
-            edge.effectColor = WardrobeLook.Accent;
-            edge.effectDistance = new Vector2(2f, -2f);
-
-            var box = panelGo.GetComponent<HorizontalLayoutGroup>();
-            box.padding = new RectOffset(18, 18, 10, 12);
-            box.childControlWidth = true;
-            box.childControlHeight = true;
-            box.childForceExpandWidth = false;
-            box.childForceExpandHeight = false;
-
-            var fit = panelGo.GetComponent<ContentSizeFitter>();
+            var fit = stackGo.GetComponent<ContentSizeFitter>();
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            _text = OnlineWindow.Label(panelGo.transform, "", 18, FontStyle.Bold, WardrobeLook.Bright);
-            _text.alignment = TextAnchor.MiddleCenter;
-            _text.raycastTarget = false;
-            _text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            var le = _text.gameObject.AddComponent<LayoutElement>();
-            le.preferredWidth = 620f;
 
             _canvasGo.SetActive(false);
         }

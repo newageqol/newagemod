@@ -40,16 +40,14 @@ namespace NewAgeQoL
         private static Vector2 _spot;
         private static bool _spotKnown;
 
-        private static bool On => Plugin.CfgPortalList == null || Plugin.CfgPortalList.Value;
-
-        internal static bool Mine(int npcId) => On && _npc > 0 && npcId == _npc;
+        internal static bool Mine(int npcId) => _npc > 0 && npcId == _npc;
 
         internal static void Tick()
         {
             try
             {
                 int npc = 0, map = -1;
-                if (On && SideButtons.InWorld() && !SideButtons.InCombat())
+                if (SideButtons.InWorld() && !SideButtons.InCombat())
                 {
                     var loc = Travel.LastMap;
                     var ud = Controllers.User;

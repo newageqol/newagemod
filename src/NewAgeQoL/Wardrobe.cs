@@ -36,6 +36,8 @@ namespace NewAgeQoL
         private static readonly List<Outline> Blinks = new List<Outline>();
         private static bool _openWhenReady;
         private static bool _seeding;
+        private static bool _masteryBound;
+        private static Dictionary<int, int> _mastery;
         private static int _edits;
 
         private static GameObject _canvasGo;
@@ -54,7 +56,7 @@ namespace NewAgeQoL
         private static int _dollJob;
         private static float _dollDue;
 
-        private static Text _race, _gender, _level, _class, _sub, _rank;
+        private static Text _race, _gender, _level, _class, _sub, _rank, _skills;
         private static readonly InputField[] BaseInput = new InputField[7];
         private static readonly Text[] TotalText = new Text[7];
         private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote;
@@ -123,6 +125,7 @@ namespace NewAgeQoL
             WardrobeArt.Close();
             WardrobeCompare.Close();
             WardrobeElixirs.Cancel();
+            WardrobeSkills.Cancel();
             _elixirLabel = null;
             _menuGo = null;
             _add = null;
@@ -160,6 +163,7 @@ namespace NewAgeQoL
             if (_canvasGo == null) return false;
             if (_askGo != null) { CloseAsk(); return true; }
             if (WardrobeElixirs.EscapeClose()) return true;
+            if (WardrobeSkills.EscapeClose()) return true;
             if (CloseMenu()) return true;
             if (!WardrobePicker.IsOpen && WardrobeArt.EscapeClose()) return true;
             if (WardrobeCompare.EscapeClose()) return true;
@@ -201,7 +205,7 @@ namespace NewAgeQoL
 
         private static bool Blank()
         {
-            S.Rank = 0;
+            S.Forget();
             S.Undress();
             S.Sober();
             for (int i = 0; i < 7; i++) S.Dist[i] = 0;
@@ -230,7 +234,7 @@ namespace NewAgeQoL
             return thing;
         }
 
-        private static int Seed(Dictionary<int, InventoryWearResponseMessageItem> worn, Dictionary<int, IGeneralThingInfoDescription> told, int[] card)
+        private static int Seed(Dictionary<int, InventoryWearResponseMessageItem> worn, Dictionary<int, IGeneralThingInfoDescription> told, int[] card, Dictionary<int, int> mastery)
         {
             int dressed = 0;
             int adopted = 0;
@@ -238,6 +242,12 @@ namespace NewAgeQoL
             {
                 if (Controllers.User?.UserInfo == null) { S.Settle(false); return 0; }
                 Blank();
+                if (mastery != null)
+                {
+                    S.Prefer.Clear();
+                    for (int id = 0; id < S.Fit.Length; id++) S.Fit[id] = 0;
+                    foreach (var pair in mastery) S.SetMastery(pair.Key, pair.Value);
+                }
                 S.Settle(false);
                 var arts = new List<KeyValuePair<int, IGeneralThingInfoDescription>>();
                 foreach (var pair in worn)
@@ -296,6 +306,7 @@ namespace NewAgeQoL
                 if (me > 0) Armor.AskNow(me, login);
             }
             catch (Exception e) { Plugin.Trace("[wardrobe] card: " + e.Message); }
+            AskMastery();
             yield return Plugin.Instance.StartCoroutine(Artifacts.FetchWear());
             if (!Artifacts.WearArrived)
             {
@@ -310,6 +321,9 @@ namespace NewAgeQoL
             while (t < 5f && told.Count < asked) { yield return null; t += Time.unscaledDeltaTime; }
             t = 0f;
             while (t < 3f && me > 0 && !Armor.HeardSince(me, since)) { yield return null; t += Time.unscaledDeltaTime; }
+            t = 0f;
+            while (t < 3f && _mastery == null) { yield return null; t += Time.unscaledDeltaTime; }
+            var mastery = _mastery;
             _seeding = false;
             if (_canvasGo == null || _loadedKey != key) yield break;
             if (_edits != edits)
@@ -324,8 +338,9 @@ namespace NewAgeQoL
                     Armor.Zone(me, TargetBody.Head), Armor.Zone(me, TargetBody.Body), Armor.Zone(me, TargetBody.LeftHand),
                     Armor.Zone(me, TargetBody.RightHand), Armor.Zone(me, TargetBody.Legs)
                 };
-            int dressed = Seed(worn, told, card);
+            int dressed = Seed(worn, told, card, mastery);
             Changed(true);
+            if (mastery == null) Notice.Show("Переодевалка: игра не ответила, какие у тебя общие умения, — они не перенесены", 5f);
             if (told.Count < asked) Notice.Show("Переодевалка: игра не рассказала про " + (asked - told.Count) + " " + Plural(asked - told.Count, "вещь", "вещи", "вещей"), 5f);
             else
             {
@@ -333,6 +348,39 @@ namespace NewAgeQoL
                 foreach (var pair in worn) if (pair.Value != null && WardrobeData.IsSlot(pair.Key)) wanted++;
                 if (dressed < wanted) Notice.Show("Переодевалка: надето " + dressed + " из " + wanted + ", остальных вещей нет в базе", 5f);
             }
+        }
+
+        private static void AskMastery()
+        {
+            _mastery = null;
+            try
+            {
+                var nc = NetworkConnection.Instance;
+                if (nc == null || !nc.IsConnected()) return;
+                if (!_masteryBound)
+                {
+                    nc.AddMessageListener(11, OnMastery);
+                    _masteryBound = true;
+                }
+                nc.SendRequest(new UserMasteryRequest());
+            }
+            catch (Exception e) { Plugin.Trace("[wardrobe] skills request: " + e.Message); }
+        }
+
+        private static void OnMastery(object m)
+        {
+            try
+            {
+                var msg = m as Transport.Messages.Responses.User.UserAvailableMasteryResponseMessage;
+                if (msg == null || !_seeding) return;
+                var got = new Dictionary<int, int>();
+                if (msg.Masteries != null)
+                    foreach (var one in msg.Masteries)
+                        if (one != null && one.SkillId > 0 && one.SkillLevel > 0) got[one.SkillId] = one.SkillLevel;
+                _mastery = got;
+                Plugin.Trace("[wardrobe] general skills of the character: " + got.Count);
+            }
+            catch (Exception e) { Plugin.Trace("[wardrobe] skills list: " + e.Message); }
         }
 
         private static int Learn(Dictionary<int, InventoryWearResponseMessageItem> worn, Dictionary<int, IGeneralThingInfoDescription> told)
@@ -368,6 +416,7 @@ namespace NewAgeQoL
             if (!WardrobePicker.IsOpen) WardrobeArt.Refresh();
             WardrobeCompare.Refresh();
             WardrobeElixirs.Refresh();
+            WardrobeSkills.Refresh();
             Keep();
         }
 
@@ -760,17 +809,19 @@ namespace NewAgeQoL
             Named();
             y += 44f;
             _race = Cycler(_side, "Раса", y, step => Turn(Race, step));
-            y += 40f;
+            y += 36f;
             _gender = Cycler(_side, "Пол", y, step => { if (S.RaceId != 9) S.Gender = S.Gender == 2 ? 1 : 2; Changed(true); });
-            y += 40f;
+            y += 36f;
             _level = Cycler(_side, "Уровень", y, step => { S.Level += step; Changed(false); });
-            y += 40f;
+            y += 36f;
             _class = Cycler(_side, "Класс", y, step => Turn(Klass, step));
-            y += 40f;
+            y += 36f;
             _sub = Cycler(_side, "Подкласс", y, step => { StepSub(step); Changed(true); });
-            y += 40f;
+            y += 36f;
             _rank = Cycler(_side, "Крепость", y, step => { StepRank(step); Changed(true); });
-            y += 48f;
+            y += 36f;
+            _skills = Opener(_side, "Умения", y, Skills);
+            y += 44f;
 
             float bw = (SideW - 24f - 18f) / 4f;
             Place(GameButton(_side, "Как у меня", Mine, false), 12f, y, bw, 38f);
@@ -778,7 +829,7 @@ namespace NewAgeQoL
             var elixirs = GameButton(_side, WardrobeElixirs.Caption(), Elixirs, false);
             Place(elixirs, 12f + (bw + 6f) * 2f, y, bw, 38f);
             _elixirLabel = elixirs.GetComponentInChildren<Text>();
-            Place(GameButton(_side, "Обнулить", () => { S.Undress(); S.Sober(); S.Minimum(); Changed(true); }, true), 12f + (bw + 6f) * 3f, y, bw, 38f);
+            Place(GameButton(_side, "Обнулить", () => { S.Undress(); S.Sober(); WardrobeSkills.Unlearn(S); S.Minimum(); Changed(true); }, true), 12f + (bw + 6f) * 3f, y, bw, 38f);
             y += 50f;
 
             Header(_side, "Характеристики", y);
@@ -1116,6 +1167,15 @@ namespace NewAgeQoL
             WardrobePicker.Open(_side, slot);
         }
 
+        private static void Skills()
+        {
+            if (_panelGo == null) return;
+            CloseMenu();
+            WardrobeArt.Close();
+            if (WardrobeSkills.IsOpen) { WardrobeSkills.Close(); return; }
+            WardrobeSkills.Open();
+        }
+
         private static void Elixirs()
         {
             if (_panelGo == null) return;
@@ -1191,13 +1251,18 @@ namespace NewAgeQoL
             var race = S.Race;
             var klass = S.Klass;
             var sub = S.Sub;
-            var rank = S.RankInfo;
             if (_race != null) _race.text = race != null ? race.Name : "?";
             if (_gender != null) _gender.text = S.Gender == 2 ? "женский" : "мужской";
             if (_level != null) _level.text = S.Level.ToString();
             if (_class != null) _class.text = klass != null ? klass.Name : "?";
             if (_sub != null) _sub.text = sub != null ? sub.Name + " (" + sub.Level + ")" : (S.Level < 8 ? "с 8 уровня" : "нет");
+            var rank = S.RankInfo;
             if (_rank != null) _rank.text = S.ClassId == WardrobeData.Ranger ? "рейнджеру нельзя" : (rank != null ? rank.Name : "нет");
+            if (_skills != null)
+            {
+                _skills.text = WardrobeSkills.Caption(S);
+                _skills.color = S.SkillFree < 0 ? WardrobeLook.Bad : WardrobeLook.Bright;
+            }
 
             if (_elixirLabel != null) _elixirLabel.text = WardrobeElixirs.Caption();
             int free = S.Free;
@@ -1224,6 +1289,12 @@ namespace NewAgeQoL
             {
                 var text = new StringBuilder();
                 if (S.Short) text.Append("На требования подкласса не хватает очков уровня.").Append('\n');
+                if (S.SkillFree < 0) text.Append("Общих умений больше, чем положено на этом уровне: лишних ").Append(-S.SkillFree).Append(".\n");
+                if (sub != null)
+                {
+                    var miss = WardrobeSkills.Missing(S, sub.N);
+                    if (miss.Count > 0) text.Append("«").Append(sub.Name).Append("» не взять, не хватает умений: ").Append(string.Join(", ", miss.ToArray())).Append(".\n");
+                }
                 foreach (var pair in S.Worn)
                 {
                     var thing = pair.Value;
@@ -1316,6 +1387,7 @@ namespace NewAgeQoL
             int at = Array.IndexOf(order, S.RaceId);
             at = ((at < 0 ? 0 : at) + step + order.Length) % order.Length;
             S.RaceId = order[at];
+            S.Forget();
             S.Undress();
             S.Minimum();
             Changed(true);
@@ -1350,7 +1422,7 @@ namespace NewAgeQoL
                 int next = (S.Rank + step * (tries + 1) + count * 4) % count;
                 if (S.CanRank(next)) { S.Rank = next; return; }
             }
-            Notice.Show(S.ClassId == WardrobeData.Ranger ? "Рейнджеру крепость недоступна" : "Для крепости не хватает сложения", 4f);
+            Notice.Show(S.ClassId == WardrobeData.Ranger ? "Рейнджеру крепость недоступна" : "Для крепости не хватает сложения или уровня", 4f);
         }
 
         private static void Raise(int i)
@@ -1379,7 +1451,9 @@ namespace NewAgeQoL
             if (target > want)
             {
                 var sub = S.Sub;
-                why = sub != null && S.Need(i) >= target ? "требования «" + sub.Name + "»" : S.Potion(i) > 0 ? "база расы и эликсиры" : "база расы";
+                why = sub != null && S.Need(i) >= target ? "требования «" + sub.Name + "»"
+                    : S.SkillNeed(i) >= target ? "умение «" + S.SkillNeedName(i) + "»"
+                    : S.Potion(i) > 0 ? "база расы и эликсиры" : "база расы";
             }
             string blocker = S.Blocker(i, target);
             if (blocker != null)
@@ -1402,6 +1476,8 @@ namespace NewAgeQoL
                 var sub = S.Sub;
                 Notice.Show(sub != null && S.Need(i) >= now
                     ? "Ниже требований «" + sub.Name + "» не опустить: " + WardrobeData.StatNames[i].ToLowerInvariant() + " " + S.Need(i)
+                    : S.SkillNeed(i) >= now
+                    ? "Ниже требований умения «" + S.SkillNeedName(i) + "» не опустить: " + WardrobeData.StatNames[i].ToLowerInvariant() + " " + S.SkillNeed(i)
                     : S.Potion(i) > 0 ? "Ниже базы расы и выпитых эликсиров не опустить" : "Ниже базы расы не опустить", 4f);
                 return;
             }
@@ -1528,6 +1604,16 @@ namespace NewAgeQoL
             At(value.rectTransform, ResultW - 132f, y, 116f, 26f);
             value.alignment = TextAnchor.MiddleRight;
             return value;
+        }
+
+        private static Text Opener(RectTransform parent, string name, float y, Action click)
+        {
+            var label = OnlineWindow.Label(parent, name, 15, FontStyle.Normal, WardrobeLook.Label);
+            At(label.rectTransform, 16f, y, 110f, 34f);
+            label.alignment = TextAnchor.MiddleLeft;
+            var button = GameButton(parent, "", click, false);
+            At(button, 126f, y + 2f, SideW - 12f - 126f, 30f);
+            return button.GetComponentInChildren<Text>();
         }
 
         private static Text Cycler(RectTransform parent, string name, float y, Action<int> step)

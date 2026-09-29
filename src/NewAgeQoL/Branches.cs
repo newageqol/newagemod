@@ -149,6 +149,71 @@ namespace NewAgeQoL
             _hunting = 0;
         }
 
+        private static readonly Dictionary<long, int> LiveCodes = new Dictionary<long, int>();
+
+        internal static void Saw(List<Transport.Messages.Responses.Combat.States.UserEnchantmentsResponseItem> items)
+        {
+            if (!On || items == null || items.Count == 0) return;
+            try
+            {
+                Tables();
+                Load();
+                foreach (var it in items)
+                {
+                    if (it == null || it.Sources == null) continue;
+                    int code = LiveCode(it.StateType, it.StateId);
+                    if (code < 0) continue;
+                    foreach (var s in it.Sources)
+                        if (s != null && s.SourceUserId > 0) Live(s.SourceUserId, code, it.StateType, it.StateId);
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[branches] live effects: " + e.Message); }
+        }
+
+        private static int LiveCode(int type, int id)
+        {
+            long key = ((long)type << 32) | (uint)id;
+            int code;
+            if (LiveCodes.TryGetValue(key, out code)) return code;
+            code = -1;
+            string res = "states.state_" + type + "_" + id + ".name";
+            string name = ResourceStrings.GetString(res);
+            if (!string.IsNullOrEmpty(name) && name != res)
+            {
+                string norm = Norm(name);
+                int v;
+                if (Skills.TryGetValue(norm, out v)) code = v;
+                else if (Roots.TryGetValue(norm, out v)) code = 1000 + v;
+            }
+            LiveCodes[key] = code;
+            return code;
+        }
+
+        private static void Live(int userId, int code, int type, int id)
+        {
+            bool root = code >= 1000;
+            int cls = root ? code - 1000 : code / 4;
+            var r = Rec(userId);
+            bool changed = false;
+            if (r.Cls != cls)
+            {
+                r.Cls = cls;
+                r.Reg = -1;
+                r.Elite = -1;
+                changed = true;
+            }
+            if (!root)
+            {
+                int branch = (code >> 1) & 1;
+                if ((code & 1) == 1) { if (r.Elite != branch) { r.Elite = branch; changed = true; } }
+                else if (r.Reg != branch) { r.Reg = branch; changed = true; }
+            }
+            if (!changed) return;
+            if (r.Full) r.Hour = Hours();
+            _dirty = true;
+            Plugin.Trace("[branches] from live effect " + type + "/" + id + " of fighter " + userId + ": " + Text(userId));
+        }
+
         internal static void Want(int userId, string login)
         {
             if (!On || userId <= 0 || string.IsNullOrEmpty(login)) return;
@@ -174,7 +239,10 @@ namespace NewAgeQoL
 
         private static string Soon(int userId)
         {
-            return _hunting == userId || Pending.Contains(userId) ? "ищу…" : "?";
+            if (_hunting == userId) return "ищу…";
+            if (Pending.Contains(userId) && _searches < Num(Plugin.CfgBranchSearches, 60)) return "ищу…";
+            BranchRec r;
+            return Known.TryGetValue(userId, out r) && r.Hour > 0 ? "не найдено" : "?";
         }
 
         private static long Hours()
@@ -192,7 +260,6 @@ namespace NewAgeQoL
             BranchRec r;
             if (!Known.TryGetValue(userId, out r)) return true;
             if (r.Full) return Hours() - r.Hour >= Num(Plugin.CfgBranchHours, 24);
-            if (r.Cls >= 0) return true;
             return Hours() - r.Hour >= Num(Plugin.CfgBranchMissHours, 6);
         }
 

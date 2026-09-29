@@ -290,6 +290,7 @@ namespace NewAgeQoL
             List<UserEnchantmentsResponseItem> was;
             bool same = States.TryGetValue(msg.UserId, out was) && was != null && was.Count == fresh.Count;
             States[msg.UserId] = fresh;
+            Branches.Saw(fresh);
             FirstAsk.Remove(msg.UserId);
             if (!same) Plugin.Trace("[fighter] states " + msg.UserId + ": " + fresh.Count);
         }
@@ -498,7 +499,6 @@ namespace NewAgeQoL
                     sig.Append(';');
                 }
             else sig.Append(Silent(ch.UserId) ? "?!" : "?");
-            sig.Append('|').Append(Aura(ch));
             string s2 = sig.ToString();
             if (s2 != _rowsSig)
             {
@@ -506,24 +506,6 @@ namespace NewAgeQoL
                 Table(ch, cd, known, items);
             }
             Width();
-        }
-
-        internal static string Aura(AbstractCharacter ch)
-        {
-            try
-            {
-                var bot = ch as BotCharacter;
-                var fit = bot != null ? bot.FitmentAura : null;
-                if (fit == null) return "";
-                return (fit.Good ? "добрая аура" : "злая аура") + ", радиус " + fit.Range + " " + Cells(fit.Range);
-            }
-            catch { return ""; }
-        }
-
-        internal static bool AuraGood(AbstractCharacter ch)
-        {
-            var bot = ch as BotCharacter;
-            return bot != null && bot.FitmentAura != null && bot.FitmentAura.Good;
         }
 
         internal static int Far(AbstractCharacter ch, ICombatData cd)
@@ -601,13 +583,6 @@ namespace NewAgeQoL
             {
                 list.Add(new[] { Status(ch, cd, known), "", "", "" });
                 tint.Add(WardrobeLook.Body);
-            }
-
-            string aura = Aura(ch);
-            if (aura.Length > 0)
-            {
-                list.Add(new[] { aura, "", "", "" });
-                tint.Add(AuraGood(ch) ? WardrobeLook.Good : WardrobeLook.Bad);
             }
 
             var wide = new float[4];

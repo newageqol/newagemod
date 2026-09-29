@@ -13,6 +13,8 @@ namespace NewAgeQoL
         private static ConfirmMessageBox _box;
         private static int _bornFrame = -1;
         private static int _enterFrame = -1;
+        private static bool _auto;
+        private static readonly System.Reflection.FieldInfo PositionField = AccessTools.Field(typeof(GlobalMapController), "_currentPosition");
 
         internal static bool Asking => _enterFrame == Time.frameCount || Open;
 
@@ -24,7 +26,26 @@ namespace NewAgeQoL
             _box = box;
             _bornFrame = Time.frameCount;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
-            Plugin.Trace("[gate] gate window, Enter will confirm");
+            _auto = City(out int location);
+            if (_auto) { var veil = box.GetComponent<CanvasGroup>() ?? box.gameObject.AddComponent<CanvasGroup>(); veil.alpha = 0f; }
+            Plugin.Trace(_auto ? "[gate] gate window of town " + location + ", confirming by itself" : "[gate] gate window" + (location > 0 ? " of location " + location : "") + ", Enter will confirm");
+        }
+
+        private static bool City(out int location)
+        {
+            location = 0;
+            try
+            {
+                var map = Controllers.Get<GlobalMapController>();
+                var all = map != null ? map.Vertices : null;
+                if (all == null || PositionField == null) return false;
+                int at = (int)PositionField.GetValue(map);
+                if (at < 0 || at >= all.Length || all[at] == null) return false;
+                var spot = all[at];
+                location = spot.LocationId;
+                return spot.VertexType == EGlobalMapVertexType.SavePoint && spot.IsRoot && spot.LocationId > 0 && spot.LocationId < 1000;
+            }
+            catch (Exception e) { Plugin.Trace("[gate] town check: " + e.Message); return false; }
         }
 
         internal static void Tick()
@@ -33,14 +54,18 @@ namespace NewAgeQoL
             try
             {
                 if (!Open || Time.frameCount <= _bornFrame) return;
-                if (!Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.KeypadEnter)) return;
-                var picked = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-                if (picked != null && picked.GetComponent<InputField>() != null) return;
+                if (!_auto)
+                {
+                    if (!Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.KeypadEnter)) return;
+                    var picked = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+                    if (picked != null && picked.GetComponent<InputField>() != null) return;
+                }
                 var ok = AccessTools.Field(typeof(ConfirmMessageBox), "MbOkButton")?.GetValue(_box) as Button;
                 if (ok == null || !ok.isActiveAndEnabled || !ok.interactable) return;
                 _enterFrame = Time.frameCount;
                 _box = null;
-                Plugin.Trace("[gate] confirmed by Enter");
+                Plugin.Trace(_auto ? "[gate] town entered without asking" : "[gate] confirmed by Enter");
+                _auto = false;
                 ok.onClick.Invoke();
             }
             catch (Exception e) { Plugin.Trace("[gate] Enter: " + e.Message); }

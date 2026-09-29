@@ -56,6 +56,7 @@ namespace NewAgeQoL
         private static GameObject _tipGo;
         private static Text _tipText;
         private static int _tipFor = -1;
+        private static bool _tipAsked;
 
 
         private static int _who;
@@ -195,32 +196,43 @@ namespace NewAgeQoL
 
             var known = new Known();
             known.At = RealTime.Now;
-            var body = new StringBuilder();
-            var said = new HashSet<string>();
+            var order = new List<string>();
+            var sums = new Dictionary<string, long>();
+            var bare = new Dictionary<string, int>();
             if (msg.Items != null)
                 foreach (var item in msg.Items)
                 {
                     if (item == null) continue;
+                    int copies = 1;
                     if (item.Times != null)
+                    {
                         foreach (var time in item.Times) known.Spans.Add(time);
+                        if (item.Times.Count > 1) copies = item.Times.Count;
+                    }
                     if (item.Actions == null) continue;
                     foreach (var action in item.Actions)
                     {
                         if (action == null) continue;
-                        string name = ResourceStrings.GetGlobalEnchantmentActionName(action.Id);
-                        if (name == "enchantment.action." + action.Id) name = "действие " + action.Id;
-                        var row = new StringBuilder();
-                        row.Append("<color=#d6dae0>· ").Append(name).Append("</color>");
-                        if (action.Value.HasValue)
-                            row.Append("  <color=").Append(action.Value > 0 ? "#7ed68a" : "#f07a6e").Append('>')
-                               .Append(action.Value > 0 ? "+" : "").Append(action.Value.Value)
-                               .Append(action.Percent ? "%" : "").Append("</color>");
-                        string line = row.ToString();
-                        if (!said.Add(line)) continue;
-                        if (body.Length > 0) body.Append('\n');
-                        body.Append(line);
+                        string key = action.Id + (action.Value.HasValue ? action.Percent ? "%" : "#" : "");
+                        if (!sums.ContainsKey(key)) { order.Add(key); sums[key] = 0; bare[key] = action.Id; }
+                        if (action.Value.HasValue) sums[key] += (long)action.Value.Value * copies;
                     }
                 }
+            var body = new StringBuilder();
+            foreach (var key in order)
+            {
+                int id = bare[key];
+                string name = ResourceStrings.GetGlobalEnchantmentActionName(id);
+                if (name == "enchantment.action." + id) name = "действие " + id;
+                if (body.Length > 0) body.Append('\n');
+                body.Append("<color=#d6dae0>· ").Append(name).Append("</color>");
+                char kind = key[key.Length - 1];
+                if (kind != '%' && kind != '#') continue;
+                long value = sums[key];
+                body.Append("  <color=").Append(value >= 0 ? "#7ed68a" : "#f07a6e").Append('>')
+                    .Append(value > 0 ? "+" : "").Append(value)
+                    .Append(kind == '%' ? "%" : "").Append("</color>");
+            }
             known.Body = body.ToString();
             known.Spans.Sort();
             Times[msg.Id] = known;
@@ -496,7 +508,7 @@ namespace NewAgeQoL
             button.onClick.AddListener(() => Query(id, false));
 
             var trigger = go.GetComponent<EventTrigger>();
-            Watch(trigger, EventTriggerType.PointerEnter, e => _tipFor = id);
+            Watch(trigger, EventTriggerType.PointerEnter, e => { _tipFor = id; _tipAsked = false; });
             Watch(trigger, EventTriggerType.PointerExit, e => { if (_tipFor == id) _tipFor = -1; });
 
             cell.Go = go;
@@ -553,6 +565,7 @@ namespace NewAgeQoL
             var text = new StringBuilder();
             text.Append("<size=12><b><color=#eceef1>").Append(Title(_tipFor)).Append("</color></b></size>");
             if (!have) { text.Append("\n<color=#acb3bd>спрашиваю сервер…</color>"); Wake(_tipFor); }
+            else if (!_tipAsked && RealTime.Now - known.At >= 2d) { _tipAsked = true; Wake(_tipFor); }
             else
             {
                 int spans = Mathf.Min(known.Spans.Count, 4);

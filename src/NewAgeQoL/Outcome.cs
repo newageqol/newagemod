@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
+using Transport.Messages.Responses.Combat;
 using UnityEngine;
 
 namespace NewAgeQoL
@@ -15,20 +16,74 @@ namespace NewAgeQoL
             internal int Expower;
         }
 
+        private const int Indicators = 352;
+        private const int RoundStart = 353;
+
         private static readonly Dictionary<int, Shift> Now = new Dictionary<int, Shift>();
         private static readonly HashSet<AnimationItem> SeenItems = new HashSet<AnimationItem>();
         private static readonly HashSet<AnimationGroup> SeenGroups = new HashSet<AnimationGroup>();
+        private static readonly HashSet<AnimationItem> Absorbed = new HashSet<AnimationItem>();
+        private static readonly HashSet<int> Assigned = new HashSet<int>();
         private static AccessTools.FieldRef<AnimationProcessor, List<AnimationGroup>> _waiting;
         private static AccessTools.FieldRef<AnimationProcessor, List<AnimationGroup>> _playing;
         private static AccessTools.FieldRef<ChangeLifeAnimationItem, float?> _started;
         private static bool _looked;
         private static int _frame = -1;
+        private static object _on;
 
         internal static Shift Of(ICombatData cd, int userId)
         {
             Collect(cd);
             Shift shift;
             return Now.TryGetValue(userId, out shift) ? shift : default(Shift);
+        }
+
+        internal static void Tick()
+        {
+            var nc = NetworkConnection.Instance;
+            if (nc == null || !nc.IsConnected()) { _on = null; return; }
+            if (ReferenceEquals(_on, nc)) return;
+            nc.RemoveMessageListener(Indicators, OnIndicators);
+            nc.AddMessageListener(Indicators, OnIndicators);
+            nc.RemoveMessageListener(RoundStart, OnIndicators);
+            nc.AddMessageListener(RoundStart, OnIndicators);
+            _on = nc;
+        }
+
+        private static void OnIndicators(object m)
+        {
+            try
+            {
+                var msg = m as IndicatorsResponseMessage;
+                if (msg == null || msg.Indicators == null) return;
+                Assigned.Clear();
+                foreach (var one in msg.Indicators)
+                    if (one != null) Assigned.Add(one.UserId);
+                int before = Absorbed.Count;
+                Absorb(FighterHint.Cd());
+                if (Absorbed.Count > before)
+                    Plugin.Trace("[outcome] server numbers came mid-calculation: " + (Absorbed.Count - before)
+                        + " queued changes are already in them");
+            }
+            catch (Exception e) { Plugin.Trace("[outcome] server numbers: " + e.Message); }
+        }
+
+        private static void Absorb(ICombatData cd)
+        {
+            if (cd == null || Assigned.Count == 0) return;
+            Look();
+            if (_waiting == null || _playing == null || _started == null) return;
+            var processor = cd.AnimationProcessor;
+            if (processor == null || processor.GroupCount == 0) return;
+            _frame = -1;
+            Collect(cd);
+            foreach (var item in SeenItems)
+            {
+                var change = item as ChangeLifeAnimationItem;
+                if (change != null && change.Target != null && Assigned.Contains(change.Target.UserId) && !_started(change).HasValue)
+                    Absorbed.Add(change);
+            }
+            _frame = -1;
         }
 
         private static void Collect(ICombatData cd)
@@ -44,7 +99,7 @@ namespace NewAgeQoL
             try
             {
                 var processor = cd.AnimationProcessor;
-                if (processor == null || processor.GroupCount == 0) return;
+                if (processor == null || processor.GroupCount == 0) { Absorbed.Clear(); return; }
                 Walk(_playing(processor));
                 Walk(_waiting(processor));
             }
@@ -90,7 +145,7 @@ namespace NewAgeQoL
             {
                 if (item == null || !SeenItems.Add(item)) continue;
                 var change = item as ChangeLifeAnimationItem;
-                if (change != null && change.Target != null && !_started(change).HasValue) Add(change);
+                if (change != null && change.Target != null && !_started(change).HasValue && !Absorbed.Contains(change)) Add(change);
                 Walk(item.Items);
             }
         }

@@ -331,6 +331,7 @@ internal static class Field
         Scenery.Clear();
         Scenery.AddRange(fresh);
         _ground = _parsed;
+        Fighters.Calm();
         Trace.Battle(_ground?.File ?? "map without Flash picture");
         if (Plugin.CfgVerbose.Value)
             Plugin.Log.LogInfo(_ground == null

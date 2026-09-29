@@ -98,6 +98,7 @@ namespace NewAgeQoL
         private static int _listDue;
         private static object _listHeard;
         private static RectTransform _listTabsRt;
+        internal static RectTransform ListStrip => _listTabsRt;
         private static RectTransform _boxRt;
         private static UserContextMenuResolver _resolver;
         private static InputField _input;
@@ -288,7 +289,7 @@ namespace NewAgeQoL
                         return;
                     }
                 }
-                if (Time.unscaledTime < _hushUntil && (EChatMessageType)message.Type != EChatMessageType.MSG_SYSTEM) { if (_hushQuiet >= _hushUntil) Plugin.Trace("[dock] first message after the location change came in " + (Time.unscaledTime - (_hushUntil - 3f)).ToString("0.00") + " s"); _hushQuiet = Time.unscaledTime + 0.25f; }
+                if (Time.unscaledTime < _hushUntil && (EChatMessageType)message.Type != EChatMessageType.MSG_SYSTEM) { if (_hushQuiet >= _hushUntil) Plugin.Trace("[dock] first message after the location change came in " + (Time.unscaledTime - _hushFrom).ToString("0.00") + " s"); _hushQuiet = Time.unscaledTime + 0.25f; }
                 var kind = (EChatMessageType)message.Type;
                 if (kind == EChatMessageType.MSG_SYSTEM)
                 {
@@ -623,6 +624,7 @@ namespace NewAgeQoL
 
         private static float _hushUntil;
         private static float _hushQuiet;
+        private static float _hushFrom;
         private static bool _snapDown;
 
         private static bool Hushed => Time.unscaledTime < _hushUntil && Time.unscaledTime < _hushQuiet;
@@ -649,17 +651,14 @@ namespace NewAgeQoL
             Line.AddRange(kept);
             _tailUntil = 0f;
             _carryMark = Line.Count;
-            if (again)
-            {
-                _hushUntil = Time.unscaledTime + 1f;
-                _hushQuiet = Time.unscaledTime + 0.25f;
-            }
+            _hushFrom = Time.unscaledTime;
+            if (again) _hushUntil = Time.unscaledTime + 0.7f;
             else
             {
                 _carriedAt = Time.unscaledTime;
-                _hushUntil = Time.unscaledTime + 3f;
-                _hushQuiet = _hushUntil;
+                _hushUntil = Time.unscaledTime + 1.2f;
             }
+            _hushQuiet = _hushUntil;
             _snapDown = true;
             ChatStay.Settle();
         }
@@ -977,7 +976,11 @@ namespace NewAgeQoL
             if (_view != null)
             {
                 holder.CurrentScrollPosition = 0f;
+                var scroll = ChatStay.Of(_view);
+                if (scroll != null) scroll.verticalNormalizedPosition = 0f;
+                ChatStay.Settle();
                 _view.SetChatContent(holder);
+                ChatStay.Settle();
                 _bottomAt = Time.unscaledTime + 0.4f;
             }
             for (int i = 0; i < SheetLabels.Length; i++)
@@ -3283,6 +3286,7 @@ namespace NewAgeQoL
                     if (hit.Success) head = hit.Value;
                 }
                 ChatDock.Moved(Number(head, "id"), Number(head, "mapType"));
+                Dozen.Moved(Number(head, "id"), Number(head, "mapType"));
             }
             catch (Exception e) { Plugin.Trace("[dock] location change: " + e.Message); }
         }

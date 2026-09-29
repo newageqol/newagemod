@@ -13,6 +13,9 @@ namespace NewAgeQoL
         internal int Rank;
         internal readonly int[] Dist = new int[7];
         internal readonly int[] Elix = new int[7];
+        internal readonly int[] Mast = new int[WardrobeSkills.Size];
+        internal readonly int[] Fit = new int[WardrobeSkills.Size];
+        internal readonly List<int> Prefer = new List<int>();
         internal readonly Dictionary<int, WardrobeThing> Worn = new Dictionary<int, WardrobeThing>();
         internal readonly Dictionary<int, string> Unknown = new Dictionary<int, string>();
         internal bool Short;
@@ -31,6 +34,9 @@ namespace NewAgeQoL
             };
             Array.Copy(Dist, copy.Dist, Dist.Length);
             Array.Copy(Elix, copy.Elix, Elix.Length);
+            Array.Copy(Mast, copy.Mast, Mast.Length);
+            Array.Copy(Fit, copy.Fit, Fit.Length);
+            copy.Prefer.AddRange(Prefer);
             foreach (var pair in Worn) copy.Worn[pair.Key] = pair.Value;
             foreach (var pair in Unknown) copy.Unknown[pair.Key] = pair.Value;
             return copy;
@@ -102,6 +108,16 @@ namespace NewAgeQoL
                 .Append(";c=").Append(ClassId).Append(";s=").Append(SubN).Append(";k=").Append(Rank)
                 .Append(";d=").Append(string.Join(",", Dist));
             if (Drunk > 0) text.Append(";e=").Append(string.Join(",", Elix));
+            var learned = new List<string>();
+            for (int id = 0; id < Mast.Length; id++)
+                if (id != WardrobeSkills.Fortress && Mast[id] > 0) learned.Add(id + ":" + Mast[id]);
+            if (learned.Count > 0) text.Append(";m=").Append(string.Join(",", learned.ToArray()));
+            if (Prefer.Count > 0)
+            {
+                var picks = new List<string>();
+                foreach (int id in Prefer) picks.Add(id.ToString());
+                text.Append(";o=").Append(string.Join(",", picks.ToArray()));
+            }
             text.Append(";w=");
             bool first = true;
             foreach (var pair in Worn)
@@ -131,6 +147,8 @@ namespace NewAgeQoL
             Rank = 0;
             for (int i = 0; i < 7; i++) Dist[i] = 0;
             Sober();
+            Forget();
+            Prefer.Clear();
             Undress();
             int lost = 0;
             foreach (var part in (body ?? "").Split(';'))
@@ -169,6 +187,22 @@ namespace NewAgeQoL
                         }
                         break;
                     }
+                    case "m":
+                        foreach (var one in value.Split(','))
+                        {
+                            var bits = one.Split(':');
+                            int id, level;
+                            if (bits.Length != 2 || !int.TryParse(bits[0], out id) || !int.TryParse(bits[1], out level)) continue;
+                            if (id > 0 && id < Mast.Length && id != WardrobeSkills.Fortress && level > 0 && level <= 5) Mast[id] = level;
+                        }
+                        break;
+                    case "o":
+                        foreach (var one in value.Split(','))
+                        {
+                            int id;
+                            if (int.TryParse(one, out id) && id > 0 && id < Mast.Length && !Prefer.Contains(id)) Prefer.Add(id);
+                        }
+                        break;
                     case "w":
                         foreach (var one in value.Split(','))
                         {
@@ -288,7 +322,62 @@ namespace NewAgeQoL
             return sub != null ? sub.Req[i] : 0;
         }
 
-        internal int Floor(int i) => Math.Max(Race.Base[i] + Potion(i), Need(i));
+        internal int Floor(int i) => Math.Max(Math.Max(Race.Base[i] + Potion(i), Need(i)), SkillNeed(i));
+
+        internal int Mastery(int id)
+        {
+            if (id == WardrobeSkills.Fortress) return Rank;
+            return id > 0 && id < Mast.Length ? Mast[id] : 0;
+        }
+
+        internal void SetMastery(int id, int level)
+        {
+            if (level < 0) level = 0;
+            if (level > 5) level = 5;
+            if (id == WardrobeSkills.Fortress) { Rank = level; return; }
+            if (id > 0 && id < Mast.Length) Mast[id] = level;
+        }
+
+        internal void Forget()
+        {
+            for (int id = 0; id < Mast.Length; id++) Mast[id] = 0;
+            Rank = 0;
+        }
+
+        internal int SkillPoints => Math.Max(0, Level) + 1;
+
+        internal int SkillSpent
+        {
+            get
+            {
+                int sum = 0;
+                foreach (var skill in WardrobeSkills.All) sum += Mastery(skill.Id);
+                return sum;
+            }
+        }
+
+        internal int SkillFree => SkillPoints - SkillSpent;
+
+        internal int SkillNeed(int i)
+        {
+            int top = 0;
+            foreach (var skill in WardrobeSkills.All)
+            {
+                int level = Mastery(skill.Id);
+                if (level > 0 && skill.Req[level - 1][i] > top) top = skill.Req[level - 1][i];
+            }
+            return top;
+        }
+
+        internal string SkillNeedName(int i)
+        {
+            foreach (var skill in WardrobeSkills.All)
+            {
+                int level = Mastery(skill.Id);
+                if (level > 0 && skill.Req[level - 1][i] >= SkillNeed(i)) return skill.Name;
+            }
+            return null;
+        }
 
         internal int TopSub
         {
@@ -424,6 +513,7 @@ namespace NewAgeQoL
             if (n < floor || n >= WardrobeData.Ranks.Count) return false;
             if (n <= 0 || n == floor) return true;
             if (ClassId == WardrobeData.Ranger) return false;
+            if (WardrobeSkills.Ready && WardrobeSkills.MinLevel(WardrobeSkills.Fortress, n) > Level) return false;
             return Base(2) >= WardrobeData.Ranks[n].MinCon;
         }
 
@@ -463,6 +553,7 @@ namespace NewAgeQoL
             foreach (int slot in drop) Worn.Remove(slot);
 
             if (Doses > Cap) Sober();
+            WardrobeSkills.Trim(this);
             Lift();
             if (Spent > Points(Level))
             {

@@ -7,7 +7,6 @@
     <Nullable>disable</Nullable>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <!-- Папка игры. Переопределяется снаружи: dotnet build -p:GameDir="..." -->
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\New Age</GameDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -60,7 +59,6 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- Physics: RaycastHit — гекс под курсором берём тем же физическим рейкастом, что игровой HexGridControl -->
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
@@ -69,7 +67,6 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- uGUI: EventSystem/RaycastResult — нужны блокиратору клика сквозь окна мода (ClickBlock.cs) -->
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>

@@ -224,20 +224,20 @@ namespace NewAgeQoL
 
             _find = OnlineWindow.MakeInput(barGo.transform, 150f, "Поиск");
             var fle = _find.GetComponent<LayoutElement>();
-            if (fle != null) { fle.preferredHeight = BarH; fle.minHeight = BarH; }
+            if (fle != null) { fle.preferredHeight = BarH; fle.minHeight = BarH; fle.minWidth = 70f; fle.flexibleWidth = 1f; }
             _find.text = _query;
             _find.onValueChanged.AddListener(v => { _query = Norm(v); Fill(); });
-            OnlineWindow.MakeGameButton(barGo.transform, "Обновить", 96f, BarH, () => { QuestBoard.Reask(); Fill(); });
+            Shrink(OnlineWindow.MakeGameButton(barGo.transform, "Обновить", 96f, BarH, () => { QuestBoard.Reask(); Fill(); }));
             _talk = OnlineWindow.MakeGameButton(barGo.transform, "Открыть", 96f, BarH, () => { if (_picked > 0) QuestBoard.Talk(_picked); });
+            Shrink(_talk);
             _track = OnlineWindow.MakeGameButton(barGo.transform, "Сбросить", 110f, BarH, () => { QuestTrack.Clear(); Paint(); });
-            _status = OnlineWindow.Label(barGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
-            _status.alignment = TextAnchor.MiddleLeft;
+            Shrink(_track);
+            _status = OnlineWindow.Label(_panelGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
+            OnlineWindow.Place(_status.rectTransform, new Vector2(0.4f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -42f), new Vector2(-64f, -10f));
+            _status.alignment = TextAnchor.MiddleRight;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
             _status.verticalOverflow = VerticalWrapMode.Truncate;
-            var sle = _status.gameObject.AddComponent<LayoutElement>();
-            sle.flexibleWidth = 1f;
-            sle.preferredHeight = BarH;
-            sle.minWidth = 60f;
+            _status.raycastTarget = false;
 
             float head = TopH + Gap + BarH + 6f;
             var listGo = new GameObject("list", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
@@ -387,6 +387,12 @@ namespace NewAgeQoL
             }
             Paint();
             Desk();
+        }
+
+        private static void Shrink(Button button)
+        {
+            var le = button != null ? button.GetComponent<LayoutElement>() : null;
+            if (le != null) le.minWidth = 64f;
         }
 
         private static bool Fits(QuestBoard.Card card)

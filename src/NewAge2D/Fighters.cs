@@ -409,11 +409,29 @@ internal static class Fighters
     }
 
     private static float _emptySince;
+    private static bool _crowd;
+    internal const int CrowdSize = 25;
+
+    internal static bool Crowd
+    {
+        get
+        {
+            if (_crowd) return true;
+            var combat = Combat();
+            if (combat == null || combat.Characters == null || combat.Characters.Count < CrowdSize) return false;
+            _crowd = true;
+            if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] big fight: {combat.Characters.Count} fighters, lighter frames and calmer drawing order");
+            if (Trace.On) Trace.Write($"big fight: {combat.Characters.Count} fighters, frame scale {Plugin.CombatScale:0.##}, live stance and mirrored looks drawn last, 3D model kept hidden up to 10 s");
+            return true;
+        }
+    }
+
+    internal static void Calm() => _crowd = false;
 
     internal static void Forget(FighterDoll doll)
     {
         Alive.Remove(doll);
-        if (Alive.Count == 0) _emptySince = Time.unscaledTime;
+        if (Alive.Count == 0) { _emptySince = Time.unscaledTime; _crowd = false; }
         else Prune();
     }
 
@@ -545,10 +563,10 @@ internal static class Fighters
                     Veils.Remove(player);
                     continue;
                 }
-                if (Plugin.FlashFight && (DollOf(player) != null || Time.unscaledTime - Veils[player].At < 3f)) continue;
+                if (Plugin.FlashFight && (DollOf(player) != null || Time.unscaledTime - Veils[player].At < (Crowd ? 10f : 3f))) continue;
                 Unveil(player);
                 if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[combat] '{player.Login}': no doll, 3D model restored");
-                if (Trace.On) Trace.Write($"'{player.Login}' 3D model RESTORED: doll did not appear within 3 s");
+                if (Trace.On) Trace.Write($"'{player.Login}' 3D model RESTORED: doll did not appear within {(Crowd ? 10 : 3)} s");
             }
         }
         if (Alive.Count > 0 || _emptySince <= 0f || Time.unscaledTime - _emptySince < 180f) return;
@@ -2123,7 +2141,7 @@ internal sealed class FighterDoll : MonoBehaviour
         }
         Need(label, true);
         if (label != "stop" && Settled) Need("stop", true);
-        if (label == "stop") Need("stop" + Fighters.Living, true);
+        if (label == "stop") Need("stop" + Fighters.Living, !Fighters.Crowd, false, false, Fighters.Crowd);
         Show(label, frame);
         float alpha = _appear || (_playing == "prizuv" && !Has("prizuv")) ? 0f : 1f;
         if (_fade && HasPicture)
@@ -2420,7 +2438,7 @@ internal sealed class FighterDoll : MonoBehaviour
         Need("stop" + Fighters.Living, false);
         if (_labels.ContainsKey("die")) Need("die", false, false, false, true);
         Need("stop", false, true);
-        if (_labels.ContainsKey("move")) Need("move", false, true, true);
+        if (_labels.ContainsKey("move")) Need("move", false, true, !Fighters.Crowd, Fighters.Crowd);
         if (strike != null) Need(strike, false, true, Mine, !Mine);
         if (second != null) Need(second, false, true, Mine, !Mine);
         Need("stop" + Fighters.Living, false, true, false, true);
@@ -2548,6 +2566,19 @@ internal sealed class FighterDoll : MonoBehaviour
         bool moving = (_owner.Initialized && _owner.MoverState != MoverState.Idle) || _gliding;
         if (moving && _labels.TryGetValue("move", out var move))
         {
+            if (!Has("move") && Has("stop"))
+            {
+                if (_moving || !_glideNoted)
+                {
+                    _glideNoted = true;
+                    if (Trace.On) Trace.Write($"'{Who}' walk frames not ready, gliding in stance");
+                }
+                _moving = false;
+                label = "stop";
+                frame = 0;
+                return;
+            }
+            _glideNoted = false;
             if (!_moving)
             {
                 _moving = true;
@@ -2746,6 +2777,7 @@ internal sealed class FighterDoll : MonoBehaviour
 
     private bool Has(string label) => label != null && _look != null && FrameCache.HasSequence(FrameCache.SequenceKey(PlayLook(label), label));
     private int _shownFrame = -1;
+    private bool _glideNoted;
     private string _shownLook;
 
     private void Jumped(string label, int frame)

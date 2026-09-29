@@ -595,6 +595,7 @@ namespace NewAgeQoL
         private static int _askedFor;
         private static float _askAt;
         private static bool _boundMastery;
+        private static string _seenButtons;
         private static int _heard;
         private static int _tries;
         private const int Dodges = 4;
@@ -766,7 +767,9 @@ namespace NewAgeQoL
                     fresh = true;
                 }
             }
-            Plugin.Trace("[hotkeys] buttons visible in combat: " + string.Join(", ", counted.ToArray()));
+            string seen = string.Join(", ", counted.ToArray());
+            if (fresh || seen != _seenButtons) Plugin.Trace("[hotkeys] buttons visible in combat: " + seen);
+            _seenButtons = seen;
             if (fresh) KeepKnown();
         }
 

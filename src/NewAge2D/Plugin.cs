@@ -10,7 +10,7 @@ namespace NewAge2D;
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "newage.2d";
-    public const string Version = "0.2.12";
+    public const string Version = "0.2.13";
 
     internal static ManualLogSource Log;
     internal static Plugin Instance;
@@ -175,7 +175,7 @@ public class Plugin : BaseUnityPlugin
 
     internal static int Smooth => 3;
 
-    internal static float CombatScale => Screen.height > 1800 ? 2f : 1.5f;
+    internal static float CombatScale => (Screen.height > 1800 ? 2f : 1.5f) * (Fighters.Crowd ? 0.75f : 1f);
 
     internal static long FrameMemory
     {

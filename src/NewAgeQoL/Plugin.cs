@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.5.0";
+        public const string Version = "0.6.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -78,13 +78,6 @@ namespace NewAgeQoL
         internal static ConfigEntry<string> CfgTravelGates;
         internal static ConfigEntry<int> CfgTravelTown;
         internal static ConfigEntry<int> CfgTravelOuter;
-        internal static ConfigEntry<bool> CfgMapLabels;
-        internal static ConfigEntry<bool> CfgMapLabelType;
-        internal static ConfigEntry<bool> CfgPortalList;
-        internal static ConfigEntry<bool> CfgMapLabelBillboard;
-        internal static ConfigEntry<int> CfgMapLabelFont;
-        internal static ConfigEntry<float> CfgMapLabelLift;
-        internal static ConfigEntry<string> CfgMapLabelColor;
         internal static ConfigEntry<bool> CfgBranchesOn;
         internal static ConfigEntry<int> CfgBranchDays;
         internal static ConfigEntry<int> CfgBranchSearches;
@@ -189,26 +182,7 @@ namespace NewAgeQoL
             Chars.Own("Travel", "OuterWorldLocation", 1002,
                 "id участка карты, куда выводит выход из этого города. 1002 — внешний мир вокруг Иллениума.", e => CfgTravelOuter = e);
 
-            Chars.Own("Map", "VertexLabels", false,
-                "Подписывать точки внешнего мира их номером: «v12». По номеру видно, куда ведёт дорога, им удобно объяснять маршрут другим и задавать точки в списке похода.", e => CfgMapLabels = e);
-            Chars.Own("Map", "VertexLabelType", false,
-                "Дописывать к номеру, что это за точка: «бой», «переход» (сохранение, вход в город или на соседний участок) или «дорога».", e => CfgMapLabelType = e);
-            Chars.Own("Map", "PortalList", true,
-                "В локации портала сразу показывать список направлений, доступных по рунам, вместо диалога. Нажатие переносит без подтверждения.", e => CfgPortalList = e);
-            Chars.Own("Map", "VertexLabelBillboard", true,
-                "Держать метку повёрнутой к камере, чтобы она читалась при любом наклоне карты.", e => CfgMapLabelBillboard = e);
-            Chars.Own("Map", "VertexLabelSharpness", 48,
-                "Разрешение шрифта метки. Влияет на чёткость, а не на размер.", e => CfgMapLabelFont = e);
-            Chars.Own("Map", "VertexLabelLift", 0.7f,
-                "Насколько поднять метку над точкой, чтобы она не легла на саму иконку.", e => CfgMapLabelLift = e);
-            Chars.Own("Map", "VertexLabelColor", "#FFEE00",
-                "Цвет метки в виде #RRGGBB.", e => CfgMapLabelColor = e);
 
-            Chars.Watch((s, e) =>
-            {
-                if (e.ChangedSetting == null) return;
-                if (e.ChangedSetting.Definition.Section == "Map") MapLabels.Refresh();
-            });
 
 
 
@@ -503,6 +477,8 @@ namespace NewAgeQoL
                 new Part { Name = "HintZones.Tick", Do = HintZones.Tick },
                 new Part { Name = "Dialogs.Tick", Do = Dialogs.Tick },
                 new Part { Name = "Claims.Tick", Do = Claims.Tick },
+                new Part { Name = "Dozen.Tick", Do = Dozen.Tick },
+                new Part { Name = "Outcome.Tick", Do = Outcome.Tick },
                 new Part { Name = "ClanMark.Tick", Do = ClanMark.Tick },
                 new Part { Name = "TabPanelFitPatch.Tick", Do = TabPanelFitPatch.Tick },
                 new Part { Name = "Workshop.Net", Do = Workshop.Net },
