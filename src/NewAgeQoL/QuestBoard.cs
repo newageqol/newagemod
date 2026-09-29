@@ -132,6 +132,20 @@ namespace NewAgeQoL
             Version++;
         }
 
+        internal static void ReaskTracked()
+        {
+            Watched("refresh button,");
+        }
+
+        internal static bool TrackedBusy
+        {
+            get
+            {
+                foreach (var c in Cards) if (QuestTrack.Tracked(c.Id) && !Fresh.Contains(c.Id)) return true;
+                return false;
+            }
+        }
+
         internal static void ReaskIfStale()
         {
             if (Time.unscaledTime - _sweptAt > 30f) Refetch();

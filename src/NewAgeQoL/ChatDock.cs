@@ -199,7 +199,7 @@ namespace NewAgeQoL
                     else Moved(-1, -1);
                     if (_root != null) Rebind();
                 }
-                if ((_redo || Fresh.Count > 0) && Time.unscaledTime >= _flushAt && !Hushed) Render();
+                if ((_redo || Fresh.Count > 0) && Time.unscaledTime >= _flushAt) Render();
 
                 if (!SideButtons.InWorld())
                 {
@@ -289,7 +289,6 @@ namespace NewAgeQoL
                         return;
                     }
                 }
-                if (Time.unscaledTime < _hushUntil && (EChatMessageType)message.Type != EChatMessageType.MSG_SYSTEM) { if (_hushQuiet >= _hushUntil) Plugin.Trace("[dock] first message after the location change came in " + (Time.unscaledTime - _hushFrom).ToString("0.00") + " s"); _hushQuiet = Time.unscaledTime + 0.25f; }
                 var kind = (EChatMessageType)message.Type;
                 if (kind == EChatMessageType.MSG_SYSTEM)
                 {
@@ -469,6 +468,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[dock] fight from the world map - chat of map " + _worldMap + " put aside until exit: lines " + World.Count);
                 }
                 Carry();
+                _sceneDue = true;
                 if (_stashed) _twinsUntil = Time.unscaledTime + 5f;
             }
             else if (_stashed && map > 0)
@@ -480,6 +480,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[dock] after the fight a different world map " + map + " (before the fight " + _worldMap + ") - deferred chat not needed");
                     Wiped.Clear();
                     Carry();
+                    _sceneDue = true;
                 }
                 World.Clear();
                 _worldMap = -1;
@@ -491,9 +492,10 @@ namespace NewAgeQoL
             }
             else
             {
-                bool again = map < 0 && Time.unscaledTime - _carriedAt < 5f;
+                bool again = map < 0 && _sceneDue;
                 if (!again) Wiped.Clear();
                 Carry(again);
+                _sceneDue = map > 0;
             }
             if (map > 0 && type != 1)
             {
@@ -622,14 +624,9 @@ namespace NewAgeQoL
             }
         }
 
-        private static float _hushUntil;
-        private static float _hushQuiet;
-        private static float _hushFrom;
         private static bool _snapDown;
 
-        private static bool Hushed => Time.unscaledTime < _hushUntil && Time.unscaledTime < _hushQuiet;
-
-        private static float _carriedAt = -10f;
+        private static bool _sceneDue;
         private static int _carryMark;
 
         private static void Carry(bool again = false)
@@ -651,14 +648,6 @@ namespace NewAgeQoL
             Line.AddRange(kept);
             _tailUntil = 0f;
             _carryMark = Line.Count;
-            _hushFrom = Time.unscaledTime;
-            if (again) _hushUntil = Time.unscaledTime + 0.7f;
-            else
-            {
-                _carriedAt = Time.unscaledTime;
-                _hushUntil = Time.unscaledTime + 1.2f;
-            }
-            _hushQuiet = _hushUntil;
             _snapDown = true;
             ChatStay.Settle();
         }

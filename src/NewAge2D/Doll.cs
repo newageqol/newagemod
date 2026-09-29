@@ -207,13 +207,7 @@ public static class Doll
         public readonly List<string> Notes = new();
     }
 
-    private static bool SwapHands(DollRequest request, string label)
-    {
-        if (label != "die") return !request.Left;
-        bool right = request.Wear.Any(w => w.Slot == 12);
-        bool left = request.Wear.Any(w => w.Slot == 11);
-        return right || !left;
-    }
+    private static bool SwapHands(DollRequest request) => !request.Left;
 
     private static Outfit Dress(MovieClip root, DollRequest request, SwfStore store, bool swapHands)
     {
@@ -401,6 +395,41 @@ public static class Doll
 
     public static int SlotOf(string label) =>
         label.EndsWith("_right", StringComparison.Ordinal) ? 12 : label.EndsWith("_left", StringComparison.Ordinal) ? 11 : 0;
+
+    private static void Still(Outfit outfit)
+    {
+        foreach (var (_, part, _, partSlot) in outfit.Attached)
+        {
+            if (partSlot != 11 && partSlot != 12) continue;
+            part.GotoFrame(0);
+            part.Stop();
+        }
+    }
+
+    private static void BotWeapons(MovieClip root, bool left, bool fight)
+    {
+        var front = root.FindDescendant("bp1");
+        var back = root.FindDescendant("bp14");
+        BotPart(front, "weaponPart1", left, fight);
+        BotPart(front, "weaponPart2", !left, fight);
+        BotPart(back, "weaponPart1", !left, fight);
+        BotPart(back, "weaponPart2", left, fight);
+    }
+
+    private static void BotPart(MovieClip point, string name, bool shown, bool fight)
+    {
+        if (point == null) return;
+        foreach (var layer in point.Layers)
+        {
+            if (layer.Name != name) continue;
+            if (layer.Visible != shown) layer.Visible = shown;
+            var clip = layer.Clip;
+            if (!shown || !fight || clip == null || clip.FrameCount < 2) continue;
+            clip.GotoFrame(0);
+            clip.Play();
+            clip.GotoFrame(1);
+        }
+    }
 
     private static void Kick(Outfit outfit, int slot)
     {
@@ -684,7 +713,7 @@ public static class Doll
             HideBars(root);
         }
 
-        var outfit = Dress(root, request, store, SwapHands(request, request.Label));
+        var outfit = Dress(root, request, store, SwapHands(request));
         using var renderer = new SwfRenderer(body);
         var picture = Rasterize(body, renderer, root, matrix);
         picture.Labels = labels;
@@ -733,9 +762,12 @@ public static class Doll
 
         root.GotoAndStop(range.Start);
         HideBars(root);
-        var outfit = Dress(root, request, store, SwapHands(request, label));
+        var outfit = Dress(root, request, store, SwapHands(request));
         sequence.Notes = outfit.Notes;
+        Still(outfit);
         Kick(outfit, kick);
+        bool fight = label.StartsWith("fight", StringComparison.Ordinal);
+        BotWeapons(root, request.Left, fight);
         root.Play();
         if (label == "stop" && !string.IsNullOrEmpty(DumpDir))
         {
@@ -781,11 +813,14 @@ public static class Doll
                     HideBars(root);
                 }
                 else AdvanceChildren(root);
+                BotWeapons(root, request.Left, false);
                 if (!StillDressed(root, outfit))
                 {
                     foreach (var (target, _, name, _) in outfit.Attached) target.RemoveAttached(name);
-                    outfit = Dress(root, request, store, SwapHands(request, label));
+                    outfit = Dress(root, request, store, SwapHands(request));
+                    Still(outfit);
                     Kick(outfit, kick);
+                    BotWeapons(root, request.Left, fight);
                     sequence.Notes.Add($"frame {range.Start + i}: attach points recreated, dressed again");
                 }
                 sequence.AdvanceTicks += Now - mark;

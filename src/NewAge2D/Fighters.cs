@@ -1500,12 +1500,29 @@ internal sealed class FighterDoll : MonoBehaviour
         return cutA > 0 && cutA == cutB && string.CompareOrdinal(a, 0, b, 0, cutA) == 0;
     }
 
+    private const float LookSettle = 0.12f;
+    private string _nextLook;
+    private float _nextLookAt;
+
     public void Refresh()
     {
         if (_owner == null || _container == null) return;
         HideModel(_view != null && _view.sprite != null);
         var plan = Plan();
         string look = plan.Look;
+        if (look != _look && _look != null && _labels != null)
+        {
+            float now = Time.unscaledTime;
+            if (look != _nextLook)
+            {
+                if (Trace.On) Trace.Write($"'{Who}' look {Trace.Look(_look)} → {Trace.Look(look)} waits {LookSettle * 1000f:0} ms for the rest of the change");
+                _nextLook = look;
+                _nextLookAt = now + LookSettle;
+                return;
+            }
+            if (now < _nextLookAt) return;
+        }
+        _nextLook = null;
         if (look != _look)
         {
             if (Trace.On) Trace.Write($"'{Who}' look {Trace.Look(_look)} → {Trace.Look(look)}: items {plan.Wear.Count}, images pending {_needs.Count}, clips pending {_files.Count}, stop frames {FrameCache.StateOf(FrameCache.SequenceKey(look, "stop"))}");
@@ -1619,6 +1636,14 @@ internal sealed class FighterDoll : MonoBehaviour
 
     internal void NoteWound(int serial) => _woundSerial = Math.Max(_woundSerial, serial);
 
+    private void Appear()
+    {
+        if (!_appear || _labels == null) return;
+        _appear = false;
+        if (_labels.ContainsKey("prizuv")) Launch("prizuv", "appearance");
+        else _fade = true;
+    }
+
     private void Launch(string wanted, string reason, int serial = -1, int request = 0)
     {
         bool fresh = serial < 0;
@@ -1629,12 +1654,13 @@ internal sealed class FighterDoll : MonoBehaviour
             request = ++_requestCounter;
             LastRequest = request;
         }
+        if (wanted != "die" && wanted != "prizuv") Appear();
         if (wanted == "die")
         {
             _queue.Clear();
             _finishedRequest = Math.Max(_finishedRequest, request);
         }
-        else if (fresh && Acting)
+        else if ((fresh || reason == "deferred") && Acting)
         {
             _queue.Enqueue((wanted, reason, serial, request));
             _queuedAt = Time.time;
@@ -2101,6 +2127,7 @@ internal sealed class FighterDoll : MonoBehaviour
         var view = CombatView.Get();
         var eye = view != null ? view.CombatCamera : Camera.main;
         if (eye != null) Place(eye);
+        if (_nextLook != null && Time.unscaledTime >= _nextLookAt) Refresh();
         if (_needs.Count > 0 && Time.unscaledTime >= _askAt)
         {
             _askAt = Time.unscaledTime + 10f;
@@ -2119,6 +2146,7 @@ internal sealed class FighterDoll : MonoBehaviour
                 return;
             }
             _rate = FrameCache.RateFor(_look);
+            Appear();
             if (_pending != null)
             {
                 string pending = _pending;
@@ -2126,12 +2154,7 @@ internal sealed class FighterDoll : MonoBehaviour
                 Launch(pending, "deferred", _pendingSerial, _pendingRequest);
             }
         }
-        if (_appear)
-        {
-            _appear = false;
-            if (_labels.ContainsKey("prizuv")) Launch("prizuv", "appearance");
-            else _fade = true;
-        }
+        Appear();
         if (_shown && (Settled || !_warmedOnce) && Time.unscaledTime - _lookSince >= 0.2f && !(_playing == "prizuv" && !Has("prizuv"))) Prewarm();
         Decide(out string label, out int frame);
         if (label != _lastLabel)
@@ -2155,7 +2178,6 @@ internal sealed class FighterDoll : MonoBehaviour
         var paint = new Color(tint.r, tint.g, tint.b, alpha);
         if (_view.color != paint) _view.color = paint;
         SyncHalo();
-        _lie = Lie(label, frame);
         Diagnose(label, frame);
     }
 
@@ -2225,17 +2247,6 @@ internal sealed class FighterDoll : MonoBehaviour
         _diagFeet = _feet;
         _diagTurned = _lastTurned;
         _diagSprite = sprite;
-    }
-
-    private float _lie;
-
-    private float Lie(string label, int frame)
-    {
-        if (label != "die") return 0f;
-        int count = _labels != null && _labels.TryGetValue("die", out var range) ? range.Count * _smooth : 0;
-        if (count <= 1) return 1f;
-        float t = Mathf.Clamp01((frame + 1f) / count);
-        return t * t * (3f - 2f * t);
     }
 
     private bool _gliding;
@@ -2356,34 +2367,18 @@ internal sealed class FighterDoll : MonoBehaviour
         bool right = Facing(eye);
         _view.flipX = right != Plugin.CfgCombatFlip.Value;
         Face(!_view.flipX);
-        float sin = Mathf.Clamp(-eye.transform.forward.y, 0.05f, 1f);
         var feet = Glide(_container.transform.position);
-        Fighters.TowardEye(eye, feet, 1f - _lie, out var shift, out float near);
+        Fighters.TowardEye(eye, feet, 1f, out var shift, out float near);
         var facing = eye.transform.rotation;
         float fit = Field.DollSize;
         _view.sortingOrder = Fighters.Layer(eye, feet, _owner != null ? _owner.HexGridPosition : null);
         if (_shade != null) _shade.sortingOrder = _view.sortingOrder - 2;
-        if (_lie <= 0f)
-        {
-            transform.rotation = facing;
-            transform.localScale = new Vector3(near, near, near) * fit;
-            transform.position = Steady(eye, feet + shift);
-            Ground(feet, shift);
-            Remember();
-            FitCapsule(eye);
-            return;
-        }
-        var flat = eye.transform.forward;
-        flat.y = 0f;
-        if (flat.sqrMagnitude < 0.0001f) flat = Vector3.forward;
-        flat.Normalize();
-        var lying = Quaternion.LookRotation(-Vector3.up, flat);
-        transform.rotation = Quaternion.Slerp(facing, lying, _lie);
-        float angle = _lie * Mathf.Acos(Mathf.Clamp01(sin));
-        float tall = 1f / Mathf.Max(0.2f, Mathf.Cos(angle));
-        transform.localScale = new Vector3(near, near * tall, near) * fit;
-        transform.position = feet + shift + Vector3.up * (0.05f * _lie);
+        transform.rotation = facing;
+        transform.localScale = new Vector3(near, near, near) * fit;
+        transform.position = Steady(eye, feet + shift);
+        Ground(feet, shift);
         Remember();
+        FitCapsule(eye);
     }
 
     private Vector3 _worldPosition;
@@ -2441,6 +2436,8 @@ internal sealed class FighterDoll : MonoBehaviour
         if (_labels.ContainsKey("move")) Need("move", false, true, !Fighters.Crowd, Fighters.Crowd);
         if (strike != null) Need(strike, false, true, Mine, !Mine);
         if (second != null) Need(second, false, true, Mine, !Mine);
+        foreach (string label in new[] { "cast", "healing" })
+            if (_labels.ContainsKey(label)) Need(label, false, true, !Fighters.Crowd, Fighters.Crowd);
         Need("stop" + Fighters.Living, false, true, false, true);
     }
 

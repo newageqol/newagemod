@@ -25,6 +25,13 @@ namespace NewAgeQoL
         private static RectTransform _list;
         private static RectTransform _strip;
         private static Text _stripMark;
+        private static RectTransform _renew;
+        private static RectTransform _renewMark;
+        private static Sprite _arrow;
+        private static float _spinFrom = -100f;
+        private const float RenewSide = 18f;
+        private const float SpinLeast = 0.6f;
+        private const float SpinMost = 5f;
         private static bool _folded;
         private static float _slide;
         private static float _left;
@@ -279,6 +286,7 @@ namespace NewAgeQoL
             _stripMark.horizontalOverflow = HorizontalWrapMode.Overflow;
             _stripMark.verticalOverflow = VerticalWrapMode.Overflow;
             OnlineWindow.Place(_stripMark.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            Renew();
             _slide = _folded ? 1f : 0f;
             Folded();
             _seen = -1;
@@ -463,6 +471,98 @@ namespace NewAgeQoL
             float eased = _slide * _slide * (3f - 2f * _slide);
             var spot = new Vector2(-eased * (_wide + StripGap + 2f), 1f);
             if ((_root.anchoredPosition - spot).sqrMagnitude > 0.01f) _root.anchoredPosition = spot;
+            Renewing(clipSpot.x + _wide - RenewSide - 4f, _low + high + 4f, _slide < 0.05f);
+        }
+
+        private static void Renew()
+        {
+            var go = new GameObject("renew", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(Button));
+            go.transform.SetParent(_canvasGo.transform, false);
+            _renew = (RectTransform)go.transform;
+            _renew.anchorMin = _renew.anchorMax = Vector2.zero;
+            _renew.pivot = Vector2.zero;
+            _renew.sizeDelta = new Vector2(RenewSide, RenewSide);
+            var back = go.GetComponent<Image>();
+            back.color = WardrobeLook.Window;
+            back.sprite = OnlineWindow.Rounded(9);
+            back.type = Image.Type.Sliced;
+            var edge = go.GetComponent<Outline>();
+            edge.effectColor = WardrobeLook.Edge;
+            edge.effectDistance = new Vector2(1f, -1f);
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = back;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1.4f, 1.4f, 1.4f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            button.colors = colors;
+            button.onClick.AddListener(() =>
+            {
+                _spinFrom = Time.unscaledTime;
+                QuestBoard.ReaskTracked();
+            });
+
+            var markGo = new GameObject("mark", typeof(RectTransform), typeof(Image));
+            markGo.transform.SetParent(go.transform, false);
+            _renewMark = (RectTransform)markGo.transform;
+            OnlineWindow.Place(_renewMark, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(-6f, -6f), new Vector2(6f, 6f));
+            var mark = markGo.GetComponent<Image>();
+            mark.sprite = Arrow();
+            mark.color = WardrobeLook.Label;
+            mark.raycastTarget = false;
+        }
+
+        private static void Renewing(float x, float y, bool shown)
+        {
+            if (_renew == null) return;
+            if (_renew.gameObject.activeSelf != shown) _renew.gameObject.SetActive(shown);
+            if (!shown) return;
+            var spot = new Vector2(x, y);
+            if ((_renew.anchoredPosition - spot).sqrMagnitude > 0.01f) _renew.anchoredPosition = spot;
+            if (_renewMark == null) return;
+            float since = Time.unscaledTime - _spinFrom;
+            bool spin = since < SpinLeast || (since < SpinMost && QuestBoard.TrackedBusy);
+            if (spin) _renewMark.Rotate(0f, 0f, 360f * Time.unscaledDeltaTime);
+            else if (_renewMark.localEulerAngles.z != 0f) _renewMark.localRotation = Quaternion.identity;
+        }
+
+        private static Sprite Arrow()
+        {
+            if (_arrow != null && _arrow.texture != null) return _arrow;
+            const int side = 64;
+            const int fine = 4;
+            float c = (side - 1) / 2f;
+            var tex = new Texture2D(side, side, TextureFormat.RGBA32, false);
+            for (int py = 0; py < side; py++)
+                for (int px = 0; px < side; px++)
+                {
+                    int hit = 0;
+                    for (int sy = 0; sy < fine; sy++)
+                        for (int sx = 0; sx < fine; sx++)
+                        {
+                            float x = px + (sx + 0.5f) / fine - 0.5f - c;
+                            float y = py + (sy + 0.5f) / fine - 0.5f - c;
+                            if (Inked(x, y)) hit++;
+                        }
+                    tex.SetPixel(px, py, new Color(1f, 1f, 1f, hit / (float)(fine * fine)));
+                }
+            tex.Apply();
+            tex.filterMode = FilterMode.Bilinear;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            _arrow = Sprite.Create(tex, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
+            return _arrow;
+        }
+
+        private static bool Inked(float x, float y)
+        {
+            float r = Mathf.Sqrt(x * x + y * y);
+            float angle = Mathf.Atan2(y, x) * Mathf.Rad2Deg;
+            if (angle < 0f) angle += 360f;
+            if (r >= 17f && r <= 25f && angle >= 60f) return true;
+            float up = y;
+            if (up < -2f || up > 13f) return false;
+            float half = 10f * (1f - (up + 2f) / 15f);
+            return Mathf.Abs(x - 21f) <= half;
         }
 
         private static bool Place()

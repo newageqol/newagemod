@@ -5,7 +5,7 @@ namespace NewAge2D;
 
 internal static class SummonWarm
 {
-    private static readonly string[] First = { "stop", "prizuv" };
+    private static readonly string[] First = { "stop", "prizuv", "cast" };
     private static readonly HashSet<int> Races = new();
     private static readonly HashSet<string> Looks = new();
     private static readonly HashSet<string> Empty = new();
