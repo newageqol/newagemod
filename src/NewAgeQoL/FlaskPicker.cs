@@ -169,10 +169,9 @@ namespace NewAgeQoL
                 if (_subs.TryGetValue(tid, out sub) && sub == CombatUsed) continue;
                 if (Flasks.DisplayName(tid) == null) continue;
                 _all.Add(tid);
-                if (_row >= 0 && Flasks.RowFor(tid) == _row) _kin.Add(tid);
+                if (Flasks.Suits(tid, _row)) _kin.Add(tid);
             }
-            bool loading = Flasks.Scanning || _waiting > 0;
-            var list = _kin.Count > 0 || (_row >= 0 && loading) ? _kin : _all;
+            var list = _row >= 0 ? _kin : _all;
             list.Sort();
             return list;
         }
@@ -363,6 +362,7 @@ namespace NewAgeQoL
         {
             if (Flasks.Scanning || _waiting > 0) return "Список ещё грузится — банки появятся тут";
             if (SideButtons.InCombat()) return "В бою сумку не смотрю — выбери банку вне боя";
+            if (_row >= 0) return Flasks.Title(_row) + ": подходящих предметов в сумке нет";
             return "Банок в сумке не нашлось";
         }
 

@@ -97,7 +97,6 @@ namespace NewAgeQoL
             DiskJournal.Attach(Logger);
             Instance = this;
             ModSwitch.Bind(Config);
-            Perf.Bind(Config);
             if (!ModSwitch.On)
             {
                 _off = true;
@@ -441,7 +440,6 @@ namespace NewAgeQoL
             internal string Name;
             internal System.Action Do;
             internal float Said;
-            internal Meter Meter;
         }
 
         private static Part[] _parts;
@@ -546,12 +544,8 @@ namespace NewAgeQoL
             for (int i = 0; i < parts.Length; i++)
             {
                 var part = parts[i];
-                var mark = Perf.Mark();
                 try { part.Do(); }
                 catch (System.Exception e) { Stumble(part, e); }
-                if (mark.At == 0L) continue;
-                if (part.Meter == null) part.Meter = Perf.Track("mod", part.Name);
-                Perf.Add(part.Meter, mark);
             }
         }
 
@@ -580,7 +574,6 @@ namespace NewAgeQoL
 
         private void Update()
         {
-            Perf.Tick();
             LoadTimer.Tick();
             if (_off) return;
             Run(Parts());

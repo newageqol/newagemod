@@ -30,8 +30,8 @@ namespace NewAgeQoL
 
         private static readonly int[][] Kin =
         {
-            new[] { 426, 427, 428 },
-            new[] { 429, 430, 431 },
+            new[] { 426, 427, 428, 2300, 2112, 2113, 2114, 2115, 2117, 2116 },
+            new[] { 429, 430, 431, 2400, 2112, 2113, 2114, 2115, 2117, 2116 },
             new[] { 16501, 16502, 16503 },
             new[] { 16852, 16853, 16854, 16856, 16857, 16858 },
         };
@@ -110,12 +110,9 @@ namespace NewAgeQoL
 
         internal static string Title(int row) => row >= 0 && row < Titles.Length ? Titles[row] : "";
 
-        internal static int RowFor(int thingId)
+        internal static bool Suits(int thingId, int row)
         {
-            if (thingId <= 0) return -1;
-            for (int row = 0; row < Kin.Length; row++)
-                if (System.Array.IndexOf(Kin[row], thingId) >= 0) return row;
-            return -1;
+            return thingId > 0 && row >= 0 && row < Kin.Length && System.Array.IndexOf(Kin[row], thingId) >= 0;
         }
 
         internal static int RowOf(ConfigEntry<int> entry)
@@ -465,8 +462,9 @@ namespace NewAgeQoL
         {
             if (row < 0 || row >= Kin.Length) return 0;
             lock (Scanned)
-                foreach (var s in Scanned)
-                    if (System.Array.IndexOf(Kin[row], s.ThingId) >= 0) return s.ThingId;
+                foreach (int kin in Kin[row])
+                    foreach (var s in Scanned)
+                        if (s.ThingId == kin && s.Qty > 0) return kin;
             return 0;
         }
 

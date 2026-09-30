@@ -112,7 +112,7 @@ internal static class Captions
             }
             var collider = character.CharacterCollider;
             if (collider == null) return true;
-            float lift = (collider.direction == 1 ? collider.height / 2f : collider.radius) + collider.center.y;
+            float lift = doll.FitHeight > 0f ? doll.FitHeight : (collider.direction == 1 ? collider.height / 2f : collider.radius) + collider.center.y;
             var screen = location.CombatCamera.WorldToScreenPoint(doll.Feet + doll.HeadShift(location.CombatCamera) + new Vector3(0f, lift, 0f));
             if (Trace.On && (!Logged.TryGetValue(character.UserId, out string seen) || seen != doll.ViewLook))
             {

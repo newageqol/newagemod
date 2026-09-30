@@ -1500,7 +1500,7 @@ internal sealed class FighterDoll : MonoBehaviour
         return cutA > 0 && cutA == cutB && string.CompareOrdinal(a, 0, b, 0, cutA) == 0;
     }
 
-    private const float LookSettle = 0.12f;
+    private const float LookSettle = 0.3f;
     private string _nextLook;
     private float _nextLookAt;
 
@@ -1746,6 +1746,8 @@ internal sealed class FighterDoll : MonoBehaviour
         catch (Exception ex) { Plugin.Log.LogError("[combat] capsule: " + ex); }
     }
 
+    internal float FitHeight { get; private set; }
+
     private void FitCapsule(Camera eye)
     {
         if (!Plugin.CfgFitCapsule.Value || _owner == null || !_owner.Initialized || _owner.Dead) return;
@@ -1765,6 +1767,7 @@ internal sealed class FighterDoll : MonoBehaviour
         float lift = Mathf.Clamp(Plugin.CfgBarsLift.Value, 0.5f, 2f);
         float over = (crown - Fighters.Caption - feetY) / unit * lift;
         float height = Mathf.Clamp(over, 0.1f, _worldHeight * 4f);
+        FitHeight = height;
         if (Mathf.Abs(collider.height - height) < 0.001f) return;
         collider.height = height;
         var center = collider.center;
@@ -2493,7 +2496,6 @@ internal sealed class FighterDoll : MonoBehaviour
         return "stop";
     }
 
-    private string _stillLook;
 
     private void Decide(out string label, out int frame)
     {
@@ -2591,14 +2593,6 @@ internal sealed class FighterDoll : MonoBehaviour
         }
         _moving = false;
         string alive = "stop" + Fighters.Living;
-        if (Settled && !FrameCache.HasSequence(FrameCache.SequenceKey(_look, alive)) && FrameCache.HasSequence(FrameCache.SequenceKey(_look, "stop")))
-        {
-            if (_stillLook != _look && Trace.On) Trace.Write($"'{Who}' live stance of look {Trace.Look(_look)} still drawing, its plain stance is shown meanwhile, not the old look");
-            _stillLook = _look;
-            label = "stop";
-            frame = 0;
-            return;
-        }
         string living = PlayLook(alive);
         if (living == null || !FrameCache.HasSequence(FrameCache.SequenceKey(living, alive)))
             living = _viewLook != null && _viewLook != _look && FrameCache.HasSequence(FrameCache.SequenceKey(_viewLook, alive)) ? _viewLook : null;
@@ -2761,6 +2755,7 @@ internal sealed class FighterDoll : MonoBehaviour
     {
         if (_look == null || label == null) return null;
         bool left = Fighters.FacesLeft(_look);
+        if (_viewLook != null && _viewLook != _look && Fighters.FacesLeft(_viewLook) == left && FrameCache.HasSequence(FrameCache.SequenceKey(_viewLook, label))) return _viewLook;
         foreach (string look in _older)
             if (Fighters.FacesLeft(look) == left && FrameCache.HasSequence(FrameCache.SequenceKey(look, label))) return look;
         return null;
