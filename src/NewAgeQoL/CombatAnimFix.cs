@@ -10,28 +10,45 @@ namespace NewAgeQoL
     public static class StuckAnimationPatch
     {
         private const float Limit = 2.5f;
-        private static readonly Dictionary<AbstractCharacter, float> Since = new Dictionary<AbstractCharacter, float>();
-        private static readonly HashSet<AbstractCharacter> Reported = new HashSet<AbstractCharacter>();
+        private const float Gap = 1f;
+
+        private sealed class Watch
+        {
+            public float Since;
+            public float Last;
+            public bool Told;
+        }
+
+        private static readonly Dictionary<int, Watch> Waiting = new Dictionary<int, Watch>();
 
         private static void Postfix(AbstractCharacter character, ref bool __result)
         {
             try
             {
                 if (character == null) return;
-                if (__result) { Since.Remove(character); return; }
+                int id = character.UserId;
+                if (__result) { Waiting.Remove(id); return; }
                 float now = Time.unscaledTime;
-                float since;
-                if (!Since.TryGetValue(character, out since))
+                Watch watch;
+                if (!Waiting.TryGetValue(id, out watch) || now - watch.Last > Gap)
                 {
-                    if (Since.Count > 200) Since.Clear();
-                    Since[character] = now;
+                    if (watch == null)
+                    {
+                        if (Waiting.Count > 200) Waiting.Clear();
+                        watch = new Watch();
+                        Waiting[id] = watch;
+                    }
+                    watch.Since = now;
+                    watch.Last = now;
+                    watch.Told = false;
                     return;
                 }
-                if (now - since < Limit) return;
+                watch.Last = now;
+                if (now - watch.Since < Limit) return;
                 __result = true;
-                if (Reported.Add(character))
+                if (!watch.Told)
                 {
-                    if (Reported.Count > 200) Reported.Clear();
+                    watch.Told = true;
                     string state = "-";
                     try
                     {

@@ -71,14 +71,7 @@ namespace NewAgeQoL
 
         private static bool Fight => SideButtons.InCombat();
 
-        private static float Zoom
-        {
-            get
-            {
-                var cfg = Fight ? Plugin.CfgCamZoom : null;
-                return cfg == null ? 1f : Mathf.Clamp(cfg.Value, 1f, 4f);
-            }
-        }
+        private const float Zoom = 1f;
 
         private static bool StartFar => Fight;
 

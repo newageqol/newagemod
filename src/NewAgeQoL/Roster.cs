@@ -38,6 +38,8 @@ namespace NewAgeQoL
         private static ConfirmMessageBox _confirm;
         private static int _enterFrame = -1;
 
+        internal static float Bottom => _canvasGo != null && _canvasGo.activeInHierarchy && _panel != null && _away < 0.5f ? -_panel.anchoredPosition.y + _panel.rect.height : 0f;
+
         internal static bool Asking => _enterFrame == Time.frameCount || (_confirm != null && _confirm.isActiveAndEnabled);
 
         internal static void Tick()
@@ -304,7 +306,6 @@ namespace NewAgeQoL
                 if (art != null)
                 {
                     face.Pic.sprite = art;
-                    if (face.Had) Plugin.Trace("[characters] game unloaded class icons, fetched again");
                     face.Had = true;
                 }
             }

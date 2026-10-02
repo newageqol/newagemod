@@ -10,7 +10,7 @@ namespace NewAgeQoL
     {
         private const string Wrap = "QoLDialogScale";
 
-        internal static float Scale => Plugin.CfgDialogScale == null ? 0.7f : Mathf.Clamp(Plugin.CfgDialogScale.Value, 0.4f, 1f);
+        internal const float Scale = 0.7f;
 
         private static bool Small(Transform window)
         {

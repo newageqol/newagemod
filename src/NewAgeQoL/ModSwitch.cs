@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
@@ -30,7 +30,7 @@ namespace NewAgeQoL
                 DialogFactory.ShowConfirmMessageBox(Caption, result =>
                 {
                     if (result == EMessageBoxResult.MB_OK) TurnOff();
-                }, "Выключить мод? После перезапуска игры клиент будет обычным, без изменений мода и вида как во Flash. Включить обратно: настройки игры, кнопка «Включить мод».");
+                }, "Выключить мод? Это действует только после перезапуска игры: клиент сейчас закроется, запусти его снова — он будет обычным, без изменений мода и вида как во Flash. Включить обратно: настройки игры, кнопка «Включить мод».");
             }
             catch (Exception e) { Plugin.Log?.LogWarning("[mod] disable dialog: " + e.Message); }
         }
@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 DialogFactory.ShowConfirmMessageBox(Caption, result =>
                 {
                     if (result == EMessageBoxResult.MB_OK) TurnOn();
-                }, "Включить мод? Он заработает после перезапуска игры.");
+                }, "Включить мод? Он заработает только после перезапуска игры: клиент сейчас закроется, запусти его снова.");
             }
             catch (Exception e) { Plugin.Log?.LogWarning("[mod] enable dialog: " + e.Message); }
         }
@@ -55,8 +55,8 @@ namespace NewAgeQoL
             if (_flashWas != null) _flashWas.Value = look;
             if (look) flash.Value = false;
             Enabled.Value = false;
-            Plugin.Log?.LogInfo("[mod] disabled from the next game start" + (look ? ", Flash look disabled too" : ""));
-            Tell("Мод выключен. Перезапусти игру, и клиент будет обычным.");
+            Plugin.Log?.LogInfo("[mod] disabled from the next game start" + (look ? ", Flash look disabled too" : "") + ", closing the client");
+            FlashLook.Quit();
         }
 
         private static void TurnOn()
@@ -67,14 +67,8 @@ namespace NewAgeQoL
             bool look = _flashWas != null && _flashWas.Value;
             if (look && flash != null) flash.Value = true;
             if (_flashWas != null) _flashWas.Value = false;
-            Plugin.Log?.LogInfo("[mod] enabled from the next game start" + (look && flash != null ? ", Flash look restored" : ""));
-            Tell("Мод включён. Перезапусти игру, чтобы он заработал.");
-        }
-
-        private static void Tell(string text)
-        {
-            try { DialogFactory.ShowMessageBox(Caption, null, result => { }, text); }
-            catch (Exception e) { Plugin.Log?.LogWarning("[mod] message: " + e.Message); }
+            Plugin.Log?.LogInfo("[mod] enabled from the next game start" + (look && flash != null ? ", Flash look restored" : "") + ", closing the client");
+            FlashLook.Quit();
         }
     }
 

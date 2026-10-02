@@ -106,6 +106,7 @@ namespace NewAgeQoL
                 foreach (var pair in icons)
                 {
                     var icon = pair.Value;
+                    if (icon != null) ItemTip.Attach(icon.gameObject, null, icon, pair.Key);
                     if (icon == null || !Hooked.Add(icon)) continue;
                     var button = IconButton != null ? IconButton.GetValue(icon) as Button : null;
                     if (button != null && IconClick != null)
@@ -132,6 +133,7 @@ namespace NewAgeQoL
                 button.onClick.AddListener(() => BagClicked(cell));
                 var drag = cell.gameObject.GetComponent<DressDragHandle>() ?? cell.gameObject.AddComponent<DressDragHandle>();
                 drag.Cell = cell;
+                ItemTip.Attach(cell.gameObject, cell, null, default(ESlots.SlotType));
             }
             catch (Exception e) { Plugin.Trace("[items] cell: " + e.Message); }
         }
@@ -538,6 +540,7 @@ namespace NewAgeQoL
 
         internal static void Shutdown()
         {
+            ItemTip.Shutdown();
             if (_ghostCanvas != null) UnityEngine.Object.Destroy(_ghostCanvas);
             _ghostCanvas = null;
             _ghost = null;
@@ -560,6 +563,8 @@ namespace NewAgeQoL
             var image = IconImage != null ? IconImage.GetValue(icon) as Image : null;
             return image != null ? image.sprite : null;
         }
+
+        internal static int ThingOf(ESlots.SlotType slot, int id) => Slots.TryGetValue(slot, out var worn) && worn != null && worn.Id == id ? worn.ThingId : 0;
 
         internal static int KindOf(ESlots.SlotType slot) => Slots.TryGetValue(slot, out var worn) && worn != null ? worn.Kind : 0;
 

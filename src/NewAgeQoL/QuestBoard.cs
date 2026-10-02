@@ -41,6 +41,7 @@ namespace NewAgeQoL
         private static readonly Dictionary<int, Detail> Told = new Dictionary<int, Detail>();
         private static readonly Dictionary<int, float> Waiting = new Dictionary<int, float>();
         private static readonly Dictionary<int, float> Sent = new Dictionary<int, float>();
+        private static readonly Dictionary<int, float> Opened = new Dictionary<int, float>();
         private static readonly Dictionary<int, int> Tries = new Dictionary<int, int>();
         private static readonly HashSet<int> Fresh = new HashSet<int>();
         private static readonly List<Card> Cards = new List<Card>();
@@ -49,7 +50,6 @@ namespace NewAgeQoL
         private static float _pollAt;
         private static float _askAt;
         private static float _sweptAt = -100f;
-        private static float _missAt;
         private static float _findAt;
         private static float _eagerUntil;
         private static bool _sceneHooked;
@@ -294,6 +294,7 @@ namespace NewAgeQoL
                 Sent.Remove(questId);
                 Wake(questId);
                 _asked = questId;
+                Opening(questId);
                 nc.SendRequest(new DetailInfoFaceRequest(questId));
                 Plugin.Trace("[quests] opening talk for quest " + questId);
             }
@@ -450,6 +451,16 @@ namespace NewAgeQoL
             return true;
         }
 
+        internal static void Opening(int questId) => Opened[questId] = Time.unscaledTime;
+
+        internal static bool Wanted(NpcFaceDetailResponseMessage msg)
+        {
+            float at;
+            if (msg == null || !Opened.TryGetValue(msg.QuestId, out at)) return false;
+            Opened.Remove(msg.QuestId);
+            return Time.unscaledTime - at < 20f;
+        }
+
         internal static bool Ours(NpcFaceDetailResponseMessage msg)
         {
             if (msg == null) return false;
@@ -507,15 +518,7 @@ namespace NewAgeQoL
                         var grid = UnityEngine.Object.FindObjectOfType<NpcFaceWidgetManager>();
                         found = grid != null ? grid.transform.parent : null;
                     }
-                    if (found == null)
-                    {
-                        if (Time.unscaledTime >= _missAt)
-                        {
-                            _missAt = Time.unscaledTime + 30f;
-                            Plugin.Trace("[quests] faces column not found");
-                        }
-                        return;
-                    }
+                    if (found == null) return;
                     _strip = found.gameObject;
                 }
                 if (!_strip.activeSelf) return;
@@ -537,9 +540,25 @@ namespace NewAgeQoL
             {
                 var detail = msg as NpcFaceDetailResponseMessage;
                 if (detail == null) return true;
-                return !QuestBoard.Ours(detail);
+                bool ours = QuestBoard.Ours(detail);
+                if (QuestBoard.Wanted(detail)) return true;
+                if (!ours) Plugin.Trace("[quests] details of quest " + detail.QuestId + " came unasked, quest window not opened");
+                return false;
             }
             catch (Exception e) { Plugin.Trace("[quests] response intercept: " + e.Message); return true; }
+        }
+    }
+
+    [HarmonyPatch(typeof(QuestController), "OnNpcSelected")]
+    internal static class QuestBoardFacePatch
+    {
+        private static void Prefix(NpcFaceMessageWrapper face)
+        {
+            try
+            {
+                if (face != null && face.FaceMessage != null) QuestBoard.Opening(face.FaceMessage.QuestId);
+            }
+            catch (Exception e) { Plugin.Trace("[quests] face click: " + e.Message); }
         }
     }
 }

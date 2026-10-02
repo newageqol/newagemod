@@ -220,6 +220,7 @@ namespace NewAgeQoL
         private static readonly string[] Gone =
         {
             "fight:hexup", "fight:hexdown", "fight:hexleft", "fight:hexright", "fight:hexgo", "win:tapes",
+            "fight:effects", "fight:zones",
         };
 
         private static readonly string[] Older = { "win:inventory", "win:online", "fight:phase", "fight:strike" };
@@ -830,8 +831,7 @@ namespace NewAgeQoL
                 new Act { Key = "fight:phase", Group = "Бой", Title = "Завершить фазу", Fallback = "Tab", Do = Phase },
                 new Act { Key = "fight:strike", Group = "Бой", Title = "Удар", Fallback = "Space", Do = Strike.Key },
                 new Act { Key = "fight:next", Group = "Бой", Title = "Следующий враг", Do = Targets.Next },
-                new Act { Key = "fight:effects", Group = "Бой", Title = "Окно эффектов", Do = EffectsWindow.Toggle },
-                new Act { Key = "fight:zones", Group = "Бой", Title = "Показать зоны наведения на бойцов", Do = HintZones.Toggle },
+                new Act { Key = "fight:nextally", Group = "Бой", Title = "Следующий союзник", Do = Targets.NextAlly },
 
                 new Act { Key = "flask:0", Group = "Банки", Title = "Банка жизни", Do = () => Flasks.Use(0) },
                 new Act { Key = "flask:1", Group = "Банки", Title = "Банка маны", Do = () => Flasks.Use(1) },
@@ -883,11 +883,13 @@ namespace NewAgeQoL
                     Do = () => SkillList.Use(kind, id),
                 });
             }
+            var place = new Dictionary<Act, int>();
+            for (int i = 0; i < list.Count; i++) place[list[i]] = i;
             list.Sort((a, b) =>
             {
                 int byGroup = Order(a.Group).CompareTo(Order(b.Group));
                 if (byGroup != 0) return byGroup;
-                if (Order(a.Group) < 4) return 0;
+                if (Order(a.Group) < 4) return place[a].CompareTo(place[b]);
                 return string.Compare(a.Title, b.Title, StringComparison.CurrentCultureIgnoreCase);
             });
             return list;

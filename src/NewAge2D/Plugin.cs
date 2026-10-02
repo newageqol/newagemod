@@ -19,7 +19,7 @@ public class Plugin : BaseUnityPlugin
     private Harmony _harmony;
 
     internal static ConfigEntry<bool> CfgEnabled;
-    internal static ConfigEntry<bool> CfgUnityOnce;
+    internal static ConfigEntry<bool> CfgFlashOnce;
     internal static ConfigEntry<bool> CfgVerbose;
     internal static ConfigEntry<bool> CfgTrace;
     internal static ConfigEntry<bool> CfgQuiet;
@@ -57,7 +57,7 @@ public class Plugin : BaseUnityPlugin
         Trace.MainThreadId = Thread.CurrentThread.ManagedThreadId;
         Journal.Attach(Log);
 
-        CfgEnabled = Config.Bind("General", "Enabled", false, "Рисовать Flash-куклу вместо 3D-модели в окне персонажа и в бою. ВЫКЛ — везде модели и анимации Unity. Это главный выключатель: при ВЫКЛ разделы Combat и Field не работают.");
+        CfgEnabled = Config.Bind("General", "Enabled", true, "Рисовать Flash-куклу вместо 3D-модели в окне персонажа и в бою. В окне настроек мода — строка «Внешний вид»: смена вида закрывает клиент, вид меняется со следующего запуска.");
         CfgVerbose = Config.Bind("General", "Verbose", true, "Подробный журнал");
         CfgTrace = Config.Bind("General", "Trace", true, "Журнал боя по кадрам: появление и пропадание кукол, 3D-модели, действия, очереди рисования и выгрузки, задержки кадров. Каждый бой — отдельный файл в BepInEx/cache/NewAge2D/trace, хранятся последние 20, вместе не больше 20 МБ");
         CfgQuiet = Config.Bind("General", "QuietOnce", false, "Служебная отметка: подробные журналы после обновления мода уже выключены. Пока её нет, мод один раз выключит их, даже если в старых настройках они были включены. После этого включённые журналы — твоя настройка, мод их не трогает.");
@@ -105,15 +105,15 @@ public class Plugin : BaseUnityPlugin
         CfgSoundBefore = Config.Bind("General", "GameSoundBeforeFlash", -1f,
             "Служебное: громкость звука игры до включения Flash-вида. При Flash-виде звук игры уходит в 0, а ползунок «Звук» в настройках игры прячется: свои звуки игра привязывает к 3D-моделям и анимациям Unity. При выключении вида громкость возвращается. -1 — мод звук не глушил.");
 
-        CfgUnityOnce = Config.Bind("General", "SwitchedToUnity", false,
-            "Служебная отметка: мод один раз перевёл вид на Unity, когда Flash-кукла перестала быть видом по умолчанию. Дальше выбор твой, обратно мод не переключает.");
-        if (!CfgUnityOnce.Value)
+        CfgFlashOnce = Config.Bind("General", "SwitchedToFlash", false,
+            "Служебная отметка: мод один раз включил Flash-вид, когда он стал видом по умолчанию.");
+        if (!CfgFlashOnce.Value)
         {
-            CfgUnityOnce.Value = true;
-            if (CfgEnabled.Value)
+            CfgFlashOnce.Value = true;
+            if (!CfgEnabled.Value)
             {
-                CfgEnabled.Value = false;
-                Log.LogInfo("View switched to Unity models: Flash doll is no longer on by default, re-enable with General/Enabled");
+                CfgEnabled.Value = true;
+                Log.LogInfo("View switched to Flash: it is now the default view");
             }
         }
 
@@ -122,6 +122,7 @@ public class Plugin : BaseUnityPlugin
             CfgCombat.Value = true;
             CfgField.Value = true;
         }
+        Tidy();
 
         System.Net.ServicePointManager.DefaultConnectionLimit = Math.Max(System.Net.ServicePointManager.DefaultConnectionLimit, 16);
         Native.Preload(Log);
@@ -161,6 +162,18 @@ public class Plugin : BaseUnityPlugin
         CfgField.SettingChanged += (_, _) => Apply();
         CfgKeepMagic.SettingChanged += (_, _) => Effects.Set(HideMagic);
         Log.LogInfo($"New Age 2D {Version} loaded, clip cache: {Store.CacheDir}, draw threads {DollWorker.WorkerCount}");
+    }
+
+    private void Tidy()
+    {
+        try
+        {
+            var left = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries")?.GetValue(Config, null) as Dictionary<ConfigDefinition, string>;
+            if (left == null || !left.Remove(new ConfigDefinition("General", "SwitchedToUnity"))) return;
+            Config.Save();
+            Log.LogInfo("Removed unused key General/SwitchedToUnity from settings");
+        }
+        catch (Exception e) { Log.LogWarning("Settings cleanup: " + e.Message); }
     }
 
     internal static bool FlashLook => CfgEnabled != null && CfgEnabled.Value;

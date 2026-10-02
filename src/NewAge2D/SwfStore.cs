@@ -12,21 +12,73 @@ public sealed class SwfStore
     public string Server = "http://files.nura.biz/";
     public Action<string> Log;
 
+    private const long Budget = 16L * 1024 * 1024;
+    private static readonly HashSet<string> Pinned = new(StringComparer.OrdinalIgnoreCase) { "client.swf", "effects.swf" };
+
     private readonly Dictionary<string, SwfMovie> _movies = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, LinkedListNode<string>> _nodes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LinkedList<string> _order = new();
     private readonly Dictionary<string, string> _failed = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, object> _gates = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _fetching = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pulled = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _parsed = new(StringComparer.OrdinalIgnoreCase);
+    private long _bytes;
+    private int _dropped;
 
     public void Forget()
     {
         lock (_movies)
         {
             _movies.Clear();
+            _nodes.Clear();
+            _order.Clear();
+            _bytes = 0;
             _failed.Clear();
+            _gates.Clear();
             _fetching.Clear();
             _pulled.Clear();
+            _parsed.Clear();
         }
+    }
+
+    private static long Weight(SwfMovie movie) => movie?.File?.Body?.Length ?? 0;
+
+    private void Touch(string file)
+    {
+        if (!_nodes.TryGetValue(file, out var node)) return;
+        _order.Remove(node);
+        _order.AddLast(node);
+    }
+
+    private void Hold(string file, SwfMovie movie)
+    {
+        bool pinned = Pinned.Contains(file);
+        if (!pinned && _movies.TryGetValue(file, out var old)) _bytes -= Weight(old);
+        _movies[file] = movie;
+        _parsed.Add(file);
+        _fetching.Remove(file);
+        _pulled.Remove(file);
+        if (pinned) return;
+        _bytes += Weight(movie);
+        if (_nodes.TryGetValue(file, out var node)) _order.Remove(node);
+        _nodes[file] = _order.AddLast(file);
+        int dropped = 0;
+        while (_bytes > Budget && _order.First != null && _order.First.Value != file)
+        {
+            string oldest = _order.First.Value;
+            _order.RemoveFirst();
+            _nodes.Remove(oldest);
+            if (_movies.TryGetValue(oldest, out var gone)) _bytes -= Weight(gone);
+            _movies.Remove(oldest);
+            _gates.Remove(oldest);
+            dropped++;
+        }
+        if (dropped == 0) return;
+        _dropped += dropped;
+        if (_dropped < 100) return;
+        Log?.Invoke($"swf cache: dropped {_dropped} least recently used files, kept {_movies.Count} ({_bytes / (1024 * 1024)} MB of bodies)");
+        _dropped = 0;
     }
 
     public void Prefetch(IEnumerable<string> files)
@@ -69,7 +121,7 @@ public sealed class SwfStore
     public bool Ready(string file)
     {
         if (string.IsNullOrEmpty(file)) return true;
-        lock (_movies) return _movies.ContainsKey(file) || _failed.ContainsKey(file);
+        lock (_movies) return _movies.ContainsKey(file) || _parsed.Contains(file) || _failed.ContainsKey(file);
     }
 
     public string Failure(string file)
@@ -84,7 +136,7 @@ public sealed class SwfStore
         object gate;
         lock (_movies)
         {
-            if (_movies.TryGetValue(file, out var known)) return known;
+            if (_movies.TryGetValue(file, out var known)) { Touch(file); return known; }
             if (_failed.TryGetValue(file, out reason)) return null;
             if (!_gates.TryGetValue(file, out gate)) _gates[file] = gate = new object();
         }
@@ -108,7 +160,7 @@ public sealed class SwfStore
                 try
                 {
                     movie = SwfMovie.Load(path);
-                    lock (_movies) _movies[file] = movie;
+                    lock (_movies) Hold(file, movie);
                 }
                 catch (Exception ex)
                 {

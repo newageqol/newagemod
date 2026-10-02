@@ -59,7 +59,9 @@ namespace NewAgeQoL
         private static Text _race, _gender, _level, _class, _sub, _rank, _skills;
         private static readonly InputField[] BaseInput = new InputField[7];
         private static readonly Text[] TotalText = new Text[7];
-        private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote;
+        private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote, _artPrice;
+        private static GameObject _artRow;
+        private const float ArtRowH = 44f;
         private static Button _update;
         private static Text _elixirLabel;
         private static string _statusSeen;
@@ -921,10 +923,44 @@ namespace NewAgeQoL
             for (int m = 0; m < 3; m++) { MagicText[m] = Line(result, WardrobeData.MagicNames[m], y); y += 26f; }
             y += 10f;
             _warn = OnlineWindow.Label(result, "", 13, FontStyle.Normal, WardrobeLook.Bad);
-            At(_warn.rectTransform, 12f, y, ResultW - 24f, BodyH - y - 10f);
+            At(_warn.rectTransform, 12f, y, ResultW - 24f, BodyH - y - 10f - ArtRowH);
             _warn.alignment = TextAnchor.UpperLeft;
             _warn.horizontalOverflow = HorizontalWrapMode.Wrap;
             _warn.verticalOverflow = VerticalWrapMode.Truncate;
+
+            _artRow = new GameObject("artPrice", typeof(RectTransform));
+            _artRow.transform.SetParent(result, false);
+            var row = (RectTransform)_artRow.transform;
+            At(row, 0f, BodyH - ArtRowH - 6f, ResultW, ArtRowH);
+            var line = new GameObject("line", typeof(RectTransform), typeof(Image));
+            line.transform.SetParent(row, false);
+            line.GetComponent<Image>().color = WardrobeLook.Edge;
+            line.GetComponent<Image>().raycastTarget = false;
+            At((RectTransform)line.transform, 14f, 0f, ResultW - 28f, 1f);
+            var name = OnlineWindow.Label(row, "Артефакты", 15, FontStyle.Normal, WardrobeLook.Label);
+            At(name.rectTransform, 18f, 10f, 120f, 28f);
+            name.alignment = TextAnchor.MiddleLeft;
+            _artPrice = OnlineWindow.Label(row, "", 16, FontStyle.Bold, WardrobeLook.Accent);
+            At(_artPrice.rectTransform, 140f, 10f, ResultW - 156f, 28f);
+            _artPrice.alignment = TextAnchor.MiddleRight;
+            _artPrice.resizeTextForBestFit = true;
+            _artPrice.resizeTextMinSize = 11;
+            _artPrice.resizeTextMaxSize = 16;
+            _artRow.SetActive(false);
+        }
+
+        internal static int ArtPrice(WardrobeState s)
+        {
+            int sum = 0;
+            var seen = new HashSet<WardrobeThing>();
+            foreach (var pair in s.Worn)
+            {
+                var thing = pair.Value;
+                if (thing == null || !thing.Art || !seen.Add(thing)) continue;
+                var rule = WardrobeData.ArtRule(thing.Sub, thing.ItemLevel);
+                if (rule != null) sum += rule.Price;
+            }
+            return sum;
         }
 
         private static void MakeCell(int slot, float x, float y)
@@ -1284,6 +1320,12 @@ namespace NewAgeQoL
             if (_energy != null) _energy.text = S.Energy.ToString();
             for (int p = 0; p < 5; p++) if (ArmorText[p] != null) ArmorText[p].text = S.Armor(p).ToString();
             for (int m = 0; m < 3; m++) if (MagicText[m] != null) MagicText[m].text = S.Magic(m).ToString();
+            if (_artRow != null)
+            {
+                int price = ArtPrice(S);
+                if (_artRow.activeSelf != price > 0) _artRow.SetActive(price > 0);
+                if (price > 0) _artPrice.text = price + " " + Plural(price, "кристалл", "кристалла", "кристаллов");
+            }
 
             if (_warn != null)
             {

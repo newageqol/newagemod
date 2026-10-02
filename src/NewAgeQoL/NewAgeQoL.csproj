@@ -63,6 +63,10 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.UIModule">
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>

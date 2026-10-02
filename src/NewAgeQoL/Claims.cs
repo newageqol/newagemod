@@ -93,7 +93,6 @@ namespace NewAgeQoL
                 {
                     if (Count(view, one.Id) == 0) return true;
                     Note(view, one);
-                    Plugin.Trace("[claims] claim " + one.Id + " arrived again, not adding a second row");
                     return false;
                 }
                 Remember(view, one.Id);

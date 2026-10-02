@@ -99,6 +99,37 @@ namespace NewAgeQoL
             catch { return false; }
         }
 
+        internal static void AskSwitch()
+        {
+            var look = Entry("General", "Enabled");
+            if (look == null) return;
+            bool toFlash = !look.Value;
+            string text = (toFlash ? "Включить вид как во Flash?" : "Вернуть 3D-вид?")
+                + " Вид меняется только после перезапуска игры: клиент сейчас закроется, запусти его снова.";
+            try
+            {
+                DialogFactory.ShowConfirmMessageBox("dialogs.artworkshop.confirm.caption", result =>
+                {
+                    if (result != EMessageBoxResult.MB_OK) return;
+                    look.Value = toFlash;
+                    Plugin.Log?.LogInfo("[look] " + (toFlash ? "Flash" : "3D") + " view from the next game start, closing the client");
+                    Quit();
+                }, text);
+            }
+            catch (System.Exception e) { Plugin.Log?.LogWarning("[look] switch dialog: " + e.Message); }
+        }
+
+        internal static void Quit()
+        {
+            try
+            {
+                var session = DependencyContainer.GetContainer()?.Resolve<SessionController>();
+                if (session != null) { session.ApplicationExit(); return; }
+            }
+            catch (System.Exception e) { Plugin.Log?.LogWarning("[look] leaving the game: " + e.Message); }
+            UnityEngine.Application.Quit();
+        }
+
         internal static string ResetCache()
         {
             try

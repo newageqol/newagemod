@@ -6,8 +6,13 @@ namespace NewAgeQoL
 {
     internal static class Targets
     {
-        internal static void Next()
+        internal static void Next() => Cycle(false);
+
+        internal static void NextAlly() => Cycle(true);
+
+        private static void Cycle(bool allies)
         {
+            string kind = allies ? "allies" : "enemies";
             try
             {
                 if (!SideButtons.InCombat()) return;
@@ -15,32 +20,32 @@ namespace NewAgeQoL
                 var mine = cd != null ? cd.MyCharacter : null;
                 if (cd == null || mine == null || cd.Characters == null) return;
 
-                var foes = Foes(cd, mine);
-                if (foes.Count == 0) { Plugin.Trace("[targets] no enemies on the field"); return; }
+                var pool = Pick(cd, mine, allies);
+                if (pool.Count == 0) { Plugin.Trace("[targets] no " + kind + " on the field"); return; }
 
                 int at = -1;
                 var now = cd.SelectedCharacter;
                 if (now != null)
-                    for (int i = 0; i < foes.Count; i++)
-                        if (foes[i].UserId == now.UserId) { at = i; break; }
+                    for (int i = 0; i < pool.Count; i++)
+                        if (pool[i].UserId == now.UserId) { at = i; break; }
 
-                var pick = foes[at < 0 ? 0 : (at + 1) % foes.Count];
+                var pick = pool[at < 0 ? 0 : (at + 1) % pool.Count];
                 if (pick == now) return;
                 cd.SelectedCharacter = pick;
                 FighterHint.Ask(pick.UserId);
-                Plugin.Trace("[targets] " + (pick.Login ?? "?") + " id " + pick.UserId + ", distance " + Far(mine, pick) + ", enemies total " + foes.Count);
+                Plugin.Trace("[targets] " + (pick.Login ?? "?") + " id " + pick.UserId + ", distance " + Far(mine, pick) + ", " + kind + " total " + pool.Count);
             }
             catch (Exception e) { Plugin.Warn("[targets] " + e); }
         }
 
-        private static List<AbstractCharacter> Foes(ICombatData cd, AbstractCharacter mine)
+        private static List<AbstractCharacter> Pick(ICombatData cd, AbstractCharacter mine, bool allies)
         {
             var list = new List<AbstractCharacter>();
             foreach (var pair in cd.Characters)
             {
                 var ch = pair.Value;
                 if (ch == null || ch.UserId == 0) continue;
-                if (ch.Team == mine.Team || ch.IsFitment() || Gone(ch)) continue;
+                if ((ch.Team == mine.Team) != allies || ch.UserId == mine.UserId || ch.IsFitment() || Gone(ch)) continue;
                 list.Add(ch);
             }
             list.Sort((a, b) =>

@@ -48,8 +48,6 @@ namespace NewAgeQoL
             {
                 new Header { Title = "Мод" },
                 A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
-                B("Ночная тема", NightTheme.Enabled),
-                A(NightTheme.RowTitle(), NightTheme.ButtonText(), NightTheme.Download),
                 new Header { Title = "Кнопки" },
                 B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
                 B("Кнопка сдачи вещей в хранилище", Plugin.CfgArtifactButtons),
@@ -69,8 +67,6 @@ namespace NewAgeQoL
 
                 new Header { Title = "Бой" },
                 B("Контрприём на себя в первой фазе", Plugin.CfgCounterAuto),
-                Sl("Отдаление камеры в бою (3D-вид, не Flash)", Plugin.CfgCamZoom, 1f, 4f),
-                Sl("Размер окон итога боя и разведки", Plugin.CfgDialogScale, 0.4f, 1f),
 
                 new Header { Title = "Кто в игре" },
                 S("Логин запасного аккаунта", Plugin.CfgOnlineLogin),
@@ -88,7 +84,8 @@ namespace NewAgeQoL
                 rows.InsertRange(rows.Count - 1, new List<RowDef>
                 {
                     new Header { Title = "Внешний вид" },
-                    B("Бой и персонажи как во Flash (выкл — как в Unity)", flash),
+                    A(flash.Value ? "Бой и персонажи как во Flash" : "Бой и персонажи в 3D",
+                        flash.Value ? "Вернуть 3D" : "Как во Flash", FlashLook.AskSwitch),
                     A("Кэш вещей Flash, как у нового игрока", "Сбросить", () => Notice.Show(FlashLook.ResetCache() ?? "Кэш вещей Flash сбросить не удалось", 6f)),
                 });
             }
@@ -615,8 +612,6 @@ namespace NewAgeQoL
                     {
                         b.Cfg.Value = !b.Cfg.Value;
                         SetSwitch(value, b.Cfg.Value);
-                        if (ReferenceEquals(b.Cfg, NightTheme.Enabled))
-                            NightTheme.Switched(b.Cfg.Value, () => { if (value != null) SetSwitch(value, b.Cfg.Value); });
                     });
                 }
                 return;

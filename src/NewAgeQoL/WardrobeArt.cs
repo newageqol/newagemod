@@ -446,7 +446,7 @@ namespace NewAgeQoL
             Wardrobe.At(_gain.rectTransform, width - 114f, y, 100f, 24f);
             _gain.alignment = TextAnchor.MiddleRight;
             y += 26f;
-            _limits = OnlineWindow.Label(rt, "", 13, FontStyle.Normal, WardrobeLook.Faint);
+            _limits = OnlineWindow.Label(rt, "", 15, FontStyle.Bold, WardrobeLook.Accent);
             Wardrobe.At(_limits.rectTransform, 14f, y, width - 28f, 22f);
             _limits.alignment = TextAnchor.MiddleLeft;
             y += 28f;
@@ -483,33 +483,67 @@ namespace NewAgeQoL
             scroll.viewport = _scroll;
 
             float rowW = width - 24f;
+            Section(content, rowW, "Характеристики", true);
             foreach (int i in WardrobeData.StatOrder) MakeRow(content, rowW, i, WardrobeData.StatNames[i]);
-            for (int p = 0; p < 5; p++) MakeRow(content, rowW, 7 + p, "Броня: " + WardrobeData.ArmorNames[p].ToLowerInvariant());
-            for (int m = 0; m < 3; m++) MakeRow(content, rowW, 12 + m, "Защита: " + WardrobeData.MagicNames[m]);
             MakeRow(content, rowW, Energy, "Энергия");
+            Section(content, rowW, "Броня", false);
+            for (int p = 0; p < 5; p++) MakeRow(content, rowW, 7 + p, WardrobeData.ArmorNames[p]);
+            Section(content, rowW, "Защита от магии", false);
+            for (int m = 0; m < 3; m++) MakeRow(content, rowW, 12 + m, WardrobeData.MagicNames[m]);
 
             float by = height - Bottom + 10f;
-            _wear = Wardrobe.GameButton(rt, "Надеть", () => Wear(false), false).GetComponent<Button>();
-            Wardrobe.At((RectTransform)_wear.transform, 14f, by, 130f, 42f);
-            var group = WardrobeData.Group(Target);
-            if (group != null)
-            {
-                _wearAll = Wardrobe.GameButton(rt, "Надеть " + group.Length, () => Wear(true), false).GetComponent<Button>();
-                Wardrobe.At((RectTransform)_wearAll.transform, 152f, by, 130f, 42f);
-            }
             _reset = Wardrobe.GameButton(rt, "Обнулить", () =>
             {
                 for (int k = 0; k < Count; k++) Values[k] = 0;
                 Paint();
             }, true).GetComponent<Button>();
-            Wardrobe.At((RectTransform)_reset.transform, width - 14f - 130f, by, 130f, 42f);
+            Wardrobe.At((RectTransform)_reset.transform, 14f, by, 130f, 42f);
+            _wear = Green(Wardrobe.GameButton(rt, "Надеть", () => Wear(false), false)).GetComponent<Button>();
+            Wardrobe.At((RectTransform)_wear.transform, width - 14f - 130f, by, 130f, 42f);
+            var group = WardrobeData.Group(Target);
+            if (group != null)
+            {
+                _wearAll = Green(Wardrobe.GameButton(rt, "Надеть " + group.Length, () => Wear(true), false)).GetComponent<Button>();
+                Wardrobe.At((RectTransform)_wearAll.transform, width - 14f - 130f - 8f - 130f, by, 130f, 42f);
+            }
+        }
+
+        private static readonly Color WearColor = new Color32(52, 128, 66, 255);
+
+        private static RectTransform Green(RectTransform button)
+        {
+            button.GetComponent<Image>().color = WearColor;
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null) label.color = Color.white;
+            return button;
+        }
+
+        private const float SectionFirst = 22f;
+        private const float SectionNext = 30f;
+
+        private static void Section(RectTransform content, float rowW, string name, bool first)
+        {
+            float h = first ? SectionFirst : SectionNext;
+            var go = new GameObject("section", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(content, false);
+            var le = go.GetComponent<LayoutElement>();
+            le.minHeight = le.preferredHeight = h;
+            var rt = (RectTransform)go.transform;
+            var label = OnlineWindow.Label(rt, name.ToUpperInvariant(), 11, FontStyle.Bold, WardrobeLook.Accent);
+            Wardrobe.At(label.rectTransform, 8f, h - 20f, rowW - 16f, 18f);
+            label.alignment = TextAnchor.MiddleLeft;
+            var line = new GameObject("line", typeof(RectTransform), typeof(Image));
+            line.transform.SetParent(rt, false);
+            line.GetComponent<Image>().color = WardrobeLook.Edge;
+            line.GetComponent<Image>().raycastTarget = false;
+            Wardrobe.At((RectTransform)line.transform, 8f, h - 2f, rowW - 16f, 1f);
         }
 
         private static void BuildCompact(RectTransform panel, float areaX, float areaY, float areaW, float areaH)
         {
             const float Width = 580f;
             const float RowH = 32f;
-            float listH = RowH * 9f;
+            float listH = RowH * 8f + SectionFirst + SectionNext + 4f;
             float height = 46f + (_kinds.Count > 1 ? 38f : 0f) + 42f + 26f + 26f + listH + 12f + 42f + 14f;
 
             _shade = new GameObject("QoLWardrobeArtShade", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -559,7 +593,7 @@ namespace NewAgeQoL
             Wardrobe.At(_gain.rectTransform, Width - 124f, y, 110f, 24f);
             _gain.alignment = TextAnchor.MiddleRight;
             y += 26f;
-            _limits = OnlineWindow.Label(rt, "", 13, FontStyle.Normal, WardrobeLook.Faint);
+            _limits = OnlineWindow.Label(rt, "", 15, FontStyle.Bold, WardrobeLook.Accent);
             Wardrobe.At(_limits.rectTransform, 14f, y, Width - 28f, 22f);
             _limits.alignment = TextAnchor.MiddleLeft;
             y += 26f;
@@ -571,15 +605,18 @@ namespace NewAgeQoL
             float colW = (Width - 20f - 10f) / 2f;
             var leftCol = Column(_scroll, 0f, colW, listH);
             var rightCol = Column(_scroll, colW + 10f, colW, listH);
+            Section(leftCol, colW, "Характеристики", true);
             foreach (int i in WardrobeData.StatOrder) MakeRow(leftCol, colW, i, WardrobeData.StatNames[i], true);
-            for (int p = 0; p < 5; p++) MakeRow(rightCol, colW, 7 + p, "Броня: " + WardrobeData.ArmorNames[p].ToLowerInvariant(), true);
-            for (int m = 0; m < 3; m++) MakeRow(rightCol, colW, 12 + m, "Защита: " + WardrobeData.MagicNames[m], true);
-            MakeRow(rightCol, colW, Energy, "Энергия", true);
+            MakeRow(leftCol, colW, Energy, "Энергия", true);
+            Section(rightCol, colW, "Броня", true);
+            for (int p = 0; p < 5; p++) MakeRow(rightCol, colW, 7 + p, WardrobeData.ArmorNames[p], true);
+            Section(rightCol, colW, "Защита от магии", false);
+            for (int m = 0; m < 3; m++) MakeRow(rightCol, colW, 12 + m, WardrobeData.MagicNames[m], true);
             y += listH + 12f;
 
             float bw = (Width - 28f - 3f * 8f) / 4f;
             int slot = _slot;
-            _wear = Wardrobe.GameButton(rt, "Сохранить", () => Wear(false), false).GetComponent<Button>();
+            _wear = Green(Wardrobe.GameButton(rt, "Сохранить", () => Wear(false), false)).GetComponent<Button>();
             Wardrobe.At((RectTransform)_wear.transform, 14f, y, bw, 42f);
             _reset = Wardrobe.GameButton(rt, "Обнулить", () =>
             {
@@ -707,7 +744,7 @@ namespace NewAgeQoL
             _gain.text = "рейтинг " + (delta > 0 ? "+" + delta : delta.ToString());
             _gain.color = delta > 0 ? WardrobeLook.Good : delta < 0 ? WardrobeLook.Bad : WardrobeLook.Label;
 
-            _limits.text = "Цена " + rule.Price + " " + Wardrobe.Plural(rule.Price, "кристалл", "кристалла", "кристаллов");
+            _limits.text = "Цена: " + rule.Price + " " + Wardrobe.Plural(rule.Price, "кристалл", "кристалла", "кристаллов");
 
             foreach (var row in Rows)
             {

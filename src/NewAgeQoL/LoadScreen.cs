@@ -70,7 +70,6 @@ namespace NewAgeQoL
 
         internal static void Attach(Preloader preloader)
         {
-            if (!NightTheme.On) return;
             if (preloader.GetComponentInChildren<LoadScreen>(true) != null) return;
             var go = new GameObject("QoLLoadScreen", typeof(RectTransform));
             var rt = (RectTransform)go.transform;

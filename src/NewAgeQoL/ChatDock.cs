@@ -56,6 +56,7 @@ namespace NewAgeQoL
         private static Text _clock;
         private static Text _count;
         private static string _shown = "";
+        private static string _clockPlace = "";
         private static bool _clockOk;
 
         private static readonly Button[] Sheets = new Button[2];
@@ -1187,8 +1188,13 @@ namespace NewAgeQoL
             if (_clock == null) return;
             var at = Server();
             string now = at.HasValue ? at.Value.AddHours(3).ToString("HH:mm") : "--:--";
-            if (now != _shown) Plugin.Trace("[dock] clock: " + now + ", label " + (_clock.gameObject.activeInHierarchy ? "visible" : "hidden")
-                + ", position " + _clock.rectTransform.anchoredPosition + " size " + _clock.rectTransform.sizeDelta);
+            string place = (_clock.gameObject.activeInHierarchy ? "visible" : "hidden")
+                + ", position " + _clock.rectTransform.anchoredPosition + " size " + _clock.rectTransform.sizeDelta;
+            if (place != _clockPlace)
+            {
+                _clockPlace = place;
+                Plugin.Trace("[dock] clock: " + now + ", label " + place);
+            }
             if (at.HasValue && !_clockOk)
             {
                 _clockOk = true;
@@ -2493,6 +2499,8 @@ namespace NewAgeQoL
         }
 
         private static readonly List<UserRowInfoMessage> Watched = new List<UserRowInfoMessage>();
+        private static readonly Dictionary<int, AbstractCharacter> Seen = new Dictionary<int, AbstractCharacter>();
+        private static object _seenFight;
         private static int _castMark;
 
         private static bool Peek
@@ -2505,12 +2513,9 @@ namespace NewAgeQoL
             Watched.Clear();
             try
             {
-                var cd = FighterHint.Cd();
-                if (cd == null || cd.Characters == null) return Watched;
-                foreach (var pair in cd.Characters)
+                Remember();
+                foreach (var one in Seen.Values)
                 {
-                    var one = pair.Value;
-                    if (one == null || one.UserId <= 0 || string.IsNullOrEmpty(one.Login)) continue;
                     var row = new UserRowInfoMessage(one.UserId, one.Login, one.Level);
                     Cards.Dress(row);
                     OnlineWindow.Extras(row);
@@ -2522,8 +2527,24 @@ namespace NewAgeQoL
             return Watched;
         }
 
+        private static void Remember()
+        {
+            if (!SideButtons.InCombat()) { Seen.Clear(); _seenFight = null; return; }
+            var cd = FighterHint.Cd();
+            if (cd == null || cd.Characters == null) return;
+            if (!ReferenceEquals(cd, _seenFight)) { Seen.Clear(); _seenFight = cd; }
+            foreach (var pair in cd.Characters)
+            {
+                var one = pair.Value;
+                if (one == null || one.UserId <= 0 || string.IsNullOrEmpty(one.Login)) continue;
+                Seen[one.UserId] = one;
+            }
+        }
+
         private static void Watch()
         {
+            try { Remember(); }
+            catch (Exception e) { Plugin.Trace("[dock] fight roster: " + e.Message); }
             if (!Peek || _list != 0) { if (_castMark != 0) { _castMark = 0; Refill(); } return; }
             int mark = 0;
             try

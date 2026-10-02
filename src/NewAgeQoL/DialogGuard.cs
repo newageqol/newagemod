@@ -25,7 +25,6 @@ namespace NewAgeQoL
         {
             if (requestByButton) return true;
             __result = false;
-            Plugin.Trace("[dailies] not showing the window on login");
             return false;
         }
     }

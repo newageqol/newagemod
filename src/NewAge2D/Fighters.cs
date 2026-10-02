@@ -2573,6 +2573,7 @@ internal sealed class FighterDoll : MonoBehaviour
                     if (Trace.On) Trace.Write($"'{Who}' walk frames not ready, gliding in stance");
                 }
                 _moving = false;
+                Need("move", !Fighters.Crowd, false, false, Fighters.Crowd);
                 label = "stop";
                 frame = 0;
                 return;
@@ -2610,7 +2611,11 @@ internal sealed class FighterDoll : MonoBehaviour
     private void Need(string label, bool urgent, bool other = false, bool soon = false, bool late = false)
     {
         if (!Waited()) return;
-        if (_clip != null && Plugin.Store != null && !Plugin.Store.Ready(_clip)) return;
+        if (_clip != null && Plugin.Store != null && !Plugin.Store.Ready(_clip))
+        {
+            if (_files.Add(_clip)) Plugin.Store.Prefetch(new[] { _clip });
+            return;
+        }
         string look = other ? _otherLook : _look;
         if (look == null) return;
         string sequence = FrameCache.SequenceKey(look, label);

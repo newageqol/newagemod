@@ -15,8 +15,6 @@ namespace NewAgeQoL
 {
     internal static class NightTown
     {
-        internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<string> Asked;
         private const int IlleniumLoc = 2;
         private const string SceneName = "Illenium_night";
         private static AssetBundle _bundle;
@@ -33,21 +31,14 @@ namespace NewAgeQoL
 
         internal static string Folder => Path.Combine(Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "", "NightTown");
 
-        internal static void Bind(ConfigFile cfg)
-        {
-            Enabled = cfg.Bind("Town", "NightIllenium", true,
-                "Ночной Иллениум: новый город вместо старого. Щелчки по зданиям работают как раньше.");
-            Asked = cfg.Bind("Town", "NightIlleniumAsked", "",
-                "Версия файлов ночного Иллениума, о которой мод уже спросил. Заполняется сама.");
-            TownFiles.Settle();
-        }
-
         internal static bool WillRun() =>
-            Enabled != null && Enabled.Value && !_busy && !_prepping && !_ready && File.Exists(Path.Combine(Folder, "illenium_night"));
+            !_busy && !_prepping && !_ready && File.Exists(Path.Combine(Folder, "illenium_night"));
 
         internal static bool SceneLoaded() => SceneManager.GetSceneByName(SceneName).isLoaded;
 
         internal static bool Held => _bundle != null || _ready || _prepping;
+
+        internal static bool Busy() => SceneLoaded() || _busy || _prepping || _pending != null;
 
         internal static void Unload()
         {
@@ -72,7 +63,7 @@ namespace NewAgeQoL
                     Drop();
                     return;
                 }
-                if (Enabled == null || !Enabled.Value || _busy) return;
+                if (_busy) return;
                 if (!_prepping && !_ready)
                 {
                     if (!File.Exists(Path.Combine(Folder, "illenium_night")))
@@ -101,8 +92,7 @@ namespace NewAgeQoL
             try
             {
                 if (_prepping || _ready || _busy || Plugin.Instance == null) return;
-                if (Enabled == null || !Enabled.Value) return;
-                TownFiles.Settle();
+                AssetSync.Settle("NightTown");
                 if (!File.Exists(Path.Combine(Folder, "illenium_night"))) return;
                 _prepping = true;
                 Plugin.Instance.StartCoroutine(Prep());
@@ -222,7 +212,7 @@ namespace NewAgeQoL
             try
             {
                 if (_warmed || _bundle != null || _pending != null || Plugin.Instance == null) return;
-                if (Enabled == null || !Enabled.Value || !SideButtons.InWorld()) return;
+                if (!SideButtons.InWorld()) return;
                 _warmed = true;
                 if (!File.Exists(Path.Combine(Folder, "illenium_night"))) return;
                 Plugin.Instance.StartCoroutine(Fetch());

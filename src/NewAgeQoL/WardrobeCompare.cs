@@ -118,8 +118,11 @@ namespace NewAgeQoL
 
         private static void Numbers(RectTransform rt, WardrobeState a, WardrobeState b, string nameA, string nameB, float x, float y, float w, float h)
         {
-            const int Lines = 27;
-            float r = Mathf.Min(26f, Mathf.Floor(h / Lines));
+            int priceA = Wardrobe.ArtPrice(a);
+            int priceB = Wardrobe.ArtPrice(b);
+            bool price = priceA > 0 || priceB > 0;
+            int lines = 29 + (price ? 1 : 0);
+            float r = Mathf.Min(26f, Mathf.Floor(h / lines));
             int size = r >= 24f ? 14 : 13;
             float nameW = w * 0.34f;
             float colW = w * 0.24f;
@@ -143,6 +146,8 @@ namespace NewAgeQoL
             Value(rt, "Жизнь", a.Life, b.Life, x, ref at, w, nameW, colW, r, size, ref n);
             Value(rt, "Мана", a.Mana, b.Mana, x, ref at, w, nameW, colW, r, size, ref n);
             Value(rt, "Энергия", a.Energy, b.Energy, x, ref at, w, nameW, colW, r, size, ref n);
+            if (price)
+                Value(rt, "Артефакты, кристаллы", priceA, priceB, x, ref at, w, nameW, colW, r, size, ref n, true);
 
             Section(rt, "Характеристики", x, ref at, w, r, size);
             foreach (int i in WardrobeData.StatOrder)
@@ -198,7 +203,7 @@ namespace NewAgeQoL
             at += r;
         }
 
-        private static void Value(RectTransform rt, string name, int a, int b, float x, ref float at, float w, float nameW, float colW, float r, int size, ref int n)
+        private static void Value(RectTransform rt, string name, int a, int b, float x, ref float at, float w, float nameW, float colW, float r, int size, ref int n, bool cost = false)
         {
             Band(rt, x, at, w, r, n++);
             var label = Write(rt, name, size, FontStyle.Normal, Soft);
@@ -208,8 +213,9 @@ namespace NewAgeQoL
             var two = Write(rt, b.ToString(), size, FontStyle.Bold, Ink);
             Wardrobe.At(two.rectTransform, x + nameW + colW, at, colW - 6f, r);
             int delta = b - a;
+            int better = cost ? -delta : delta;
             float deltaX = x + nameW + colW * 2f;
-            var diff = Write(rt, delta == 0 ? "=" : (delta > 0 ? "+" + delta : delta.ToString()), size, FontStyle.Bold, delta > 0 ? Up : delta < 0 ? Down : Dim);
+            var diff = Write(rt, delta == 0 ? "=" : (delta > 0 ? "+" + delta : delta.ToString()), size, FontStyle.Bold, better > 0 ? Up : better < 0 ? Down : Dim);
             Wardrobe.At(diff.rectTransform, deltaX, at, x + w - deltaX - 8f, r);
             diff.alignment = TextAnchor.MiddleRight;
             at += r;

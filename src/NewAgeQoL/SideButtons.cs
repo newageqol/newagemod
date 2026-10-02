@@ -472,7 +472,7 @@ namespace NewAgeQoL
             {
                 foreach (var cam in Camera.allCameras)
                 {
-                    if (cam.targetTexture != null || !cam.isActiveAndEnabled) continue;
+                    if (cam == Backdrop.Cam || cam.targetTexture != null || !cam.isActiveAndEnabled) continue;
                     if (cam.clearFlags != CameraClearFlags.Skybox && cam.clearFlags != CameraClearFlags.SolidColor) continue;
                     var r = cam.rect;
                     if (r.width < 0.99f || r.height < 0.99f) continue;
@@ -896,6 +896,7 @@ namespace NewAgeQoL
                 {
                     line = Travel.Status;
                     owner = Named("QoLTravelButton");
+                    if (owner == null || owner.Go == null || !Shown(owner)) owner = Named("QoLTownButton");
                 }
                 else if (!string.IsNullOrEmpty(Artifacts.Status))
                 {

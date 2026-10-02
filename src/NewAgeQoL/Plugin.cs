@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.6.0";
+        public const string Version = "0.7.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -51,10 +51,8 @@ namespace NewAgeQoL
         internal static ConfigEntry<string> CfgStorageCache;
         internal static ConfigEntry<bool> CfgManikinOn;
         internal static ConfigEntry<string> CfgManikinTaken;
-        internal static ConfigEntry<float> CfgCamZoom;
         internal static ConfigEntry<float> CfgCamPanExtra;
         internal static ConfigEntry<float> CfgCamRoomExtra;
-        internal static ConfigEntry<float> CfgDialogScale;
         internal static ConfigEntry<string> CfgOnlineLogin;
         internal static ConfigEntry<string> CfgOnlinePassword;
         internal static ConfigEntry<string> CfgOnlineVersion;
@@ -107,9 +105,7 @@ namespace NewAgeQoL
             }
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
             Chars.Home(Config);
-            NightTown.Bind(Config);
-            MagicTower.Bind(Config);
-            NightTheme.Bind(Config);
+            AssetSync.Boot();
 
 
             Chars.Own("Town", "ButtonGoesToTournament", false,
@@ -234,8 +230,6 @@ namespace NewAgeQoL
             Chars.Once("Online", "GroupByClanOn",
                 "Служебная отметка: группировка по кланам после обновления мода уже включена. Пока её нет, мод один раз включит её, даже если в старых настройках она была выключена. После этого выключенная группировка — твоя настройка, мод её не трогает.", () => CfgOnlineByClan.Value = true);
             ChatColors.Bind();
-            Chars.Own("Combat", "CameraRange", 1f,
-                "Насколько дальше игрового можно ОТДАЛИТЬ камеру в бою: 1 — как в игре, 2 — вдвое дальше и выше, до 4. Приближение остаётся игровым, ближе игрового предела камера не подойдёт. Мод только раздвигает дальний предел, управление игровое: колесо мыши и перетаскивание. Действует только в обычном 3D-виде боя: во Flash-виде камерой управляет сам Flash-вид, и эта настройка на него не влияет.", e => CfgCamZoom = e);
             Chars.Own("Combat", "WalkHexHighlight", true,
                 "В фазе ходьбы подсвечивать клетку под мышью, чтобы было видно, куда именно попадёт клик.", e => CfgWalkHex = e);
             Chars.Own("Combat", "WalkKeys", true,
@@ -251,7 +245,6 @@ namespace NewAgeQoL
             CfgSmallScreen = Config.Bind("Interface", "SmallScreenScale", 1.2f,
                 "Во сколько раз крупнее делать интерфейс мода (чат, приёмы, подсказки, кнопки) на экранах ниже 1080 точек по высоте: 1 — как в игре, 1.2 — на пятую часть крупнее, до 1.5. Крупнее пиксель в пиксель не растёт, на 1080p и больше ничего не меняется.");
             CfgSoundVolume.Value = UnityEngine.Mathf.Clamp01(CfgSoundVolume.Value);
-            CfgCamZoom.Value = UnityEngine.Mathf.Clamp(CfgCamZoom.Value, 1f, 4f);
             Chars.Own("Combat", "CameraPanExtra", 0.5f,
                 "Небольшой запас в единицах поля сверх того, что нужно, чтобы показать клетки под панелью чата: мод сам считает высоту панели в единицах поля и раздвигает границу камеры ровно на неё, а это число добавляется сверху (0 — ровно, до 20).", e => CfgCamPanExtra = e);
             CfgCamPanExtra.Value = UnityEngine.Mathf.Clamp(CfgCamPanExtra.Value, 0f, 20f);
@@ -263,9 +256,6 @@ namespace NewAgeQoL
             if (UnityEngine.Mathf.Abs(CfgCamRoomExtra.Value - 3f) < 0.01f) CfgCamRoomExtra.Value = 0f;
             if (UnityEngine.Mathf.Abs(CfgCamRoomExtra.Value - 2f) < 0.01f) CfgCamRoomExtra.Value = 0f;
             CfgCamRoomExtra.Value = UnityEngine.Mathf.Clamp(CfgCamRoomExtra.Value, 0f, 20f);
-            Chars.Own("Combat", "ResultDialogScale", 0.7f,
-                "Размер окон «Победа»/«Поражение» после боя и окна разведки «Нападение»: 1 — как в игре, 0.4 — меньше вдвое с лишним. Окно остаётся по центру экрана.", e => CfgDialogScale = e);
-            CfgDialogScale.Value = UnityEngine.Mathf.Clamp(CfgDialogScale.Value, 0.4f, 1f);
             Chars.Own("Quests", "DailyTaskPopups", false,
                 "Показывать всплывающие карточки хода ежедневных заданий над чатом: «Торжество IV, 1/10» и подобные. ВЫКЛ — не показывать, весь список всё равно открывается кнопкой заданий дня. Окно уже выполненного задания с наградой этой галкой не трогается, оно открывается как обычно.", e => CfgDailyToast = e);
             Chars.Own("Quests", "Window", "",
@@ -317,6 +307,7 @@ namespace NewAgeQoL
                 "Служебная отметка: на время отладки подробный журнал уже включён. Пока её нет, мод один раз включит журнал, даже если в старых настройках он был выключен. После этого выключенный журнал — твоя настройка, мод его не трогает.", () => CfgVerbose.Value = true);
 
             Chars.Legacy(CfgLastCharacter.Value);
+            Chars.Tidy(Config);
 
             try
             {
@@ -344,7 +335,11 @@ namespace NewAgeQoL
         {
             internal System.DateTime At;
             internal int Hushed;
+            internal int Told;
+            internal string Last;
         }
+
+        private const int TellPerGap = 10;
 
         private static readonly System.Collections.Generic.Dictionary<string, Site> Sites =
             new System.Collections.Generic.Dictionary<string, Site>();
@@ -364,11 +359,19 @@ namespace NewAgeQoL
             lock (Sites)
             {
                 Site site;
-                if (!Sites.TryGetValue(key, out site)) { Sites[key] = new Site { At = now }; return true; }
-                if ((now - site.At).TotalSeconds < gap) { site.Hushed++; return false; }
+                if (!Sites.TryGetValue(key, out site)) { Sites[key] = new Site { At = now, Told = 1, Last = text }; return true; }
+                if ((now - site.At).TotalSeconds < gap)
+                {
+                    if (site.Told >= TellPerGap || text == site.Last) { site.Hushed++; return false; }
+                    site.Told++;
+                    site.Last = text;
+                    return true;
+                }
                 hushed = site.Hushed;
                 site.Hushed = 0;
                 site.At = now;
+                site.Told = 1;
+                site.Last = text;
                 return true;
             }
         }
@@ -457,6 +460,7 @@ namespace NewAgeQoL
             {
                 new Part { Name = "Chars.Tick", Do = Chars.Tick },
                 new Part { Name = "SideButtons.Tick", Do = SideButtons.Tick },
+                new Part { Name = "Backdrop.Tick", Do = Backdrop.Tick },
                 new Part { Name = "Flasks.Tick", Do = Flasks.Tick },
                 new Part { Name = "Settings.Tick", Do = Settings.Tick },
                 new Part { Name = "Changelog.Tick", Do = Changelog.Tick },
@@ -472,7 +476,6 @@ namespace NewAgeQoL
                 new Part { Name = "Chest.Tick", Do = Chest.Tick },
                 new Part { Name = "Roster.Tick", Do = Roster.Tick },
                 new Part { Name = "UiScale.Tick", Do = UiScale.Tick },
-                new Part { Name = "HintZones.Tick", Do = HintZones.Tick },
                 new Part { Name = "Dialogs.Tick", Do = Dialogs.Tick },
                 new Part { Name = "Claims.Tick", Do = Claims.Tick },
                 new Part { Name = "Dozen.Tick", Do = Dozen.Tick },
@@ -486,9 +489,12 @@ namespace NewAgeQoL
                 new Part { Name = "Cards.Tick", Do = Cards.Tick },
                 new Part { Name = "WalkHex.Tick", Do = WalkHex.Tick },
                 new Part { Name = "Notice.Tick", Do = Notice.Tick },
-                new Part { Name = "TownFiles.Tick", Do = TownFiles.Tick },
-                new Part { Name = "TowerFiles.Tick", Do = TowerFiles.Tick },
+                new Part { Name = "Loot.Tick", Do = Loot.Tick },
+                new Part { Name = "AssetSync.Tick", Do = AssetSync.Tick },
                 new Part { Name = "ShopLift.Tick", Do = ShopLift.Tick },
+                new Part { Name = "ItemTip.Tick", Do = ItemTip.Tick },
+                new Part { Name = "Relog.Tick", Do = Relog.Tick },
+                new Part { Name = "BankHall.Tick", Do = BankHall.Tick },
                 new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
@@ -518,7 +524,6 @@ namespace NewAgeQoL
                 new Part { Name = "Quickslots.Tick", Do = Quickslots.Tick },
                 new Part { Name = "HelpColumn.Tick", Do = HelpColumn.Tick },
                 new Part { Name = "SpeedBar.Tick", Do = SpeedBar.Tick },
-                new Part { Name = "Probe.Tick", Do = Probe.Tick },
                 new Part { Name = "Chaotic.Tick", Do = Chaotic.Tick },
                 new Part { Name = "Sounds.Tick", Do = Sounds.Tick },
                 new Part { Name = "Curtain.Tick", Do = Curtain.Tick },

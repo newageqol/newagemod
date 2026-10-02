@@ -4,4 +4,6 @@ obj/
 *.swf
 release/NightTown/
 release/MagicTower/
+release/BankHall/
+release/BankSafe/
 !src/NewAge.Swf/

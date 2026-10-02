@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using BepInEx.Configuration;
+using HarmonyLib;
 using UnityEngine;
 
 namespace NewAgeQoL
@@ -55,6 +56,12 @@ namespace NewAgeQoL
         }
 
         private static readonly List<Slot> Slots = new List<Slot>();
+        private static readonly string[] Retired =
+        {
+            "Combat/CameraRange", "Combat/ResultDialogScale", "Look/GothicShops", "Map/PortalList",
+            "Map/VertexLabels", "Map/VertexLabelType", "Map/VertexLabelBillboard", "Map/VertexLabelSharpness",
+            "Map/VertexLabelLift", "Map/VertexLabelColor",
+        };
         private static ConfigFile _home;
         private static ConfigFile _file;
         private static EventHandler<SettingChangedEventArgs> _watch;
@@ -145,6 +152,7 @@ namespace NewAgeQoL
                 if (all) _legacy = 0;
                 var file = new ConfigFile(path, true);
                 foreach (var slot in Slots) slot.Move(file, fresh, all);
+                Tidy(file);
                 file.Save();
                 if (_watch != null)
                 {
@@ -157,6 +165,24 @@ namespace NewAgeQoL
                 Plugin.Log?.LogInfo("[character] settings " + (all ? "moved to own file" : fresh ? "created" : "loaded") + ": " + userId + ".cfg");
             }
             catch (Exception e) { Plugin.Fault("[character] settings: " + e); }
+        }
+
+        internal static void Tidy(ConfigFile file)
+        {
+            try
+            {
+                var left = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries")?.GetValue(file, null) as Dictionary<ConfigDefinition, string>;
+                if (left == null) return;
+                var gone = new List<ConfigDefinition>();
+                foreach (var def in left.Keys)
+                    if (Array.IndexOf(Retired, def.Section + "/" + def.Key) >= 0) gone.Add(def);
+                if (gone.Count == 0) return;
+                foreach (var def in gone) left.Remove(def);
+                file.Save();
+                Plugin.Log?.LogInfo("[settings] removed unused keys from " + Path.GetFileName(file.ConfigFilePath) + ": "
+                    + string.Join(", ", gone.ConvertAll(d => d.Section + "/" + d.Key).ToArray()));
+            }
+            catch (Exception e) { Plugin.Trace("[settings] cleanup: " + e.Message); }
         }
 
         private static void Forget()

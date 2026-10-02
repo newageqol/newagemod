@@ -533,6 +533,13 @@ namespace NewAgeQoL
             if (thing.DamageMax > 0 && thing.Range > 0) weapon.Add("Дальность", thing.Range.ToString());
             if (WardrobeData.IsTwoHand(thing.Sub)) weapon.Add("Двуручное", "");
             if (weapon.Rows.Count > 0) list.Add(weapon);
+            var rule = thing.Art ? WardrobeData.ArtRule(thing.Sub, thing.ItemLevel) : null;
+            if (rule != null && rule.Price > 0)
+            {
+                var price = new TipBlock { Title = "Стоимость" };
+                price.Add("Кристаллы", rule.Price.ToString());
+                list.Add(price);
+            }
             return list;
         }
 

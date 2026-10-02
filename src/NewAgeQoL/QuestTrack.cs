@@ -611,6 +611,7 @@ namespace NewAgeQoL
                 if (one == null || !one.isActiveAndEnabled || !one.interactable) continue;
                 var rt = one.transform as RectTransform;
                 if (rt == null || (_canvasGo != null && rt.IsChildOf(_canvasGo.transform))) continue;
+                if (one.GetComponentInParent<OpenDailyChestButton>() != null) continue;
                 var canvas = one.GetComponentInParent<Canvas>();
                 if (canvas == null || !canvas.enabled) continue;
                 var root = canvas.rootCanvas;

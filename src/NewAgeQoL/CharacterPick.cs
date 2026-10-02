@@ -152,4 +152,14 @@ namespace NewAgeQoL
             return count;
         }
     }
+
+    [HarmonyPatch(typeof(FatalErrorSceneScript), nameof(FatalErrorSceneScript.LoadFatalErrorScene))]
+    internal static class FatalErrorLogPatch
+    {
+        private static void Prefix(EFatalErrorType fatalErrorType, string errorDetails)
+        {
+            try { Plugin.Log?.LogInfo("[game] error screen: " + fatalErrorType + (string.IsNullOrEmpty(errorDetails) ? "" : " - " + errorDetails)); }
+            catch { }
+        }
+    }
 }

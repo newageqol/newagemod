@@ -10,7 +10,7 @@ namespace NewAgeQoL
 
         private static Sprite _drop, _bolt, _spark, _enter, _bin, _cap, _head, _mask, _mail, _burst, _scroll, _quest;
         private static Sprite _star, _starEmpty;
-        private static Sprite _blades, _downward, _hex, _disc;
+        private static Sprite _blades, _downward, _hex, _disc, _again;
 
         private static readonly Vector2[] Zigzag =
         {
@@ -103,6 +103,25 @@ namespace NewAgeQoL
                     return false;
                 });
             return _enter;
+        }
+
+        internal static Sprite Again()
+        {
+            if (Gone(_again))
+                _again = Shape((x, y) =>
+                {
+                    float r = Mathf.Sqrt(x * x + y * y);
+                    float a = Mathf.Atan2(y, x) * Mathf.Rad2Deg;
+                    if (a < 0f) a += 360f;
+                    if (r >= 0.5f && r <= 0.74f && a >= 62f && a <= 345f) return true;
+                    const float at = 62f * Mathf.Deg2Rad;
+                    var p = new Vector2(Mathf.Cos(at), Mathf.Sin(at)) * 0.62f;
+                    var dir = new Vector2(Mathf.Sin(at), -Mathf.Cos(at));
+                    var side = new Vector2(Mathf.Cos(at), Mathf.Sin(at));
+                    var head = new[] { p + dir * 0.36f, p - dir * 0.04f + side * 0.3f, p - dir * 0.04f - side * 0.3f };
+                    return Inside(head, x, y);
+                });
+            return _again;
         }
 
         internal static Sprite Star(bool filled)

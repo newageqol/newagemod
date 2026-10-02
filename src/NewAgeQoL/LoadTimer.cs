@@ -134,7 +134,7 @@ namespace NewAgeQoL
             _worst = 0f;
             _gc = GC.CollectionCount(0);
             _heap = GC.GetTotalMemory(false);
-            _night = NightTheme.On;
+            _night = true;
             _town = NightTown.Held;
             try { var ud = Controllers.User; _from = ud != null ? ud.CurrentLocationId : -1; }
             catch { _from = -1; }
