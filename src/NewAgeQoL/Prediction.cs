@@ -13,8 +13,8 @@ namespace NewAgeQoL
         private const string AbilityKey = "abilities.ability126.name";
         private const float Window = 3f;
 
-        private static readonly Regex Ability = new Regex(@"\[\s*<span class='ca'>([^<]*)</span>\s*\]", RegexOptions.Compiled);
-        private static readonly Regex Owner = new Regex(@"<span class='cu' data-id='(-?\d+)'>", RegexOptions.Compiled);
+        private static readonly Regex Used = new Regex(@"^\s*(.+?)\s+использовал\S*\s+\S+\s*\[\s*([^\]]+?)\s*\](.*)$", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex Owner = new Regex(@"data-id='(-?\d+)'", RegexOptions.Compiled);
         private static readonly Regex Effect = new Regex(@"(\d+)", RegexOptions.Compiled);
         private static readonly Regex Tag = new Regex(@"<[^>]+>", RegexOptions.Compiled);
 
@@ -25,7 +25,43 @@ namespace NewAgeQoL
         }
 
         private static readonly Dictionary<int, Jump> Jumps = new Dictionary<int, Jump>();
+        private static readonly Dictionary<int, Jump> Items = new Dictionary<int, Jump>();
+        private static readonly Dictionary<int, Jump> Added = new Dictionary<int, Jump>();
+        private static AccessTools.FieldRef<ChangeLifeAnimationItem, float?> _startTime;
+        private static bool _looked;
         private static string _name;
+
+        internal static void Item(ChangeLifeAnimationItem item)
+        {
+            if (item == null || item.life <= 0 || item.AnimationName != "change_life" || item.Target == null) return;
+            if (item.Source != null && item.Source != item.Target) return;
+            if (item.Group != null && item.Group.actionType == ActionType.THINGEFFECT) return;
+            int userId = item.Target.UserId;
+            Jump added;
+            if (Added.TryGetValue(userId, out added) && Time.unscaledTime - added.At <= Window && added.Delta == item.life)
+            {
+                Added.Remove(userId);
+                if (Applied(item))
+                {
+                    Plugin.Trace("[prediction] " + (item.Target.Login ?? userId.ToString()) + ": server animation +" + item.life + " came after, marked as already added");
+                    return;
+                }
+            }
+            Items[userId] = new Jump { Delta = item.life, At = Time.unscaledTime };
+        }
+
+        private static bool Applied(ChangeLifeAnimationItem item)
+        {
+            if (!_looked)
+            {
+                _looked = true;
+                try { _startTime = AccessTools.FieldRefAccess<ChangeLifeAnimationItem, float?>("_startTime"); }
+                catch (Exception e) { Plugin.Trace("[prediction] field _startTime not found: " + e.Message); }
+            }
+            if (_startTime == null || _startTime(item).HasValue) return false;
+            _startTime(item) = 0f;
+            return true;
+        }
 
         internal static void Assigned(CharacterIndicators indicators, CharacterIndicatorsMessage message, int before)
         {
@@ -38,22 +74,20 @@ namespace NewAgeQoL
         internal static void Heard(ChatResponseMessage message)
         {
             if (message == null || message.Type != 3 || string.IsNullOrEmpty(message.Text)) return;
-            string text = message.Text;
-            var ability = Ability.Match(text);
-            if (!ability.Success || !Same(ability.Groups[1].Value)) return;
+            string raw = message.Text;
+            var used = Used.Match(Tag.Replace(raw, ""));
+            if (!used.Success || !Same(used.Groups[2].Value)) return;
             if (!SideButtons.InCombat()) return;
+            Plugin.Trace("[prediction] combat log: " + (raw.Length > 300 ? raw.Substring(0, 300) : raw));
 
-            int userId = 0;
-            foreach (Match m in Owner.Matches(text.Substring(0, ability.Index)))
-                int.TryParse(m.Groups[1].Value, out userId);
-            if (userId == 0) return;
-
-            int bonus = Bonus(text.Substring(ability.Index + ability.Length));
-            if (bonus <= 0) return;
+            int bonus = Bonus(used.Groups[3].Value);
+            if (bonus <= 0) { Plugin.Trace("[prediction] no effect number in the line"); return; }
 
             var cd = FighterHint.Cd();
-            AbstractCharacter mage = null;
-            if (cd == null || cd.Characters == null || !cd.Characters.TryGetValue(userId, out mage) || mage == null) return;
+            if (cd == null || cd.Characters == null) return;
+            var mage = Find(cd, raw, used.Groups[1].Value.Trim());
+            if (mage == null) { Plugin.Trace("[prediction] fighter '" + used.Groups[1].Value.Trim() + "' not found on the field"); return; }
+            int userId = mage.UserId;
             var indicators = mage.Indicators;
             if (indicators == null || indicators.IsDead) return;
 
@@ -64,10 +98,34 @@ namespace NewAgeQoL
                 Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": +" + bonus + " already in the server numbers, life " + indicators.CurrentLife);
                 return;
             }
+            if (Items.TryGetValue(userId, out jump) && Time.unscaledTime - jump.At <= Window && jump.Delta == bonus)
+            {
+                Items.Remove(userId);
+                Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": server sent +" + bonus + " as an animation, it adds the life itself");
+                return;
+            }
 
             int was = indicators.CurrentLife;
             indicators.CurrentLife = was + bonus;
+            Added[userId] = new Jump { Delta = bonus, At = Time.unscaledTime };
             Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": life " + was + " + " + bonus + " = " + indicators.CurrentLife + " of " + indicators.MaxLife + ", at once from the combat log");
+        }
+
+        private static AbstractCharacter Find(ICombatData cd, string raw, string login)
+        {
+            var id = Owner.Match(raw);
+            AbstractCharacter ch;
+            int userId;
+            if (id.Success && int.TryParse(id.Groups[1].Value, out userId) && cd.Characters.TryGetValue(userId, out ch) && ch != null) return ch;
+            AbstractCharacter found = null;
+            foreach (var pair in cd.Characters)
+            {
+                var one = pair.Value;
+                if (one == null || !string.Equals(one.Login, login, StringComparison.Ordinal)) continue;
+                if (found != null) return null;
+                found = one;
+            }
+            return found;
         }
 
         private static int Bonus(string tail)
@@ -115,6 +173,20 @@ namespace NewAgeQoL
         private static void Postfix(ChatResponseMessage message)
         {
             try { Prediction.Heard(message); }
+            catch (Exception e) { Plugin.Trace("[prediction] " + e.Message); }
+        }
+    }
+
+    [HarmonyPatch(typeof(ChangeLifeAnimationItem), MethodType.Constructor, new[]
+    {
+        typeof(AnimationGroup), typeof(AbstractCharacter), typeof(AbstractCharacter),
+        typeof(string), typeof(int), typeof(AnimationItemType),
+    })]
+    public static class PredictionItemPatch
+    {
+        private static void Postfix(ChangeLifeAnimationItem __instance)
+        {
+            try { Prediction.Item(__instance); }
             catch (Exception e) { Plugin.Trace("[prediction] " + e.Message); }
         }
     }

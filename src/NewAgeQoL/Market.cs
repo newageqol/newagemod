@@ -139,7 +139,7 @@ namespace NewAgeQoL
                 _stock = Stock(qty);
                 _field.OnValueChanged = new IntegerInputField.OnValueChangedEvent();
                 _field.OnValueChanged.AddListener(OnLotsChanged);
-                _field.Initialize("Лотов", 1, MaxByQuantity(), 1);
+                InitLots(MaxByQuantity(), 1);
 
                 var origLabel = AccessTools.Field(typeof(IntegerInputField), "LabelText")?.GetValue(qty) as Text;
                 var newLabel = AccessTools.Field(typeof(IntegerInputField), "LabelText")?.GetValue(_field) as Text;
@@ -205,8 +205,27 @@ namespace NewAgeQoL
             if (_field == null) return;
             int cap = MaxByQuantity();
             if (_lots > cap) _lots = cap;
-            try { _field.Initialize("Лотов", 1, cap, _lots < 1 ? 1 : _lots); }
+            try { InitLots(cap, _lots < 1 ? 1 : _lots); }
             catch { }
+        }
+
+        private static void InitLots(int cap, int value)
+        {
+            _field.Initialize("Лотов", 1, cap, value);
+            bool live = cap > 1;
+            _field.Interactable = true;
+            foreach (var name in new[] { "DecrementButton", "IncrementButton" })
+            {
+                var b = AccessTools.Field(typeof(IntegerInputField), name)?.GetValue(_field) as Button;
+                if (b == null) continue;
+                var cg = b.GetComponent<CanvasGroup>();
+                if (cg == null) cg = b.gameObject.AddComponent<CanvasGroup>();
+                cg.alpha = live ? 1f : 0f;
+                cg.interactable = live;
+                cg.blocksRaycasts = live;
+            }
+            var input = AccessTools.Field(typeof(IntegerInputField), "ValueInputField")?.GetValue(_field) as InputField;
+            if (input != null) input.interactable = live;
         }
 
         internal static void Outgoing(BaseRequest request)

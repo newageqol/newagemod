@@ -1688,7 +1688,7 @@ namespace NewAgeQoL
 
         private bool Single(IQuickButton skill)
         {
-            if (skill == null || (!_tricks && !_spells)) return false;
+            if (skill == null || _things) return false;
             if (Chase(skill) || Summon(skill)) return false;
             var at = skill.Target;
             return at == ETargetType.TARGET_ANY_PLAYER || at == ETargetType.TARGET_ENEMY
