@@ -22,6 +22,8 @@ namespace NewAgeQoL
 
     internal static class Branches
     {
+        private const string Server = "https://newage-branches.outerlab.org/v1/branches";
+        private const string ServerMark = "newage-branches 1";
         private const string Site = "https://nura.biz";
         private const string Archive = Site + "/events/combats";
         private const string Detail = "/events/combats/detail/";
@@ -97,11 +99,13 @@ namespace NewAgeQoL
         private static readonly Dictionary<int, string> Logins = new Dictionary<int, string>();
         private static readonly List<int> Pending = new List<int>();
         private static readonly HashSet<string> Fetched = new HashSet<string>();
+        private static readonly HashSet<int> Waiting = new HashSet<int>();
+        private static readonly HashSet<int> Asked = new HashSet<int>();
 
-        private static bool _tables, _loaded, _busy, _dirty, _session;
+        private static bool _tables, _loaded, _busy, _dirty, _session, _cut, _asking;
         private static string _cookie = "";
-        private static int _searches, _pages, _hunting, _era;
-        private static float _saveAt, _nextAt;
+        private static int _searches, _pages, _hunting, _era, _polls;
+        private static float _saveAt, _nextAt, _askAt, _downUntil;
 
         private sealed class Row
         {
@@ -131,8 +135,15 @@ namespace NewAgeQoL
                 Tables();
                 Load();
                 Flush();
-                if (_busy || Pending.Count == 0 || Plugin.Instance == null) return;
-                if (_searches >= Num(Plugin.CfgBranchSearches, 60)) return;
+                if (Plugin.Instance == null) return;
+                if (Served() && !_busy)
+                {
+                    if (_asking || (Pending.Count == 0 && Waiting.Count == 0) || Time.unscaledTime < _askAt) return;
+                    _asking = true;
+                    Plugin.Instance.StartCoroutine(Ask(_era));
+                    return;
+                }
+                if (_busy || Pending.Count == 0 || !Room()) return;
                 _busy = true;
                 Plugin.Instance.StartCoroutine(Work());
             }
@@ -144,6 +155,10 @@ namespace NewAgeQoL
             _era++;
             Pending.Clear();
             Fetched.Clear();
+            Waiting.Clear();
+            Asked.Clear();
+            _polls = 0;
+            _askAt = 0f;
             _searches = 0;
             _pages = 0;
             _hunting = 0;
@@ -220,7 +235,8 @@ namespace NewAgeQoL
             Tables();
             Load();
             Logins[userId] = login;
-            if (!Stale(userId) || _hunting == userId || Pending.Contains(userId)) return;
+            if (_hunting == userId || Pending.Contains(userId) || Waiting.Contains(userId)) return;
+            if (Served() ? Asked.Contains(userId) : !Stale(userId)) return;
             Pending.Add(userId);
         }
 
@@ -239,8 +255,8 @@ namespace NewAgeQoL
 
         private static string Soon(int userId)
         {
-            if (_hunting == userId) return "ищу…";
-            if (Pending.Contains(userId) && _searches < Num(Plugin.CfgBranchSearches, 60)) return "ищу…";
+            if (_hunting == userId || Waiting.Contains(userId)) return "ищу…";
+            if (Pending.Contains(userId) && (Served() || Room())) return "ищу…";
             BranchRec r;
             return Known.TryGetValue(userId, out r) && r.Hour > 0 ? "не найдено" : "?";
         }
@@ -276,12 +292,123 @@ namespace NewAgeQoL
             return Known.TryGetValue(userId, out r) && r.Full && r.Hour >= since;
         }
 
+        private static bool Room()
+        {
+            return _searches < Num(Plugin.CfgBranchSearches, 60) && _pages < Num(Plugin.CfgBranchPages, 30);
+        }
+
+        private static bool Served()
+        {
+            return Plugin.CfgBranchServer != null && Plugin.CfgBranchServer.Value && Time.unscaledTime >= _downUntil;
+        }
+
+        private static IEnumerator Ask(int era)
+        {
+            var sent = new List<int>();
+            var sb = new StringBuilder();
+            foreach (var id in Pending) Line(id, sent, sb);
+            foreach (var id in Waiting) Line(id, sent, sb);
+            if (sent.Count == 0) { _asking = false; yield break; }
+            var req = new UnityWebRequest(Server, "POST", new DownloadHandlerBuffer(), new UploadHandlerRaw(Encoding.UTF8.GetBytes(sb.ToString())));
+            req.timeout = 10;
+            req.redirectLimit = 0;
+            Head(req, "Content-Type", "text/plain; charset=utf-8");
+            Head(req, "User-Agent", "NewAgeQoL");
+            yield return req.SendWebRequest();
+            long code = req.responseCode;
+            string error = req.error ?? "";
+            string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
+            req.Dispose();
+            _asking = false;
+            if (era != _era) yield break;
+            if (code != 200 || !body.StartsWith(ServerMark, StringComparison.Ordinal))
+            {
+                _downUntil = Time.unscaledTime + 600f;
+                foreach (var id in Waiting) if (!Pending.Contains(id)) Pending.Add(id);
+                Waiting.Clear();
+                Plugin.Trace("[branches] branch server unavailable (code " + code + (error.Length > 0 ? ", " + error : "") + "), searching the site directly for 10 minutes");
+                yield break;
+            }
+            int full = 0, miss = 0;
+            foreach (var id in sent) Asked.Add(id);
+            foreach (var raw in body.Split('\n'))
+            {
+                var bit = raw.Trim().Split('\t');
+                if (bit.Length != 6) continue;
+                int id, cls, reg, eli;
+                long hour;
+                if (!int.TryParse(bit[0], out id) || !sent.Contains(id)) continue;
+                if (!int.TryParse(bit[2], out cls)) cls = -1;
+                if (!int.TryParse(bit[3], out reg)) reg = -1;
+                if (!int.TryParse(bit[4], out eli)) eli = -1;
+                if (!long.TryParse(bit[5], out hour)) hour = 0;
+                if (cls < -1 || cls >= ClassNames.Length) cls = -1;
+                if (reg > 1 || reg < -1) reg = -1;
+                if (eli > 1 || eli < -1) eli = -1;
+                Pending.Remove(id);
+                if (bit[1] == "full" && cls >= 0 && reg >= 0 && eli >= 0)
+                {
+                    Waiting.Remove(id);
+                    var r = Rec(id);
+                    if (!(r.Full && r.Hour > hour))
+                    {
+                        r.Cls = cls;
+                        r.Reg = reg;
+                        r.Elite = eli;
+                        r.Hour = hour > 0 ? hour : Hours();
+                    }
+                    full++;
+                }
+                else if (bit[1] == "miss")
+                {
+                    Waiting.Remove(id);
+                    var r = Merge(id, cls, reg, eli);
+                    if (!r.Full) r.Hour = hour > 0 ? hour : Hours();
+                    miss++;
+                }
+                else
+                {
+                    Waiting.Add(id);
+                    Merge(id, cls, reg, eli);
+                }
+            }
+            _dirty = true;
+            _polls++;
+            if (Waiting.Count > 0 && _polls >= 60)
+            {
+                Plugin.Trace("[branches] server still searching after " + _polls + " polls, giving up on " + Waiting.Count + " for this fight");
+                Waiting.Clear();
+            }
+            _askAt = Time.unscaledTime + (Waiting.Count > 0 ? 5f : 0f);
+            Plugin.Trace("[branches] server: asked " + sent.Count + ", found " + full + ", not found " + miss + ", still searching " + Waiting.Count);
+        }
+
+        private static void Line(int id, List<int> sent, StringBuilder sb)
+        {
+            string login;
+            if (sent.Count >= 80 || sent.Contains(id) || !Logins.TryGetValue(id, out login)) return;
+            login = login.Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ').Trim();
+            if (login.Length == 0) return;
+            sent.Add(id);
+            sb.Append(id).Append('\t').Append(login).Append('\n');
+        }
+
+        private static BranchRec Merge(int id, int cls, int reg, int eli)
+        {
+            var r = Rec(id);
+            if (cls < 0 || r.Full || (r.Cls >= 0 && r.Cls != cls)) return r;
+            r.Cls = cls;
+            if (r.Reg < 0) r.Reg = reg;
+            if (r.Elite < 0) r.Elite = eli;
+            return r;
+        }
+
         private static IEnumerator Work()
         {
             int era = _era;
             try
             {
-                while (era == _era && _searches < Num(Plugin.CfgBranchSearches, 60))
+                while (era == _era && _searches < Num(Plugin.CfgBranchSearches, 60) && _pages < Num(Plugin.CfgBranchPages, 30))
                 {
                     int who = 0;
                     while (Pending.Count > 0)
@@ -307,21 +434,30 @@ namespace NewAgeQoL
             string login;
             if (!Logins.TryGetValue(userId, out login) || login.Length == 0) yield break;
             long since = Hours();
+            _cut = false;
             int days = Mathf.Clamp(Num(Plugin.CfgBranchDays, 7), 1, 14);
             var today = DateTime.UtcNow.AddHours(Num(Plugin.CfgBranchShift, 3)).Date;
             for (int back = 0; back < days; back += 2)
             {
                 if (era != _era) yield break;
-                if (Fresh(userId, since) || _searches >= Num(Plugin.CfgBranchSearches, 60)) break;
+                if (Fresh(userId, since)) break;
+                if (_searches >= Num(Plugin.CfgBranchSearches, 60)) { _cut = true; break; }
                 var rows = new List<Row>();
                 var to = today.AddDays(-back);
                 _searches++;
                 yield return Find(login, to.AddDays(-1), to, rows);
                 if (era != _era) yield break;
+                if (_cut) break;
                 if (rows.Count == 0) continue;
                 yield return Mine(userId, rows, since, era);
+                if (_cut) break;
             }
             if (era != _era) yield break;
+            if (_cut && !Fresh(userId, since))
+            {
+                Plugin.Trace("[branches] " + login + ": search cut short, will retry in the next fight: " + Text(userId));
+                yield break;
+            }
             Rec(userId).Hour = Hours();
             _dirty = true;
             Plugin.Trace("[branches] " + login + ": " + Text(userId));
@@ -329,8 +465,9 @@ namespace NewAgeQoL
 
         private static IEnumerator Mine(int userId, List<Row> rows, long since, int era)
         {
-            while (era == _era && !Fresh(userId, since) && _pages < Num(Plugin.CfgBranchPages, 30))
+            while (era == _era && !Fresh(userId, since))
             {
+                if (_pages >= Num(Plugin.CfgBranchPages, 30)) { _cut = true; yield break; }
                 int at = -1, best = 0;
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -344,7 +481,7 @@ namespace NewAgeQoL
                 var reply = new Reply();
                 yield return Get(Site + Detail + rows[at].Uid, reply);
                 if (era != _era) yield break;
-                if (reply.Body.Length == 0) continue;
+                if (reply.Body.Length == 0) { _cut = true; yield break; }
                 yield return Read(reply.Body);
             }
         }
@@ -359,7 +496,7 @@ namespace NewAgeQoL
         private static IEnumerator Find(string login, DateTime from, DateTime to, List<Row> rows)
         {
             if (!_session) yield return Session();
-            if (!_session) yield break;
+            if (!_session) { _cut = true; yield break; }
             var form = new WWWForm();
             form.AddField("beginDate", from.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture));
             form.AddField("endDate", to.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture));
@@ -372,6 +509,7 @@ namespace NewAgeQoL
                 if (sent.Body.IndexOf(Detail, StringComparison.Ordinal) < 0)
                 {
                     _session = false;
+                    _cut = true;
                     Plugin.Trace("[branches] search for " + login + ": response " + sent.Code + ", no redirect, no fights in response");
                     yield break;
                 }
@@ -382,6 +520,7 @@ namespace NewAgeQoL
             if (go.StartsWith("/")) go = Site + go;
             var page = new Reply();
             yield return Get(go, page);
+            if (page.Body.Length == 0) { _cut = true; yield break; }
             List(page.Body, rows);
             Plugin.Trace("[branches] search for " + login + " " + from.ToString("dd.MM", CultureInfo.InvariantCulture)
                 + "…" + to.ToString("dd.MM", CultureInfo.InvariantCulture) + ": page " + page.Body.Length + " chars, fights " + rows.Count);
@@ -443,7 +582,7 @@ namespace NewAgeQoL
             {
                 int close = s.IndexOf(']', i, b - i);
                 if (close < 0) break;
-                if (Starts(s, close + 1, Owned)) continue;
+                if (Starts(s, close, Owned)) continue;
                 Take(Before(s, a, i), Skill(s, i + 1, close + 1), cls, reg, eli, bad);
             }
             for (int i = Find(s, Owned, a, b); i >= 0; i = Find(s, Owned, i + 1, b))
@@ -496,11 +635,19 @@ namespace NewAgeQoL
             {
                 if (bad.Contains(kv.Key)) continue;
                 var r = Rec(kv.Key);
-                r.Cls = kv.Value;
-                r.Hour = Hours();
+                if (r.Cls != kv.Value)
+                {
+                    r.Cls = kv.Value;
+                    r.Reg = -1;
+                    r.Elite = -1;
+                }
+                bool was = r.Full;
                 int v;
-                if (reg.TryGetValue(kv.Key, out v)) r.Reg = v;
-                if (eli.TryGetValue(kv.Key, out v)) r.Elite = v;
+                bool sawReg = reg.TryGetValue(kv.Key, out v);
+                if (sawReg) r.Reg = v;
+                bool sawElite = eli.TryGetValue(kv.Key, out v);
+                if (sawElite) r.Elite = v;
+                if (r.Full && ((sawReg && sawElite) || !was)) r.Hour = Hours();
                 fresh++;
             }
             if (fresh == 0) return;

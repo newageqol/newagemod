@@ -65,6 +65,11 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[chat] selection forget: " + e.Message); }
         }
 
+        internal static void Drop()
+        {
+            if (_live != null) _live.Clear();
+        }
+
         internal static void Tick()
         {
             var pick = _live;

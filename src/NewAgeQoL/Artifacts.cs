@@ -24,7 +24,6 @@ namespace NewAgeQoL
         private const int IlleniumLoc = 2, BankLoc = 21;
         private const int WinInventory = -104, WinBox = -100, WinByLocation = -105;
         private const int BtnDress = 1, BtnDressExtra = 2, BtnTakeOff = 4, BtnGetFromBox = 0x4000, BtnPutToBox = 0x8000;
-        private const int ArtRarity = 4;
 
         internal static bool Busy;
         internal static bool Internal;
@@ -49,6 +48,7 @@ namespace NewAgeQoL
         private static bool _exact;
         private static string _lastErr = "";
         private static bool _put;
+        private static bool _scanOk;
         private static bool _listeners;
 
         private static string Saved
@@ -122,9 +122,23 @@ namespace NewAgeQoL
 
                 Say("смотрю, что надето");
                 yield return Plugin.Instance.StartCoroutine(ScanWear());
-                var worn = Worn.Where(w => w.Rarity == ArtRarity).ToList();
+                var plan = Manikin.Saved();
+                var worn = Worn.Where(w => w != null && w.ThingId > 0 && w.SlotId > 0
+                                           && !(plan.TryGetValue(w.SlotId, out int kept) && kept == w.ThingId)).ToList();
 
                 var memory = worn.Select(w => new Slot { ThingId = w.ThingId, SlotId = w.SlotId }).ToList();
+                foreach (var o in Recall())
+                    if (!memory.Any(m => m.ThingId == o.ThingId && m.SlotId == o.SlotId))
+                        memory.Add(o);
+                if (memory.Count > 0) Remember(memory);
+
+                var kit = new Dictionary<int, int>();
+                foreach (var pair in plan)
+                {
+                    if (WornSlots().TryGetValue(pair.Key, out var on) && on != null && on.ThingId == pair.Value) continue;
+                    kit.TryGetValue(pair.Value, out int n);
+                    kit[pair.Value] = n + 1;
+                }
 
                 if (worn.Count > 0)
                 {
@@ -142,32 +156,44 @@ namespace NewAgeQoL
 
                 Say("собираю вещи для хранилища");
                 yield return Plugin.Instance.StartCoroutine(Scan(WinBox, 380));
-                var art = Scanned.Where(i => i.Rarity == ArtRarity).ToList();
+                var store = new Dictionary<int, int>();
+                foreach (var m in memory)
+                {
+                    store.TryGetValue(m.ThingId, out int n);
+                    store[m.ThingId] = n + 1;
+                }
+                foreach (var pair in kit)
+                    if (store.TryGetValue(pair.Key, out int n))
+                        store[pair.Key] = n > pair.Value ? n - pair.Value : 0;
+                var art = new List<Item>();
+                foreach (var it in Scanned)
+                {
+                    if (!store.TryGetValue(it.ThingId, out int left) || left <= 0 || it.Qty <= 0) continue;
+                    int qty = it.Qty < left ? it.Qty : left;
+                    store[it.ThingId] = left - qty;
+                    var copy = it;
+                    copy.Qty = qty;
+                    art.Add(copy);
+                }
                 if (art.Count == 0)
                 {
-                    if (memory.Count > 0) Remember(memory);
-                    else Say("вещей для хранилища не нашёл, старый список цел");
+                    if (memory.Count == 0) Say("вещей для хранилища не нашёл");
                     yield return Plugin.Instance.StartCoroutine(DressManikin());
                     yield break;
                 }
 
-                Say("кладу в хранилище: " + art.Count);
+                int total = art.Sum(i => i.Qty);
+                Say("кладу в хранилище: " + total);
                 int done = 0;
                 foreach (var it in art)
                 {
-                    if (!memory.Any(m => m.ThingId == it.ThingId))
-                        memory.Add(new Slot { ThingId = it.ThingId, SlotId = 0 });
                     yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnPutToBox, WinBox, it.Tab, it.Qty));
-                    done++;
-                    Step("кладу в хранилище: " + done + " из " + art.Count);
+                    if (_lastOk) done += it.Qty;
+                    Step("кладу в хранилище: " + done + " из " + total);
                 }
 
-                foreach (var o in Recall())
-                    if (!memory.Any(m => m.ThingId == o.ThingId && m.SlotId == o.SlotId))
-                        memory.Add(o);
-
-                Remember(memory);
-                Say("сдал в хранилище: " + done);
+                Say(done < total ? "сдал в хранилище: " + done + ", осталось в сумке: " + (total - done)
+                                 : "сдал в хранилище: " + done);
                 yield return Plugin.Instance.StartCoroutine(DressManikin());
             }
             finally { Busy = false; }
@@ -185,7 +211,9 @@ namespace NewAgeQoL
                 if (!AtStorage()) { Say("не дошёл до хранилища (см. лог)"); yield break; }
 
                 yield return Plugin.Instance.StartCoroutine(ScanWear());
+                bool sure = _gotWear;
                 yield return Plugin.Instance.StartCoroutine(Scan(WinInventory, 380));
+                sure &= _scanOk;
 
                 var have = new Dictionary<int, int>();
                 foreach (var w in Worn)
@@ -206,6 +234,39 @@ namespace NewAgeQoL
                 KeepStorage();
                 Plugin.Trace("[art] visible in storage " + Scanned.Count + ": "
                                     + string.Join(", ", Scanned.Select(i => i.ThingId + "/stack" + i.Inv + "/tab" + i.Tab + "/qty" + i.Qty).ToArray()));
+                sure &= _scanOk;
+
+                int gone = 0;
+                if (sure)
+                {
+                    var anywhere = new Dictionary<int, int>(have);
+                    foreach (var it in Scanned)
+                    {
+                        if (it.ThingId <= 0 || it.Qty <= 0) continue;
+                        anywhere.TryGetValue(it.ThingId, out int had);
+                        anywhere[it.ThingId] = had + it.Qty;
+                    }
+                    var found = new List<Slot>();
+                    var lost = new System.Text.StringBuilder();
+                    foreach (var m in memory)
+                    {
+                        if (anywhere.TryGetValue(m.ThingId, out int left) && left > 0)
+                        {
+                            anywhere[m.ThingId] = left - 1;
+                            found.Add(m);
+                            continue;
+                        }
+                        gone++;
+                        lost.Append(Name(m.ThingId)).Append(" (").Append(Manikin.SlotName(m.SlotId)).Append("); ");
+                    }
+                    if (gone > 0)
+                    {
+                        Plugin.Warn("[return] gone from storage, bag and body, dropped from the list: " + lost);
+                        memory = found;
+                        Remember(memory);
+                    }
+                }
+                else Plugin.Warn("[return] storage, bag or worn list did not arrive, nothing is dropped from the list");
 
                 var need = new Dictionary<int, int>();
                 foreach (var m in memory)
@@ -233,12 +294,13 @@ namespace NewAgeQoL
                 int done = 0;
                 if (take.Count > 0)
                 {
-                    Say("забираю из хранилища: " + take.Count);
+                    int total = take.Sum(i => i.Qty);
+                    Say("забираю из хранилища: " + total);
                     foreach (var it in take)
                     {
                         yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnGetFromBox, WinByLocation, it.Tab, it.Qty));
-                        done++;
-                        Step("забираю из хранилища: " + done + " из " + take.Count);
+                        if (_lastOk) done += it.Qty;
+                        Step("забираю из хранилища: " + done + " из " + total);
                     }
                     yield return Wait(0.25f);
                     yield return Plugin.Instance.StartCoroutine(Scan(WinInventory, 380));
@@ -338,13 +400,14 @@ namespace NewAgeQoL
                 {
                     ManikinOn = false;
                     Forget();
-                    Say("вернул " + memory.Count + ", надел " + back);
+                    Say("вернул " + memory.Count + ", надел " + back
+                        + (gone > 0 ? ", нет нигде: " + gone : ""));
                 }
                 else
                 {
-                    Remember(missed);
+                    Remember(memory);
                     Say("вернул " + (memory.Count - missed.Count) + ", осталось " + missed.Count
-                        + " — нажми ещё раз");
+                        + (gone > 0 ? ", нет нигде: " + gone : "") + " — нажми ещё раз");
                 }
             }
             finally { Busy = false; }
@@ -463,7 +526,7 @@ namespace NewAgeQoL
                     }
                     KeepTaken(out_of_box);
 
-                    Say("беру из хранилища: " + take.Count);
+                    Say("беру из хранилища: " + take.Sum(i => i.Qty));
                     foreach (var it in take)
                         yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnGetFromBox, WinByLocation, it.Tab, it.Qty));
                     yield return Wait(0.25f);
@@ -479,6 +542,7 @@ namespace NewAgeQoL
             int on = 0, lost = 0;
             foreach (int slot in order)
             {
+                if (stay.Contains(slot)) continue;
                 int thing = plan[slot];
                 int n;
                 if (!need.TryGetValue(thing, out n) || n <= 0) continue;
@@ -578,7 +642,7 @@ namespace NewAgeQoL
 
             if (back.Count > 0)
             {
-                Say("возвращаю в хранилище: " + back.Count);
+                Say("возвращаю в хранилище: " + back.Sum(i => i.Qty));
                 foreach (var it in back)
                     yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnPutToBox, WinBox, it.Tab, it.Qty));
                 yield return Wait(0.25f);
@@ -765,6 +829,7 @@ namespace NewAgeQoL
             _tabs = null;
             _tabsWindow = window;
             _tabsAltWindow = window == WinByLocation ? Loc() : window;
+            _scanOk = false;
 
             Send(new GetThingsTabsRequest(window));
             float t = 0f;
@@ -780,6 +845,7 @@ namespace NewAgeQoL
 
             t = 0f;
             while (t < 5f && GotTabs.Count < tabs.Count) { yield return null; t += Time.unscaledDeltaTime; }
+            _scanOk = tabs.All(tab => GotTabs.Contains(tab));
         }
 
         internal static IEnumerator FetchWear() => ScanWear();

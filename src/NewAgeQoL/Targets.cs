@@ -57,6 +57,7 @@ namespace NewAgeQoL
                 int byFar = Far(mine, a).CompareTo(Far(mine, b));
                 return byFar != 0 ? byFar : a.UserId.CompareTo(b.UserId);
             });
+            if (allies && !Gone(mine)) list.Insert(0, mine);
             return list;
         }
 

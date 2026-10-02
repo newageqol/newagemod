@@ -18,6 +18,8 @@ namespace NewAgeQoL
             internal Text Count;
             internal System.Func<bool> Enabled;
             internal System.Func<Sprite> Sprite;
+            internal System.Func<string> Art;
+            internal Image Back;
             internal System.Func<string> Badge;
             internal bool WhiteBadge;
             internal System.Action Click;
@@ -37,6 +39,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLBagButton",
+                Art = () => "btn_bag",
                 Col = 3,
                 Fight = true,
                 Hint = () => "Инвентарь" + Hotkeys.Tail("win:inventory"),
@@ -50,6 +53,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLLeaveWatch",
+                Art = () => "btn_leave",
                 Col = 3,
                 Fight = true,
                 Order = 120,
@@ -65,6 +69,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLSpellButton",
+                Art = () => "btn_spells",
                 Col = 3,
                 Fight = true,
                 Hint = () => "Книга магии" + Hotkeys.Tail("win:spells"),
@@ -74,6 +79,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLOnlineButton",
+                Art = () => "btn_online",
                 Col = 3,
                 Fight = true,
                 Order = 90,
@@ -85,6 +91,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLDailyButton",
+                Art = () => "btn_daily",
                 Col = 3,
                 Fight = true,
                 FightSeat = 1,
@@ -99,6 +106,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLQuestButton",
+                Art = () => "btn_quests",
                 Col = 3,
                 Hint = () => "Задания" + Hotkeys.Tail("win:quests"),
                 Sprite = QuestBoard.Icon,
@@ -108,6 +116,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLSetupButton",
+                Art = () => "btn_setup",
                 Col = 3,
                 Fight = true,
                 Order = 99,
@@ -122,6 +131,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLTownButton",
+                Art = () => "btn_town",
                 Right = true,
                 Col = 0,
                 Hint = () => Artifacts.Busy ? "Идёт работа с хранилищем"
@@ -137,11 +147,12 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLArtifactButton",
+                Art = () => Artifacts.HasStash ? "btn_stash_get" : "btn_stash_put",
                 Right = true,
                 Col = 0,
                 Hint = () => Artifacts.HasStash
-                    ? "Забрать вещи из хранилища и надеть"
-                    : "Сдать вещи в хранилище",
+                    ? "Вернуть основной набор"
+                    : "Надеть запасной набор",
                 Enabled = () => (Plugin.CfgArtifactButtons == null || Plugin.CfgArtifactButtons.Value) && !ClaimLocked(),
                 Sprite = () => Artifacts.HasStash ? Pick("storage_get", 13) : Pick("storage_put", 14),
                 Click = () =>
@@ -155,6 +166,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = Workshop.ButtonName,
+                Art = () => "btn_workshop",
                 Col = 3,
                 Order = 4,
                 Hint = () => "Мастерская артефактов",
@@ -166,6 +178,7 @@ namespace NewAgeQoL
             new Entry
             {
                 Name = "QoLTravelButton",
+                Art = () => "btn_travel",
                 Right = true,
                 Order = 9,
                 Col = 2,
@@ -290,22 +303,20 @@ namespace NewAgeQoL
                 }
                 if (b.Go == null) Create(b);
                 if (b.Go == null) continue;
-                var sprite = b.Sprite();
+                var sprite = Tile(b) ?? b.Sprite();
                 if (b.Icon != null)
                 {
                     if (sprite != null && b.Icon.sprite != sprite) b.Icon.sprite = sprite;
                     bool drawn = b.Icon.sprite != null && b.Icon.sprite.texture != null;
                     if (b.Icon.enabled != drawn) b.Icon.enabled = drawn;
                 }
-                if (b.Frame != null) Dress(b.Frame);
+                if (b.Frame != null && b.Frame.enabled) b.Frame.enabled = false;
 
                 var btn = b.Go.GetComponent<Button>();
                 if (btn != null && !btn.interactable) btn.interactable = true;
-                if (b.Icon != null)
-                {
-                    var tint = b.PressAt > 0f ? Pressed : Color.white;
-                    if (b.Icon.color != tint) b.Icon.color = tint;
-                }
+                var tint = b.PressAt > 0f ? Pressed : Color.white;
+                if (b.Icon != null && b.Icon.color != tint) b.Icon.color = tint;
+                if (b.Back != null) Plate(b.Back, b.PressAt > 0f);
                 if (b.Count != null && b.Badge != null)
                 {
                     string badge = b.Badge();
@@ -625,7 +636,10 @@ namespace NewAgeQoL
             rt.sizeDelta = new Vector2(_cellSide, _cellSide);
 
             var back = go.GetComponent<Image>();
-            back.color = new Color(0.04f, 0.05f, 0.07f, 0.42f);
+            back.color = WardrobeLook.Window;
+            back.sprite = OnlineWindow.Rounded(16);
+            back.type = Image.Type.Sliced;
+            WardrobeLook.Frame(go, WardrobeLook.Edge);
             back.raycastTarget = false;
 
             if (which == 1) _panelRight = rt; else _panel = rt;
@@ -640,6 +654,7 @@ namespace NewAgeQoL
                 b.Go = null;
                 b.Icon = null;
                 b.Frame = null;
+                b.Back = null;
                 b.Count = null;
             }
             if (_panel != null) Object.Destroy(_panel.gameObject);
@@ -1108,6 +1123,47 @@ namespace NewAgeQoL
         private static float _cellSide = 64f;
 
 
+        private static Sprite Tile(Entry entry)
+        {
+            if (entry.Art == null) return null;
+            var tile = Icons.Flash(entry.Art());
+            return tile != null && tile.texture != null ? tile : null;
+        }
+
+        private static readonly Color Held = WardrobeLook.Mix(WardrobeLook.Button, Color.black, 0.35f);
+
+        private static void Plate(Image back, bool pressed)
+        {
+            var want = pressed ? Held : WardrobeLook.Button;
+            if (back.color != want) back.color = want;
+        }
+
+        private static void Flatten(Entry entry, RectTransform cell, float side)
+        {
+            var back = cell.Find("back") as RectTransform;
+            if (back != null)
+            {
+                entry.Back = back.GetComponent<Image>();
+                back.offsetMin = Vector2.zero;
+                back.offsetMax = Vector2.zero;
+                entry.Back.sprite = OnlineWindow.Rounded(8);
+                entry.Back.type = Image.Type.Sliced;
+                entry.Back.color = WardrobeLook.Button;
+                WardrobeLook.Frame(back.gameObject, WardrobeLook.Edge);
+            }
+            var clip = cell.Find("clip") as RectTransform;
+            if (clip == null) return;
+            float pad = side * 0.08f;
+            clip.offsetMin = new Vector2(pad, pad);
+            clip.offsetMax = new Vector2(-pad, -pad);
+            if (clip.childCount == 0) return;
+            var icon = clip.GetChild(0) as RectTransform;
+            if (icon == null) return;
+            icon.offsetMin = Vector2.zero;
+            icon.offsetMax = Vector2.zero;
+        }
+
+
         internal static void Strip(GameObject go)
         {
             foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true))
@@ -1265,7 +1321,7 @@ namespace NewAgeQoL
                 float side = _cellSide;
                 var rt = (RectTransform)go.transform;
 
-                var sprite = entry.Sprite();
+                var sprite = Tile(entry) ?? entry.Sprite();
                 icon.gameObject.SetActive(true);
                 icon.enabled = true;
                 icon.preserveAspect = true;
@@ -1273,6 +1329,9 @@ namespace NewAgeQoL
                 if (sprite != null) icon.sprite = sprite;
                 entry.Icon = icon;
                 entry.Frame = frame;
+                entry.Back = null;
+                Flatten(entry, rt, side);
+                if (frame != null) frame.enabled = false;
 
                 if (entry.Badge != null) entry.Count = Badge(rt, side, entry.Badge(), entry.WhiteBadge);
 

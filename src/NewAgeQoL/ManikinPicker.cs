@@ -19,6 +19,7 @@ namespace NewAgeQoL
             internal int ThingId;
             internal string Where;
             internal int Left;
+            internal int Have;
         }
 
         private sealed class Card
@@ -118,7 +119,7 @@ namespace NewAgeQoL
         private static string Sign(List<Choice> list)
         {
             var text = new System.Text.StringBuilder();
-            foreach (var choice in list) text.Append(choice.ThingId).Append('/').Append(choice.Left).Append(';');
+            foreach (var choice in list) text.Append(choice.ThingId).Append('/').Append(choice.Left).Append('/').Append(choice.Have).Append(';');
             return text.ToString();
         }
 
@@ -210,7 +211,7 @@ namespace NewAgeQoL
             int used = Manikin.Used(thingId, slot);
             int left = have - used;
             if (have > 0 && left <= 0) return;
-            list.Add(new Choice { ThingId = thingId, Where = where, Left = left > 0 ? left : 1 });
+            list.Add(new Choice { ThingId = thingId, Where = where, Left = left > 0 ? left : 1, Have = have });
         }
 
         private static void Fill(List<Choice> list)
@@ -219,9 +220,9 @@ namespace NewAgeQoL
             for (int i = _grid.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_grid.GetChild(i).gameObject);
             Cards.Clear();
 
-            Make(0, "пусто", "убрать из слота");
+            Make(0, "пусто", "убрать из слота", 0);
             foreach (var choice in list)
-                Make(choice.ThingId, Flasks.DisplayName(choice.ThingId) ?? "вещь " + choice.ThingId, Where(choice));
+                Make(choice.ThingId, Flasks.DisplayName(choice.ThingId) ?? "вещь " + choice.ThingId, Where(choice), choice.Have);
 
             _built = true;
             _sign = Sign(list);
@@ -231,7 +232,7 @@ namespace NewAgeQoL
 
         private static string Where(Choice choice)
         {
-            return choice.Left > 1 ? choice.Where + ", свободно " + choice.Left : choice.Where;
+            return choice.Where;
         }
 
         private static void Refresh(List<Choice> list)
@@ -257,7 +258,7 @@ namespace NewAgeQoL
             }
         }
 
-        private static void Make(int thingId, string name, string where)
+        private static void Make(int thingId, string name, string where, int have)
         {
             var go = new GameObject("thing" + thingId, typeof(RectTransform), typeof(Image), typeof(Button), typeof(VerticalLayoutGroup));
             go.transform.SetParent(_grid, false);
@@ -284,6 +285,22 @@ namespace NewAgeQoL
             icon.raycastTarget = false;
             var ile = iconGo.GetComponent<LayoutElement>();
             ile.minHeight = IconSide; ile.preferredHeight = IconSide;
+
+            if (have > 1)
+            {
+                var count = OnlineWindow.Label(go.transform, have + " шт.", 12, FontStyle.Bold, WardrobeLook.Bright);
+                count.alignment = TextAnchor.UpperRight;
+                count.raycastTarget = false;
+                count.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                var crt = count.rectTransform;
+                crt.anchorMin = crt.anchorMax = new Vector2(1f, 1f);
+                crt.pivot = new Vector2(1f, 1f);
+                crt.sizeDelta = new Vector2(60f, 18f);
+                crt.anchoredPosition = new Vector2(-8f, -6f);
+                var shadow = count.gameObject.AddComponent<Outline>();
+                shadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
+                shadow.effectDistance = new Vector2(1f, -1f);
+            }
 
             var caption = OnlineWindow.Label(go.transform, name, 12, FontStyle.Normal, WardrobeLook.Bright);
             caption.alignment = TextAnchor.UpperCenter;

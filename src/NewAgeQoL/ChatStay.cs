@@ -23,6 +23,7 @@ namespace NewAgeQoL
         private static int _turn;
         private static bool _touched;
         private static ScrollRect _watched;
+        private static bool _force;
         private static readonly Dictionary<ChatContentHolder, List<ITextScrollerContent>> Seen = new Dictionary<ChatContentHolder, List<ITextScrollerContent>>();
         private static readonly StringBuilder Pen = new StringBuilder();
 
@@ -72,6 +73,27 @@ namespace NewAgeQoL
             Watch(scroll);
             _wasBottom = AtBottom(scroll);
             _wasTop = FromTop(scroll);
+        }
+
+        internal static bool Freeze(ChatPanelContent panel)
+        {
+            if (_force) return false;
+            var holder = Holder(panel);
+            if (holder == null || !ReferenceEquals(holder, ChatDock.Board())) return false;
+            var scroll = Of(panel);
+            if (scroll == null || AtBottom(scroll)) return false;
+            List<ITextScrollerContent> before;
+            if (!Seen.TryGetValue(holder, out before) || before.Count == 0) return false;
+            if (!holder.Content.Contains(before[before.Count - 1])) return false;
+            ChatDock.Grow();
+            return true;
+        }
+
+        internal static void Redraw(Action draw)
+        {
+            _force = true;
+            try { draw(); }
+            finally { _force = false; }
         }
 
         internal static void Note(ChatPanelContent panel)
@@ -268,16 +290,21 @@ namespace NewAgeQoL
     [HarmonyPatch(typeof(ChatPanelContent), "OnChatChanged")]
     internal static class ChatStayPatch
     {
-        private static void Prefix(ChatPanelContent __instance)
+        private static bool Prefix(ChatPanelContent __instance, ref bool __state)
         {
-            if (!ChatStay.On) return;
+            __state = false;
+            if (!ChatStay.On) return true;
+            try { __state = ChatStay.Freeze(__instance); }
+            catch (Exception e) { Plugin.Trace("[chat] hold system log: " + e.Message); }
+            if (__state) return false;
             try { ChatStay.Remember(__instance); }
             catch (Exception e) { Plugin.Trace("[chat] save scroll: " + e.Message); }
+            return true;
         }
 
-        private static void Postfix(ChatPanelContent __instance)
+        private static void Postfix(ChatPanelContent __instance, bool __state)
         {
-            if (!ChatStay.On) return;
+            if (!ChatStay.On || __state) return;
             try { ChatStay.Note(__instance); }
             catch (Exception e) { Plugin.Trace("[chat] line list: " + e.Message); }
             if (!ChatStay.Held) return;

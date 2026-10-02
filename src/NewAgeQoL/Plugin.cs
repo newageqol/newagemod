@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.8.0";
+        public const string Version = "0.9.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -77,6 +77,7 @@ namespace NewAgeQoL
         internal static ConfigEntry<int> CfgTravelTown;
         internal static ConfigEntry<int> CfgTravelOuter;
         internal static ConfigEntry<bool> CfgBranchesOn;
+        internal static ConfigEntry<bool> CfgBranchServer;
         internal static ConfigEntry<int> CfgBranchDays;
         internal static ConfigEntry<int> CfgBranchSearches;
         internal static ConfigEntry<int> CfgBranchPages;
@@ -268,6 +269,8 @@ namespace NewAgeQoL
                 "id персонажа, которым ты в последний раз входил в игру через этот клиент. Заполняется само. На экране выбора персонажа мод сразу показывает его, а не того, кто заходил последним по данным сервера (например, запасного для окна «Кто в игре»). 0 — как в игре.");
             Chars.Own("Branches", "ShowBranches", true,
                 "В подсказке бойца показывать его ветку классовых умений и ветку элитных. Мод ищет их в архиве битв на сайте игры по открытым логам боёв: одно классовое умение в логе однозначно называет ветку. Найденное запоминается, чтобы не спрашивать сайт заново.", e => CfgBranchesOn = e);
+            Chars.Own("Branches", "UseServer", true,
+                "Спрашивать ветки у сервера мода: он один ищет их в архиве битв для всех игроков и сразу отдаёт уже найденные. Если сервер не ответил, мод 10 минут ищет на сайте игры сам, как раньше. Выключено — мод всегда ищет на сайте сам.", e => CfgBranchServer = e);
             Chars.Own("Branches", "SearchDays", 7,
                 "На сколько дней назад заглядывать в архив битв, от 1 до 14. Архив ищет окнами по два дня, так что 7 дней — это до четырёх запросов поиска на бойца, и то лишь пока ветка не найдена.", e => CfgBranchDays = e);
             CfgBranchDays.Value = UnityEngine.Mathf.Clamp(CfgBranchDays.Value, 1, 14);

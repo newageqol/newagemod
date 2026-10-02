@@ -105,6 +105,10 @@ namespace NewAgeQoL
         private static InputField _input;
         private static GameObject _chip;
         private static Text _chipText;
+        private static Image _chipBack;
+        private static Image _chipMark;
+        private static bool _chipPicked;
+        private static bool _chipHover;
         private static int _tab;
         private static int _to;
         private static string _toName = "";
@@ -757,8 +761,13 @@ namespace NewAgeQoL
 
         private static void Redraw()
         {
-            try { AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null); }
+            try { ChatStay.Redraw(() => AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null)); }
             catch (Exception e) { Plugin.Trace("[dock] feed redraw: " + e.Message); }
+        }
+
+        internal static void Grow()
+        {
+            _window = Mathf.Min(Keep, _window + 1);
         }
 
         private static void Quiet(ChatContentHolder holder, Action fill)
@@ -947,6 +956,7 @@ namespace NewAgeQoL
         private static void Chip()
         {
             bool set = _to > 0;
+            if (_chipPicked) Pick(false);
             if (_chip != null && _chip.activeSelf != set) _chip.SetActive(set);
             if (_chipText == null) { Inset(0f); return; }
             _chipText.text = set ? _toName + " :" : "";
@@ -1055,6 +1065,7 @@ namespace NewAgeQoL
         {
             if (_input == null || !Active) return;
             Outside();
+            Picked();
             Probe();
             if (_eat)
             {
@@ -1799,6 +1810,10 @@ namespace NewAgeQoL
             _input = null;
             _chip = null;
             _chipText = null;
+            _chipBack = null;
+            _chipMark = null;
+            _chipPicked = false;
+            _chipHover = false;
             _tipGo = null;
             _tipText = null;
             _clock = null;
@@ -2599,7 +2614,7 @@ namespace NewAgeQoL
                     widget.Data = row;
                     Plain(widget, row.IsAway == true);
                     OnlineWindow.MarkAway(widget, row.IsAway == true);
-                    widget.OnItemClickDelegate = item => Recipient(row.UserId, row.Login);
+                    widget.OnItemClickDelegate = item => RowClick(row.UserId, row.Login);
                     widget.OnRightButtonClickDelegate = item =>
                     {
                         try
@@ -2614,6 +2629,30 @@ namespace NewAgeQoL
                 }
             }
             catch (Exception e) { Plugin.Trace("[dock] list rows: " + e.Message); }
+        }
+
+        private static int _rowLastId;
+        private static float _rowLastAt;
+
+        private static void RowClick(int id, string login)
+        {
+            float now = Time.unscaledTime;
+            bool twice = id == _rowLastId && now - _rowLastAt <= 0.35f;
+            _rowLastId = twice ? 0 : id;
+            _rowLastAt = now;
+            if (!twice)
+            {
+                Recipient(id, login);
+                return;
+            }
+            try
+            {
+                var info = Controllers.Get<UserInfoWindowController>();
+                if (info == null) return;
+                info.ShowUserInfoDialog(id, login);
+                Plugin.Trace("[dock] double click on player " + login + " - info opened");
+            }
+            catch (Exception e) { Plugin.Trace("[dock] player info: " + e.Message); }
         }
 
         private static readonly Color Clear = new Color(0f, 0f, 0f, 0f);
@@ -2911,7 +2950,7 @@ namespace NewAgeQoL
 
         private static GameObject Chip(Transform host)
         {
-            var go = new GameObject("chip", typeof(RectTransform), typeof(Button));
+            var go = new GameObject("chip", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(host, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0f, 0f);
@@ -2921,13 +2960,36 @@ namespace NewAgeQoL
             rt.offsetMax = new Vector2(9f, -1f);
             rt.sizeDelta = new Vector2(0f, rt.sizeDelta.y);
 
+            var markGo = new GameObject("mark", typeof(RectTransform), typeof(Image));
+            markGo.transform.SetParent(go.transform, false);
+            _chipMark = markGo.GetComponent<Image>();
+            _chipMark.color = ChipPicked;
+            _chipMark.raycastTarget = false;
+            markGo.SetActive(false);
             _chipText = OnlineWindow.Label(go.transform, "", 13, FontStyle.Bold, WardrobeLook.Accent);
             _chipText.alignment = TextAnchor.MiddleLeft;
             _chipText.horizontalOverflow = HorizontalWrapMode.Overflow;
             _chipText.verticalOverflow = VerticalWrapMode.Overflow;
             OnlineWindow.Place(_chipText.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero);
-            go.GetComponent<Button>().onClick.AddListener(() => { _to = 0; _toName = ""; Chip(); Focus(); });
+            _chipBack = go.GetComponent<Image>();
+            _chipBack.color = ChipIdle;
+            _chipBack.raycastTarget = true;
+            go.GetComponent<Button>().transition = Selectable.Transition.None;
             var trigger = go.AddComponent<EventTrigger>();
+            var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+            down.callback.AddListener(data =>
+            {
+                var press = data as PointerEventData;
+                if (press == null || press.button != PointerEventData.InputButton.Left || _to <= 0) return;
+                Pick(true);
+            });
+            trigger.triggers.Add(down);
+            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => _chipHover = true);
+            trigger.triggers.Add(enter);
+            var leave = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            leave.callback.AddListener(_ => _chipHover = false);
+            trigger.triggers.Add(leave);
             var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
             entry.callback.AddListener(data =>
             {
@@ -2939,6 +3001,62 @@ namespace NewAgeQoL
             trigger.triggers.Add(entry);
             go.SetActive(false);
             return go;
+        }
+
+        private static readonly Color ChipIdle = new Color(1f, 1f, 1f, 0f);
+        private static readonly Color ChipPicked = new Color(WardrobeLook.Accent.r, WardrobeLook.Accent.g, WardrobeLook.Accent.b, 0.3f);
+
+        private static void Pick(bool on)
+        {
+            _chipPicked = on;
+            if (_chipMark != null)
+            {
+                if (on) Measure();
+                if (_chipMark.gameObject.activeSelf != on) _chipMark.gameObject.SetActive(on);
+            }
+            if (!on) return;
+            ChatPick.Drop();
+            if (_input != null && _input.isFocused) _input.DeactivateInputField();
+        }
+
+        private static void Measure()
+        {
+            if (_chipText == null || _chipMark == null) return;
+            var settings = _chipText.GetGenerationSettings(Vector2.zero);
+            float scale = _chipText.pixelsPerUnit > 0f ? _chipText.pixelsPerUnit : 1f;
+            float wide = _chipText.cachedTextGeneratorForLayout.GetPreferredWidth(_toName, settings) / scale;
+            float high = _chipText.cachedTextGeneratorForLayout.GetPreferredHeight(_toName, settings) / scale;
+            var rt = (RectTransform)_chipMark.transform;
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(wide, high);
+        }
+
+        private static void Picked()
+        {
+            if (!_chipPicked) return;
+            if (_to <= 0 || ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) && !_chipHover))
+            {
+                Pick(false);
+                return;
+            }
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (ctrl)
+            {
+                if (!Input.GetKeyDown(KeyCode.C)) return;
+                GUIUtility.systemCopyBuffer = _toName;
+                Plugin.Trace("[dock] recipient nick copied");
+                return;
+            }
+            string typed = Input.inputString;
+            if (string.IsNullOrEmpty(typed)) return;
+            var keep = new StringBuilder();
+            foreach (char c in typed) if (!char.IsControl(c)) keep.Append(c);
+            Pick(false);
+            if (keep.Length > 0) Type(keep.ToString());
+            else Focus();
         }
 
         private static void Inset(float left)
