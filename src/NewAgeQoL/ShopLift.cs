@@ -74,6 +74,36 @@ namespace NewAgeQoL
         private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
     }
 
+    [HarmonyPatch(typeof(ClanTreasuryListThingsController), "BuildWindow")]
+    internal static class ShopLiftClanTreasuryListThingsPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
+    }
+
+    [HarmonyPatch(typeof(ClanTreasuryPutThingController), "BuildWindow")]
+    internal static class ShopLiftClanTreasuryPutThingPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
+    }
+
+    [HarmonyPatch(typeof(ClanTreasuryPutCrystallsController), "BuildWindow")]
+    internal static class ShopLiftClanTreasuryPutCrystallsPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
+    }
+
+    [HarmonyPatch(typeof(StorageGetThingController), "BuildWindow")]
+    internal static class ShopLiftStorageGetThingPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
+    }
+
+    [HarmonyPatch(typeof(StoragePutThingController), "BuildWindow")]
+    internal static class ShopLiftStoragePutThingPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result) => ShopLift.Attach(__result);
+    }
+
     [HarmonyPatch(typeof(HintHolder), "Update")]
     internal static class ShopLiftHintGuard
     {

@@ -50,7 +50,7 @@ namespace NewAgeQoL
             try
             {
                 if (_closeLater && (!_busy || Time.unscaledTime > _holdUntil)) Uncover();
-                if (_warmed || _warming || _busy) return;
+                if (_warmed || _warming || _busy || AssetSync.Off("BankHall")) return;
                 if (!SideButtons.InWorld() || SideButtons.InCombat() || AssetSync.Loading) return;
                 _warmed = true;
                 if (Ready) return;
@@ -94,7 +94,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (_busy) return;
+                if (_busy || AssetSync.Off("BankHall")) return;
                 var old = FindOld();
                 if (old == null || old.GetComponentInChildren<BankLife>(true) != null) return;
                 if (!_warming) AssetSync.Settle("BankHall");
@@ -130,30 +130,32 @@ namespace NewAgeQoL
             }
         }
 
+        private static bool _fxLoading;
+
         internal static IEnumerator EnsureFx()
         {
-            while (_warming || _busy) yield return null;
+            while (_fxLoading) yield return null;
             if (_fx != null) yield break;
             if (!File.Exists(Path.Combine(Folder, "bank_fx"))) yield break;
-            var req = AssetBundle.LoadFromFileAsync(Path.Combine(Folder, "bank_fx"));
-            yield return req;
-            if (_fx != null) yield break;
-            _fx = req.assetBundle;
-            if (_fx == null) yield break;
-            Mats.Clear();
-            foreach (var m in _fx.LoadAllAssets<Material>()) Mats[m.name] = m;
+            _fxLoading = true;
+            try
+            {
+                var req = AssetBundle.LoadFromFileAsync(Path.Combine(Folder, "bank_fx"));
+                yield return req;
+                _fx = req.assetBundle;
+                if (_fx == null) yield break;
+                Mats.Clear();
+                foreach (var m in _fx.LoadAllAssets<Material>()) Mats[m.name] = m;
+            }
+            finally { _fxLoading = false; }
         }
 
         private static IEnumerator Prepare()
         {
             if (_fx == null)
             {
-                var req = AssetBundle.LoadFromFileAsync(Path.Combine(Folder, "bank_fx"));
-                yield return req;
-                _fx = req.assetBundle;
+                yield return EnsureFx();
                 if (_fx == null) { Plugin.Warn("[bank] effects bundle failed to load"); yield break; }
-                Mats.Clear();
-                foreach (var m in _fx.LoadAllAssets<Material>()) Mats[m.name] = m;
                 yield return null;
             }
             if (_baseTex == null) { _baseTex = Load("bank_base.png", false, false); yield return null; }

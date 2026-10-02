@@ -48,6 +48,9 @@ namespace NewAgeQoL
             {
                 new Header { Title = "Мод" },
                 A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
+                AssetSync.Pending
+                    ? A("Новые версии старых локаций: " + AssetSync.PendingSize + " МБ", "Скачать", AssetSync.Retry)
+                    : null,
                 new Header { Title = "Кнопки" },
                 B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
                 B("Кнопка сдачи вещей в хранилище", Plugin.CfgArtifactButtons),

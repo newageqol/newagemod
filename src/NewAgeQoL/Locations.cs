@@ -18,7 +18,7 @@ namespace NewAgeQoL
         internal class Desc
         {
             public string Folder, Name, Prefab, Kind = "prerender", Scene, Bundle, Fx, Data;
-            public bool Busy;
+            public bool Busy, Warming;
             public AssetBundle SceneBundle, FxBundle;
             public Material Bloom;
             public Texture2D Base, Delta, Fx2, Depth;
@@ -40,6 +40,64 @@ namespace NewAgeQoL
             public int Mask;
             public bool Hdr;
             public string Scene;
+        }
+
+        private static bool _warmed, _warming;
+
+        internal static void Warm()
+        {
+            try
+            {
+                if (_warmed || _warming || Plugin.Instance == null) return;
+                if (!SideButtons.InWorld() || SideButtons.InCombat() || AssetSync.Loading || AssetSync.Asking) return;
+                _warmed = true;
+                Plugin.Instance.StartCoroutine(Preload());
+            }
+            catch (Exception e) { Plugin.Trace("[places] preload: " + e.Message); }
+        }
+
+        private static IEnumerator Preload()
+        {
+            _warming = true;
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            int n = 0;
+            try
+            {
+                foreach (var d in All().ToList())
+                {
+                    if (d.Kind != "prerender" || d.Busy || AssetSync.Off(d.Name)) continue;
+                    if (!File.Exists(PathOf(d, "bank_base.png"))) continue;
+                    yield return BankHall.EnsureFx();
+                    d.Warming = true;
+                    try { yield return LoadTextures(d); }
+                    finally { d.Warming = false; }
+                    n++;
+                    yield return null;
+                }
+            }
+            finally { _warming = false; }
+            Plugin.Trace("[places] preloaded " + n + " pictures in " + clock.ElapsedMilliseconds + " ms");
+        }
+
+        private static IEnumerator LoadTextures(Desc d)
+        {
+            if (d.Base == null) { d.Base = Load(d, "bank_base.png", false, false); yield return null; }
+            if (d.Delta == null) { d.Delta = Load(d, "bank_delta.png", false, true); yield return null; }
+            if (d.Fx2 == null) { d.Fx2 = Load(d, "bank_fx2.png", false, true); yield return null; }
+            if (d.Depth == null) { d.Depth = Load(d, "bank_depth.png", true, false); yield return null; }
+        }
+
+        private static void HideOld(GameObject old)
+        {
+            var fon = old.transform.Find("fonSprite");
+            if (fon != null) fon.gameObject.SetActive(false);
+        }
+
+        private static void ShowOld(GameObject old)
+        {
+            if (old == null || old.GetComponentInChildren<PlaceMark>(true) != null) return;
+            var fon = old.transform.Find("fonSprite");
+            if (fon != null) fon.gameObject.SetActive(true);
         }
 
         private static readonly Dictionary<string, Desc> Known = new Dictionary<string, Desc>(StringComparer.OrdinalIgnoreCase);
@@ -98,7 +156,7 @@ namespace NewAgeQoL
         {
             var d = Find(folder);
             if (d == null) return false;
-            if (d.Busy || d.Saved != null) return true;
+            if (d.Busy || d.Warming || d.Saved != null) return true;
             if (d.Kind == "scene" && !string.IsNullOrEmpty(d.Scene) && SceneManager.GetSceneByName(d.Scene).isLoaded) return true;
             return d.Kind == "prerender" && UnityEngine.Object.FindObjectsOfType<PlaceMark>().Any(m => m.Folder == folder);
         }
@@ -114,7 +172,7 @@ namespace NewAgeQoL
             d.Base = d.Delta = d.Fx2 = d.Depth = null;
         }
 
-        internal static bool PrerenderBusy => Known.Values.Any(d => d.Busy && d.Kind == "prerender");
+        internal static bool PrerenderBusy => Known.Values.Any(d => (d.Busy || d.Warming) && d.Kind == "prerender");
 
         internal static bool IsOurScene(string scene) =>
             Known.Values.Any(d => d.Kind == "scene" && string.Equals(d.Scene, scene, StringComparison.Ordinal));
@@ -132,10 +190,11 @@ namespace NewAgeQoL
             {
                 try
                 {
-                    if (d.Busy || string.IsNullOrEmpty(d.Prefab)) continue;
+                    if (d.Busy || string.IsNullOrEmpty(d.Prefab) || AssetSync.Off(d.Name)) continue;
                     var old = FindOld(d.Prefab);
                     if (old == null || old.GetComponentInChildren<PlaceMark>(true) != null) continue;
                     AssetSync.Settle(d.Name);
+                    if (d.Kind == "scene" ? !string.IsNullOrEmpty(d.Bundle) && File.Exists(PathOf(d, d.Bundle)) : File.Exists(PathOf(d, "bank_base.png"))) HideOld(old);
                     if (d.Kind == "scene") Plugin.Instance.StartCoroutine(RunScene(d, old));
                     else Plugin.Instance.StartCoroutine(RunPrerender(d, old));
                 }
@@ -148,19 +207,23 @@ namespace NewAgeQoL
         private static IEnumerator RunPrerender(Desc d, GameObject old)
         {
             if (!File.Exists(PathOf(d, "bank_base.png"))) { Plugin.Trace("[places] " + d.Name + ": picture missing"); yield break; }
+            while (d.Warming) yield return null;
             d.Busy = true;
+            bool shown = false;
             try
             {
                 yield return BankHall.EnsureFx();
                 if (BankHall.Mat("pre_composite") == null) { Plugin.Warn("[places] " + d.Name + ": effects bundle missing"); yield break; }
-                if (d.Base == null) { d.Base = Load(d, "bank_base.png", false, false); yield return null; }
-                if (d.Delta == null) { d.Delta = Load(d, "bank_delta.png", false, true); yield return null; }
-                if (d.Fx2 == null) { d.Fx2 = Load(d, "bank_fx2.png", false, true); yield return null; }
-                if (d.Depth == null) d.Depth = Load(d, "bank_depth.png", true, false);
+                yield return LoadTextures(d);
                 if (old == null || d.Base == null || BankHall.Mat("pre_composite") == null) yield break;
                 ApplyPrerender(d, old);
+                shown = true;
             }
-            finally { d.Busy = false; }
+            finally
+            {
+                d.Busy = false;
+                if (!shown) ShowOld(old);
+            }
         }
 
         private static Texture2D Load(Desc d, string file, bool linear, bool compress)
@@ -242,6 +305,7 @@ namespace NewAgeQoL
                 yield break;
             }
             d.Busy = true;
+            bool shown = false;
             try
             {
                 if (d.SceneBundle == null)
@@ -268,8 +332,13 @@ namespace NewAgeQoL
                 var scene = SceneManager.GetSceneByName(d.Scene);
                 if (!scene.IsValid() || old == null) yield break;
                 ApplyScene(d, old, scene);
+                shown = true;
             }
-            finally { d.Busy = false; }
+            finally
+            {
+                d.Busy = false;
+                if (!shown) ShowOld(old);
+            }
         }
 
         private class Data

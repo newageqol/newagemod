@@ -2,12 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 namespace NewAgeQoL
 {
@@ -37,13 +39,90 @@ namespace NewAgeQoL
             ["BankHall"] = new Group { InUse = BankHall.InUse, Release = BankHall.Unload },
         };
 
-        private static float _startAt = 20f;
+        private static long _gotBytes, _totalBytes;
+        private static List<Entry> _need;
+        private static int _answer;
         private static bool _running;
         private static bool _done;
         private static Dictionary<string, string> _known;
         private static readonly Dictionary<string, string> Verified = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         internal static bool Loading { get; private set; }
+
+        internal static bool Declined { get; private set; }
+
+        internal static bool Asking => _running && !_done;
+
+        internal static bool Off(string group) =>
+            Declined && _need != null && _need.Any(e => e.Path.StartsWith(group + "/", StringComparison.OrdinalIgnoreCase));
+
+        internal static float Progress => _totalBytes > 0 ? Mathf.Clamp01(_gotBytes / (float)_totalBytes) : 0f;
+
+        internal static string Done => Mb(_gotBytes) + " из " + Mb(_totalBytes) + " МБ";
+
+        internal static string Mb(long bytes) => Math.Max(1L, (bytes + 512L * 1024L) / (1024L * 1024L)).ToString();
+
+        internal static void Answer(bool yes) => _answer = yes ? 1 : 2;
+
+        internal static bool Pending => Declined && !_running && _need != null && _need.Count > 0;
+
+        internal static string PendingSize => Mb(_need == null ? 0 : _need.Sum(e => e.Size));
+
+        internal static void Retry()
+        {
+            if (!Pending || Plugin.Instance == null) return;
+            _running = true;
+            Plugin.Instance.StartCoroutine(Again());
+        }
+
+        private static IEnumerator Again()
+        {
+            bool ok = false;
+            try
+            {
+                Plugin.Log.LogInfo("[assets] download started from the settings");
+                _totalBytes = _need.Sum(e => e.Size);
+                AssetGate.Show();
+                yield return Get(r => ok = r);
+            }
+            finally
+            {
+                Loading = false;
+                _running = false;
+                foreach (var g in Staged()) Settle(g);
+            }
+            if (!ok) yield break;
+            Declined = false;
+            AssetGate.Close();
+            try { Settings.Close(); }
+            catch (Exception e) { Plugin.Trace("[assets] closing settings: " + e.Message); }
+            Notice.Show("Новые версии старых локаций скачаны. Они появятся при следующем входе в локацию.", 6f);
+        }
+
+        private static IEnumerator Get(Action<bool> done)
+        {
+            Loading = true;
+            _gotBytes = 0;
+            AssetGate.Downloading();
+            var left = new List<Entry>(_need);
+            foreach (var e in left)
+            {
+                bool ok = false;
+                long before = _gotBytes;
+                yield return Fetch(e, r => ok = r, b => _gotBytes = before + b);
+                _gotBytes = before + e.Size;
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo("[assets] stopped at " + e.Path + ", will continue later");
+                    Declined = true;
+                    AssetGate.Failed();
+                    done(false);
+                    yield break;
+                }
+                _need.Remove(e);
+            }
+            done(true);
+        }
 
         internal static string Root => Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "";
 
@@ -55,7 +134,8 @@ namespace NewAgeQoL
         {
             if (Plugin.Instance == null) return;
             if (!Loading) NightTown.Warm();
-            if (_running || _done || Time.unscaledTime < _startAt) return;
+            if (!Loading) Locations.Warm();
+            if (_running || _done) return;
             _running = true;
             Plugin.Instance.StartCoroutine(Run());
         }
@@ -152,16 +232,27 @@ namespace NewAgeQoL
                 SaveState();
                 long total = 0;
                 foreach (var e in need) total += e.Size;
-                if (need.Count > 0) Plugin.Log.LogInfo("[assets] downloading " + need.Count + " files, " + total + " bytes");
-
-                Loading = need.Count > 0;
-                foreach (var e in need)
+                if (need.Count == 0) { finished = true; yield break; }
+                Plugin.Log.LogInfo("[assets] " + need.Count + " files to download, " + total + " bytes, asking the player");
+                _totalBytes = total;
+                _gotBytes = 0;
+                _answer = 0;
+                _need = need;
+                while (SideButtons.InCombat()) yield return new WaitForSecondsRealtime(1f);
+                AssetGate.Ask(need.Count, total);
+                while (_answer == 0) yield return null;
+                if (_answer == 2)
                 {
-                    bool ok = false;
-                    yield return Fetch(e, r => ok = r);
-                    if (!ok) { Plugin.Log.LogInfo("[assets] stopped at " + e.Path + ", will continue next launch"); yield break; }
+                    Declined = true;
+                    AssetGate.Close();
+                    Plugin.Log.LogInfo("[assets] player declined the download, mod locations are off this session");
+                    yield break;
                 }
+                bool got = false;
+                yield return Get(r => got = r);
+                if (!got) yield break;
                 finished = true;
+                AssetGate.Close();
             }
             finally
             {
@@ -199,7 +290,7 @@ namespace NewAgeQoL
             return !top.Equals("NewAge2D", StringComparison.OrdinalIgnoreCase) && !top.Equals("config", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static IEnumerator Fetch(Entry e, Action<bool> done)
+        private static IEnumerator Fetch(Entry e, Action<bool> done, Action<long> progress)
         {
             var target = Path.Combine(Stage, e.Path);
             var part = target + ".part";
@@ -240,7 +331,7 @@ namespace NewAgeQoL
                 {
                     if (have > 0 && request.responseCode == 200) { request.Abort(); restart = true; break; }
                     if (SideButtons.InCombat()) { request.Abort(); paused = true; break; }
-                    if (request.downloadedBytes != seen) { seen = request.downloadedBytes; quietSince = Time.unscaledTime; }
+                    if (request.downloadedBytes != seen) { seen = request.downloadedBytes; quietSince = Time.unscaledTime; progress(have + (long)seen); }
                     else if (Time.unscaledTime - quietSince > 60f) { request.Abort(); stalled = true; break; }
                     yield return new WaitForSecondsRealtime(0.5f);
                 }
@@ -331,5 +422,167 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Trace("[assets] saving state: " + e.Message); }
         }
+    }
+    internal static class AssetGate
+    {
+        private static GameObject _root;
+        private static Text _text;
+        private static RectTransform _bar;
+        private static GameObject _buttons, _barBox, _fail;
+        private static bool _downloading;
+
+        private static void Build()
+        {
+            if (_root != null) return;
+            _root = new GameObject("QoLAssetGate", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            UnityEngine.Object.DontDestroyOnLoad(_root);
+            var canvas = _root.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32000;
+            var scaler = _root.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 1f;
+            UiScale.Own(scaler);
+
+            var veil = new GameObject("veil", typeof(RectTransform), typeof(Image));
+            veil.transform.SetParent(_root.transform, false);
+            var vrt = (RectTransform)veil.transform;
+            vrt.anchorMin = Vector2.zero;
+            vrt.anchorMax = Vector2.one;
+            vrt.offsetMin = vrt.offsetMax = Vector2.zero;
+            veil.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
+
+            var box = new GameObject("box", typeof(RectTransform), typeof(Image));
+            box.transform.SetParent(_root.transform, false);
+            var brt = (RectTransform)box.transform;
+            brt.sizeDelta = new Vector2(720f, 270f);
+            var bimg = box.GetComponent<Image>();
+            bimg.color = WardrobeLook.Popup;
+            bimg.sprite = OnlineWindow.Rounded(10);
+            bimg.type = Image.Type.Sliced;
+
+            _text = OnlineWindow.Label(box.transform, "", 18, FontStyle.Normal, WardrobeLook.Bright);
+            _text.alignment = TextAnchor.UpperCenter;
+            var trt = _text.rectTransform;
+            trt.anchorMin = new Vector2(0f, 0f);
+            trt.anchorMax = new Vector2(1f, 1f);
+            trt.offsetMin = new Vector2(36f, 92f);
+            trt.offsetMax = new Vector2(-36f, -30f);
+
+            _buttons = new GameObject("buttons", typeof(RectTransform));
+            _buttons.transform.SetParent(box.transform, false);
+            Fill((RectTransform)_buttons.transform);
+            var yes = OnlineWindow.MakeGameButton(_buttons.transform, "Скачать", 220f, 46f, () => AssetSync.Answer(true));
+            var no = OnlineWindow.MakeGameButton(_buttons.transform, "Не сейчас", 220f, 46f, () => AssetSync.Answer(false));
+            Place(yes.transform as RectTransform, -120f);
+            Place(no.transform as RectTransform, 120f);
+
+            _fail = new GameObject("fail", typeof(RectTransform));
+            _fail.transform.SetParent(box.transform, false);
+            Fill((RectTransform)_fail.transform);
+            var go = OnlineWindow.MakeGameButton(_fail.transform, "Продолжить", 260f, 46f, Close);
+            Place(go.transform as RectTransform, 0f);
+
+            _barBox = new GameObject("bar", typeof(RectTransform), typeof(Image));
+            _barBox.transform.SetParent(box.transform, false);
+            var bb = (RectTransform)_barBox.transform;
+            bb.anchorMin = bb.anchorMax = new Vector2(0.5f, 0f);
+            bb.pivot = new Vector2(0.5f, 0f);
+            bb.sizeDelta = new Vector2(520f, 18f);
+            bb.anchoredPosition = new Vector2(0f, 40f);
+            _barBox.GetComponent<Image>().color = WardrobeLook.Field;
+            var fill = new GameObject("fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(_barBox.transform, false);
+            _bar = (RectTransform)fill.transform;
+            _bar.anchorMin = new Vector2(0f, 0f);
+            _bar.anchorMax = new Vector2(0f, 1f);
+            _bar.pivot = new Vector2(0f, 0.5f);
+            _bar.offsetMin = _bar.offsetMax = Vector2.zero;
+            fill.GetComponent<Image>().color = new Color32(196, 156, 72, 255);
+            _root.AddComponent<AssetGateTicker>();
+        }
+
+        private static void Fill(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        private static void Place(RectTransform rt, float x)
+        {
+            var le = rt.GetComponent<LayoutElement>();
+            if (le != null) rt.sizeDelta = new Vector2(le.preferredWidth, le.preferredHeight);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(x, 28f);
+        }
+
+        private static void Mode(bool buttons, bool bar, bool fail)
+        {
+            _buttons.SetActive(buttons);
+            _barBox.SetActive(bar);
+            _fail.SetActive(fail);
+            _root.SetActive(true);
+        }
+
+        internal static void Ask(int files, long bytes)
+        {
+            try
+            {
+                Build();
+                _downloading = false;
+                _text.text = "Новые версии старых локаций: " + AssetSync.Mb(bytes) + " МБ.\nСкачать сейчас? Войти в игру можно будет после загрузки.\nБез них будут обычные карты игры.\nСкачать можно и позже, в настройках мода.";
+                Mode(true, false, false);
+            }
+            catch (Exception e) { Plugin.Warn("[assets] dialog: " + e.Message); AssetSync.Answer(false); }
+        }
+
+        internal static void Show()
+        {
+            Build();
+            _root.SetActive(true);
+        }
+
+        internal static void Downloading()
+        {
+            if (_root == null) return;
+            _downloading = true;
+            Mode(false, true, false);
+            Tick();
+        }
+
+        internal static void Failed()
+        {
+            if (_root == null) return;
+            _downloading = false;
+            _text.text = "Не удалось скачать новые версии старых локаций.\nПока будут обычные карты игры.\nДокачать можно в настройках мода или при следующем запуске.";
+            Mode(false, false, true);
+        }
+
+        internal static void Close()
+        {
+            _downloading = false;
+            if (_root != null) _root.SetActive(false);
+        }
+
+        internal static void Tick()
+        {
+            if (_root != null)
+            {
+                var canvas = _root.GetComponent<Canvas>();
+                bool fight = SideButtons.InCombat();
+                if (canvas.enabled == fight) canvas.enabled = !fight;
+            }
+            if (!_downloading || _text == null) return;
+            _text.text = "Загружаю новые версии старых локаций…\n" + AssetSync.Done + (SideButtons.InWorld() ? "\nОкно закроется само, когда загрузка закончится." : "\nВойти в игру можно будет после загрузки.");
+            _bar.anchorMax = new Vector2(AssetSync.Progress, 1f);
+        }
+    }
+
+    internal class AssetGateTicker : MonoBehaviour
+    {
+        private void Update() => AssetGate.Tick();
     }
 }

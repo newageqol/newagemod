@@ -63,7 +63,7 @@ namespace NewAgeQoL
                     Drop();
                     return;
                 }
-                if (_busy) return;
+                if (_busy || AssetSync.Off("NightTown")) return;
                 if (!_prepping && !_ready)
                 {
                     if (!File.Exists(Path.Combine(Folder, "illenium_night")))
@@ -91,7 +91,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (_prepping || _ready || _busy || Plugin.Instance == null) return;
+                if (_prepping || _ready || _busy || Plugin.Instance == null || AssetSync.Off("NightTown")) return;
                 AssetSync.Settle("NightTown");
                 if (!File.Exists(Path.Combine(Folder, "illenium_night"))) return;
                 _prepping = true;
@@ -211,7 +211,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (_warmed || _bundle != null || _pending != null || Plugin.Instance == null) return;
+                if (_warmed || _bundle != null || _pending != null || Plugin.Instance == null || AssetSync.Off("NightTown") || AssetSync.Asking) return;
                 if (!SideButtons.InWorld()) return;
                 _warmed = true;
                 if (!File.Exists(Path.Combine(Folder, "illenium_night"))) return;
