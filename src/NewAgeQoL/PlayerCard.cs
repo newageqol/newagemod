@@ -206,7 +206,7 @@ namespace NewAgeQoL
             float block = r * 16.4f;
 
             float buttonH = Mathf.Max(34f, r * 1.3f);
-            float faceH = Mathf.Min(left * 4f / 3f, block - buttonH - 10f);
+            float faceH = Mathf.Min(left * 4f / 3f, block - buttonH * 2f - 18f);
             var frame = Box(root, "face", Pad, y, left, faceH, faint, 10);
             var face = new GameObject("avatar", typeof(RectTransform), typeof(Image));
             face.transform.SetParent(frame, false);
@@ -220,6 +220,9 @@ namespace NewAgeQoL
             int id = m.UserId;
             var site = Wardrobe.GameButton(root, "Информация на сайте", () => Application.OpenURL(Site + id), false);
             At(site, Pad, y + faceH + 10f, left, buttonH);
+            string target = m.Login ?? "";
+            var gold = Wardrobe.GameButton(root, "Перевести золото", () => GoldTransfer.Open(root, target, font), false);
+            At(gold, Pad, y + faceH + 18f + buttonH, left, buttonH);
 
             var wait = new Waiting { UserId = m.UserId, Root = go };
             string race = RaceName(m.Race);

@@ -25,6 +25,7 @@ namespace NewAgeQoL
         internal int DamageMax;
         internal int Range;
         internal bool Art;
+        internal readonly Dictionary<char, double> Price = new Dictionary<char, double>();
     }
 
     internal sealed class WardrobeArtRule
@@ -624,10 +625,23 @@ namespace NewAgeQoL
                     var damage = cell[14].Split('-');
                     if (damage.Length == 2) { thing.DamageMin = Int(damage[0]); thing.DamageMax = Int(damage[1]); }
                     thing.Range = Int(cell[15]);
+                    if (cell.Length > 16) Prices(thing.Price, cell[16]);
                     pack.Things.Add(thing);
                     if (thing.Id > 0) pack.ById[thing.Id] = thing;
                     break;
                 }
+            }
+        }
+
+        private static void Prices(Dictionary<char, double> into, string text)
+        {
+            foreach (var part in (text ?? "").Split(','))
+            {
+                int colon = part.IndexOf(':');
+                if (colon != 1) continue;
+                double value;
+                if (double.TryParse(part.Substring(2), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
+                    into[part[0]] = value;
             }
         }
 

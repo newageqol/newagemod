@@ -327,7 +327,7 @@ namespace NewAgeQoL
             float aspect = b.size.x / Mathf.Max(b.size.y, 0.001f);
             int eyes = 0, k = 0;
             var chandTops = new List<Vector3>();
-            var head = spots.FirstOrDefault(x => x.Kind == "torchhead");
+            var heads = spots.Where(x => x.Kind == "torchhead").ToList();
             foreach (var s in spots)
             {
                 if (s.Kind == "torchhead") continue;
@@ -352,7 +352,8 @@ namespace NewAgeQoL
                 float fw = fh * (torch ? 0.55f : 0.42f);
                 Vector3? wrapAt = null;
                 float wrap = 0f;
-                if (torch && head != null)
+                var head = torch ? heads.OrderBy(x => Mathf.Abs((x.U + x.H) * 0.5f - s.U) + Mathf.Abs(x.V - s.V)).FirstOrDefault() : null;
+                if (head != null)
                 {
                     float hw = (head.H - head.U) * b.size.x;
                     float hh = (head.D - head.V) * b.size.y;

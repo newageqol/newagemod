@@ -15,7 +15,7 @@ internal static class HexLook
 
     private static readonly Color ZoneTint = new(0.45f, 0.9f, 1f, 1f);
     private static readonly Color GridTint = new(0.02f, 0.07f, 0.03f, 1f);
-    private static readonly Color LineTint = new(0.82f, 0.86f, 0.74f, 1f);
+    private static readonly Color LineTint = new(0.03f, 0.03f, 0.03f, 1f);
     private static readonly Color HoverTint = new(1f, 1f, 1f, 1f);
     private static readonly Color Strike = new(0.5f, 0f, 0f);
 
@@ -111,12 +111,15 @@ internal static class HexLook
         internal SpriteRenderer Core;
         internal GameObject FrontGo;
         internal SpriteRenderer Front;
+        internal GameObject BeamGo;
+        internal SpriteRenderer Beam;
 
         internal void Drop()
         {
             if (Go != null) UnityEngine.Object.Destroy(Go);
             if (CoreGo != null) UnityEngine.Object.Destroy(CoreGo);
             if (FrontGo != null) UnityEngine.Object.Destroy(FrontGo);
+            if (BeamGo != null) UnityEngine.Object.Destroy(BeamGo);
         }
     }
 
@@ -151,6 +154,7 @@ internal static class HexLook
     private static Sprite _base;
     private static Sprite _core;
     private static Sprite _front;
+    private static Sprite _beam;
 
     internal static void Tick()
     {
@@ -190,7 +194,7 @@ internal static class HexLook
         Zone(cd, box, own);
         Cursor(cd, box, own, eye);
         Threat(cd, box, own);
-        Rings(cd);
+        Rings(cd, eye);
     }
 
     private static void Build(Transform grid)
@@ -279,9 +283,7 @@ internal static class HexLook
         Edges.Clear();
         Set.Clear();
         var shade = With(GridTint, Mathf.Min(0.8f, bright * 1.3f));
-        var thin = With(LineTint, Mathf.Min(0.7f, bright * 1.1f));
-        var wallShade = With(GridTint, Mathf.Min(0.9f, bright * 1.6f + 0.15f));
-        var wall = With(LineTint, Mathf.Min(0.85f, bright * 1.5f + 0.1f));
+        var thin = With(LineTint, Mathf.Min(0.85f, bright * 2.1f));
         var blocked = new Color(0f, 0f, 0f, Mathf.Min(0.45f, bright * 0.6f + 0.1f));
         foreach (int key in Where.Values)
         {
@@ -295,10 +297,10 @@ internal static class HexLook
                 if (!Edges.Add(edge)) continue;
                 Side(key, next, out var a, out var b);
                 var inward = (middle - (a + b) * 0.5f).normalized;
-                var dark = inward * (open ? 0.028f : 0.05f);
-                var core = inward * (open ? 0.009f : 0.018f);
-                var under = open ? shade : wallShade;
-                var over = open ? thin : wall;
+                var dark = inward * 0.028f;
+                var core = inward * 0.013f;
+                var under = shade;
+                var over = thin;
                 _faint.Quad(a - dark, b - dark, b + dark, a + dark, under, under, under, under);
                 _faint.Quad(a - core, b - core, b + core, a + core, over, over, over, over);
             }
@@ -547,10 +549,17 @@ internal static class HexLook
         return t * t * 0.55f;
     }
 
+    private static bool CanStrike(CombatData cd)
+    {
+        var me = cd.MyCharacter;
+        var units = cd.TimeUnitsManager;
+        return me != null && !me.Dead && units != null && units.ActionTimeUnits > 0;
+    }
+
     private static void Threat(CombatData cd, Dictionary<int, GridSelection> box, int own)
     {
         Reach.Clear();
-        if (cd.RoundType == RoundType.COMBAT_ROUND && own != 0 && box.TryGetValue(own, out var selection) && selection?.Cells != null && selection.SelectionColor == Strike)
+        if (cd.RoundType == RoundType.COMBAT_ROUND && own != 0 && CanStrike(cd) && box.TryGetValue(own, out var selection) && selection?.Cells != null && selection.SelectionColor == Strike)
             foreach (var cell in selection.Cells)
                 if (cell?.occupiedBy != null && !cell.occupiedBy.Dead) Reach.Add(cell.occupiedBy);
         Calm.Clear();
@@ -568,7 +577,7 @@ internal static class HexLook
         }
     }
 
-    private static void Rings(CombatData cd)
+    private static void Rings(CombatData cd, Camera eye)
     {
         var chosen = cd.SelectedCharacter;
         var me = cd.MyCharacter;
@@ -579,7 +588,7 @@ internal static class HexLook
             _gameMark = shown;
         }
         if (_gameMark != null && _gameMark.activeSelf) _gameMark.SetActive(false);
-        var picked = chosen != null && !chosen.Dead ? Fighters.DollOf(chosen) : null;
+        var picked = chosen != null ? Fighters.DollOf(chosen) : null;
         var paint = chosen != null ? Tone(chosen, me) : Glow.Foe;
         if (!ReferenceEquals(picked, _chosenDoll))
         {
@@ -590,7 +599,7 @@ internal static class HexLook
 
         Lost.Clear();
         Lost.AddRange(Marks.Keys);
-        if (chosen != null && chosen.Initialized && !chosen.Dead)
+        if (chosen != null && chosen.Initialized)
         {
             Lost.Remove(chosen);
             if (!Marks.TryGetValue(chosen, out var mark) || mark.Go == null)
@@ -600,12 +609,13 @@ internal static class HexLook
                 mark.View = Piece("NewAge2D.ChosenRing", BaseSprite, Low + 8, out mark.Go);
                 mark.Core = Piece("NewAge2D.ChosenCore", CoreSprite, Low + 9, out mark.CoreGo);
                 mark.Front = Piece("NewAge2D.ChosenFront", FrontSprite, Low + 9, out mark.FrontGo);
+                mark.Beam = Piece("NewAge2D.ChosenBeam", BeamSprite, Low + 9, out mark.BeamGo);
                 Marks[chosen] = mark;
             }
             var world = picked != null && picked.Feet != Vector3.zero ? picked.Feet : chosen.position;
             var local = _grid.InverseTransformPoint(world);
             local.y = 0f;
-            float wide = Step * 1.3f;
+            float wide = Step * 0.9f;
             var size = new Vector3(wide, wide, 1f);
             var flat = Quaternion.Euler(90f, 0f, 0f);
             mark.Go.transform.localPosition = local;
@@ -617,13 +627,24 @@ internal static class HexLook
                 go.transform.localRotation = flat;
                 go.transform.localScale = size;
             }
-            var bright = Color.Lerp(paint, Color.white, 0.15f);
+            var bright = paint;
             mark.View.color = With(bright, 1f);
-            mark.Core.color = With(Color.Lerp(paint, Color.white, 0.75f), 0.95f);
+            mark.Core.color = With(Color.Lerp(paint, Color.white, 0.2f), 0.95f);
             mark.Front.color = With(bright, 1f);
             bool front = picked != null && picked.HasPicture;
             if (mark.Front.enabled != front) mark.Front.enabled = front;
             if (front && mark.Front.sortingOrder != picked.SortingOrder + 1) mark.Front.sortingOrder = picked.SortingOrder + 1;
+            bool beam = eye != null;
+            if (mark.Beam.enabled != beam) mark.Beam.enabled = beam;
+            if (beam)
+            {
+                mark.BeamGo.transform.position = _root.transform.TransformPoint(local);
+                mark.BeamGo.transform.rotation = eye.transform.rotation;
+                mark.BeamGo.transform.localScale = new Vector3(wide, wide * 0.45f, 1f);
+                mark.Beam.color = With(bright, 0.8f + 0.2f * Mathf.Sin(Time.unscaledTime * 3f));
+                int order = front ? picked.SortingOrder + 1 : Low + 9;
+                if (mark.Beam.sortingOrder != order) mark.Beam.sortingOrder = order;
+            }
         }
         foreach (var character in Lost)
         {
@@ -656,6 +677,8 @@ internal static class HexLook
 
     private static Sprite FrontSprite => _front != null ? _front : _front = Disk(2);
 
+    private static Sprite BeamSprite => _beam != null ? _beam : _beam = Column();
+
     private static SpriteRenderer Piece(string name, Sprite sprite, int order, out GameObject go)
     {
         go = new GameObject(name);
@@ -672,6 +695,30 @@ internal static class HexLook
     {
         float t = Mathf.Clamp01(1f - Mathf.Abs(d - at) / half);
         return t * t * (3f - 2f * t);
+    }
+
+    private static Sprite Column()
+    {
+        const int wide = 128;
+        const int high = 256;
+        const float rim = 0.78f;
+        var pixels = new Color32[wide * high];
+        for (int y = 0; y < high; y++)
+        {
+            float up = (y + 0.5f) / high;
+            float fade = (1f - up) * (1f - up) * Mathf.Clamp01(up * 12f + 0.4f);
+            for (int x = 0; x < wide; x++)
+            {
+                float d = Mathf.Abs((x + 0.5f) / wide * 2f - 1f);
+                float alpha = Mathf.Max(Bump(d, rim, 0.07f), Bump(d, rim, 0.2f) * 0.55f);
+                if (d < rim) alpha = Mathf.Max(alpha, 0.22f * (d / rim) * (d / rim) * (d / rim));
+                pixels[y * wide + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(alpha * fade) * 255f));
+            }
+        }
+        var texture = new Texture2D(wide, high, TextureFormat.RGBA32, true) { name = "NewAge2D.ChosenBeam", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 4 };
+        texture.SetPixels32(pixels);
+        texture.Apply(true, true);
+        return Sprite.Create(texture, new Rect(0, 0, wide, high), new Vector2(0.5f, 0f), wide, 0, SpriteMeshType.FullRect);
     }
 
     private static Sprite Disk(int kind)

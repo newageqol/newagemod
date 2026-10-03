@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Globalization;
 using HarmonyLib;
 using Transport.Messages.Responses.User.Inventory;
 using UnityEngine;
@@ -59,8 +60,9 @@ namespace NewAgeQoL
         private static Text _race, _gender, _level, _class, _sub, _rank, _skills;
         private static readonly InputField[] BaseInput = new InputField[7];
         private static readonly Text[] TotalText = new Text[7];
-        private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote, _artPrice;
+        private static Text _free, _rating, _life, _mana, _energy, _warn, _stamp, _updateNote, _artPrice, _buyPrice;
         private static GameObject _artRow;
+        private static GameObject _buyRow;
         private const float ArtRowH = 44f;
         private static Button _update;
         private static Text _elixirLabel;
@@ -923,7 +925,7 @@ namespace NewAgeQoL
             for (int m = 0; m < 3; m++) { MagicText[m] = Line(result, WardrobeData.MagicNames[m], y); y += 26f; }
             y += 10f;
             _warn = OnlineWindow.Label(result, "", 13, FontStyle.Normal, WardrobeLook.Bad);
-            At(_warn.rectTransform, 12f, y, ResultW - 24f, BodyH - y - 10f - ArtRowH);
+            At(_warn.rectTransform, 12f, y, ResultW - 24f, BodyH - y - 10f - ArtRowH * 2f);
             _warn.alignment = TextAnchor.UpperLeft;
             _warn.horizontalOverflow = HorizontalWrapMode.Wrap;
             _warn.verticalOverflow = VerticalWrapMode.Truncate;
@@ -947,6 +949,57 @@ namespace NewAgeQoL
             _artPrice.resizeTextMinSize = 11;
             _artPrice.resizeTextMaxSize = 16;
             _artRow.SetActive(false);
+
+            _buyRow = new GameObject("buyPrice", typeof(RectTransform));
+            _buyRow.transform.SetParent(result, false);
+            var buy = (RectTransform)_buyRow.transform;
+            At(buy, 0f, BodyH - ArtRowH * 2f - 6f, ResultW, ArtRowH);
+            var buyLine = new GameObject("line", typeof(RectTransform), typeof(Image));
+            buyLine.transform.SetParent(buy, false);
+            buyLine.GetComponent<Image>().color = WardrobeLook.Edge;
+            buyLine.GetComponent<Image>().raycastTarget = false;
+            At((RectTransform)buyLine.transform, 14f, 0f, ResultW - 28f, 1f);
+            var buyName = OnlineWindow.Label(buy, "Покупка", 15, FontStyle.Normal, WardrobeLook.Label);
+            At(buyName.rectTransform, 18f, 10f, 100f, 28f);
+            buyName.alignment = TextAnchor.MiddleLeft;
+            _buyPrice = OnlineWindow.Label(buy, "", 16, FontStyle.Bold, WardrobeLook.Accent);
+            At(_buyPrice.rectTransform, 110f, 10f, ResultW - 126f, 28f);
+            _buyPrice.alignment = TextAnchor.MiddleRight;
+            _buyPrice.resizeTextForBestFit = true;
+            _buyPrice.resizeTextMinSize = 10;
+            _buyPrice.resizeTextMaxSize = 16;
+            _buyRow.SetActive(false);
+        }
+
+        private static readonly char[] Currencies = { 't', 'g', 'c', 'u', 'x' };
+        private static readonly string[] CurrencyNames = { "таллы", "золото", "реликты", "ратник", "трофеи" };
+
+        internal static string BuyPrice(WardrobeState s)
+        {
+            var sum = new double[Currencies.Length];
+            int unpriced = 0;
+            foreach (var pair in s.Worn)
+            {
+                var thing = pair.Value;
+                if (thing == null || thing.Art) continue;
+                if (thing.Price.Count == 0) { unpriced++; continue; }
+                for (int i = 0; i < Currencies.Length; i++)
+                {
+                    double value;
+                    if (thing.Price.TryGetValue(Currencies[i], out value)) sum[i] += value;
+                }
+            }
+            var parts = new List<string>();
+            for (int i = 0; i < Currencies.Length; i++)
+                if (sum[i] > 0.0001) parts.Add(CurrencyNames[i] + " " + Money(sum[i]));
+            if (unpriced > 0) parts.Add("без цены: " + unpriced);
+            return string.Join(" · ", parts.ToArray());
+        }
+
+        private static string Money(double value)
+        {
+            var culture = CultureInfo.GetCultureInfo("ru-RU");
+            return Math.Abs(value - Math.Round(value)) < 0.005 ? Math.Round(value).ToString("#,0", culture) : value.ToString("#,0.##", culture);
         }
 
         internal static int ArtPrice(WardrobeState s)
@@ -1325,6 +1378,12 @@ namespace NewAgeQoL
                 int price = ArtPrice(S);
                 if (_artRow.activeSelf != price > 0) _artRow.SetActive(price > 0);
                 if (price > 0) _artPrice.text = price + " " + Plural(price, "кристалл", "кристалла", "кристаллов");
+            }
+            if (_buyRow != null)
+            {
+                string buy = BuyPrice(S);
+                if (_buyRow.activeSelf != buy.Length > 0) _buyRow.SetActive(buy.Length > 0);
+                if (buy.Length > 0) _buyPrice.text = buy;
             }
 
             if (_warn != null)

@@ -229,4 +229,25 @@ namespace NewAgeQoL
             }
         }
     }
+    [HarmonyPatch(typeof(HexGridControl), "OnPointerClick")]
+    internal static class WalkLeftOnly
+    {
+        [HarmonyPriority(Priority.First)]
+        private static bool Prefix(PointerEventData eventData)
+        {
+            try
+            {
+                if (eventData == null || eventData.button == PointerEventData.InputButton.Left) return true;
+                var cd = FighterHint.Cd();
+                if (cd == null || cd.RoundType != RoundType.WALK_ROUND) return true;
+                Plugin.Trace("[walk] " + eventData.button + " click on the field ignored: walking only by left button");
+                return false;
+            }
+            catch (Exception e)
+            {
+                Plugin.Trace("[walk] click button check: " + e.Message);
+                return true;
+            }
+        }
+    }
 }

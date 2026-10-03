@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.11.0";
+        public const string Version = "0.12.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -502,6 +502,8 @@ namespace NewAgeQoL
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
                 new Part { Name = "OnlineList.Tick", Do = OnlineList.Tick },
+                new Part { Name = "GoldTransfer.Tick", Do = GoldTransfer.Tick },
+                new Part { Name = "CardAsk.Tick", Do = CardAsk.Tick },
                 new Part { Name = "OnlineWindow.Tick", Do = OnlineWindow.Tick },
                 new Part { Name = "QuestBoard.Tick", Do = QuestBoard.Tick },
                 new Part { Name = "QuestWindow.Tick", Do = QuestWindow.Tick },
@@ -577,6 +579,7 @@ namespace NewAgeQoL
             UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnScene;
             CultPotions.Shutdown();
             DressDrag.Shutdown();
+            CardAsk.Shutdown();
             DiskJournal.Detach(Logger);
         }
 

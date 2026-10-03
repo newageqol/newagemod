@@ -274,6 +274,7 @@ namespace NewAgeQoL
             if (cam == null) cam = Camera.main;
             var life = host.AddComponent<BankLife>();
             life.Setup(mat, mf.sharedMesh, new[] { d.Base, d.Delta, d.Fx2, d.Depth, null }, b, sr, ReadSpots(d), cam);
+            PlaceSprites.Attach(host, d.Folder, b, sr.sortingLayerID, sr.sortingOrder);
             fon.gameObject.SetActive(false);
             Plugin.Trace("[places] " + d.Name + " shown as a picture " + d.Base.width + "x" + d.Base.height);
         }
@@ -288,7 +289,7 @@ namespace NewAgeQoL
                 foreach (var line in File.ReadAllLines(path))
                 {
                     var p = line.Split(' ');
-                    if (p.Length < 3) continue;
+                    if (p.Length < 3 || PlaceSprites.Kinds.Contains(p[0])) continue;
                     float F(int i) => i < p.Length ? float.Parse(p[i], CultureInfo.InvariantCulture) : 0f;
                     list.Add(new BankHall.Spot { Kind = p[0], U = F(1), V = F(2), H = F(3), D = p.Length > 4 ? F(4) : -1f });
                 }
