@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.12.0";
+        public const string Version = "0.12.1";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -454,6 +454,7 @@ namespace NewAgeQoL
         private static void Renew()
         {
             if (_updateAt > 0f && UnityEngine.Time.unscaledTime > _updateAt) { _updateAt = 0f; Updater.CheckSilent(); }
+            Updater.Remind();
         }
 
         private static Part[] Parts()

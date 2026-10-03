@@ -61,6 +61,7 @@ namespace NewAgeQoL
                 {
                     if (Unity3DHelper.IsOverInterface()) { Off("mouse over a window"); return; }
                     if (!SkillList.HexUnder(out hex)) { Off("cannot compute hex under mouse"); return; }
+                    if (BodyClick.Hovered(cd) != null) { Off("mouse over a fighter"); return; }
                 }
                 if (!Walkable(cd, hex)) { Off("hex outside move zone", hex); return; }
 

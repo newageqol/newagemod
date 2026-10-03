@@ -136,7 +136,7 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[fighter] model highlight: " + e.Message); }
         }
 
-        private static AbstractCharacter Hovered(ICombatData cd)
+        internal static AbstractCharacter Hovered(ICombatData cd)
         {
             AbstractCharacter flash;
             return FlashLook.Under(out flash) ? flash : Body(cd);

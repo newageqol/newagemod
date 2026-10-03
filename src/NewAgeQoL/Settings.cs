@@ -25,7 +25,9 @@ namespace NewAgeQoL
 
         private sealed class HotRow : RowDef { internal string Key; }
 
-        private sealed class ActionRow : RowDef { internal string ButtonText; internal Action Do; }
+        private sealed class ActionRow : RowDef { internal string ButtonText; internal Action Do; internal Func<string> TitleNow; internal Func<string> ButtonNow; }
+
+        private static readonly List<(Text label, Text value, ActionRow row)> Lives = new List<(Text, Text, ActionRow)>();
 
         private sealed class PickRow : RowDef { internal ConfigEntry<string> ByName; internal ConfigEntry<int> ById; internal System.Func<string> Display; }
 
@@ -47,6 +49,7 @@ namespace NewAgeQoL
             var rows = new List<RowDef>
             {
                 new Header { Title = "Мод" },
+                new ActionRow { Title = UpdateTitle(), ButtonText = UpdateButton(), Do = Updater.Press, TitleNow = UpdateTitle, ButtonNow = UpdateButton },
                 A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
                 AssetSync.Pending
                     ? A("Новые версии старых локаций: " + AssetSync.PendingSize + " МБ", "Скачать", AssetSync.Retry)
@@ -157,6 +160,33 @@ namespace NewAgeQoL
                 Secret = secret,
             };
 
+        private static string UpdateTitle()
+        {
+            if (Updater.State == Updater.Stage.Done) return Updater.Message;
+            string head = "Версия мода " + Plugin.Version;
+            return Updater.State == Updater.Stage.Idle ? head : head + " · " + Updater.Message;
+        }
+
+        private static string UpdateButton()
+        {
+            switch (Updater.State)
+            {
+                case Updater.Stage.Checking: return "Проверяю…";
+                case Updater.Stage.Downloading: return "Качаю…";
+                case Updater.Stage.Done: return "Готово";
+                default: return "Обновить";
+            }
+        }
+
+        private static void Relive()
+        {
+            foreach (var (label, value, row) in Lives)
+            {
+                if (label != null) { string t = row.TitleNow(); if (label.text != t) label.text = t; }
+                if (value != null) { string b = row.ButtonNow(); if (value.text != b) value.text = b; }
+            }
+        }
+
         private static RowDef A(string title, string buttonText, Action act) =>
             new ActionRow { Title = title, ButtonText = buttonText, Do = act };
 
@@ -221,6 +251,7 @@ namespace NewAgeQoL
             _canvas = null;
             _placed = false;
             _undo.Clear();
+            Lives.Clear();
         }
 
         private static void Remember<T>(ConfigEntry<T> cfg)
@@ -282,6 +313,7 @@ namespace NewAgeQoL
 
             _undo.Clear();
             Slots.Clear();
+            Lives.Clear();
             foreach (var row in Rows())
             {
                 try { AddRow(rowPrefab, container, row); }
@@ -653,6 +685,7 @@ namespace NewAgeQoL
                     button.onClick.RemoveAllListeners();
                     button.onClick.AddListener(() => act.Do());
                 }
+                if (act.TitleNow != null && act.ButtonNow != null) Lives.Add((label, value, act));
                 return;
             }
 
@@ -915,6 +948,7 @@ namespace NewAgeQoL
             if (_win == null) return;
             Stretch();
             Center();
+            Relive();
         }
 
         private static void ScrollTop(ScrollRect scroll)

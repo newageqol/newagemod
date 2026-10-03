@@ -16,7 +16,6 @@ internal static class HexLook
     private static readonly Color ZoneTint = new(0.45f, 0.9f, 1f, 1f);
     private static readonly Color GridTint = new(0.02f, 0.07f, 0.03f, 1f);
     private static readonly Color LineTint = new(0.03f, 0.03f, 0.03f, 1f);
-    private static readonly Color HoverTint = new(1f, 1f, 1f, 1f);
     private static readonly Color Strike = new(0.5f, 0f, 0f);
 
     private static readonly int[,] Dirs = { { 1, 0 }, { 1, -1 }, { 0, -1 }, { -1, 0 }, { -1, 1 }, { 0, 1 } };
@@ -533,14 +532,6 @@ internal static class HexLook
                         With(GridTint, fa), With(GridTint, fb), With(GridTint, fb), With(GridTint, fa));
                 }
             }
-        if (!Open(hover) || Walk.Contains(hover)) return;
-        var center = Middle(hover);
-        for (int k = 0; k < 6; k++)
-        {
-            Side(hover, Neighbor(hover, k), out var a, out var b);
-            Band(_marks, a, b, center, 0.06f, With(HoverTint, 0.75f), With(HoverTint, 0.45f));
-            Band(_marks, a, b, center, 0.35f, With(HoverTint, 0.16f), With(HoverTint, 0f));
-        }
     }
 
     private static float Fade(Vector3 point, Vector3 spot, float reach)

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -45,6 +47,16 @@ namespace NewAgeQoL
             Check();
         }
 
+        private static bool _told;
+
+        internal static void Remind()
+        {
+            if (_told || !CanUpdate) return;
+            if (!SideButtons.InWorld() || SideButtons.InCombat()) return;
+            _told = true;
+            Notice.Show("Вышла версия мода " + LatestVersion + ". Обновить можно в настройках мода, раздел «Мод».", 15f);
+        }
+
         internal static void Check()
         {
             if (State == Stage.Checking || State == Stage.Downloading) return;
@@ -52,6 +64,16 @@ namespace NewAgeQoL
             State = Stage.Checking;
             Message = "проверяю…";
             Plugin.Instance.StartCoroutine(CheckRoutine());
+        }
+
+        private static bool _install;
+
+        internal static void Press()
+        {
+            if (CanUpdate) { Update(); return; }
+            if (State == Stage.Done || State == Stage.Checking || State == Stage.Downloading) return;
+            _install = true;
+            Check();
         }
 
         internal static void Update()
@@ -76,6 +98,7 @@ namespace NewAgeQoL
 
             if (json.Length == 0)
             {
+                _install = false;
                 State = Stage.Failed;
                 Message = "не удалось проверить: " + (error ?? "нет ответа");
                 Plugin.Trace("[update] " + Message);
@@ -110,6 +133,7 @@ namespace NewAgeQoL
 
             if (string.IsNullOrEmpty(tag))
             {
+                _install = false;
                 State = Stage.Failed;
                 Message = "не удалось разобрать ответ сервера";
                 yield break;
@@ -134,6 +158,8 @@ namespace NewAgeQoL
                 Message = "вышла версия " + LatestVersion;
             }
             Plugin.Trace("[update] installed " + Plugin.Version + ", on server " + LatestVersion);
+            if (_install && CanUpdate) Update();
+            _install = false;
         }
 
         private static readonly char[] Cuts = { '/', '\\' };
@@ -157,8 +183,8 @@ namespace NewAgeQoL
 
         private static IEnumerator UpdateRoutine()
         {
-            string url = _dllUrl.Length > 0 ? _dllUrl : _zipUrl;
-            bool zip = _dllUrl.Length == 0;
+            bool zip = _zipUrl.Length > 0;
+            string url = zip ? _zipUrl : _dllUrl;
             var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("User-Agent", "NewAgeQoL");
             request.timeout = 120;
@@ -177,8 +203,8 @@ namespace NewAgeQoL
 
             try
             {
-                if (zip) data = FromZip(data);
-                Install(data);
+                if (zip) InstallZip(data);
+                else Install(data);
                 State = Stage.Done;
                 Message = "готово. Закрой клиент полностью и запусти заново, тогда встанет версия " + LatestVersion;
             }
@@ -190,23 +216,70 @@ namespace NewAgeQoL
             }
         }
 
-        private static byte[] FromZip(byte[] data)
+        private const string PluginsPrefix = "BepInEx/plugins/";
+        private const string FlashFolder = "NewAge2D/";
+
+        private static void InstallZip(byte[] data)
         {
+            byte[] main = null;
+            var flash = new List<KeyValuePair<string, byte[]>>();
             using (var stream = new MemoryStream(data))
             using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
             {
                 foreach (var entry in archive.Entries)
                 {
-                    if (!entry.Name.Equals(DllName, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (entry.Name.Length == 0) continue;
+                    string full = entry.FullName.Replace('\\', '/');
+                    int at = full.IndexOf(PluginsPrefix, StringComparison.OrdinalIgnoreCase);
+                    string inside = at >= 0 ? full.Substring(at + PluginsPrefix.Length) : full;
+                    bool ours = entry.Name.Equals(DllName, StringComparison.OrdinalIgnoreCase)
+                                && (at < 0 || inside.Equals(DllName, StringComparison.OrdinalIgnoreCase));
+                    bool flat = at >= 0 && inside.StartsWith(FlashFolder, StringComparison.OrdinalIgnoreCase)
+                                && inside.IndexOf("..", StringComparison.Ordinal) < 0;
+                    if (!ours && !flat) continue;
+                    if (ours && main != null) continue;
+                    byte[] bytes;
                     using (var source = entry.Open())
                     using (var target = new MemoryStream())
                     {
                         source.CopyTo(target);
-                        return target.ToArray();
+                        bytes = target.ToArray();
                     }
+                    if (ours) main = bytes;
+                    else flash.Add(new KeyValuePair<string, byte[]>(inside, bytes));
                 }
             }
-            throw new Exception("в архиве нет " + DllName);
+            if (main == null) throw new Exception("в архиве нет " + DllName);
+
+            string root = BepInEx.Paths.PluginPath;
+            int changed = 0;
+            foreach (var file in flash)
+            {
+                string path = Path.Combine(root, file.Key.Replace('/', Path.DirectorySeparatorChar));
+                if (Same(path, file.Value)) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                Put(path, file.Value);
+                changed++;
+            }
+            Plugin.Trace("[update] Flash view: " + changed + " of " + flash.Count + " files replaced");
+            Install(main);
+        }
+
+        private static bool Same(string path, byte[] bytes)
+        {
+            try
+            {
+                if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length) return false;
+                using (var sha = SHA256.Create())
+                using (var file = File.OpenRead(path))
+                {
+                    byte[] a = sha.ComputeHash(bytes);
+                    byte[] b = sha.ComputeHash(file);
+                    for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+                    return true;
+                }
+            }
+            catch { return false; }
         }
 
         private static void Install(byte[] data)
@@ -226,14 +299,23 @@ namespace NewAgeQoL
             }
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception("не нашёл файл мода на диске");
             if (data.Length < 20000) throw new Exception("файл подозрительно маленький");
+            Put(path, data);
+        }
 
+        private static void Put(string path, byte[] data)
+        {
             string folder = Path.GetDirectoryName(path);
-            string fresh = Path.Combine(folder, DllName + ".new");
+            string name = Path.GetFileName(path);
+            string fresh = path + ".new";
             File.WriteAllBytes(fresh, data);
-
-            string old = Path.Combine(folder, DllName + ".old_" + DateTime.Now.ToString("MMdd_HHmmss"));
+            if (!File.Exists(path))
+            {
+                File.Move(fresh, path);
+                return;
+            }
+            string old = Path.Combine(folder, name + ".old_" + DateTime.Now.ToString("MMdd_HHmmss"));
             Swap(path, fresh, old);
-            Sweep(folder, old);
+            Sweep(folder, name, old);
         }
 
         private static void Swap(string path, string fresh, string old)
@@ -256,11 +338,11 @@ namespace NewAgeQoL
             }
         }
 
-        private static void Sweep(string folder, string keep)
+        private static void Sweep(string folder, string name, string keep)
         {
             try
             {
-                foreach (var file in Directory.GetFiles(folder, DllName + ".old_*"))
+                foreach (var file in Directory.GetFiles(folder, name + ".old_*"))
                 {
                     if (string.Equals(file, keep, StringComparison.OrdinalIgnoreCase)) continue;
                     try { File.Delete(file); } catch { }
