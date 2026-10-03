@@ -111,7 +111,8 @@ namespace NewAgeQoL
 
             float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
             float alpha = 0.55f + 0.45f * wave;
-            var tint = keyed ? new Color(1f, 0.82f, 0.3f, alpha) : new Color(0.45f, 0.92f, 1f, alpha);
+            var tint = keyed ? (FlashLook.Fight ? new Color(1f, 0.78f, 0.15f, alpha) : new Color(1f, 0.82f, 0.3f, alpha))
+                : FlashLook.Fight ? new Color(1f, 1f, 1f, alpha) : new Color(0.45f, 0.92f, 1f, alpha);
             _line.startColor = tint;
             _line.endColor = tint;
             float width = Thick(_center, _pitch, !fresh) * (0.85f + 0.3f * wave);
@@ -123,7 +124,7 @@ namespace NewAgeQoL
                 _under.endColor = dark;
                 _under.widthMultiplier = width * 2.1f;
             }
-            int order = FlashLook.Fight ? short.MinValue + 4 : 0;
+            int order = FlashLook.Fight ? short.MinValue + 10 : 0;
             if (_line.sortingOrder != order) _line.sortingOrder = order;
             if (_under != null && _under.sortingOrder != order - 1) _under.sortingOrder = order - 1;
             if (!_go.activeSelf) _go.SetActive(true);

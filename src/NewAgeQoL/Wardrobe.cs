@@ -1782,7 +1782,7 @@ namespace NewAgeQoL
 
         private static System.Collections.IEnumerator Fetch(string image, string file)
         {
-            var req = UnityEngine.Networking.UnityWebRequest.Get("https://files.nura.biz/site/images/things100x100/" + image + ".png");
+            var req = UnityEngine.Networking.UnityWebRequest.Get("https://files.nura.biz/site/images/things100x100/" + StringUtils.NormalizeExtension(image, ".png"));
             req.timeout = 30;
             yield return req.SendWebRequest();
             byte[] data = req.responseCode == 200 && string.IsNullOrEmpty(req.error) && req.downloadHandler != null ? req.downloadHandler.data : null;

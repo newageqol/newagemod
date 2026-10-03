@@ -23,6 +23,8 @@ internal static class Fighters
     private static readonly HashSet<string> SeenClips = new();
     private static readonly List<FighterDoll> Alive = new();
 
+    internal static List<FighterDoll> Dolls => Alive;
+
     internal static int Count => Alive.Count;
 
     [HarmonyPostfix, HarmonyPatch(typeof(AbstractCharacter), "SetCharacterGameObject")]
@@ -1946,9 +1948,35 @@ internal sealed class FighterDoll : MonoBehaviour
         return ring;
     }
 
+    private bool _hover;
+    private bool _threat;
+    private bool _chosen;
+    private Color _chosenPaint;
+
     internal void Glow(bool on)
     {
-        if (!on)
+        _hover = on;
+        Halo();
+    }
+
+    internal void Threat(bool on)
+    {
+        if (_threat == on) return;
+        _threat = on;
+        Halo();
+    }
+
+    internal void Chosen(bool on, Color paint)
+    {
+        _chosenPaint = paint;
+        if (_chosen == on) return;
+        _chosen = on;
+        Halo();
+    }
+
+    private void Halo()
+    {
+        if (!_hover && !_threat && !_chosen)
         {
             DropHalo();
             return;
@@ -1991,8 +2019,8 @@ internal sealed class FighterDoll : MonoBehaviour
             if (renderer.sortingOrder != order) renderer.sortingOrder = order;
             var at = new Vector3(Ring[i].X * unit, Ring[i].Y * unit, 0f);
             if (renderer.transform.localPosition != at) renderer.transform.localPosition = at;
-            var paint = NewAge2D.Glow.Paint;
-            var tint = new Color(paint.r, paint.g, paint.b, Ring[i].A * alpha);
+            var paint = _hover ? NewAge2D.Glow.Paint : _chosen ? _chosenPaint : NewAge2D.Glow.Reach;
+            var tint = new Color(paint.r, paint.g, paint.b, Ring[i].A * alpha * (_hover || _chosen ? 1f : NewAge2D.Glow.Pulse));
             if (renderer.color != tint) renderer.color = tint;
         }
     }

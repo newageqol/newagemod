@@ -31,7 +31,7 @@ namespace NewAgeQoL
             internal float Until;
             internal GameObject Wear;
             internal readonly HashSet<long> Worn = new HashSet<long>();
-            internal readonly List<SingleImageLoader> Loaders = new List<SingleImageLoader>();
+            internal readonly List<KeyValuePair<Image, string>> Pics = new List<KeyValuePair<Image, string>>();
         }
 
         private sealed class Result
@@ -193,6 +193,7 @@ namespace NewAgeQoL
             {
                 var plate = Plates[i];
                 if (plate.Go == null) { Plates.RemoveAt(i); continue; }
+                Show(plate);
                 if (RectTransformUtility.RectangleContainsScreenPoint(plate.Rt, Input.mousePosition, null))
                 {
                     plate.Until = Mathf.Max(plate.Until, now + 2f);
@@ -202,6 +203,19 @@ namespace NewAgeQoL
                 float left = plate.Until - now;
                 if (left <= 0f) { Drop(plate); continue; }
                 plate.Veil.alpha = left < Fade ? left / Fade : 1f;
+            }
+        }
+
+        private static void Show(Plate plate)
+        {
+            foreach (var pic in plate.Pics)
+            {
+                var image = pic.Key;
+                if (image == null || (image.enabled && !Quickslots.Faded(image.sprite))) continue;
+                var sprite = WardrobeIcons.Get(pic.Value);
+                if (Quickslots.Faded(sprite)) { image.enabled = false; continue; }
+                image.sprite = sprite;
+                image.enabled = true;
             }
         }
 
@@ -227,8 +241,7 @@ namespace NewAgeQoL
         private static void Drop(Plate plate)
         {
             Plates.Remove(plate);
-            foreach (var loader in plate.Loaders) loader.Dispose();
-            plate.Loaders.Clear();
+            plate.Pics.Clear();
             if (plate.Go != null) UnityEngine.Object.Destroy(plate.Go);
         }
 
@@ -389,14 +402,8 @@ namespace NewAgeQoL
                 {
                     case EDialogDescriptionItemType.ITEM_TYPE_THING:
                         if (string.IsNullOrEmpty(item.Image)) return;
-                        var loader = new SingleImageLoader(image);
-                        plate.Loaders.Add(loader);
-                        loader.LoadThingImage(item.Image, () =>
-                        {
-                            if (image == null) return;
-                            OnlineWindow.Place(rt, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 2f), new Vector2(-2f, -2f));
-                            image.preserveAspect = true;
-                        });
+                        plate.Pics.Add(new KeyValuePair<Image, string>(image, item.Image));
+                        Show(plate);
                         return;
                     case EDialogDescriptionItemType.ITEM_TYPE_ENCHANTMENT: sprite = AtlasUtils.GetStateSprite(EStateType.GlobalEnchantment, item.Id); break;
                     case EDialogDescriptionItemType.ITEM_TYPE_PROFESSION: sprite = AtlasUtils.GetProfessionIcon(item.Id); break;

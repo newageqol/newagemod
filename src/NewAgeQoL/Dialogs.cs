@@ -39,6 +39,7 @@ namespace NewAgeQoL
                 window.SetParent(wrap, false);
                 wrap.localScale = new Vector3(k, k, 1f);
                 Plugin.Trace("[windows] " + root.name + " scaled to " + k);
+                CloseSeat.Attach(window);
             }
             catch (Exception e) { Plugin.Trace("[windows] scaling: " + e.Message); }
         }
@@ -158,6 +159,59 @@ namespace NewAgeQoL
                 Plugin.Trace("[windows] action window centered, scale " + k + ", layer " + High);
             }
             catch (Exception e) { Plugin.Trace("[windows] action window: " + e.Message); }
+        }
+    }
+
+    internal sealed class CloseSeat : MonoBehaviour
+    {
+        private const float Rise = 16f;
+
+        private RectTransform _button;
+
+        internal static void Attach(RectTransform window)
+        {
+            try
+            {
+                var button = window.Find("CloseButtonContainer/CloseButton") as RectTransform;
+                if (button == null || window.Find("DialogCaption") == null || window.GetComponent<CloseSeat>() != null) return;
+                window.gameObject.AddComponent<CloseSeat>()._button = button;
+            }
+            catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); }
+        }
+
+        private static string Edges(RectTransform one)
+        {
+            if (one == null) return "-";
+            var corners = new Vector3[4];
+            one.GetWorldCorners(corners);
+            var local = one.root.InverseTransformPoint(corners[0]);
+            var high = one.root.InverseTransformPoint(corners[2]);
+            return "x " + local.x.ToString("0") + ".." + high.x.ToString("0") + " y " + local.y.ToString("0") + ".." + high.y.ToString("0");
+        }
+
+        private void LateUpdate()
+        {
+            try
+            {
+                if (_button == null) { Destroy(this); return; }
+                if (transform.lossyScale.x < 0.01f) return;
+                var host = _button.parent != null ? _button.parent.GetComponentInParent<Canvas>() : null;
+                if (host == null) return;
+                var own = _button.GetComponent<Canvas>();
+                if (own == null)
+                {
+                    own = _button.gameObject.AddComponent<Canvas>();
+                    _button.gameObject.AddComponent<GraphicRaycaster>();
+                }
+                own.overrideSorting = true;
+                own.sortingLayerID = host.sortingLayerID;
+                own.sortingOrder = host.sortingOrder + 1;
+                _button.anchoredPosition += new Vector2(0f, Rise);
+                Plugin.Trace("[windows] " + transform.root.name + ": close button drawn above the caption bar, order " + own.sortingOrder
+                    + ", raised " + Rise + "; button " + Edges(_button) + ", caption " + Edges(transform.Find("DialogCaption") as RectTransform) + ", window " + Edges(transform as RectTransform));
+                Destroy(this);
+            }
+            catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); Destroy(this); }
         }
     }
 

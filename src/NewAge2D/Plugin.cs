@@ -169,9 +169,13 @@ public class Plugin : BaseUnityPlugin
         try
         {
             var left = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries")?.GetValue(Config, null) as Dictionary<ConfigDefinition, string>;
-            if (left == null || !left.Remove(new ConfigDefinition("General", "SwitchedToUnity"))) return;
+            if (left == null) return;
+            var gone = new List<string>();
+            foreach (var key in new[] { new ConfigDefinition("General", "SwitchedToUnity"), new ConfigDefinition("Field", "HexFaint"), new ConfigDefinition("Field", "HexLook"), new ConfigDefinition("Field", "HexGrid") })
+                if (left.Remove(key)) gone.Add(key.Section + "/" + key.Key);
+            if (gone.Count == 0) return;
             Config.Save();
-            Log.LogInfo("Removed unused key General/SwitchedToUnity from settings");
+            Log.LogInfo("Removed unused keys from settings: " + string.Join(", ", gone));
         }
         catch (Exception e) { Log.LogWarning("Settings cleanup: " + e.Message); }
     }
@@ -223,6 +227,7 @@ public class Plugin : BaseUnityPlugin
         _harmony?.UnpatchSelf();
         _harmony = null;
         Journal.Detach(Log);
+        HexLook.Drop();
         Field.Dispose();
         Fighters.ClearAll();
         FlashQueue.Clear();
@@ -260,6 +265,7 @@ public class Plugin : BaseUnityPlugin
         Fighters.Tick();
         BodyClick.Tick();
         Glow.Tick();
+        HexLook.Tick();
         StatesColumn.Tick();
         Captions.Order();
         GameSound.Tick();

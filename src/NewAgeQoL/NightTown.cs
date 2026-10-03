@@ -42,6 +42,7 @@ namespace NewAgeQoL
 
         internal static void Unload()
         {
+            Kept.Clear();
             if (_bundle != null) { _bundle.Unload(true); _bundle = null; }
             if (_fx != null) { _fx.Unload(true); _fx = null; }
             _bloom = null;
@@ -50,7 +51,7 @@ namespace NewAgeQoL
             _tmpFont = null;
         }
 
-        private static bool Full() => SystemInfo.graphicsMemorySize >= 3500;
+        private static bool Roomy() => SystemInfo.graphicsMemorySize >= 2000;
 
         internal static void Loaded()
         {
@@ -95,6 +96,8 @@ namespace NewAgeQoL
                 AssetSync.Settle("NightTown");
                 if (!File.Exists(Path.Combine(Folder, "illenium_night"))) return;
                 _prepping = true;
+                Phase("bundle");
+                Watch(true);
                 Plugin.Instance.StartCoroutine(Prep());
             }
             catch (Exception e) { _prepping = false; Plugin.Trace("[night] prepare: " + e.Message); }
@@ -117,10 +120,12 @@ namespace NewAgeQoL
             try
             {
                 Application.backgroundLoadingPriority = ThreadPriority.High;
+                FastUpload(true);
                 NightLoad.Night(0.02f);
                 if (_bundle == null) yield return Fetch();
                 _bundleMs = clock.ElapsedMilliseconds;
                 NightLoad.Night(0.1f);
+                Phase("fx");
                 if (_fx == null && File.Exists(Path.Combine(Folder, "illenium_night_fx")))
                 {
                     var req = AssetBundle.LoadFromFileAsync(Path.Combine(Folder, "illenium_night_fx"));
@@ -129,33 +134,246 @@ namespace NewAgeQoL
                     if (_fx != null) { _bloom = _fx.LoadAllAssets<Material>().FirstOrDefault(m => m.name == "bloom" && m.shader != null && m.shader.name == "Hidden/CityBloom"); _font = _fx.LoadAllAssets<Font>().FirstOrDefault(); _labelMat = _fx.LoadAllAssets<Material>().FirstOrDefault(m => m.name == "label"); }
                 }
                 if (_bundle == null) { Plugin.Warn("[night] town bundle failed to load"); yield break; }
+                long fxMs = clock.ElapsedMilliseconds - _bundleMs;
+                Phase("scene read");
                 var op = SceneManager.LoadSceneAsync(SceneName, LoadSceneMode.Additive);
                 if (op == null) { Plugin.Warn("[night] scene failed to load"); yield break; }
                 var waited = System.Diagnostics.Stopwatch.StartNew();
+                long readMs = -1;
                 while (!op.isDone && waited.ElapsedMilliseconds < 20000)
                 {
+                    if (readMs < 0 && op.progress >= 0.9f) { readMs = waited.ElapsedMilliseconds; Phase("scene activate"); }
                     NightLoad.Night(0.1f + 0.85f * Mathf.Clamp01(op.progress / 0.9f));
                     yield return null;
                 }
                 if (!op.isDone) { Plugin.Warn("[night] scene still loading after 20 s"); yield return op; }
+                long loadMs = waited.ElapsedMilliseconds;
                 var scene = SceneManager.GetSceneByName(SceneName);
                 if (!scene.IsValid() || !scene.isLoaded) yield break;
+                Phase("scene hide");
+                var step = System.Diagnostics.Stopwatch.StartNew();
                 Remember(scene);
+                long rememberMs = step.ElapsedMilliseconds;
+                int kept = Keep(scene);
                 foreach (var root in scene.GetRootGameObjects())
                 {
                     foreach (var cam in root.GetComponentsInChildren<Camera>(true)) cam.enabled = false;
                     root.SetActive(false);
                 }
                 _sceneMs = clock.ElapsedMilliseconds - _bundleMs;
+                Phase("prepared");
+                Plugin.Trace("[night] prepare steps: bundle " + _bundleMs + " ms, fx " + fxMs + " ms, scene read " + (readMs < 0 ? loadMs : readMs) + " ms, scene activate " + (readMs < 0 ? 0 : loadMs - readMs) + " ms, remember light " + rememberMs + " ms, kept in memory " + kept + " assets, hide " + (step.ElapsedMilliseconds - rememberMs) + " ms, " + Stats(scene));
                 NightLoad.Night(0.95f);
                 done = true;
             }
             finally
             {
                 Application.backgroundLoadingPriority = priority;
+                FastUpload(false);
                 _prepping = false;
                 _ready = done;
+                if (!_busy) StopWatch(15f);
             }
+        }
+
+        private static readonly HashSet<UnityEngine.Object> Kept = new HashSet<UnityEngine.Object>();
+
+        private static int Keep(Scene scene)
+        {
+            Kept.Clear();
+            if (!Roomy()) return 0;
+            try
+            {
+                void Add(UnityEngine.Object o) { if (o != null) Kept.Add(o); }
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+                        foreach (var m in r.sharedMaterials)
+                        {
+                            if (m == null) continue;
+                            Add(m);
+                            Add(m.shader);
+                            foreach (int id in m.GetTexturePropertyNameIDs()) Add(m.GetTexture(id));
+                        }
+                    foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true)) Add(mf.sharedMesh);
+                    foreach (var mc in root.GetComponentsInChildren<MeshCollider>(true)) Add(mc.sharedMesh);
+                    foreach (var pr in root.GetComponentsInChildren<ParticleSystemRenderer>(true)) Add(pr.mesh);
+                    foreach (var an in root.GetComponentsInChildren<Animation>(true))
+                        foreach (AnimationState st in an) Add(st.clip);
+                    foreach (var l in root.GetComponentsInChildren<Light>(true)) Add(l.cookie);
+                }
+                foreach (var d in _lit.Select(l => l.Map).Distinct())
+                {
+                    if (d == null) continue;
+                    Add(d.lightmapColor);
+                    Add(d.lightmapDir);
+                    Add(d.shadowMask);
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[night] keep assets: " + e.Message); }
+            return Kept.Count;
+        }
+
+        private static int _uploadSlice = -1;
+        private static int _uploadBuffer = -1;
+        private static bool _uploadPersistent;
+
+        private static void FastUpload(bool on)
+        {
+            try
+            {
+                if (on)
+                {
+                    if (_uploadSlice >= 0) return;
+                    _uploadSlice = QualitySettings.asyncUploadTimeSlice;
+                    _uploadBuffer = QualitySettings.asyncUploadBufferSize;
+                    _uploadPersistent = QualitySettings.asyncUploadPersistentBuffer;
+                    QualitySettings.asyncUploadTimeSlice = Math.Max(_uploadSlice, 8);
+                    QualitySettings.asyncUploadBufferSize = Math.Max(_uploadBuffer, Roomy() ? 64 : 16);
+                    QualitySettings.asyncUploadPersistentBuffer = true;
+                }
+                else
+                {
+                    if (_uploadSlice < 0) return;
+                    QualitySettings.asyncUploadTimeSlice = _uploadSlice;
+                    QualitySettings.asyncUploadBufferSize = _uploadBuffer;
+                    QualitySettings.asyncUploadPersistentBuffer = _uploadPersistent;
+                    _uploadSlice = -1;
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[night] upload settings: " + e.Message); }
+        }
+
+        private static string _phase = "";
+        private static bool _watching;
+        private static float _watchUntil;
+
+        private static void Phase(string name) => _phase = name;
+
+        private static bool _restart;
+
+        private static void Watch(bool fresh = false)
+        {
+            _watchUntil = Time.realtimeSinceStartup + 60f;
+            if (_watching) { if (fresh) _restart = true; return; }
+            if (Plugin.Instance == null) return;
+            _watching = true;
+            _restart = false;
+            Plugin.Instance.StartCoroutine(Frames());
+        }
+
+        private static void StopWatch(float after) =>
+            _watchUntil = Mathf.Min(_watchUntil, Time.realtimeSinceStartup + after);
+
+        private sealed class FrameLog
+        {
+            public readonly Dictionary<string, float> Total = new Dictionary<string, float>();
+            public readonly Dictionary<string, int> Count = new Dictionary<string, int>();
+            public readonly List<string> Order = new List<string>();
+            public readonly System.Text.StringBuilder Slow = new System.Text.StringBuilder();
+            public int Frames;
+            public float Worst;
+            public string WorstAt = "";
+
+            public void Add(string at, float ms)
+            {
+                Frames++;
+                if (!Total.ContainsKey(at)) { Total[at] = 0f; Count[at] = 0; Order.Add(at); }
+                Total[at] += ms;
+                Count[at]++;
+                if (ms > Worst) { Worst = ms; WorstAt = at; }
+                if (ms >= 50f && Slow.Length < 2000) Slow.Append(at).Append(' ').Append(ms.ToString("0")).Append(" ms; ");
+            }
+
+            public void Report()
+            {
+                if (Frames == 0) return;
+                Plugin.Trace("[night] frames: " + Frames + ", worst " + Worst.ToString("0") + " ms in '" + WorstAt + "'; by phase: "
+                    + string.Join(", ", Order.Select(p => "'" + p + "' " + Count[p] + " fr " + Total[p].ToString("0") + " ms"))
+                    + (Slow.Length > 0 ? "; slow frames: " + Slow : ""));
+            }
+        }
+
+        private static IEnumerator Frames()
+        {
+            var log = new FrameLog();
+            string was = _phase;
+            float last = Time.realtimeSinceStartup;
+            try
+            {
+                while (Time.realtimeSinceStartup < _watchUntil)
+                {
+                    yield return null;
+                    float now = Time.realtimeSinceStartup;
+                    float ms = (now - last) * 1000f;
+                    last = now;
+                    if (_restart)
+                    {
+                        _restart = false;
+                        log.Report();
+                        log = new FrameLog();
+                        was = "bundle";
+                    }
+                    log.Add(was == _phase ? was : was + ">" + _phase, ms);
+                    was = _phase;
+                }
+            }
+            finally
+            {
+                _watching = false;
+                log.Report();
+            }
+        }
+
+        private static string Stats(Scene scene)
+        {
+            try
+            {
+                int renderers = 0, lights = 0, tris = 0, readable = 0;
+                var meshes = new HashSet<Mesh>();
+                var textures = new HashSet<Texture>();
+                var heavy = new List<KeyValuePair<string, int>>();
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+                    {
+                        renderers++;
+                        foreach (var m in r.sharedMaterials)
+                        {
+                            if (m == null) continue;
+                            foreach (int id in m.GetTexturePropertyNameIDs())
+                            {
+                                var t = m.GetTexture(id);
+                                if (t != null) textures.Add(t);
+                            }
+                        }
+                    }
+                    lights += root.GetComponentsInChildren<Light>(true).Length;
+                    foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true))
+                    {
+                        var mesh = mf.sharedMesh;
+                        if (mesh == null || !meshes.Add(mesh)) continue;
+                        if (mesh.isReadable) readable++;
+                        int n = 0;
+                        for (int i = 0; i < mesh.subMeshCount; i++) n += (int)(mesh.GetIndexCount(i) / 3);
+                        tris += n;
+                        heavy.Add(new KeyValuePair<string, int>(mesh.name + (mesh.isReadable ? " rw" : "") + " v" + mesh.vertexCount + " a" + mesh.vertexAttributeCount, n));
+                    }
+                }
+                foreach (var d in LightmapSettings.lightmaps)
+                {
+                    if (d == null) continue;
+                    if (d.lightmapColor != null) textures.Add(d.lightmapColor);
+                    if (d.shadowMask != null) textures.Add(d.shadowMask);
+                }
+                var formats = textures.OfType<Texture2D>()
+                    .GroupBy(t => t.format + " " + Math.Max(t.width, t.height))
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key + " x" + g.Count());
+                return "renderers " + renderers + ", lights " + lights + ", meshes " + meshes.Count + " (" + tris + " tris, readable " + readable + "), textures " + textures.Count + ": " + string.Join(", ", formats)
+                    + "; heaviest meshes: " + string.Join(", ", heavy.OrderByDescending(h => h.Value).Take(8).Select(h => h.Key + " " + h.Value + " tris"));
+            }
+            catch (Exception e) { return "stats failed: " + e.Message; }
         }
 
         private sealed class Lit
@@ -235,8 +453,10 @@ namespace NewAgeQoL
         {
             _busy = true;
             var clock = System.Diagnostics.Stopwatch.StartNew();
+            Watch();
             try
             {
+                if (_prepping) Phase("wait prepare");
                 while (_prepping && clock.ElapsedMilliseconds < 25000) yield return null;
                 long waitMs = clock.ElapsedMilliseconds;
                 if (!_ready) { Plugin.Warn("[night] town not prepared, old town stays"); yield break; }
@@ -244,19 +464,30 @@ namespace NewAgeQoL
                 var old = FindOld();
                 var scene = SceneManager.GetSceneByName(SceneName);
                 if (old == null || !scene.IsValid() || !scene.isLoaded) { Plugin.Warn("[night] old town or night scene not found"); yield break; }
+                Phase("show");
+                var step = System.Diagnostics.Stopwatch.StartNew();
                 Relight();
+                long relightMs = step.ElapsedMilliseconds;
                 foreach (var root in scene.GetRootGameObjects()) root.SetActive(true);
+                long activeMs = step.ElapsedMilliseconds;
                 Apply(old, scene);
+                long applyMs = step.ElapsedMilliseconds;
                 GateBack(scene);
+                long gateMs = step.ElapsedMilliseconds;
                 Raise(scene);
+                Judge(scene);
+                long raiseMs = step.ElapsedMilliseconds;
                 NightLoad.Release(true);
+                Phase("shown");
                 Plugin.Trace("[night] timing: bundle " + _bundleMs + " ms, scene " + _sceneMs + " ms (alongside the game), waited after the game " + waitMs + " ms, apply " + (clock.ElapsedMilliseconds - waitMs) + " ms");
+                Plugin.Trace("[night] show steps: relight " + relightMs + " ms, activate " + (activeMs - relightMs) + " ms, apply " + (applyMs - activeMs) + " ms, gate " + (gateMs - applyMs) + " ms, click areas " + (raiseMs - gateMs) + " ms, release " + (step.ElapsedMilliseconds - raiseMs) + " ms");
             }
             finally
             {
                 if (_labels != null) { _labels.enabled = true; _labels = null; }
                 _busy = false;
                 NightLoad.Release(false);
+                StopWatch(3f);
             }
         }
 
@@ -538,30 +769,141 @@ namespace NewAgeQoL
             RenderSettings.fogStartDistance = data.FogStart;
             RenderSettings.fogEndDistance = data.FogEnd;
 
-            bool full = Full();
+            bool full = !_light;
             if (_shadowDistance < 0) { _shadowDistance = QualitySettings.shadowDistance; _shadowCascades = QualitySettings.shadowCascades; }
             QualitySettings.shadowDistance = 70;
             QualitySettings.shadowCascades = 2;
             QualitySettings.softParticles = true;
+            _dimmed.Clear();
+            if (camObj != null) { camObj.depthTextureMode |= DepthTextureMode.Depth; _hdr = camObj.allowHDR; }
+            Look(scene, camObj, full);
+            if (camObj != null && camObj.GetComponent<NightClock>() == null) camObj.gameObject.AddComponent<NightClock>();
+            Plugin.Trace("[night] town replaced, quality " + (full ? "full" : "light") + ", buildings " + data.Buildings.Count);
+        }
+
+        private static bool _light;
+        private static bool _judged;
+        private static bool _judging;
+        private static bool _hdr;
+        private static readonly HashSet<Light> _dimmed = new HashSet<Light>();
+        private const float SlowFrameMs = 22f;
+        private const float GainNeeded = 0.75f;
+        private const float RetryAfter = 900f;
+        private static float _retryAt;
+
+        private static void Look(Scene scene, Camera cam, bool full)
+        {
             foreach (var root in scene.GetRootGameObjects())
                 foreach (var l in root.GetComponentsInChildren<Light>(true))
                 {
-                    if (l.type == LightType.Directional) l.shadows = full ? LightShadows.Soft : LightShadows.Hard;
-                    else if (!full && l.bakingOutput.lightmapBakeType == LightmapBakeType.Realtime && !(l.color.r > 0.9f && l.color.b < 0.4f)) l.enabled = false;
+                    if (l.type == LightType.Directional) { l.shadows = full ? LightShadows.Soft : LightShadows.Hard; continue; }
+                    if (full)
+                    {
+                        if (_dimmed.Remove(l)) l.enabled = true;
+                        continue;
+                    }
+                    if (l.enabled && l.bakingOutput.lightmapBakeType == LightmapBakeType.Realtime && !(l.color.r > 0.9f && l.color.b < 0.4f))
+                    {
+                        l.enabled = false;
+                        _dimmed.Add(l);
+                    }
                 }
-            if (camObj != null)
+            if (cam == null) return;
+            var glow = cam.GetComponent<NightGlow>();
+            if (full && _bloom != null)
             {
-                camObj.depthTextureMode |= DepthTextureMode.Depth;
-                if (full && _bloom != null)
-                {
-                    camObj.allowHDR = true;
-                    var glow = camObj.GetComponent<NightGlow>();
-                    if (glow == null) glow = camObj.gameObject.AddComponent<NightGlow>();
-                    glow.mat = _bloom;
-                }
+                cam.allowHDR = true;
+                if (glow == null) glow = cam.gameObject.AddComponent<NightGlow>();
+                glow.mat = _bloom;
+                glow.enabled = true;
             }
-            if (camObj != null && camObj.GetComponent<NightClock>() == null) camObj.gameObject.AddComponent<NightClock>();
-            Plugin.Trace("[night] town replaced, quality " + (full ? "full" : "light") + ", buildings " + data.Buildings.Count);
+            else
+            {
+                if (glow != null) glow.enabled = false;
+                cam.allowHDR = _hdr;
+            }
+        }
+
+        private static void Judge(Scene scene)
+        {
+            if (_judging || Plugin.Instance == null) return;
+            if (_judged)
+            {
+                if (!_light || Time.realtimeSinceStartup < _retryAt) return;
+                _judged = false;
+                _light = false;
+                Look(scene, Camera.main, true);
+                Plugin.Trace("[night] quality check: light for 15 minutes, trying full again");
+            }
+            _judging = true;
+            Plugin.Instance.StartCoroutine(Measure());
+        }
+
+        private static bool Watching() =>
+            SceneLoaded() && !_busy && !_prepping && Application.isFocused && Camera.main != null && Camera.main.GetComponent<NightClock>() != null;
+
+        private static IEnumerator Sample(List<float> into, int count, float settle, bool strict)
+        {
+            float calm = Time.realtimeSinceStartup + settle;
+            float last = Time.realtimeSinceStartup;
+            while (into.Count < count)
+            {
+                yield return null;
+                float now = Time.realtimeSinceStartup;
+                float ms = (now - last) * 1000f;
+                last = now;
+                if (!Watching())
+                {
+                    if (strict) yield break;
+                    calm = now + settle;
+                    continue;
+                }
+                if (now < calm) continue;
+                into.Add(ms);
+            }
+        }
+
+        private static float Median(List<float> list)
+        {
+            var sorted = list.OrderBy(v => v).ToList();
+            return sorted[sorted.Count / 2];
+        }
+
+        private static IEnumerator Measure()
+        {
+            try
+            {
+                var full = new List<float>();
+                yield return Sample(full, 150, 3f, false);
+                float fullMs = Median(full);
+                if (fullMs <= SlowFrameMs)
+                {
+                    _judged = true;
+                    Plugin.Trace("[night] quality check: full, median frame " + fullMs.ToString("0.0") + " ms over " + full.Count + " frames");
+                    yield break;
+                }
+                var scene = SceneManager.GetSceneByName(SceneName);
+                if (!Watching() || !scene.isLoaded) yield break;
+                Look(scene, Camera.main, false);
+                var light = new List<float>();
+                yield return Sample(light, 90, 0.5f, true);
+                scene = SceneManager.GetSceneByName(SceneName);
+                if (light.Count < 90)
+                {
+                    var cam = Camera.main;
+                    if (scene.isLoaded && !_busy && cam != null && cam.GetComponent<NightClock>() != null) Look(scene, cam, true);
+                    Plugin.Trace("[night] quality check interrupted, will repeat on the next visit");
+                    yield break;
+                }
+                float lightMs = Median(light);
+                bool helps = lightMs <= fullMs * GainNeeded;
+                _light = helps;
+                _judged = true;
+                if (helps) _retryAt = Time.realtimeSinceStartup + RetryAfter;
+                if (!helps) Look(scene, Camera.main, true);
+                Plugin.Trace("[night] quality check: " + (helps ? "light" : "full") + ", median frame full " + fullMs.ToString("0.0") + " ms, light " + lightMs.ToString("0.0") + " ms" + (helps ? ", next try of full in 15 minutes" : " (effects are not what slows it, kept full)"));
+            }
+            finally { _judging = false; }
         }
 
         internal static void Left()
