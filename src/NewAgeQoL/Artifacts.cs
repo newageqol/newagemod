@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 var bagArt = new Dictionary<int, int>();
                 foreach (var it in Scanned)
                 {
-                    if (it.Rarity != WardrobeArt.Rarity || it.ThingId <= 0 || it.Qty <= 0) continue;
+                    if (!Guarded(it.Rarity) || it.ThingId <= 0 || it.Qty <= 0) continue;
                     bagArt.TryGetValue(it.ThingId, out int had);
                     bagArt[it.ThingId] = had + it.Qty;
                 }
@@ -195,7 +195,7 @@ namespace NewAgeQoL
                 }
                 if (loose > 0)
                 {
-                    Plugin.Trace("[art] artifacts lying in the bag go to storage too: " + loose);
+                    Plugin.Trace("[art] artifacts and mythic items lying in the bag go to storage too: " + loose);
                     Remember(memory);
                 }
                 var art = new List<Item>();
@@ -1043,6 +1043,8 @@ namespace NewAgeQoL
         }
 
         private static bool ExtraSlot(int slot) => slot >= 19 && slot <= 24;
+
+        private static bool Guarded(int rarity) => rarity == WardrobeArt.Rarity || rarity == (int)EThingRarity.MYTHICAL;
 
         private static void Send(BaseRequest request)
         {
