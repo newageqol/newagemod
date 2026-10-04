@@ -31,6 +31,7 @@ namespace NewAgeQoL
         internal string Name;
         internal int[] Left = new int[0];
         internal int[] Right = new int[0];
+        internal int[] Elite = new int[0];
         internal string LeftName = "";
         internal string RightName = "";
         internal readonly List<KuSub> Subs = new List<KuSub>();
@@ -44,6 +45,14 @@ namespace NewAgeQoL
             if (Array.IndexOf(Right, skill) > 0) return 2;
             return -1;
         }
+
+        internal int EliteSide(int skill)
+        {
+            int at = Array.IndexOf(Elite, skill);
+            return at < 0 ? -1 : at < 3 ? 1 : 2;
+        }
+
+        internal int EliteRoot(int side) => Elite.Length == 6 ? Elite[side == 2 ? 3 : 0] : 0;
 
         internal KuSub Sub(int n)
         {
@@ -171,12 +180,13 @@ namespace NewAgeQoL
             internal readonly List<string[]> Trees = new List<string[]>();
             internal readonly List<string[]> Skills = new List<string[]>();
             internal readonly List<string[]> Costs = new List<string[]>();
+            internal readonly List<string[]> Elites = new List<string[]>();
 
             internal bool Full
             {
                 get
                 {
-                    if (Trees.Count < 6) return false;
+                    if (Trees.Count < 6 || Elites.Count < 6) return false;
                     var known = new HashSet<int>();
                     foreach (var cell in Skills) known.Add(Int(cell[1]));
                     foreach (var cell in Skills)
@@ -191,6 +201,12 @@ namespace NewAgeQoL
                             if (ids.Length != 8) return false;
                             foreach (int id in ids) if (!known.Contains(id)) return false;
                         }
+                    foreach (var cell in Elites)
+                    {
+                        var ids = Ids(cell[2]);
+                        if (ids.Length != 6) return false;
+                        foreach (int id in ids) if (!known.Contains(id)) return false;
+                    }
                     return true;
                 }
             }
@@ -218,6 +234,9 @@ namespace NewAgeQoL
                             break;
                         case "K":
                             if (cell.Length >= 5 + Top) lines.Skills.Add(cell);
+                            break;
+                        case "KE":
+                            if (cell.Length >= 3) lines.Elites.Add(cell);
                             break;
                         case "KC":
                             if (cell.Length >= 2 + Top) lines.Costs.Add(cell);
@@ -267,6 +286,12 @@ namespace NewAgeQoL
                     klass.Right = Ids(cell[3]);
                     klass.LeftName = cell[4];
                     klass.RightName = cell[5];
+                }
+                foreach (var cell in tree.Elites)
+                {
+                    var klass = FindLoaded(Int(cell[1]));
+                    var ids = Ids(cell[2]);
+                    if (klass != null && ids.Length == 6) klass.Elite = ids;
                 }
                 foreach (var cell in tree.Costs)
                 {

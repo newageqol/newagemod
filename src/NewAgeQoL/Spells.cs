@@ -14,8 +14,6 @@ namespace NewAgeQoL
 
         private static bool _solo;
 
-        internal static bool Solo => _solo;
-
         internal static void Open()
         {
             try

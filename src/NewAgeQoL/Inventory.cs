@@ -529,15 +529,6 @@ namespace NewAgeQoL
             catch { }
         }
 
-        internal static void SyncAll()
-        {
-            for (int i = Live.Count - 1; i >= 0; i--)
-            {
-                if (Live[i] == null) { Live.RemoveAt(i); continue; }
-                Sync(Live[i]);
-            }
-        }
-
         internal static void Sync(InventoryThingItemRenderer r)
         {
             if (r == null) return;

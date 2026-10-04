@@ -79,7 +79,4 @@ public sealed class SwfTimeline
     public IReadOnlyDictionary<string, int> Labels { get; init; }
 
     public int FrameCount => Frames.Count;
-
-    public int FrameOf(string label) =>
-        label is not null && Labels.TryGetValue(label, out int frame) ? frame : -1;
 }

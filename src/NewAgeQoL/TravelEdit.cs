@@ -11,8 +11,6 @@ namespace NewAgeQoL
         private static Action<string> _done;
         private static Action _yes;
 
-        internal static bool IsOpen => _canvasGo != null;
-
         internal static void Ask(string title, string start, Action<string> done)
         {
             Build(title, start, "Сохранить", true);

@@ -10,7 +10,7 @@ namespace NewAgeQoL
     internal static class KuCalc
     {
         private const float PanelW = 1240f;
-        private const float PanelH = 780f;
+        private const float PanelH = 820f;
         private const float BodyY = 172f;
         private const float BodyH = PanelH - BodyY - 52f;
         private const float TreeW = 820f;
@@ -20,7 +20,7 @@ namespace NewAgeQoL
         private const float NodeW = 110f;
         private const float NodeH = 122f;
         private const float TabW = 148f;
-        private static readonly float[] Rows = { 18f, 152f, 286f, 420f };
+        private static readonly float[] Rows = { 58f, 192f, 326f, 460f };
         private static readonly int[] Cols = { 1, 1, 0, 1, 2, 0, 1, 2 };
         private static readonly int[] Tiers = { 0, 1, 2, 2, 2, 3, 3, 3 };
 
@@ -172,8 +172,23 @@ namespace NewAgeQoL
         {
             get
             {
+                var klass = Klass;
                 int sum = 0;
-                foreach (var pair in Plan) sum += KuData.Cost(pair.Value);
+                foreach (var pair in Plan)
+                    if (klass == null || klass.EliteSide(pair.Key) < 0) sum += KuData.Cost(pair.Value);
+                return sum;
+            }
+        }
+
+        private static int Trophies
+        {
+            get
+            {
+                var klass = Klass;
+                int sum = 0;
+                if (klass == null) return 0;
+                foreach (var pair in Plan)
+                    if (klass.EliteSide(pair.Key) > 0) sum += pair.Value;
                 return sum;
             }
         }
@@ -197,10 +212,25 @@ namespace NewAgeQoL
             return 0;
         }
 
+        private static int EliteBranch(KuClass klass)
+        {
+            foreach (int id in klass.Elite) if (Level(id) > 0) return klass.EliteSide(id);
+            return 0;
+        }
+
         private static bool CanRaise(KuClass klass, int id)
         {
             int level = Level(id);
             if (level >= KuData.Top) return false;
+            int elite = klass.EliteSide(id);
+            if (elite > 0)
+            {
+                int eliteBranch = EliteBranch(klass);
+                if (eliteBranch > 0 && elite != eliteBranch) return false;
+                if (level + 1 > Subs) return false;
+                var root = KuData.Skill(id);
+                return root == null || root.Parent == 0 || Level(root.Parent) >= level + 1;
+            }
             int side = klass.Side(id);
             int branch = Branch(klass);
             if (side > 0 && branch > 0 && side != branch) return false;
@@ -241,6 +271,7 @@ namespace NewAgeQoL
             yield return klass.Root;
             for (int i = 1; i < klass.Left.Length; i++) yield return klass.Left[i];
             for (int i = 1; i < klass.Right.Length; i++) yield return klass.Right[i];
+            foreach (int id in klass.Elite) yield return id;
         }
 
         private static void Click(int id, PointerEventData data)
@@ -272,9 +303,16 @@ namespace NewAgeQoL
             Subs = next;
             if (Spent > Total)
             {
-                Plan.Clear();
+                var klass = Klass;
+                var drop = new List<int>();
+                foreach (var pair in Plan) if (klass == null || klass.EliteSide(pair.Key) < 0) drop.Add(pair.Key);
+                foreach (int id in drop) Plan.Remove(id);
                 Notice.Show("Калькулятор КУ: на этом подклассе очков меньше — дерево сброшено", 4f);
             }
+            var cut = Klass;
+            if (cut != null)
+                foreach (int id in cut.Elite)
+                    if (Level(id) > Subs) Set(id, Subs);
             Refresh();
         }
 
@@ -287,7 +325,7 @@ namespace NewAgeQoL
         private static string Describe()
         {
             var klass = Klass;
-            return (klass != null ? klass.Name : "?") + ", подклассов " + Subs + ", очков " + Total + ", осталось " + (Total - Spent);
+            return (klass != null ? klass.Name : "?") + ", подклассов " + Subs + ", очков " + Total + ", осталось " + (Total - Spent) + ", трофеев " + Trophies;
         }
 
         private static void Build()
@@ -428,11 +466,17 @@ namespace NewAgeQoL
             if (klass == null) return;
 
             _leftTitle = Say(_tree, klass.LeftName, 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperLeft);
-            Wardrobe.At(_leftTitle.rectTransform, 16f, 16f, Col * 3f - 40f, 70f);
+            Wardrobe.At(_leftTitle.rectTransform, 16f, 14f, Col * 3f - 40f, 38f);
             _leftTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _leftTitle.resizeTextForBestFit = true;
+            _leftTitle.resizeTextMinSize = 10;
+            _leftTitle.resizeTextMaxSize = 15;
             _rightTitle = Say(_tree, klass.RightName, 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperRight);
-            Wardrobe.At(_rightTitle.rectTransform, Col * 4f + 24f, 16f, Col * 3f - 40f, 70f);
+            Wardrobe.At(_rightTitle.rectTransform, Col * 4f + 24f, 14f, Col * 3f - 40f, 38f);
             _rightTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _rightTitle.resizeTextForBestFit = true;
+            _rightTitle.resizeTextMinSize = 10;
+            _rightTitle.resizeTextMaxSize = 15;
 
             var spots = new Dictionary<int, Vector2>();
             spots[klass.Root] = Spot(3, 0);
@@ -440,6 +484,15 @@ namespace NewAgeQoL
             {
                 spots[klass.Left[i]] = Spot(Cols[i], Tiers[i]);
                 spots[klass.Right[i]] = Spot(4 + Cols[i], Tiers[i]);
+            }
+            if (klass.Elite.Length == 6)
+            {
+                spots[klass.Elite[0]] = Spot(0, 0);
+                spots[klass.Elite[1]] = Spot(0, 1);
+                spots[klass.Elite[2]] = Spot(1, 0);
+                spots[klass.Elite[3]] = Spot(6, 0);
+                spots[klass.Elite[4]] = Spot(5, 0);
+                spots[klass.Elite[5]] = Spot(6, 1);
             }
             foreach (var pair in spots)
             {
@@ -528,7 +581,7 @@ namespace NewAgeQoL
             if (_subText != null)
                 _subText.text = Subs + " · " + (sub != null ? sub.Name + " · с " + sub.Level + " ур." : "подкласс");
             if (_points != null)
-                _points.text = "Очков: <color=#e2b85c><b>" + Math.Max(0, Total - Spent) + "</b></color>";
+                _points.text = "Очков: <color=#e2b85c><b>" + Math.Max(0, Total - Spent) + "</b></color>      Трофеев: <color=#e2b85c><b>" + Trophies + "</b></color>";
             int branch = Branch(klass);
             if (_leftTitle != null) _leftTitle.color = branch == 1 ? WardrobeLook.Accent : branch == 2 ? WardrobeLook.Faint : WardrobeLook.Label;
             if (_rightTitle != null) _rightTitle.color = branch == 2 ? WardrobeLook.Accent : branch == 1 ? WardrobeLook.Faint : WardrobeLook.Label;
@@ -613,18 +666,27 @@ namespace NewAgeQoL
             _deskIcon.sprite = sprite;
             _deskIcon.enabled = sprite != null;
             _deskName.text = skill.Name;
-            int side = klass.Side(id);
-            _deskKind.text = skill.Kind + " · " + (side == 0 ? "корень обеих веток" : "ветка «" + (side == 1 ? klass.LeftName : klass.RightName) + "»");
+            int elite = klass.EliteSide(id);
+            if (elite > 0)
+            {
+                var root = KuData.Skill(klass.EliteRoot(elite));
+                _deskKind.text = skill.Kind + " · элитное · ветка «" + (root != null ? root.Name : "?") + "»";
+            }
+            else
+            {
+                int side = klass.Side(id);
+                _deskKind.text = skill.Kind + " · " + (side == 0 ? "корень обеих веток" : "ветка «" + (side == 1 ? klass.LeftName : klass.RightName) + "»");
+            }
             int level = Level(id);
             _deskNow.text = level > 0 ? "Изучено: " + KuData.Step(level) + " (" + level + " из " + KuData.Top + ")" : "Не изучено";
             _deskNow.color = level > 0 ? WardrobeLook.Accent : WardrobeLook.Faint;
 
             for (int i = _deskRows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_deskRows.GetChild(i).gameObject);
-            for (int i = 0; i < KuData.Top; i++) AddStep(skill, i + 1, level);
+            for (int i = 0; i < KuData.Top; i++) AddStep(skill, i + 1, level, elite > 0);
             if (moved && _deskScroll != null) _deskScroll.verticalNormalizedPosition = 1f;
         }
 
-        private static void AddStep(KuSkill skill, int step, int level)
+        private static void AddStep(KuSkill skill, int step, int level, bool elite)
         {
             bool have = step <= level;
             bool next = step == level + 1;
@@ -645,12 +707,16 @@ namespace NewAgeQoL
 
             var head = new StringBuilder();
             head.Append("<b>").Append(step).Append(". ").Append(KuData.Step(step)).Append("</b>");
-            head.Append("   <size=12><color=#747b85>всего ").Append(KuData.Cost(step)).Append(' ').Append(Wardrobe.Plural(KuData.Cost(step), "очко", "очка", "очков")).Append("</color></size>");
+            int price = elite ? step : KuData.Cost(step);
+            head.Append("   <size=12><color=#747b85>всего ").Append(price).Append(' ')
+                .Append(elite ? Wardrobe.Plural(price, "трофей", "трофея", "трофеев") : Wardrobe.Plural(price, "очко", "очка", "очков")).Append("</color></size>");
             var cost = skill.Costs[step - 1];
-            if (cost != null && cost.Length >= 3 && (cost[0] > 0 || cost[1] > 0 || cost[2] > 0))
+            int charges = cost != null && cost.Length >= 4 ? cost[3] : 0;
+            if (cost != null && cost.Length >= 3 && (cost[0] > 0 || cost[1] > 0 || cost[2] > 0 || charges > 0))
             {
                 var parts = new List<string>();
                 if (cost[0] > 0) parts.Add("энергия " + cost[0]);
+                if (charges > 0) parts.Add("заряды " + charges);
                 if (cost[1] > 0) parts.Add("действует " + cost[1]);
                 if (cost[2] > 0) parts.Add("перезарядка " + cost[2]);
                 head.Append("\n<size=12><color=#acb3bd>").Append(string.Join(" · ", parts.ToArray())).Append("</color></size>");

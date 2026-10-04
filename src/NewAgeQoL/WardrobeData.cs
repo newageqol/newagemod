@@ -137,7 +137,6 @@ namespace NewAgeQoL
         internal static List<WardrobeThing> Things => _pack.Things;
         internal static string Stamp => _pack.Stamp;
         internal static bool Unnumbered => _pack.Things.Count > 0 && _pack.ById.Count < _pack.Things.Count / 2;
-        internal static string Meta => _pack.Meta.ToString();
         internal static string Source = "";
         private static string _text;
         internal static string Current => _text;

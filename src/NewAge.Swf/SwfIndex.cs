@@ -23,8 +23,6 @@ public sealed class SwfIndex
     public int BitmapCount { get; private set; }
     public int ActionByteCount { get; private set; }
 
-    public int As2ClassCount => Exports.Values.Count(n => n.StartsWith("__Packages.", StringComparison.Ordinal));
-
     public IReadOnlyList<SwfTag> MainTimeline { get; private init; }
 
     public static SwfIndex Build(SwfFile file)
@@ -142,19 +140,4 @@ public sealed class SwfIndex
         }
     }
 
-    public bool TryGetExportedSprite(string exportName, out int characterId, out List<SwfTag> tags)
-    {
-        tags = null;
-        return ExportsByName.TryGetValue(exportName, out characterId)
-            && Sprites.TryGetValue(characterId, out tags);
-    }
-
-    public int FindFrame(string label, int spriteId = 0)
-    {
-        if (!FrameLabels.TryGetValue(spriteId, out var labels)) return -1;
-        foreach (var (frame, name) in labels)
-            if (string.Equals(name, label, StringComparison.Ordinal))
-                return frame;
-        return -1;
-    }
 }

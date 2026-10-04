@@ -44,9 +44,6 @@ internal static class Dxt
     private static int BlockBytes(int width, int height) =>
         Math.Max(1, (width + 3) / 4) * Math.Max(1, (height + 3) / 4) * 16;
 
-    public static byte[] EncodeChain(byte[] rgba, int width, int height, out int mips) =>
-        EncodeChain(rgba, width, height, out mips, false, out _);
-
     private static byte[] EncodeChain(byte[] rgba, int width, int height, out int mips, bool pooled, out int total)
     {
         total = 0;
@@ -166,13 +163,6 @@ internal static class Dxt
                 target[q + 3] = (byte)((a + 2) / 4);
             }
         }
-    }
-
-    public static byte[] Encode(byte[] rgba, int width, int height)
-    {
-        var output = new byte[BlockBytes(width, height)];
-        EncodeInto(rgba, width, height, output, 0, Work);
-        return output;
     }
 
     private static int EncodeInto(byte[] rgba, int width, int height, byte[] output, int start, Scratch work)

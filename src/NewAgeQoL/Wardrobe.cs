@@ -75,15 +75,7 @@ namespace NewAgeQoL
         private static Button _add;
         private const float StripW = PanelW - 32f - 128f;
 
-        internal static bool IsOpen => _canvasGo != null;
-        internal static RectTransform Side => _side;
         internal static Transform Panel => _panelGo != null ? _panelGo.transform : null;
-
-        internal static void Toggle()
-        {
-            if (_canvasGo != null) { Close(); return; }
-            Open();
-        }
 
         internal static void Open()
         {

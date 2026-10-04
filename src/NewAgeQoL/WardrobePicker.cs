@@ -268,6 +268,12 @@ namespace NewAgeQoL
             return true;
         }
 
+        private static int Group(WardrobeThing thing, int bit)
+        {
+            if (thing.Classes == 0) return 1;
+            return (thing.Classes & bit) != 0 ? 0 : 2;
+        }
+
         private static void Fill()
         {
             if (_content == null) return;
@@ -286,15 +292,15 @@ namespace NewAgeQoL
             int bit = s.ClassId > 0 ? 1 << (s.ClassId - 1) : 0;
             list.Sort((a, b) =>
             {
-                int c = ((b.Classes & bit) != 0).CompareTo((a.Classes & bit) != 0);
+                int c = Group(a, bit).CompareTo(Group(b, bit));
                 if (c != 0) return c;
                 c = b.Level.CompareTo(a.Level);
                 if (c != 0) return c;
                 c = b.Rarity.CompareTo(a.Rarity);
                 return c != 0 ? c : string.CompareOrdinal(a.Name, b.Name);
             });
-            int mine = 0;
-            foreach (var thing in list) if ((thing.Classes & bit) != 0) mine++;
+            var groups = new int[3];
+            foreach (var thing in list) groups[Group(thing, bit)]++;
 
             WardrobeThing worn;
             s.Worn.TryGetValue(_slot, out worn);
@@ -305,10 +311,17 @@ namespace NewAgeQoL
             int baseRating = s.Rating;
             int shown = 0;
             var klass = s.Klass;
-            if (mine > 0) Section("Для класса «" + (klass != null ? klass.Name : "?") + "»: " + mine);
+            int group = -1;
             for (int i = 0; i < list.Count && shown < Limit; i++)
             {
-                if (i == mine) Section(mine > 0 ? "Остальные: " + (list.Count - mine) : "Для класса «" + (klass != null ? klass.Name : "?") + "» вещей нет");
+                int now = Group(list[i], bit);
+                if (now != group)
+                {
+                    group = now;
+                    if (now == 0) Section("Для класса «" + (klass != null ? klass.Name : "?") + "»: " + groups[0]);
+                    else if (now == 1) Section("Для всех классов: " + groups[1]);
+                    else Section("Для других классов: " + groups[2]);
+                }
                 Make(list[i], s, baseRating, worn == list[i]);
                 shown++;
             }

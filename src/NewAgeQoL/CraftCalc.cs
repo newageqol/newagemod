@@ -47,6 +47,8 @@ namespace NewAgeQoL
         private static RectTransform _drops;
         private static Text _found;
         private static Text _craftText;
+        private static InputField _fromField;
+        private static InputField _toField;
         private static InputField _search;
         private static InputField _qtyField;
         private static readonly List<Pic> Pics = new List<Pic>();
@@ -60,6 +62,8 @@ namespace NewAgeQoL
         private static readonly HashSet<string> Open = new HashSet<string>();
 
         private static int _craft;
+        private static int _from;
+        private static int _to;
         private static int _picked;
         private static int _qty = 1;
         private static string _query = "";
@@ -73,8 +77,6 @@ namespace NewAgeQoL
         private static Text _note;
         private static int _seenData;
         private static float _iconsAt;
-
-        internal static bool IsOpen => _canvasGo != null;
 
         internal static void Show()
         {
@@ -124,6 +126,8 @@ namespace NewAgeQoL
             _drops = null;
             _found = null;
             _craftText = null;
+            _fromField = null;
+            _toField = null;
             _search = null;
             _qtyField = null;
             Pics.Clear();
@@ -145,10 +149,14 @@ namespace NewAgeQoL
             {
                 _filterAt = 0f;
                 string query = (_typed ?? "").Trim().ToLowerInvariant();
-                if (query != _query)
+                int from = Typed(_fromField);
+                int to = Typed(_toField);
+                if (query != _query || from != _from || to != _to)
                 {
                     _query = query;
-                    Fill();
+                    _from = from;
+                    _to = to;
+                    Refilter();
                 }
             }
             More();
@@ -300,11 +308,20 @@ namespace NewAgeQoL
             _craftText.resizeTextMaxSize = 14;
             Wardrobe.At((RectTransform)Wardrobe.Arrow(box, "›", () => Step(1)).transform, ListW - 12f - 34f, 56f, 34f, 32f);
 
+            var levelLabel = Say(box, "Уровень от", 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            Wardrobe.At(levelLabel.rectTransform, 14f, 94f, 90f, 32f);
+            _fromField = LevelInput(box, _from);
+            Wardrobe.At((RectTransform)_fromField.transform, 106f, 94f, 70f, 32f);
+            var toLabel = Say(box, "до", 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleCenter);
+            Wardrobe.At(toLabel.rectTransform, 180f, 94f, 34f, 32f);
+            _toField = LevelInput(box, _to);
+            Wardrobe.At((RectTransform)_toField.transform, 218f, 94f, 70f, 32f);
+
             _found = Say(box, "", 12, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
-            Wardrobe.At(_found.rectTransform, 14f, 92f, ListW - 28f, 20f);
+            Wardrobe.At(_found.rectTransform, 14f, 130f, ListW - 28f, 20f);
             Fit(_found, 9, 12);
 
-            _itemsScroll = Scroller(box, 8f, 116f, ListW - 16f, BodyH - 124f, 2f, out _items);
+            _itemsScroll = Scroller(box, 8f, 154f, ListW - 16f, BodyH - 162f, 2f, out _items);
 
             var up = Wardrobe.GameButton(box, "↑", ToTop, false);
             Wardrobe.At(up, ListW - 20f - 44f, BodyH - 20f - 44f, 44f, 44f);
@@ -323,6 +340,28 @@ namespace NewAgeQoL
             edge.effectDistance = new Vector2(1f, -1f);
             _toTop = up.gameObject;
             _toTop.SetActive(false);
+        }
+
+        private static InputField LevelInput(RectTransform host, int value)
+        {
+            var field = OnlineWindow.MakeInput(host, 70f, "");
+            WardrobeLook.Style(field);
+            field.contentType = InputField.ContentType.Custom;
+            field.characterValidation = InputField.CharacterValidation.None;
+            field.onValidateInput = (text, index, c) => c >= '0' && c <= '9' ? c : '\0';
+            field.characterLimit = 3;
+            field.textComponent.alignment = TextAnchor.MiddleCenter;
+            field.textComponent.fontSize = 15;
+            field.SetTextWithoutNotify(value > 0 ? value.ToString() : "");
+            field.onValueChanged.AddListener(text => _filterAt = Time.unscaledTime + 0.25f);
+            return field;
+        }
+
+        private static int Typed(InputField field)
+        {
+            int value;
+            if (field == null || !int.TryParse(field.text, NumberStyles.None, CultureInfo.InvariantCulture, out value)) return 0;
+            return value;
         }
 
         private static void ToTop()
@@ -398,6 +437,11 @@ namespace NewAgeQoL
             int count = crafts.Count + 1;
             index = ((index + by) % count + count) % count;
             _craft = index == 0 ? 0 : crafts[index - 1];
+            Refilter();
+        }
+
+        private static void Refilter()
+        {
             Fill();
             if (_picked == 0) return;
             if (Listed.Contains(_picked))
@@ -428,6 +472,12 @@ namespace NewAgeQoL
         {
             var list = RecipeData.Making(thing);
             if (list == null) return false;
+            if (_from > 0 || _to > 0)
+            {
+                int level = LevelOf(thing);
+                if (_from > 0 && level < _from) return false;
+                if (_to > 0 && level > _to) return false;
+            }
             foreach (var recipe in list)
             {
                 if (_craft != 0 && recipe.Profession != _craft) continue;
@@ -453,6 +503,7 @@ namespace NewAgeQoL
             {
                 string many = Wardrobe.Plural(total, "вещь", "вещи", "вещей");
                 if (_query.Length > 0) _found.text = "Найдено: " + total + " " + many;
+                else if (_from > 0 || _to > 0) _found.text = "Подходит " + total + " " + many;
                 else if (_craft != 0) _found.text = "В этой профессии " + total + " " + many;
                 else _found.text = "Всего " + total + " " + many + ", многие крафтятся в нескольких профессиях";
             }

@@ -54,8 +54,6 @@ namespace NewAgeQoL
         internal static string Status { get { lock (Gate) return _status; } }
         internal static string Stamp { get { lock (Gate) return _stamp; } }
         internal static int Version { get { lock (Gate) return _version; } }
-        internal static List<OnlinePlayer> Players { get { lock (Gate) return new List<OnlinePlayer>(_players); } }
-
         internal static OnlinePlayer ByLogin(string login)
         {
             if (string.IsNullOrEmpty(login)) return null;

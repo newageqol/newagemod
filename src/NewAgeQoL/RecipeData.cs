@@ -62,15 +62,6 @@ namespace NewAgeQoL
 
         internal static string CacheFile => Path.Combine(Path.Combine(BepInEx.Paths.CachePath, "NewAgeQoL"), "recipes.txt");
 
-        internal static string Stamp
-        {
-            get
-            {
-                Load();
-                return _pack.Stamp;
-            }
-        }
-
         internal static List<Recipe> Recipes
         {
             get

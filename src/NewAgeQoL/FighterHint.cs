@@ -216,11 +216,6 @@ namespace NewAgeQoL
 
         internal const float Slack = 0.012f;
 
-        internal static float Limit(float slack)
-        {
-            return Mathf.Max(12f, Screen.height * slack);
-        }
-
         internal static Camera Eye()
         {
             var view = CombatView();
@@ -231,37 +226,6 @@ namespace NewAgeQoL
         {
             var view = BaseLocationView.GetInstance() as CombatLocationView;
             return view != null ? view : null;
-        }
-
-        internal static bool Zone(Camera camera, AbstractCharacter ch, out Rect zone)
-        {
-            bool capsule;
-            return Zone(camera, ch, out zone, out capsule);
-        }
-
-        internal static bool Zone(Camera camera, AbstractCharacter ch, out Rect zone, out bool capsule)
-        {
-            zone = new Rect();
-            capsule = true;
-            if (camera == null || ch == null || ch.HexGridPosition == null) return false;
-            var view = CombatView();
-            var grid = view != null && view.HexGrid != null ? view.HexGrid.transform : null;
-            if (grid == null) return false;
-            var center = HexUtils.offsetToPixelInWordSpace(grid, ch.HexGridPosition);
-            float left = float.MaxValue, right = float.MinValue, bottom = float.MaxValue, top = float.MinValue;
-            for (int k = 0; k < 6; k++)
-            {
-                float angle = -Mathf.PI / 3f * (k + 0.5f);
-                var corner = center + grid.TransformVector(new Vector3(MathConsts.HEX_SIZE * Mathf.Cos(angle), 0f, MathConsts.HEX_SIZE * Mathf.Sin(angle)));
-                var spot = camera.WorldToScreenPoint(corner);
-                if (spot.z <= 0f) return false;
-                left = Mathf.Min(left, spot.x);
-                right = Mathf.Max(right, spot.x);
-                bottom = Mathf.Min(bottom, spot.y);
-                top = Mathf.Max(top, spot.y);
-            }
-            zone = Rect.MinMaxRect(left, bottom, right, top);
-            return true;
         }
 
         private static void Listen()
@@ -291,6 +255,7 @@ namespace NewAgeQoL
             bool same = States.TryGetValue(msg.UserId, out was) && was != null && was.Count == fresh.Count;
             States[msg.UserId] = fresh;
             Branches.Saw(fresh);
+            Prediction.Saw(msg.UserId, fresh);
             FirstAsk.Remove(msg.UserId);
             if (!same) Plugin.Trace("[fighter] states " + msg.UserId + ": " + fresh.Count);
         }

@@ -78,12 +78,6 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[cards] " + e.Message); }
         }
 
-        internal static void FitNow(Component grid)
-        {
-            try { Fit(grid); }
-            catch (Exception e) { Plugin.Trace("[cards] " + e.Message); }
-        }
-
         private static void Fit(Component grid)
         {
             if (grid == null || !grid.gameObject.activeInHierarchy) return;

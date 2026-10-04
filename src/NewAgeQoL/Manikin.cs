@@ -457,6 +457,16 @@ namespace NewAgeQoL
             });
         }
 
+        private static void Wipe()
+        {
+            if (Wear.Count == 0) return;
+            Wear.Clear();
+            Keep();
+            _shownSeen = -1;
+            Paint();
+            Plugin.Trace("[kit] spare kit cleared");
+        }
+
         private static void Build()
         {
             Close();
@@ -498,6 +508,10 @@ namespace NewAgeQoL
             title.alignment = TextAnchor.MiddleLeft;
 
             OnlineWindow.MakeCloseButton(_panelGo.transform, Close);
+
+            var wipe = OnlineWindow.MakeGameButton(_panelGo.transform, "Очистить", 150f, 36f, Wipe);
+            OnlineWindow.Place((RectTransform)wipe.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
+                new Vector2(-75f, -58f - 3.5f * Cell - 3f * Gap - 18f), new Vector2(75f, -58f - 3.5f * Cell - 3f * Gap + 18f));
 
             var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.UserMenuCharacterSlotsPanelContentPrefab : null;
             if (prefab == null) throw new Exception("game equipment window not found");

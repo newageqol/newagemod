@@ -122,11 +122,6 @@ namespace NewAgeQoL
             nc.SendRequest(new UserInfoRequest(userId, login));
         }
 
-        internal static bool Has(int userId)
-        {
-            return Known.ContainsKey(userId);
-        }
-
         internal static void AskNow(int userId, string login)
         {
             if (userId <= 0) return;
@@ -167,17 +162,6 @@ namespace NewAgeQoL
             sb.Append("   body ").Append(r.Body);
             sb.Append("   arms ").Append(r.Left).Append('/').Append(r.Right);
             sb.Append("   legs ").Append(r.Legs);
-            return sb.ToString();
-        }
-
-        internal static string Magic(int userId)
-        {
-            ArmorRec r;
-            if (!Known.TryGetValue(userId, out r)) return "";
-            var sb = new StringBuilder();
-            sb.Append("полнолуние ").Append(r.Black);
-            sb.Append("   рассвет ").Append(r.White);
-            sb.Append("   астрал ").Append(r.Astral);
             return sb.ToString();
         }
     }

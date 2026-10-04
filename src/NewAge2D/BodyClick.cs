@@ -36,7 +36,6 @@ internal static class BodyClick
     private static readonly System.Reflection.MethodInfo Moved = AccessTools.Method(typeof(HexGridControl), "PointerMoved");
     private static readonly System.Reflection.MethodInfo Fire = AccessTools.Method(typeof(HexGridControl), "FireClickEvent");
     private static readonly List<RaycastResult> Hits = new();
-    private static readonly Vector3[] Corners = new Vector3[8];
     private static readonly Texture2D[] Hands = new Texture2D[3];
     private static int _scale;
     private static bool _shown;

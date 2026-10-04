@@ -26,8 +26,6 @@ public sealed class SwfReader
         set { _pos = value; _bitCount = 0; }
     }
 
-    public bool Eof => _pos >= _data.Length;
-
     public void Align() => _bitCount = 0;
 
     public byte ReadUI8()
@@ -35,8 +33,6 @@ public sealed class SwfReader
         _bitCount = 0;
         return _data[_pos++];
     }
-
-    public sbyte ReadSI8() => (sbyte)ReadUI8();
 
     public ushort ReadUI16()
     {
@@ -68,15 +64,6 @@ public sealed class SwfReader
         float v = BitConverter.ToSingle(_data, _pos);
         _pos += 4;
         return v;
-    }
-
-    public byte[] ReadBytes(int count)
-    {
-        _bitCount = 0;
-        var r = new byte[count];
-        Buffer.BlockCopy(_data, _pos, r, 0, count);
-        _pos += count;
-        return r;
     }
 
     public void Skip(int count)
@@ -171,12 +158,6 @@ public sealed class SwfReader
     public SwfColor ReadRgba()
     {
         byte r = ReadUI8(), g = ReadUI8(), b = ReadUI8(), a = ReadUI8();
-        return new SwfColor(r, g, b, a);
-    }
-
-    public SwfColor ReadArgb()
-    {
-        byte a = ReadUI8(), r = ReadUI8(), g = ReadUI8(), b = ReadUI8();
         return new SwfColor(r, g, b, a);
     }
 

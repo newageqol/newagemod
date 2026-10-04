@@ -95,6 +95,7 @@ namespace NewAgeQoL
         internal static void Stash()
         {
             if (Busy || Plugin.Instance == null) return;
+            if (SideButtons.InCombat()) { Plugin.Trace("[art] no storage trips from combat"); return; }
             if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] no storage trips from a fight claim"); return; }
             Plugin.Instance.StartCoroutine(StashRoutine());
         }
@@ -102,6 +103,7 @@ namespace NewAgeQoL
         internal static void Restore()
         {
             if (Busy || Plugin.Instance == null) return;
+            if (SideButtons.InCombat()) { Plugin.Trace("[art] no storage trips from combat"); return; }
             if (SideButtons.ClaimLocked()) { Plugin.Trace("[art] no storage trips from a fight claim"); return; }
             Plugin.Instance.StartCoroutine(RestoreRoutine());
         }
@@ -127,9 +129,13 @@ namespace NewAgeQoL
                                            && !(plan.TryGetValue(w.SlotId, out int kept) && kept == w.ThingId)).ToList();
 
                 var memory = worn.Select(w => new Slot { ThingId = w.ThingId, SlotId = w.SlotId }).ToList();
+                var fresh = new List<Slot>(memory);
                 foreach (var o in Recall())
-                    if (!memory.Any(m => m.ThingId == o.ThingId && m.SlotId == o.SlotId))
-                        memory.Add(o);
+                {
+                    int at = fresh.FindIndex(m => m.ThingId == o.ThingId && m.SlotId == o.SlotId);
+                    if (at >= 0) fresh.RemoveAt(at);
+                    else memory.Add(o);
+                }
                 if (memory.Count > 0) Remember(memory);
 
                 var kit = new Dictionary<int, int>();
@@ -162,9 +168,36 @@ namespace NewAgeQoL
                     store.TryGetValue(m.ThingId, out int n);
                     store[m.ThingId] = n + 1;
                 }
+                var listedAll = new Dictionary<int, int>(store);
                 foreach (var pair in kit)
                     if (store.TryGetValue(pair.Key, out int n))
                         store[pair.Key] = n > pair.Value ? n - pair.Value : 0;
+                var bagArt = new Dictionary<int, int>();
+                foreach (var it in Scanned)
+                {
+                    if (it.Rarity != WardrobeArt.Rarity || it.ThingId <= 0 || it.Qty <= 0) continue;
+                    bagArt.TryGetValue(it.ThingId, out int had);
+                    bagArt[it.ThingId] = had + it.Qty;
+                }
+                int loose = 0;
+                foreach (var pair in bagArt)
+                {
+                    listedAll.TryGetValue(pair.Key, out int listed);
+                    kit.TryGetValue(pair.Key, out int forKit);
+                    int unlisted = pair.Value - listed;
+                    if (unlisted <= 0) continue;
+                    for (int i = 0; i < unlisted; i++) memory.Add(new Slot { ThingId = pair.Key, SlotId = 0 });
+                    loose += unlisted;
+                    int extra = pair.Value - (listed > forKit ? listed : forKit);
+                    if (extra <= 0) continue;
+                    store.TryGetValue(pair.Key, out int toBox);
+                    store[pair.Key] = toBox + extra;
+                }
+                if (loose > 0)
+                {
+                    Plugin.Trace("[art] artifacts lying in the bag go to storage too: " + loose);
+                    Remember(memory);
+                }
                 var art = new List<Item>();
                 foreach (var it in Scanned)
                 {
@@ -710,6 +743,7 @@ namespace NewAgeQoL
         private static IEnumerator EnsureStorage()
         {
             if (AtStorage()) yield break;
+            if (SideButtons.InCombat()) { Plugin.Trace("[art] storage trip stopped: in combat"); yield break; }
 
             if (Loc() != IlleniumLoc && Loc() != BankLoc)
             {
@@ -969,6 +1003,8 @@ namespace NewAgeQoL
         private static void OnWear(object m)
         {
             if (!(m is InventoryWearResponseMessage w)) return;
+            int me = Me();
+            if (w.UserId != 0 && me != 0 && w.UserId != me) return;
             Worn.Clear();
             if (w.Items != null) Worn.AddRange(w.Items);
             _slotsFresh = false;
@@ -1024,6 +1060,16 @@ namespace NewAgeQoL
         {
             float t = 0f;
             while (t < seconds) { yield return null; t += Time.unscaledDeltaTime; }
+        }
+
+        private static int Me()
+        {
+            try
+            {
+                var info = Controllers.User?.UserInfo;
+                return info != null ? info.UserId : 0;
+            }
+            catch { return 0; }
         }
 
         private static int Loc()

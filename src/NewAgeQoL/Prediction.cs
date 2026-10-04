@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using HarmonyLib;
 using Transport.Messages.Responses.Chat;
 using Transport.Messages.Responses.Combat;
+using Transport.Messages.Responses.Combat.States;
 using UnityEngine;
 
 namespace NewAgeQoL
@@ -11,7 +12,10 @@ namespace NewAgeQoL
     internal static class Prediction
     {
         private const string AbilityKey = "abilities.ability126.name";
+        private const int StateType = 3;
+        private const int StateId = 126;
         private const float Window = 3f;
+        private const float Lag = 6f;
 
         private static readonly Regex Used = new Regex(@"^\s*(.+?)\s+использовал\S*\s+\S+\s*\[\s*([^\]]+?)\s*\](.*)$", RegexOptions.Compiled | RegexOptions.Singleline);
         private static readonly Regex Owner = new Regex(@"data-id='(-?\d+)'", RegexOptions.Compiled);
@@ -27,6 +31,9 @@ namespace NewAgeQoL
         private static readonly Dictionary<int, Jump> Jumps = new Dictionary<int, Jump>();
         private static readonly Dictionary<int, Jump> Items = new Dictionary<int, Jump>();
         private static readonly Dictionary<int, Jump> Added = new Dictionary<int, Jump>();
+        private static readonly HashSet<int> Marked = new HashSet<int>();
+        private static readonly Dictionary<int, float> Settled = new Dictionary<int, float>();
+        private static ICombatData _fight;
         private static AccessTools.FieldRef<ChangeLifeAnimationItem, float?> _startTime;
         private static bool _looked;
         private static string _name;
@@ -38,7 +45,7 @@ namespace NewAgeQoL
             if (item.Group != null && item.Group.actionType == ActionType.THINGEFFECT) return;
             int userId = item.Target.UserId;
             Jump added;
-            if (Added.TryGetValue(userId, out added) && Time.unscaledTime - added.At <= Window && added.Delta == item.life)
+            if (Added.TryGetValue(userId, out added) && Time.unscaledTime - added.At <= Lag && Near(added.Delta, item.life))
             {
                 Added.Remove(userId);
                 if (Applied(item))
@@ -69,16 +76,29 @@ namespace NewAgeQoL
             int delta = indicators.CurrentLife - before;
             if (delta <= 0) return;
             Jumps[message.UserId] = new Jump { Delta = delta, At = Time.unscaledTime };
+            Jump added;
+            if (Added.TryGetValue(message.UserId, out added) && Time.unscaledTime - added.At <= Lag
+                && Math.Abs(delta - added.Delta) <= Math.Max(2, added.Delta / 50))
+            {
+                Added.Remove(message.UserId);
+                Plugin.Trace("[prediction] " + message.UserId + ": server numbers already had +" + added.Delta + ", life " + indicators.CurrentLife);
+            }
         }
 
         internal static void Heard(ChatResponseMessage message)
         {
             if (message == null || message.Type != 3 || string.IsNullOrEmpty(message.Text)) return;
             string raw = message.Text;
-            var used = Used.Match(Tag.Replace(raw, ""));
-            if (!used.Success || !Same(used.Groups[2].Value)) return;
-            if (!SideButtons.InCombat()) return;
-            Plugin.Trace("[prediction] combat log: " + (raw.Length > 300 ? raw.Substring(0, 300) : raw));
+            string plain = Tag.Replace(raw, "");
+            var used = Used.Match(plain);
+            if (!used.Success || !Same(used.Groups[2].Value))
+            {
+                if (_name != null && Norm(plain).Contains("[" + _name + "]"))
+                    Plugin.Trace("[prediction] line names the ability but did not match: " + Cut(raw));
+                return;
+            }
+            if (!SideButtons.InCombat()) { Plugin.Trace("[prediction] line outside combat: " + Cut(raw)); return; }
+            Plugin.Trace("[prediction] combat log: " + Cut(raw));
 
             int bonus = Bonus(used.Groups[3].Value);
             if (bonus <= 0) { Plugin.Trace("[prediction] no effect number in the line"); return; }
@@ -87,20 +107,61 @@ namespace NewAgeQoL
             if (cd == null || cd.Characters == null) return;
             var mage = Find(cd, raw, used.Groups[1].Value.Trim());
             if (mage == null) { Plugin.Trace("[prediction] fighter '" + used.Groups[1].Value.Trim() + "' not found on the field"); return; }
+            Grant(mage, bonus, true);
+        }
+
+        internal static void Saw(int userId, List<UserEnchantmentsResponseItem> items)
+        {
+            if (userId == 0 || items == null) return;
+            UserEnchantmentsResponseItem state = null;
+            foreach (var it in items)
+                if (it != null && it.StateType == StateType && it.StateId == StateId) { state = it; break; }
+            var cd = FighterHint.Cd();
+            if (!ReferenceEquals(cd, _fight)) { _fight = cd; Marked.Clear(); }
+            if (state == null) { Marked.Remove(userId); return; }
+            if (!Marked.Add(userId)) return;
+            if (!SideButtons.InCombat()) return;
+            AbstractCharacter mage;
+            if (cd == null || cd.Characters == null || !cd.Characters.TryGetValue(userId, out mage) || mage == null) return;
+            var indicators = mage.Indicators;
+            if (indicators == null) return;
+            int bonus = FighterHint.Power(state);
+            Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": state " + StateType + "_" + StateId
+                + " appeared, bonus " + bonus + ", duration " + state.Duration + ", life " + indicators.CurrentLife + " of " + indicators.MaxLife);
+            if (bonus <= 0) return;
+            Grant(mage, bonus, false);
+        }
+
+        private static void Grant(AbstractCharacter mage, int bonus, bool exact)
+        {
             int userId = mage.UserId;
             var indicators = mage.Indicators;
             if (indicators == null || indicators.IsDead) return;
 
+            float settled;
+            if (Settled.TryGetValue(userId, out settled) && Time.unscaledTime - settled <= Lag) return;
+
             Jump jump;
+            if (Added.TryGetValue(userId, out jump) && Time.unscaledTime - jump.At <= Lag)
+            {
+                if (!exact || jump.Delta == bonus) return;
+                int fix = bonus - jump.Delta;
+                indicators.CurrentLife += fix;
+                jump.Delta = bonus;
+                Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": combat log says +" + bonus + ", corrected by " + fix + ", life " + indicators.CurrentLife);
+                return;
+            }
             if (Jumps.TryGetValue(userId, out jump) && Time.unscaledTime - jump.At <= Window
                 && Math.Abs(jump.Delta - bonus) <= Math.Max(2, bonus / 50))
             {
+                Settled[userId] = Time.unscaledTime;
                 Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": +" + bonus + " already in the server numbers, life " + indicators.CurrentLife);
                 return;
             }
-            if (Items.TryGetValue(userId, out jump) && Time.unscaledTime - jump.At <= Window && jump.Delta == bonus)
+            if (Items.TryGetValue(userId, out jump) && Time.unscaledTime - jump.At <= Window && (exact ? jump.Delta == bonus : Near(jump.Delta, bonus)))
             {
                 Items.Remove(userId);
+                Settled[userId] = Time.unscaledTime;
                 Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": server sent +" + bonus + " as an animation, it adds the life itself");
                 return;
             }
@@ -108,7 +169,18 @@ namespace NewAgeQoL
             int was = indicators.CurrentLife;
             indicators.CurrentLife = was + bonus;
             Added[userId] = new Jump { Delta = bonus, At = Time.unscaledTime };
-            Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": life " + was + " + " + bonus + " = " + indicators.CurrentLife + " of " + indicators.MaxLife + ", at once from the combat log");
+            Plugin.Trace("[prediction] " + (mage.Login ?? userId.ToString()) + ": life " + was + " + " + bonus + " = " + indicators.CurrentLife + " of " + indicators.MaxLife
+                + (exact ? ", at once from the combat log" : ", from the state"));
+        }
+
+        private static bool Near(int a, int b)
+        {
+            return Math.Abs(a - b) <= Math.Max(2, Math.Max(a, b) / 50);
+        }
+
+        private static string Cut(string raw)
+        {
+            return raw.Length > 300 ? raw.Substring(0, 300) : raw;
         }
 
         private static AbstractCharacter Find(ICombatData cd, string raw, string login)

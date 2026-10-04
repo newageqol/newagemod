@@ -8,9 +8,9 @@ namespace NewAgeQoL
         private const int Side = 48;
         private const int Wide = 72;
 
-        private static Sprite _drop, _bolt, _spark, _enter, _bin, _cap, _head, _mask, _mail, _burst, _scroll, _quest;
+        private static Sprite _drop, _bolt, _spark, _enter, _bin, _cap, _head, _burst, _scroll, _quest;
         private static Sprite _star, _starEmpty;
-        private static Sprite _blades, _downward, _hex, _disc, _again;
+        private static Sprite _blades, _downward, _again;
 
         private static readonly Vector2[] Zigzag =
         {
@@ -169,21 +169,6 @@ namespace NewAgeQoL
             return _bin;
         }
 
-        internal static Sprite Mail()
-        {
-            if (Gone(_mail))
-                _mail = Shape((x, y) =>
-                {
-                    if (Mathf.Abs(x) > 0.92f || Mathf.Abs(y) > 0.64f) return false;
-                    float flap = 0.64f - Mathf.Abs(x) * 0.7f;
-                    if (Mathf.Abs(y - flap) <= 0.1f && y >= -0.05f) return false;
-                    float lower = -0.64f + Mathf.Abs(x) * 0.7f;
-                    if (Mathf.Abs(y - lower) <= 0.08f && y <= -0.05f && Mathf.Abs(x) > 0.25f) return false;
-                    return true;
-                });
-            return _mail;
-        }
-
         internal static Sprite Burst()
         {
             if (Gone(_burst))
@@ -220,65 +205,6 @@ namespace NewAgeQoL
                     return false;
                 });
             return _downward;
-        }
-
-        internal static Sprite Hex()
-        {
-            if (Gone(_hex))
-                _hex = Shape((x, y) =>
-                {
-                    const float side = 0.86f;
-                    if (Mathf.Abs(x) > side) return false;
-                    if (Mathf.Abs(0.5f * x + 0.8660254f * y) > side) return false;
-                    if (Mathf.Abs(0.5f * x - 0.8660254f * y) > side) return false;
-                    return true;
-                });
-            return _hex;
-        }
-
-        internal static Sprite Disc()
-        {
-            if (Gone(_disc)) _disc = Shape((x, y) => x * x + y * y <= 0.94f * 0.94f);
-            return _disc;
-        }
-
-        private static Sprite Paint(Func<float, float, Color32> ink)
-        {
-            try
-            {
-                var tex = new Texture2D(Side, Side, TextureFormat.RGBA32, false);
-                var px = new Color32[Side * Side];
-                const int sub = 3;
-                for (int py = 0; py < Side; py++)
-                    for (int pxx = 0; pxx < Side; pxx++)
-                    {
-                        float r = 0f, g = 0f, b = 0f, a = 0f;
-                        for (int sy = 0; sy < sub; sy++)
-                            for (int sx = 0; sx < sub; sx++)
-                            {
-                                float x = ((pxx + (sx + 0.5f) / sub) / Side) * 2f - 1f;
-                                float y = ((py + (sy + 0.5f) / sub) / Side) * 2f - 1f;
-                                var one = ink(x, y);
-                                float weight = one.a / 255f;
-                                r += one.r * weight;
-                                g += one.g * weight;
-                                b += one.b * weight;
-                                a += weight;
-                            }
-                        int taken = sub * sub;
-                        byte alpha = (byte)Mathf.RoundToInt(255f * a / taken);
-                        px[py * Side + pxx] = a < 0.001f
-                            ? new Color32(0, 0, 0, 0)
-                            : new Color32((byte)Mathf.Clamp(r / a, 0f, 255f), (byte)Mathf.Clamp(g / a, 0f, 255f),
-                                          (byte)Mathf.Clamp(b / a, 0f, 255f), alpha);
-                    }
-                tex.SetPixels32(px);
-                tex.Apply();
-                tex.filterMode = FilterMode.Bilinear;
-                tex.wrapMode = TextureWrapMode.Clamp;
-                return Sprite.Create(tex, new Rect(0f, 0f, Side, Side), new Vector2(0.5f, 0.5f), 100f);
-            }
-            catch (Exception e) { Plugin.Trace("[icons] colored icon: " + e.Message); return null; }
         }
 
         internal static Sprite Quest()
@@ -377,24 +303,6 @@ namespace NewAgeQoL
                     return true;
                 });
             return _scroll;
-        }
-
-        internal static Sprite Mask()
-        {
-            if (Gone(_mask))
-                _mask = Shape((x, y) =>
-                {
-                    float fx = x / 0.74f, fy = y / 0.94f;
-                    if (fx * fx + fy * fy > 1f) return false;
-                    float lx = (x + 0.3f) / 0.2f, ly = (y - 0.3f) / 0.15f;
-                    if (lx * lx + ly * ly <= 1f) return false;
-                    float rx = (x - 0.3f) / 0.2f, ry = (y - 0.3f) / 0.15f;
-                    if (rx * rx + ry * ry <= 1f) return false;
-                    float mx = x / 0.44f, my = (y + 0.28f) / 0.26f;
-                    if (y <= -0.28f && mx * mx + my * my <= 1f) return false;
-                    return true;
-                });
-            return _mask;
         }
 
         internal static Sprite Head()

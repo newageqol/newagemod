@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.12.1";
+        public const string Version = "0.13.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -581,6 +581,7 @@ namespace NewAgeQoL
             CultPotions.Shutdown();
             DressDrag.Shutdown();
             CardAsk.Shutdown();
+            Claims.Shutdown();
             DiskJournal.Detach(Logger);
         }
 

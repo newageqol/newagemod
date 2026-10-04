@@ -41,12 +41,6 @@ internal static class Captions
 
     private static readonly ConditionalWeakTable<LifeManaEnergyDisplay, Board> Boards = new();
 
-    internal static LifeManaEnergyDisplay DisplayOf(AbstractCharacter character)
-    {
-        if (character == null || DisplaysField == null || !(Fighters.Combat() is CombatData combat)) return null;
-        return DisplaysField.GetValue(combat) is Dictionary<int, LifeManaEnergyDisplay> displays && displays.TryGetValue(character.UserId, out var display) ? display : null;
-    }
-
     internal static void Order()
     {
         if (!Plugin.FlashFight || DisplaysField == null || Time.unscaledTime < _orderAt) return;

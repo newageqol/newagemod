@@ -61,24 +61,6 @@ public sealed class MovieClip(SwfMovie movie, SwfTimeline timeline, int characte
     public void Play() => Playing = true;
     public void Stop() => Playing = false;
 
-    public bool GotoAndPlay(string label)
-    {
-        int frame = Timeline.FrameOf(label);
-        if (frame < 0) return false;
-        GotoFrame(frame);
-        Playing = true;
-        return true;
-    }
-
-    public bool GotoAndStop(string label)
-    {
-        int frame = Timeline.FrameOf(label);
-        if (frame < 0) return false;
-        GotoFrame(frame);
-        Playing = false;
-        return true;
-    }
-
     public void GotoAndStop(int frame)
     {
         GotoFrame(frame);
@@ -207,26 +189,6 @@ public sealed class MovieClip(SwfMovie movie, SwfTimeline timeline, int characte
         return null;
     }
 
-    public MovieClip AttachMovie(string exportName, string instanceName = null, int? depth = null)
-    {
-        var clip = Movie.CreateInstance(exportName);
-        if (clip is null) return null;
-
-        clip.Name = instanceName ?? exportName;
-        clip.GotoFrame(0);
-
-        int at = depth ?? NextHighestDepth();
-        _attached[at] = new DisplayObject
-        {
-            Depth = at,
-            CharacterId = clip.CharacterId,
-            Name = clip.Name,
-            Clip = clip,
-        };
-        _layersCache = null;
-        return clip;
-    }
-
     public MovieClip AttachExternal(MovieClip clip, string instanceName = null, int? depth = null)
     {
         if (clip is null) return null;
@@ -258,81 +220,6 @@ public sealed class MovieClip(SwfMovie movie, SwfTimeline timeline, int characte
             }
         }
         return false;
-    }
-
-    public void ClearAttached()
-    {
-        _attached.Clear();
-        _layersCache = null;
-    }
-
-    public void ClearContent()
-    {
-        _displayList.Clear();
-        _attached.Clear();
-        _layersCache = null;
-    }
-
-    public void SwapDepths(int first, int second)
-    {
-        if (first == second) return;
-        DisplayObject Take(int depth, out bool attached)
-        {
-            if (_attached.Remove(depth, out var layer)) { attached = true; return layer; }
-            if (_displayList.Remove(depth, out layer)) { attached = false; return layer; }
-            attached = false;
-            return null;
-        }
-        var a = Take(first, out bool aAttached);
-        var b = Take(second, out bool bAttached);
-        if (a is not null)
-        {
-            a.Depth = second;
-            (aAttached ? _attached : _displayList)[second] = a;
-        }
-        if (b is not null)
-        {
-            b.Depth = first;
-            (bAttached ? _attached : _displayList)[first] = b;
-        }
-        _layersCache = null;
-    }
-
-    public static MovieClip CreateEmpty(SwfMovie movie, string name)
-    {
-        var timeline = new SwfTimeline
-        {
-            CharacterId = -1,
-            Frames = new List<SwfFrame> { new() { Index = 0 } },
-            Labels = new Dictionary<string, int>(StringComparer.Ordinal),
-        };
-        return new MovieClip(movie, timeline, -1) { Name = name };
-    }
-
-    public bool RemoveAt(int depth)
-    {
-        bool removed = _attached.Remove(depth) || _displayList.Remove(depth);
-        if (removed) _layersCache = null;
-        return removed;
-    }
-
-    public DisplayObject LayerOf(MovieClip child)
-    {
-        foreach (var layer in Layers)
-            if (ReferenceEquals(layer.Clip, child))
-                return layer;
-        return null;
-    }
-
-    public DisplayObject AttachChild(MovieClip clip, string name, int depth)
-    {
-        clip.Name = name;
-        var layer = new DisplayObject { Depth = depth, CharacterId = clip.CharacterId, Name = name, Clip = clip };
-        _attached[depth] = layer;
-        _layersCache = null;
-        ChildCreated?.Invoke(this, layer);
-        if (clip.CurrentFrame < 0 && clip.FrameCount > 0) clip.GotoFrame(0);
-        return layer;
     }
 
     public int NextHighestDepth()

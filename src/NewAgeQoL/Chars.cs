@@ -64,7 +64,6 @@ namespace NewAgeQoL
         };
         private static ConfigFile _home;
         private static ConfigFile _file;
-        private static EventHandler<SettingChangedEventArgs> _watch;
         private static int _who;
         private static int _legacy;
         private static float _lookAt;
@@ -74,14 +73,6 @@ namespace NewAgeQoL
         internal static void Home(ConfigFile file)
         {
             _home = file;
-        }
-
-        internal static void Watch(EventHandler<SettingChangedEventArgs> watch)
-        {
-            if (watch == null) return;
-            _watch = watch;
-            if (_home != null) _home.SettingChanged += watch;
-            if (_file != null) _file.SettingChanged += watch;
         }
 
         internal static void Legacy(int userId)
@@ -154,11 +145,6 @@ namespace NewAgeQoL
                 foreach (var slot in Slots) slot.Move(file, fresh, all);
                 Tidy(file);
                 file.Save();
-                if (_watch != null)
-                {
-                    if (_file != null) _file.SettingChanged -= _watch;
-                    file.SettingChanged += _watch;
-                }
                 _file = file;
                 _who = userId;
                 Forget();

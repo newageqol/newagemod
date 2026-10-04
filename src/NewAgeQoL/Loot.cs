@@ -14,8 +14,9 @@ namespace NewAgeQoL
     {
         private const float Life = 10f;
         private const float Fade = 0.6f;
-        private const float Leave = 1.5f;
+        private const float Leave = 0f;
         private const float Wide = 300f;
+        private const float Folded = 230f;
         private const float Pad = 12f;
         private const float Pic = 30f;
         private const int Most = 4;
@@ -29,6 +30,11 @@ namespace NewAgeQoL
             internal RectTransform Rt;
             internal CanvasGroup Veil;
             internal float Until;
+            internal bool Shut;
+            internal Text Title;
+            internal string Head;
+            internal LayoutElement Size;
+            internal readonly List<GameObject> Body = new List<GameObject>();
             internal GameObject Wear;
             internal readonly HashSet<long> Worn = new HashSet<long>();
             internal readonly List<KeyValuePair<Image, string>> Pics = new List<KeyValuePair<Image, string>>();
@@ -194,6 +200,7 @@ namespace NewAgeQoL
                 var plate = Plates[i];
                 if (plate.Go == null) { Plates.RemoveAt(i); continue; }
                 Show(plate);
+                if (plate.Shut) { plate.Veil.alpha = 1f; continue; }
                 if (RectTransformUtility.RectangleContainsScreenPoint(plate.Rt, Input.mousePosition, null))
                 {
                     plate.Until = Mathf.Max(plate.Until, now + 2f);
@@ -201,8 +208,9 @@ namespace NewAgeQoL
                     continue;
                 }
                 float left = plate.Until - now;
-                if (left <= 0f) { Drop(plate); continue; }
-                plate.Veil.alpha = left < Fade ? left / Fade : 1f;
+                bool last = i == 0;
+                if (left <= 0f) { if (last) Fold(plate, true); else Drop(plate); continue; }
+                plate.Veil.alpha = last || left >= Fade ? 1f : left / Fade;
             }
         }
 
@@ -229,8 +237,23 @@ namespace NewAgeQoL
             if ((_stack.anchoredPosition - want).sqrMagnitude > 0.25f) _stack.anchoredPosition = want;
         }
 
+        private static void Fold(Plate plate, bool shut)
+        {
+            if (plate.Go == null || plate.Shut == shut) return;
+            plate.Shut = shut;
+            foreach (var part in plate.Body) if (part != null) part.SetActive(!shut);
+            plate.Size.preferredWidth = shut ? Folded : Wide;
+            plate.Title.fontSize = shut ? 15 : 18;
+            plate.Title.text = shut ? "Последняя добыча" : plate.Head;
+            plate.Title.GetComponent<LayoutElement>().preferredWidth = (shut ? Folded : Wide) - Pad * 2f - 26f;
+            if (!shut) plate.Until = Time.unscaledTime + Life;
+            plate.Veil.alpha = 1f;
+            Plugin.Trace("[loot] last loot plate " + (shut ? "folded" : "unfolded"));
+        }
+
         private static void Add(Result result)
         {
+            for (int i = Plates.Count - 1; i >= 0; i--) if (Plates[i].Shut) Drop(Plates[i]);
             while (Plates.Count >= Most) Drop(Plates[Plates.Count - 1]);
             var plate = Make(result);
             plate.Until = Time.unscaledTime + Life;
@@ -266,7 +289,8 @@ namespace NewAgeQoL
             edge.effectColor = result.Win ? WardrobeLook.Accent : WardrobeLook.Edge;
             edge.effectDistance = new Vector2(2f, -2f);
 
-            go.GetComponent<LayoutElement>().preferredWidth = Wide;
+            plate.Size = go.GetComponent<LayoutElement>();
+            plate.Size.preferredWidth = Wide;
 
             var column = go.GetComponent<VerticalLayoutGroup>();
             column.padding = new RectOffset((int)Pad, (int)Pad, 8, 10);
@@ -277,9 +301,11 @@ namespace NewAgeQoL
             column.childForceExpandWidth = false;
             column.childForceExpandHeight = false;
 
-            var title = Line(go.transform, result.Win ? "Победа" : "Поражение", 18, FontStyle.Bold, result.Win ? WardrobeLook.Good : WardrobeLook.Bad);
+            plate.Head = result.Win ? "Победа" : "Поражение";
+            var title = Line(go.transform, plate.Head, 18, FontStyle.Bold, result.Win ? WardrobeLook.Good : WardrobeLook.Bad);
             title.GetComponent<LayoutElement>().preferredWidth = Wide - Pad * 2f - 26f;
-            Shut(go.transform, plate);
+            plate.Title = title;
+            var close = Shut(go.transform, plate);
 
             var gains = new List<string>();
             if (result.Exp != 0) gains.Add(Paint("Опыт", WardrobeLook.Label) + " " + Paint(Signed(result.Exp), Exp));
@@ -301,10 +327,15 @@ namespace NewAgeQoL
                 foreach (var one in result.Worn) plate.Worn.Add(Key(one));
                 plate.Wear = Worn(go.transform, result.Worn);
             }
+            foreach (Transform part in go.transform)
+                if (part.gameObject != title.gameObject && part.gameObject != close) plate.Body.Add(part.gameObject);
+            var open = go.AddComponent<Button>();
+            open.transition = Selectable.Transition.None;
+            open.onClick.AddListener(() => { if (plate.Shut) Fold(plate, false); });
             return plate;
         }
 
-        private static void Shut(Transform host, Plate plate)
+        private static GameObject Shut(Transform host, Plate plate)
         {
             var go = new GameObject("close", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(host, false);
@@ -328,6 +359,7 @@ namespace NewAgeQoL
             var x = OnlineWindow.Label(go.transform, "×", 20, FontStyle.Bold, WardrobeLook.Bright);
             x.raycastTarget = false;
             OnlineWindow.Place(x.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(0f, 2f));
+            return go;
         }
 
         private static void Row(Transform host, Plate plate, DialogDescriptionItemMessage item)

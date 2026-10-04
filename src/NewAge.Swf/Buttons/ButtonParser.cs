@@ -27,9 +27,6 @@ public sealed class SwfButton
 
     public IEnumerable<SwfButtonRecord> DownState =>
         Records.Where(r => r.Down).OrderBy(r => r.Depth);
-
-    public IEnumerable<SwfButtonRecord> HitState =>
-        Records.Where(r => r.HitTest).OrderBy(r => r.Depth);
 }
 
 public static class ButtonParser

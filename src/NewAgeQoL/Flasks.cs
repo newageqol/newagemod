@@ -26,8 +26,6 @@ namespace NewAgeQoL
 
         private static readonly string[] Titles = { "Жизнь", "Мана", "Энергия", "Грибы" };
 
-        internal const int Shrooms = 3;
-
         private static readonly int[][] Kin =
         {
             new[] { 426, 427, 428, 2300, 2112, 2113, 2114, 2115, 2117, 2116 },
@@ -155,8 +153,6 @@ namespace NewAgeQoL
 
         internal static bool Shown(int row) => Id(row) > 0 || Wish(row).Length > 0;
 
-        internal static bool Absent(int row) => !Shown(row) || (Thing(row) > 0 ? Left[row] == 0 : Checked[row]);
-
         internal static bool Busy(int row) => row >= 0 && row < Rows && RowBusy[row];
 
         private static readonly int[] BadgeOf = { int.MinValue, int.MinValue, int.MinValue, int.MinValue };
@@ -189,18 +185,6 @@ namespace NewAgeQoL
         }
 
         internal static Sprite Icon(int row) => IconFor(Thing(row));
-
-        internal static Sprite Real(int row)
-        {
-            int id = Thing(row);
-            if (id <= 0) return null;
-            string image;
-            lock (Images) image = Images.TryGetValue(id, out var img) ? img : null;
-            if (string.IsNullOrEmpty(image)) return null;
-            if (Sharp.TryGetValue(image, out var crisp) && crisp != null && crisp.texture != null) return crisp;
-            if (Icons.TryGetValue(image, out var known) && known != null && known.texture != null) return known;
-            return null;
-        }
 
         internal static Sprite IconFor(int id)
         {
@@ -262,11 +246,6 @@ namespace NewAgeQoL
         {
             if (thingId <= 0) return;
             lock (Uses) Uses[thingId] = canUse;
-        }
-
-        internal static bool UseKnown(int thingId)
-        {
-            lock (Uses) return Uses.ContainsKey(thingId);
         }
 
         internal static void Note(int thingId, string image, int subType, int rarity, int level)
@@ -485,20 +464,6 @@ namespace NewAgeQoL
             catch (System.Exception e) { Plugin.Trace("[flasks] name to id conversion: " + e.Message); }
         }
 
-        private static int Find(string want)
-        {
-            int loose = 0;
-            lock (Scanned)
-                foreach (var s in Scanned)
-                {
-                    string name = NameOf(s.ThingId);
-                    if (string.IsNullOrEmpty(name)) continue;
-                    if (string.Equals(name, want, System.StringComparison.OrdinalIgnoreCase)) return s.ThingId;
-                    if (loose == 0 && name.IndexOf(want, System.StringComparison.OrdinalIgnoreCase) >= 0) loose = s.ThingId;
-                }
-            return loose;
-        }
-
         private static bool NeedNames()
         {
             for (int row = 0; row < Rows; row++)
@@ -711,21 +676,7 @@ namespace NewAgeQoL
             DiskJournal.Flush();
         }
 
-        internal static bool Drink(int row, int count, System.Action<int, bool> done)
-        {
-            if (Plugin.Instance == null || row < 0 || row >= Rows) return false;
-            if (RowBusy[row] || !Shown(row)) return false;
-            Plugin.Instance.StartCoroutine(UseRoutine(row, Mathf.Max(0, count), done));
-            return true;
-        }
-
         internal static int Remaining(int row) => row >= 0 && row < Rows && Thing(row) > 0 ? Left[row] : -1;
-
-        internal static int Current(int row)
-        {
-            if (!Gauge(row, out int cur, out _)) return -1;
-            return Mathf.Max(0, cur);
-        }
 
         private static IEnumerator UseRoutine(int row, int want, System.Action<int, bool> done)
         {

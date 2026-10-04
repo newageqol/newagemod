@@ -13,18 +13,6 @@ public static class SwfBounds
         return any ? rect : SKRect.Empty;
     }
 
-    public static SKRect MeasureAnimation(SwfMovie movie, MovieClip clip, in SwfMatrix matrix, int frames)
-    {
-        var rect = SKRect.Empty;
-        bool any = false;
-        for (int i = 0; i < frames; i++)
-        {
-            Walk(movie, clip, matrix, ref rect, ref any);
-            clip.Advance();
-        }
-        return any ? rect : SKRect.Empty;
-    }
-
     private static void Walk(SwfMovie movie, MovieClip clip, in SwfMatrix matrix, ref SKRect rect, ref bool any)
     {
         var owner = clip.Movie;

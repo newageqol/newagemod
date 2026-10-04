@@ -33,8 +33,6 @@ namespace NewAgeQoL
         private static Text _type, _levelText, _points, _gain, _limits;
         private static Button _wear, _wearAll, _reset;
 
-        internal static bool IsOpen => _go != null;
-
         private static int Cost(int k)
         {
             if (k < 7) return 3;

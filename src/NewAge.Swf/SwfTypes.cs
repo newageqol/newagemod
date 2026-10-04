@@ -48,8 +48,6 @@ public readonly struct SwfColor(byte r, byte g, byte b, byte a)
     public byte B { get; } = b;
     public byte A { get; } = a;
 
-    public uint Argb => (uint)((A << 24) | (R << 16) | (G << 8) | B);
-
     public override string ToString() => $"#{A:X2}{R:X2}{G:X2}{B:X2}";
 }
 

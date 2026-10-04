@@ -42,17 +42,6 @@ namespace NewAgeQoL
             }
         }
 
-        internal static int Unseen
-        {
-            get
-            {
-                Load();
-                int n = 0;
-                foreach (var m in All) if (m.Received && !m.Seen) n++;
-                return n;
-            }
-        }
-
         internal static WardrobeManikin Active
         {
             get
@@ -162,20 +151,6 @@ namespace NewAgeQoL
             All.Remove(m);
             if (ActiveKey == m.Key) ActiveKey = null;
             Touch();
-        }
-
-        internal static bool Receive(int server, string from, long at, string title, string body)
-        {
-            Load();
-            foreach (var m in All)
-                if (m.Received && m.Server == server && m.From == from) return false;
-            All.Add(new WardrobeManikin
-            {
-                Key = Guid.NewGuid().ToString("N"), Title = Clean(title), From = Clean(from), At = at,
-                Server = server, Body = body, Received = true, Seen = false
-            });
-            Touch();
-            return true;
         }
 
         internal static string FreeTitle()

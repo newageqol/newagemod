@@ -428,17 +428,15 @@ internal static class HexLook
 
     private static void Plug(CombatData cd)
     {
-        foreach (var character in cd.Characters.Values)
-        {
-            var spot = character?.HexGridPosition;
-            if (spot == null) continue;
-            int key = Key(spot.clientX, spot.clientY);
-            if (Set.Contains(key)) continue;
-            int around = 0;
-            for (int k = 0; k < 6; k++)
-                if (Set.Contains(Neighbor(key, k))) around++;
-            if (around >= 3 || (cd.MyCharacter != null && ReferenceEquals(character, cd.MyCharacter) && around > 0)) Set.Add(key);
-        }
+        var spot = cd.MyCharacter?.HexGridPosition;
+        if (spot == null) return;
+        int key = Key(spot.clientX, spot.clientY);
+        for (int k = 0; k < 6; k++)
+            if (Set.Contains(Neighbor(key, k)))
+            {
+                Set.Add(key);
+                return;
+            }
     }
 
     private static bool Hover(GridSelection selection, out AbstractCharacter body)

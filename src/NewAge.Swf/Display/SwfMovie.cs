@@ -14,9 +14,7 @@ public sealed class SwfMovie
     private readonly ConcurrentDictionary<int, Lazy<SwfMorphShape>> _morphShapes = new();
     private readonly ConcurrentDictionary<(int Character, int Step), Lazy<SwfShape>> _morphSamples = new();
     private readonly ConcurrentDictionary<int, Lazy<SwfBitmap>> _bitmaps = new();
-    private readonly ConcurrentDictionary<int, SwfEditText> _editTexts = new();
     private readonly ConcurrentDictionary<int, SwfButton> _buttons = new();
-    private readonly ConcurrentDictionary<int, SwfRect?> _buttonBounds = new();
     private readonly ConcurrentDictionary<int, Lazy<SwfTimeline>> _timelines = new();
     private byte[] _jpegTables;
 
@@ -67,8 +65,6 @@ public sealed class SwfMovie
     }
 
     private readonly ConcurrentDictionary<int, string> _brokenShapes = new();
-
-    public IReadOnlyDictionary<int, string> BrokenShapes => _brokenShapes;
 
     public SwfShape GetShape(int characterId)
     {
@@ -132,15 +128,6 @@ public sealed class SwfMovie
         }
     }
 
-    public SwfEditText GetEditText(int characterId) => _editTexts.GetOrAdd(characterId, ParseEditText);
-
-    private SwfEditText ParseEditText(int characterId)
-    {
-        if (!Index.Characters.TryGetValue(characterId, out var tag) || tag.Code != SwfTagCode.DefineEditText) return null;
-        try { return EditTextParser.Parse(File, tag); }
-        catch (Exception) { return null; }
-    }
-
     public SwfButton GetButton(int characterId) => _buttons.GetOrAdd(characterId, ParseButton);
 
     private SwfButton ParseButton(int characterId)
@@ -149,44 +136,6 @@ public sealed class SwfMovie
         if (tag.Code is not (SwfTagCode.DefineButton or SwfTagCode.DefineButton2)) return null;
         try { return ButtonParser.Parse(File, tag); }
         catch (Exception) { return null; }
-    }
-
-    public SwfRect? GetButtonBounds(int characterId) => _buttonBounds.GetOrAdd(characterId, MeasureButton);
-
-    private SwfRect? MeasureButton(int characterId)
-    {
-        var button = GetButton(characterId);
-        if (button is null) return null;
-
-        double minX = double.MaxValue, minY = double.MaxValue;
-        double maxX = double.MinValue, maxY = double.MinValue;
-
-        var records = button.HitState.Any() ? button.HitState : button.UpState;
-        foreach (var record in records)
-        {
-            var shape = GetShape(record.CharacterId);
-            if (shape is null) continue;
-
-            var b = shape.Bounds;
-            foreach (var (px, py) in new[]
-            {
-                (b.X, b.Y), (b.X + b.Width, b.Y),
-                (b.X, b.Y + b.Height), (b.X + b.Width, b.Y + b.Height),
-            })
-            {
-                var m = record.Matrix;
-                double x = m.A * px + m.C * py + m.Tx;
-                double y = m.B * px + m.D * py + m.Ty;
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-            }
-        }
-
-        if (minX < maxX && minY < maxY)
-            return new SwfRect((int)(minX * 20), (int)(maxX * 20), (int)(minY * 20), (int)(maxY * 20));
-        return null;
     }
 
     public SwfBitmap GetBitmap(int characterId) =>

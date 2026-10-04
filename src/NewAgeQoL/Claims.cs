@@ -33,6 +33,51 @@ namespace NewAgeQoL
         private static readonly HashSet<int> Kinds = new HashSet<int>();
         private static readonly System.Reflection.FieldInfo AnnounceField = AccessTools.Field(typeof(BaseEnterfightWidget), "_announce");
         private static float _next;
+        private static readonly HashSet<int> Heard = new HashSet<int>();
+        private static INetworkConnection _on;
+
+        private static void Listen()
+        {
+            var nc = NetworkConnection.Instance;
+            if (nc == null || !nc.IsConnected()) return;
+            if (ReferenceEquals(_on, nc)) return;
+            Shutdown();
+            nc.RemoveMessageListener(17, OnAnnounce);
+            nc.AddMessageListener(17, OnAnnounce);
+            _on = nc;
+        }
+
+        internal static void Shutdown()
+        {
+            try { if (_on != null) _on.RemoveMessageListener(17, OnAnnounce); }
+            catch { }
+            _on = null;
+        }
+
+        private static void OnAnnounce(object msg)
+        {
+            try
+            {
+                var one = msg as FightAnnounce;
+                if (one == null) return;
+                int loc = -1;
+                try { var ud = Controllers.User; if (ud != null) loc = ud.CurrentLocationId; }
+                catch { }
+                if (one.Type != 1)
+                {
+                    if (Heard.Remove(one.Id)) Plugin.Log?.LogInfo("[claims] claim " + one.Id + " gone, location " + loc);
+                    return;
+                }
+                if (!Heard.Add(one.Id)) return;
+                if (Heard.Count > 2000) { Heard.Clear(); Heard.Add(one.Id); }
+                Plugin.Log?.LogInfo("[claims] claim " + one.Id + ": type " + one.ClaimType + ", location " + loc
+                    + ", creator " + (string.IsNullOrEmpty(one.LeaderLogin) ? "-" : one.LeaderLogin)
+                    + (one.LeaderId.HasValue ? " (" + one.LeaderId.Value + ")" : "")
+                    + ", players up to " + one.MaxCount + ", levels " + one.MinLevel + "-" + one.MaxLevel
+                    + ", wait " + one.Timeout / 1000 + " s, round " + one.RoundTimeout);
+            }
+            catch (Exception e) { Plugin.Trace("[claims] announce: " + e.Message); }
+        }
 
         internal static void Note(BaseEnterfightView view, FightAnnounce one)
         {
@@ -58,6 +103,7 @@ namespace NewAgeQoL
 
         internal static void Tick()
         {
+            Listen();
             Stale();
             if (Live.Count == 0) return;
             if (RealTime.Now < _next) return;

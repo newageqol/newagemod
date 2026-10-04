@@ -451,8 +451,6 @@ namespace NewAgeQoL
         private static bool _wantAway;
         private static float _away;
 
-        internal static float Away => _away;
-
         private static RectTransform Slider(RectTransform parent, int which)
         {
             if (_deck == null || parent != (RectTransform)_deck.transform) return parent;
@@ -789,13 +787,6 @@ namespace NewAgeQoL
         {
             if (InCombat()) return area.yMax - FightTop;
             return area.yMax - LeftColumn.TopHeight() - Gap;
-        }
-
-        private static void Place()
-        {
-            if (_panel == null) return;
-            Stand(_panel, 0);
-            Stand(_panelRight, 1);
         }
 
 

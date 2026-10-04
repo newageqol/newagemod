@@ -20,7 +20,6 @@ namespace NewAgeQoL
         private const float Pad = 6f;
         private const float BarsWidth = 180f;
         private const float ListWidth = 208f;
-        private const float TabsHeight = 20f;
         private const float InputHeight = 22f;
         private const float TabHigh = 12f;
         private static RectTransform _tabsRt;

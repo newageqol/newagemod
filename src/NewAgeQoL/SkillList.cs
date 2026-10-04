@@ -52,7 +52,6 @@ namespace NewAgeQoL
             }
         }
 
-        private const float ThingTop = 110f;
         private const int Cap = 17;
 
         private readonly bool _tricks;
@@ -116,17 +115,6 @@ namespace NewAgeQoL
 
         internal static int TrickCount => Tricks._panelGo != null && Tricks._panelGo.activeInHierarchy ? Tricks.Live.Count : 0;
 
-        internal static float TrickWidth
-        {
-            get
-            {
-                var go = Tricks._panelGo;
-                if (go == null || !go.activeInHierarchy) return 0f;
-                var rt = go.transform as RectTransform;
-                return rt != null ? Mathf.Max(0f, rt.rect.width) : 0f;
-            }
-        }
-
         internal static void Tick()
         {
             Abilities.Step();
@@ -183,7 +171,6 @@ namespace NewAgeQoL
         private Text _tipText;
         private int _tipFor;
         private bool _listening;
-        private readonly Vector2 Spot = new Vector2(-600f, -30f);
         private static Texture2D _cursor;
         private int _hexPick;
         private int _hexFor;
@@ -1298,11 +1285,6 @@ namespace NewAgeQoL
             return false;
         }
 
-        internal static bool PhaseDone
-        {
-            get { return Over(); }
-        }
-
         private static bool Late
         {
             get { return Over(); }
@@ -1906,18 +1888,6 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Warn(_tag + " use " + skill.Id + ": " + e.Message); }
         }
-        private void Dialog(int id)
-        {
-            try
-            {
-                var holder = Holder();
-                var dialog = Controllers.Get<ConfirmActionDialogController>();
-                if (holder == null || dialog == null) return;
-                dialog.OpenDialog(holder, id);
-            }
-            catch (Exception e) { Plugin.Warn(_tag + " pick window " + id + ": " + e.Message); }
-        }
-
         private void Slot(IQuickButton skill)
         {
             var go = new GameObject("skill", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(Button));

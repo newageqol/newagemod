@@ -916,13 +916,6 @@ namespace NewAgeQoL
             }
         }
 
-        private static Vector3 Door(string name, Vector3 center)
-        {
-            if (name == "armory" || name == "arena" || name == "new_illGate" || name == "portal" || name == "obelisk" || name == "cityHall") return Vector3.back;
-            var d = new Vector3(0, 0, -10) - new Vector3(center.x, 0, center.z);
-            return d.sqrMagnitude < 0.01f ? Vector3.back : d.normalized;
-        }
-
         private static GameObject FindIn(Scene scene, string name)
         {
             foreach (var root in scene.GetRootGameObjects())

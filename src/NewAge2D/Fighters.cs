@@ -221,19 +221,6 @@ internal static class Fighters
         catch (Exception ex) { Plugin.Log.LogWarning("[combat] selection circle: " + ex.Message); }
     }
 
-    internal static OffsetCoord[] PathOf(AbstractCharacter owner)
-    {
-        if (owner == null || MoverField == null || PathField == null) return null;
-        if (!(MoverField.GetValue(owner) is CharacterMover mover) || mover == null) return null;
-        return PathField.GetValue(mover) as OffsetCoord[];
-    }
-
-    internal static Vector3? CellPosition(AbstractCharacter owner, OffsetCoord cell)
-    {
-        if (owner == null || owner.parent == null) return null;
-        return HexUtils.offsetToPixelInWordSpace(owner.parent, cell);
-    }
-
     internal static float StepSeconds(AbstractCharacter owner)
     {
         if (owner == null || MoverField == null || DistanceField == null) return 0f;
@@ -1000,8 +987,6 @@ internal static class FrameCache
 
     private static float _spilledAt;
 
-    internal static long VideoBytes => _bytes;
-
     internal static string Stats() => $"urgent {Batches.Count}, later {Later.Count}, frames left {Remaining()}, sprites {Sprites.Count}, video memory {_bytes / 1048576.0:0} MB";
 
     private static long Ms(long from, long to) => (to - from) * 1000 / System.Diagnostics.Stopwatch.Frequency;
@@ -1371,19 +1356,7 @@ internal sealed class FighterDoll : MonoBehaviour
 
     private string Who => _owner != null ? _owner.Login : "?";
 
-    internal string Playing => _playing;
-
-    internal bool Striking => _playing != null && _playing != "die" && _playing != "cast" && _playing != "healing" && _playing != "prizuv";
-
     internal bool Acting => (_playing != null && _playing != "die") || _queue.Count > 0;
-
-    internal float StrikeHitTime => _playStart + FrameCache.HitShare(_playing != null && _look != null ? FrameCache.SequenceKey(PlayLook(_playing), _playing) : null) * _playCount / (float)(_rate * _playScale);
-
-    internal bool ActionHalfway => _playing == null || Time.time >= _playStart + 0.55f * _playCount / (float)(_rate * _playScale);
-
-    internal bool StrikeStarted => _playing != null && Has(_playing);
-
-    internal bool StrikeLanded => StrikeStarted && Time.time >= StrikeHitTime;
 
     internal Vector3 Feet => _feet;
 
@@ -1627,16 +1600,7 @@ internal sealed class FighterDoll : MonoBehaviour
     private int _serialRequested;
     private int _playingSerial;
     private int _landedSerial;
-    private int _woundSerial;
     private int _pendingSerial;
-
-    internal bool StrikePending => Striking || _queue.Count > 0;
-
-    internal int LandedSerial => _playingSerial > _landedSerial && Striking && StrikeLanded ? _playingSerial : _landedSerial;
-
-    internal int TakeWound() => _woundSerial = Math.Min(_woundSerial + 1, _serialRequested);
-
-    internal void NoteWound(int serial) => _woundSerial = Math.Max(_woundSerial, serial);
 
     private void Appear()
     {
@@ -2056,17 +2020,7 @@ internal sealed class FighterDoll : MonoBehaviour
         return shape == null || shape.At(u, v);
     }
 
-    internal bool TryPicture(out Bounds bounds)
-    {
-        bounds = default;
-        if (_view == null || _view.sprite == null || !_view.enabled) return false;
-        bounds = _view.bounds;
-        return true;
-    }
-
     internal bool Broken => _broken;
-
-    internal bool Ready => _broken || HasPicture;
 
     internal void AddHot(HashSet<string> hot)
     {

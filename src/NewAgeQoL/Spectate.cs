@@ -194,21 +194,6 @@ namespace NewAgeQoL
             }
         }
 
-        internal static bool Fallen
-        {
-            get
-            {
-                if (!SideButtons.InCombat()) return false;
-                try
-                {
-                    var cd = FighterHint.Cd();
-                    var me = cd != null ? cd.MyCharacter : null;
-                    return me != null && me.Dead;
-                }
-                catch { return false; }
-            }
-        }
-
         internal static bool Rotted
         {
             get
