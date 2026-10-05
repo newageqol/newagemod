@@ -217,6 +217,8 @@ namespace NewAgeQoL
 
         internal static RectTransform LeftPanel => _panel != null && _panel.gameObject.activeInHierarchy ? _panel : null;
 
+        internal static RectTransform DockedPanel => _panelRight != null && _panelRight.gameObject.activeInHierarchy ? _panelRight : null;
+
         private static float Space()
         {
             var area = Area();

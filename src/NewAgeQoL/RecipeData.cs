@@ -52,6 +52,7 @@ namespace NewAgeQoL
             internal readonly Dictionary<int, RecipeThing> Things = new Dictionary<int, RecipeThing>();
             internal readonly Dictionary<int, List<Recipe>> ByResult = new Dictionary<int, List<Recipe>>();
             internal readonly List<int> Crafts = new List<int>();
+            internal readonly HashSet<int> Drops = new HashSet<int>();
         }
 
         private static bool _loaded;
@@ -94,6 +95,12 @@ namespace NewAgeQoL
             Load();
             List<Recipe> list;
             return _pack.ByResult.TryGetValue(id, out list) ? list : null;
+        }
+
+        internal static bool Drops(int id)
+        {
+            Load();
+            return _pack.Drops.Contains(id);
         }
 
         internal static string ThingName(int id)
@@ -210,7 +217,7 @@ namespace NewAgeQoL
         }
 
         private static string Describe(Pack pack) =>
-            (pack.Stamp ?? "no date") + ", recipes " + pack.All.Count + ", things " + pack.Things.Count + ", professions " + pack.Crafts.Count;
+            (pack.Stamp ?? "no date") + ", recipes " + pack.All.Count + ", things " + pack.Things.Count + ", professions " + pack.Crafts.Count + ", also dropped " + pack.Drops.Count;
 
         private static Pack Read(string text)
         {
@@ -248,6 +255,9 @@ namespace NewAgeQoL
             {
                 case "V":
                     if (cell.Length > 1) pack.Stamp = cell[1];
+                    break;
+                case "D":
+                    if (cell.Length > 1) pack.Drops.Add(Int(cell[1]));
                     break;
                 case "T":
                     if (cell.Length < 6) return;

@@ -409,7 +409,7 @@ namespace NewAgeQoL
                 yield return Plugin.Instance.StartCoroutine(Scan(WinInventory, 380));
 
                 var wornLeft = Worn.Select(w => w.ThingId).ToList();
-                var bagLeft = Scanned.Select(i => i.ThingId).ToList();
+                var bagLeft = Scanned.Where(i => i.Qty > 0).SelectMany(i => Enumerable.Repeat(i.ThingId, i.Qty)).ToList();
                 var missed = new List<Slot>();
                 foreach (var m in memory)
                 {

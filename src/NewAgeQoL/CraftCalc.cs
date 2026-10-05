@@ -229,7 +229,7 @@ namespace NewAgeQoL
             return list[index];
         }
 
-        private static bool Crafted(int thing) => RecipeData.Making(thing) != null;
+        private static bool Crafted(int thing) => RecipeData.Making(thing) != null && !RecipeData.Drops(thing);
 
         private static long Runs(long need, Recipe recipe)
         {
@@ -746,13 +746,25 @@ namespace NewAgeQoL
             Wardrobe.At(name.rectTransform, x + 44f, 3f, nameW, 22f);
             Fit(name, 9, 14);
             string sub = craftable ? (open ? "крафтится — нажми, чтобы свернуть" : "крафтится — нажми, чтобы увидеть состав") : "дроп";
+            if (craftable && RecipeData.Drops(id)) sub = open ? "дроп · можно и скрафтить — нажми, чтобы свернуть" : "дроп · можно и скрафтить: " + Yield(id) + " — нажми, чтобы увидеть";
             if (info != null && info.Level > 0) sub = "ур. " + info.Level + " · " + sub;
             var line = Say(rt, sub, 12, FontStyle.Normal, craftable ? WardrobeLook.Good : WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(line.rectTransform, x + 44f, 24f, nameW, 18f);
+            Fit(line, 9, 12);
             var count = Say(rt, "× " + need, 16, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleRight);
             Wardrobe.At(count.rectTransform, right - countW, 0f, countW, 46f);
             count.horizontalOverflow = HorizontalWrapMode.Wrap;
             Fit(count, 10, 16);
+        }
+
+        private static string Yield(int id)
+        {
+            var recipe = Variant(id);
+            if (recipe == null || recipe.Parts.Count == 0) return "есть рецепт";
+            var main = recipe.Parts[0];
+            foreach (var part in recipe.Parts)
+                if (part.Count > main.Count) main = part;
+            return main.Count + " × " + RecipeData.ThingName(main.Id) + " → " + Math.Max(1, recipe.ResultCount) + " шт.";
         }
 
         private static void Unfold(string key)

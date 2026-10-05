@@ -132,6 +132,7 @@ internal static class HexLook
     private static Paint _marks;
     private static int _zoneSign;
     private static float _zoneAt;
+    private static int _zoneFrom = -1;
     private static bool _failed;
     private static Transform _failedGrid;
 
@@ -404,11 +405,13 @@ internal static class HexLook
     private static void Zone(CombatData cd, Dictionary<int, GridSelection> box, int own)
     {
         bool walk = cd.RoundType == RoundType.WALK_ROUND && own != 0 && box.ContainsKey(own);
-        int sign = walk ? own * 397 ^ (box[own].Cells?.Length ?? 0) : 0;
+        int sign = walk ? Sign(box[own]) : 0;
         if (sign != _zoneSign)
         {
+            int from = Spot(cd);
+            if (_zoneSign == 0 || from != _zoneFrom) _zoneAt = Time.unscaledTime;
             _zoneSign = sign;
-            _zoneAt = Time.unscaledTime;
+            _zoneFrom = from;
             _zone.Begin();
             Walk.Clear();
             if (walk)
@@ -424,6 +427,26 @@ internal static class HexLook
         }
         float shown = Mathf.Clamp01((Time.unscaledTime - _zoneAt) / 0.3f);
         _zone.Skin.color = new Color(1f, 1f, 1f, shown * shown * (3f - 2f * shown));
+    }
+
+    private static int Sign(GridSelection selection)
+    {
+        int sum = 0, count = 0;
+        if (selection?.Cells != null)
+            foreach (var cell in selection.Cells)
+                if (cell != null && Where.TryGetValue(cell, out int key))
+                {
+                    unchecked { sum += (key * 16777619) ^ (key >> 7); }
+                    count++;
+                }
+        int sign = unchecked(sum * 31 + count);
+        return sign == 0 ? 1 : sign;
+    }
+
+    private static int Spot(CombatData cd)
+    {
+        var spot = cd.MyCharacter?.HexGridPosition;
+        return spot != null ? Key(spot.clientX, spot.clientY) : -1;
     }
 
     private static void Plug(CombatData cd)

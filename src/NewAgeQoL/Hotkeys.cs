@@ -635,6 +635,14 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[hotkeys] skills request: " + e.Message); }
         }
 
+        internal static void Recheck()
+        {
+            _heard = 0;
+            _tries = 0;
+            _askAt = 0f;
+            Plugin.Trace("[hotkeys] magic shop closed, asking the game for spells again");
+        }
+
         private static void OnMasteries(object m)
         {
             try
@@ -680,13 +688,14 @@ namespace NewAgeQoL
                 _heard |= dodges ? 2 : 4 << school;
                 Known();
                 int added = 0, noName = 0;
+                var unnamed = new StringBuilder();
                 foreach (var item in msg.Items)
                 {
                     if (item == null) continue;
                     int id = dodges ? item.Value3 : item.Value1;
                     if (id <= 0) continue;
                     string name = dodges ? Dodged(id) : Cast(id);
-                    if (name == null) { noName++; continue; }
+                    if (name == null) { noName++; unnamed.Append(' ').Append(id); continue; }
                     string key = (dodges ? "trick:" : "spell:") + id;
                     string was;
                     if (Learned.TryGetValue(key, out was) && was == name) continue;
@@ -694,7 +703,7 @@ namespace NewAgeQoL
                     added++;
                 }
                 Plugin.Trace("[hotkeys] " + (dodges ? "dodges" : "spells of school " + msg.Selector) + " of the character " + msg.Items.Count
-                             + ": stored " + added + ", unnamed " + noName);
+                             + ": stored " + added + ", unnamed " + noName + (noName > 0 ? " (id" + unnamed + ")" : ""));
                 if (added > 0) KeepKnown();
             }
             catch (Exception e) { Plugin.Trace("[hotkeys] dodges and spells list: " + e.Message); }
@@ -992,6 +1001,21 @@ namespace NewAgeQoL
             if (!SideButtons.InWorld()) return true;
             try { Settings.ToggleHotkeys(); return false; }
             catch (Exception e) { Plugin.Fault("[hotkeys] window: " + e.Message); return true; }
+        }
+    }
+
+    internal sealed class SpellShopWatch : MonoBehaviour
+    {
+        private void OnDisable() => Hotkeys.Recheck();
+    }
+
+    [HarmonyLib.HarmonyPatch(typeof(MagicShopController), "BuildWindow")]
+    internal static class SpellShopWatchPatch
+    {
+        private static void Postfix(BasePanelContentWindow __result)
+        {
+            try { if (__result != null && __result.GetComponent<SpellShopWatch>() == null) __result.gameObject.AddComponent<SpellShopWatch>(); }
+            catch (Exception e) { Plugin.Trace("[hotkeys] magic shop watch: " + e.Message); }
         }
     }
 }
