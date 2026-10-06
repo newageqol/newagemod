@@ -41,6 +41,8 @@ namespace NewAgeQoL
                 plate.Until = until;
                 Plates.Add(plate);
                 _canvasGo.SetActive(true);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_stack);
+                Spot();
             }
             catch (Exception e) { Plugin.Trace("[message] " + e.Message); }
         }
@@ -48,6 +50,7 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             if (_canvasGo == null || !_canvasGo.activeSelf) return;
+            Spot();
             float now = Time.unscaledTime;
             for (int i = Plates.Count - 1; i >= 0; i--)
             {
@@ -57,6 +60,50 @@ namespace NewAgeQoL
                 plate.Veil.alpha = left < 0.6f ? left / 0.6f : 1f;
             }
             if (Plates.Count == 0) _canvasGo.SetActive(false);
+        }
+
+        private static readonly Vector3[] Corners = new Vector3[4];
+
+        private static void Spot()
+        {
+            if (_stack == null) return;
+            float top = 0f, bottom = 0f;
+            bool around = false;
+            try
+            {
+                var panel = Wardrobe.Panel as RectTransform;
+                if (panel != null && panel.gameObject.activeInHierarchy)
+                {
+                    var canvas = panel.GetComponentInParent<Canvas>();
+                    var cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+                    panel.GetWorldCorners(Corners);
+                    float low = RectTransformUtility.WorldToScreenPoint(cam, Corners[0]).y;
+                    float high = RectTransformUtility.WorldToScreenPoint(cam, Corners[1]).y;
+                    var own = (RectTransform)_canvasGo.transform;
+                    float k = own.rect.height / Mathf.Max(1f, Screen.height);
+                    top = (Screen.height - high) * k;
+                    bottom = low * k;
+                    around = true;
+                }
+            }
+            catch { around = false; }
+            if (!around)
+            {
+                Anchor(1f, -150f);
+                return;
+            }
+            if (top >= bottom) Anchor(1f, -Mathf.Max(4f, top * 0.5f - Height() * 0.5f));
+            else Anchor(0f, Mathf.Max(4f, bottom * 0.5f - Height() * 0.5f));
+        }
+
+        private static float Height() => _stack.rect.height;
+
+        private static void Anchor(float edge, float y)
+        {
+            var at = new Vector2(0.5f, edge);
+            if (_stack.anchorMin != at) { _stack.anchorMin = _stack.anchorMax = at; _stack.pivot = at; }
+            var pos = new Vector2(0f, y);
+            if (_stack.anchoredPosition != pos) _stack.anchoredPosition = pos;
         }
 
         private static void Drop(Plate plate)

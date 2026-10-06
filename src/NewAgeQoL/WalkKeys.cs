@@ -15,6 +15,8 @@ namespace NewAgeQoL
         private const int Down = 2;
         private const int Left = 3;
 
+        internal const string GoKey = "fight:walkgo";
+
         private const float Fits = 0.35f;
         private const float Bend = 4f;
         private const float Nudge = 0.02f;
@@ -72,11 +74,10 @@ namespace NewAgeQoL
                 if (Input.GetKeyDown(KeyCode.DownArrow)) { Step(Down); return; }
                 if (Input.GetKeyDown(KeyCode.LeftArrow)) { Step(Left); return; }
                 if (Input.GetKeyDown(KeyCode.RightArrow)) { Step(Right); return; }
-                bool main = Input.GetKeyDown(KeyCode.Return);
+                if (Busy || Hotkeys.KeyFor(GoKey) != KeyCode.Return || Input.GetKeyDown(KeyCode.Return)) return;
                 bool pad = Input.GetKeyDown(KeyCode.KeypadEnter);
-                bool typed = !main && !pad && Crlf();
-                if (!main && !pad && !typed) return;
-                Plugin.Trace("[walk] input: " + (main ? "Enter" : pad ? "numpad Enter" : "Enter by character")
+                if (!pad && !Crlf()) return;
+                Plugin.Trace("[walk] input: " + (pad ? "numpad Enter" : "Enter by character")
                     + ", hex " + (_pick != null ? _pick.clientX + ";" + _pick.clientY : "not picked"));
                 Go();
             }

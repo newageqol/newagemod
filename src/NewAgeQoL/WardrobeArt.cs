@@ -110,25 +110,50 @@ namespace NewAgeQoL
             var text = new StringBuilder("@");
             text.Append(thing.Sub).Append('.').Append(thing.ItemLevel);
             foreach (int value in ValuesOf(thing)) text.Append('.').Append(value);
+            var kind = WardrobeData.ArtKind(thing.Sub);
+            if (Look(thing.Image) && (kind == null || thing.Image != kind.Image)) text.Append('~').Append(thing.Image);
             return text.ToString();
+        }
+
+        internal static bool Look(string image)
+        {
+            if (string.IsNullOrEmpty(image) || image.Length > 80) return false;
+            foreach (char c in image)
+                if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '-')) return false;
+            return true;
         }
 
         internal static WardrobeThing Parse(string reference)
         {
-            var bits = reference.Substring(1).Split('.');
+            string body = reference.Substring(1);
+            string image = null;
+            int tilde = body.IndexOf('~');
+            if (tilde >= 0)
+            {
+                image = body.Substring(tilde + 1);
+                body = body.Substring(0, tilde);
+                if (!Look(image)) image = null;
+            }
+            var bits = body.Split('.');
             if (bits.Length != 2 + Count) return null;
             int sub, level;
             if (!int.TryParse(bits[0], out sub) || !int.TryParse(bits[1], out level)) return null;
             var values = new int[Count];
             for (int k = 0; k < Count; k++)
                 if (!int.TryParse(bits[2 + k], out values[k])) return null;
-            return Valid(sub, level, values) ? Make(sub, level, values) : null;
+            if (!Valid(sub, level, values)) return null;
+            var thing = Make(sub, level, values);
+            if (image != null) thing.Image = image;
+            return thing;
         }
 
         internal static WardrobeThing Recheck(WardrobeThing old)
         {
             var values = ValuesOf(old);
-            return Valid(old.Sub, old.ItemLevel, values) ? Make(old.Sub, old.ItemLevel, values) : null;
+            if (!Valid(old.Sub, old.ItemLevel, values)) return null;
+            var thing = Make(old.Sub, old.ItemLevel, values);
+            if (Look(old.Image)) thing.Image = old.Image;
+            return thing;
         }
 
         internal static List<KeyValuePair<int, WardrobeThing>> FromGame(WardrobeState s, List<KeyValuePair<int, IGeneralThingInfoDescription>> found, int[] card)
@@ -398,7 +423,10 @@ namespace NewAgeQoL
             }
             var values = new int[Count];
             Array.Copy(Values, values, Count);
-            Wardrobe.Pick(_slot, Make(Sub, _level, values), all);
+            var made = Make(Sub, _level, values);
+            WardrobeThing old;
+            if (Wardrobe.S.Worn.TryGetValue(Target, out old) && old != null && old.Art && old.Sub == Sub && Look(old.Image)) made.Image = old.Image;
+            Wardrobe.Pick(_slot, made, all);
         }
 
         private static void Build(RectTransform host)

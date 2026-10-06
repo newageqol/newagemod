@@ -265,6 +265,8 @@ namespace NewAgeQoL
                 foreach (var pair in WardrobeArt.FromGame(S, arts, card))
                 {
                     if (pair.Value.Level > S.Level) continue;
+                    InventoryWearResponseMessageItem real;
+                    if (worn.TryGetValue(pair.Key, out real) && real != null && WardrobeArt.Look(real.Image)) pair.Value.Image = real.Image;
                     S.Wear(pair.Key, pair.Value);
                     dressed++;
                 }
@@ -1109,9 +1111,15 @@ namespace NewAgeQoL
             float stageX = 16f + SideW + 16f;
             float cx = stageX + cell.anchoredPosition.x;
             float cy = Head - cell.anchoredPosition.y;
-            float x = cx + Cell + 10f;
-            if (x + Width > stageX + StageW) x = cx - 10f - Width;
-            At(rt, x, cy, Width, 40f);
+            float boxL = stageX + 18f + Cell + Gap + 6f;
+            float boxR = stageX + StageW - 18f - Cell - Gap - 6f;
+            float boxT = Head + 18f + Cell + Gap + 6f;
+            float boxB = Head + 18f + 6f * (Cell + Gap) - Gap - 6f;
+            float x;
+            if (cx + Cell <= boxL) x = boxL;
+            else if (cx >= boxR) x = boxR - Width;
+            else x = Mathf.Clamp(cx + Cell * 0.5f - Width * 0.5f, boxL, boxR - Width);
+            At(rt, x, Mathf.Max(cy, boxT), Width, 40f);
             var back = _tipGo.GetComponent<Image>();
             back.sprite = OnlineWindow.Rounded(10);
             back.type = Image.Type.Sliced;
@@ -1142,7 +1150,7 @@ namespace NewAgeQoL
             }
             LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
             float tall = rt.rect.height;
-            if (cy + tall > PanelH - 8f) At(rt, x, Mathf.Max(8f, PanelH - 8f - tall), Width, tall);
+            At(rt, x, Mathf.Max(boxT, Mathf.Min(cy, boxB - tall)), Width, tall);
         }
 
         private static void TipRule()

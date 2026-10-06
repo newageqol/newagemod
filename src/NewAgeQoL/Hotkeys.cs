@@ -306,6 +306,8 @@ namespace NewAgeQoL
             _listAt = 0f;
         }
 
+        internal static KeyCode KeyFor(string key) => KeyOf(Of(key));
+
         internal static string Of(string key)
         {
             Read();
@@ -841,6 +843,7 @@ namespace NewAgeQoL
                 new Act { Key = "fight:strike", Group = "Бой", Title = "Удар", Fallback = "Space", Do = Strike.Key },
                 new Act { Key = "fight:next", Group = "Бой", Title = "Следующий враг", Do = Targets.Next },
                 new Act { Key = "fight:nextally", Group = "Бой", Title = "Следующий союзник", Do = Targets.NextAlly },
+                new Act { Key = WalkKeys.GoKey, Group = "Бой", Title = "Шаг на клетку, выбранную стрелками", Fallback = "Return", Do = WalkKeys.Go },
 
                 new Act { Key = "flask:0", Group = "Банки", Title = "Банка жизни", Do = () => Flasks.Use(0) },
                 new Act { Key = "flask:1", Group = "Банки", Title = "Банка маны", Do = () => Flasks.Use(1) },
