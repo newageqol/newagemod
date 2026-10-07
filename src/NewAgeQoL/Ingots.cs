@@ -59,7 +59,6 @@ namespace NewAgeQoL
         private static Button _give;
         private static Button _most;
         private static Text _giveLabel;
-        private static readonly Vector3[] Corners = new Vector3[4];
 
         internal static bool Running => _step != Step.Idle;
 
@@ -79,7 +78,7 @@ namespace NewAgeQoL
                     _said = "";
                     if (_here) Flasks.RequestScanNow();
                 }
-                bool show = _here && SideButtons.InWorld() && !SideButtons.InCombat() && ChatDock.Active;
+                bool show = _here && SideButtons.InWorld() && !SideButtons.InCombat();
                 if (!show)
                 {
                     if (Running) Stop("начался бой — остановлено");
@@ -445,8 +444,8 @@ namespace NewAgeQoL
             var panel = new GameObject("panel", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             panel.transform.SetParent(_canvasGo.transform, false);
             _root = (RectTransform)panel.transform;
-            _root.anchorMin = _root.anchorMax = Vector2.zero;
-            _root.pivot = Vector2.zero;
+            _root.anchorMin = _root.anchorMax = new Vector2(0f, 1f);
+            _root.pivot = new Vector2(0f, 1f);
             _root.sizeDelta = new Vector2(Wide, 80f);
             var back = panel.GetComponent<Image>();
             back.color = WardrobeLook.Window;
@@ -602,28 +601,9 @@ namespace NewAgeQoL
 
         private static void Place()
         {
-            var side = SideButtons.DockedPanel;
-            if (side != null && _root != null && _canvas != null)
-            {
-                float k = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
-                var sideCanvas = side.GetComponentInParent<Canvas>();
-                var eye = sideCanvas != null && sideCanvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? sideCanvas.rootCanvas.worldCamera : null;
-                side.GetWorldCorners(Corners);
-                Vector2 foot = RectTransformUtility.WorldToScreenPoint(eye, Corners[0]);
-                var at = new Vector2(Mathf.Max(4f, foot.x / k - Wide - 10f), foot.y / k);
-                if ((_root.anchoredPosition - at).sqrMagnitude > 0.25f) _root.anchoredPosition = at;
-                if (Math.Abs(_root.sizeDelta.x - Wide) > 0.5f) _root.sizeDelta = new Vector2(Wide, _root.sizeDelta.y);
-                return;
-            }
-            var dock = ChatDock.Root;
-            if (_root == null || _canvas == null || dock == null) return;
-            float scale = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
-            var dockCanvas = dock.GetComponentInParent<Canvas>();
-            var cam = dockCanvas != null && dockCanvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? dockCanvas.rootCanvas.worldCamera : null;
-            dock.GetWorldCorners(Corners);
-            Vector2 top = RectTransformUtility.WorldToScreenPoint(cam, Corners[1]);
-            var spot = new Vector2(Mathf.Max(4f, top.x / scale - Wide - 10f), top.y / scale + 24f);
-            if ((_root.anchoredPosition - spot).sqrMagnitude > 0.25f) _root.anchoredPosition = spot;
+            if (_root == null) return;
+            var at = Enchantments.NextTo();
+            if ((_root.anchoredPosition - at).sqrMagnitude > 0.25f) _root.anchoredPosition = at;
             if (Math.Abs(_root.sizeDelta.x - Wide) > 0.5f) _root.sizeDelta = new Vector2(Wide, _root.sizeDelta.y);
         }
     }

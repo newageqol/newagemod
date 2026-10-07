@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using HarmonyLib;
 using Transport.Messages.Responses.Combat;
 using Transport.Messages.Responses.Locations.Arena;
 using UnityEngine;
@@ -47,6 +48,7 @@ namespace NewAgeQoL
         private static int _watched;
         private static int _backTo;
         private static float _leaveAt;
+        private static float _exitAt;
         private static float _watchedAt;
         private static bool _inFight;
         private static int _map = -1;
@@ -60,6 +62,7 @@ namespace NewAgeQoL
             try
             {
                 Mine();
+                if (_exitAt > 0f && !SideButtons.InCombat()) _exitAt = 0f;
                 if (Time.unscaledTime >= _listenAt)
                 {
                     _listenAt = Time.unscaledTime + 1f;
@@ -234,6 +237,12 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) return;
                 if (SideButtons.InCombat())
                 {
+                    if (_exitAt > 0f && Time.unscaledTime < _exitAt + 8f)
+                    {
+                        Plugin.Trace("[fights] leaving already requested, click ignored");
+                        return;
+                    }
+                    _exitAt = Time.unscaledTime;
                     nc.SendRequest(new ChangeMapRequest(0));
                     Plugin.Trace("[fights] leaving fight spectating");
                     _backTo = 0;
@@ -245,6 +254,19 @@ namespace NewAgeQoL
                 Leave();
             }
             catch (Exception e) { Plugin.Warn("[fights] leaving spectating: " + e.Message); }
+        }
+
+        internal static bool GameLeave()
+        {
+            try
+            {
+                var cd = FighterHint.Cd();
+                if (cd == null || cd.RoundNum == 0 || cd.MyCharacter != null || !SideButtons.InCombat()) return true;
+                Plugin.Trace("[fights] game phase button in spectate, leaving through the mod");
+                Exit();
+                return false;
+            }
+            catch (Exception e) { Plugin.Trace("[fights] game leave: " + e.Message); return true; }
         }
 
         private static void Leave()
@@ -562,5 +584,11 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Warn("[fights] moving to fight: " + e.Message); }
         }
+    }
+
+    [HarmonyPatch(typeof(CombatController), "OnEndPhasePressed")]
+    internal static class SpectateLeavePatch
+    {
+        private static bool Prefix() => Spectate.GameLeave();
     }
 }

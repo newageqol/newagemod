@@ -221,9 +221,7 @@ namespace NewAgeQoL
             if (items.Count == 0) { AddRow("нет эффектов", "", "", "", WardrobeLook.Body); return; }
             foreach (var it in items)
             {
-                string key = "states.state_" + it.StateType + "_" + it.StateId;
-                string name = ResourceStrings.GetString(key + ".name");
-                if (name == key + ".name") name = "состояние " + it.StateType + "/" + it.StateId;
+                string name = FighterHint.StateName(it);
                 string src = FighterHint.Sources(it, cd, ch.UserId);
                 int power = FighterHint.Power(it);
                 string dur = it.Duration > 1000 ? "до конца боя" : it.Duration > 0 ? it.Duration + " " + FighterHint.Turns(it.Duration) : "";

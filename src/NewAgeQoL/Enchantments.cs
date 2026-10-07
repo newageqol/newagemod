@@ -544,6 +544,16 @@ namespace NewAgeQoL
             if (_root.anchoredPosition != place) _root.anchoredPosition = place;
         }
 
+        internal static Vector2 NextTo()
+        {
+            if (_root != null && _root.gameObject.activeInHierarchy)
+                return new Vector2(_root.anchoredPosition.x + _root.sizeDelta.x + 10f, _root.anchoredPosition.y);
+            bool freed = LeftColumn.TopBlockHidden;
+            float x = freed ? 14f : 14f + SideButtons.LeftWidth + 10f;
+            float y = freed ? 10f : LeftColumn.TopHeight() + 10f;
+            return new Vector2(x, -y);
+        }
+
         private static void Tip()
         {
             if (_tipFor <= 0)

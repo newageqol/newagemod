@@ -517,9 +517,7 @@ namespace NewAgeQoL
                 var paint = new List<Color32>();
                 foreach (var it in items)
                 {
-                    string key = "states.state_" + it.StateType + "_" + it.StateId;
-                    string name = ResourceStrings.GetString(key + ".name");
-                    if (name == key + ".name") name = "состояние " + it.StateType + "/" + it.StateId;
+                    string name = StateName(it);
                     int power = Power(it);
                     string dur = it.Duration > 1000 ? "до конца боя" : it.Duration > 0 ? it.Duration + " " + Turns(it.Duration) : "";
                     body.Add(new[] { name, Sources(it, cd, ch.UserId), power != 0 ? power.ToString() : "", dur });
@@ -683,6 +681,20 @@ namespace NewAgeQoL
             if (told) return true;
             if (rough != null) { items = rough; return true; }
             return false;
+        }
+
+        internal static string StateName(UserEnchantmentsResponseItem it)
+        {
+            string key = "states.state_" + it.StateType + "_" + it.StateId + ".name";
+            string name = ResourceStrings.GetString(key);
+            if (name != key) return name;
+            if (it.StateType == (int)EStateType.ActiveAbility || it.StateType == (int)EStateType.AbilityEffect || it.StateType == (int)EStateType.Aura)
+            {
+                string skill = "abilities.ability" + it.StateId + ".name";
+                name = ResourceStrings.GetString(skill);
+                if (name != skill) return name;
+            }
+            return "состояние " + it.StateType + "/" + it.StateId;
         }
 
         internal static int Power(UserEnchantmentsResponseItem it)
