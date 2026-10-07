@@ -36,6 +36,8 @@ namespace NewAgeQoL
         private static Text _state;
         private static readonly Vector3[] Corners = new Vector3[4];
         private static BottomPanelButton _talk;
+        private static BottomPanelButton _early;
+        private static float _earlyAt;
         private static float _lookAt;
         private static Vector2 _spot;
         private static bool _spotKnown;
@@ -75,6 +77,7 @@ namespace NewAgeQoL
                 if (_npc <= 0)
                 {
                     Restore();
+                    if (_early != null && Time.unscaledTime - _earlyAt > 3f) { Veil(_early, false); _early = null; }
                     if (_canvasGo != null && _canvasGo.activeSelf) _canvasGo.SetActive(false);
                     return;
                 }
@@ -311,8 +314,33 @@ namespace NewAgeQoL
             if (label != null && label.text != text) label.text = text;
         }
 
+        internal static void Early(SceneObjectInfo info, UnityEngine.Events.UnityEvent click)
+        {
+            if (info == null || click == null || info.ObjectType != EObjectType.Npc || info.SpriteName != Face) return;
+            foreach (var one in UnityEngine.Object.FindObjectsOfType<BottomPanelButton>())
+            {
+                if (one == null || one.button == null || one.button.onClick != click) continue;
+                Veil(one, true);
+                _early = one;
+                _earlyAt = Time.unscaledTime;
+                return;
+            }
+        }
+
+        private static bool Veil(BottomPanelButton button, bool hidden)
+        {
+            var group = button.GetComponent<CanvasGroup>() ?? button.gameObject.AddComponent<CanvasGroup>();
+            float alpha = hidden ? 0f : 1f;
+            if (group.alpha == alpha && group.blocksRaycasts != hidden) return false;
+            group.alpha = alpha;
+            group.blocksRaycasts = !hidden;
+            group.interactable = !hidden;
+            return true;
+        }
+
         private static void Hide()
         {
+            if (_talk == null && _early != null) _talk = _early;
             if (_talk == null)
             {
                 if (Time.unscaledTime < _lookAt) return;
@@ -321,15 +349,15 @@ namespace NewAgeQoL
                     if (one != null && one.ObjectType == EObjectType.Npc && one.gameObject.activeInHierarchy) { _talk = one; break; }
                 if (_talk == null) return;
             }
-            if (!_talk.gameObject.activeSelf) return;
             Measure(_talk.transform as RectTransform);
-            _talk.gameObject.SetActive(false);
+            if (!Veil(_talk, true)) return;
             Plugin.Trace("[portal] talk button hidden, list placed at " + _spot.x.ToString("0") + "," + _spot.y.ToString("0"));
         }
 
         private static void Restore()
         {
-            if (_talk != null && !_talk.gameObject.activeSelf) _talk.gameObject.SetActive(true);
+            if (_talk != null) Veil(_talk, false);
+            if (_early == _talk) _early = null;
             _talk = null;
         }
 
@@ -369,6 +397,16 @@ namespace NewAgeQoL
             else spot = new Vector2(Screen.width / scale * 0.5f - Wide * 0.5f, Screen.height / scale * 0.3f);
             if ((_root.anchoredPosition - spot).sqrMagnitude > 0.25f) _root.anchoredPosition = spot;
             if (Math.Abs(_root.sizeDelta.x - Wide) > 0.5f) _root.sizeDelta = new Vector2(Wide, _root.sizeDelta.y);
+        }
+    }
+
+    [HarmonyPatch(typeof(StaticLocationLoadController), "FindInteractionObject")]
+    internal static class PortalsButtonPatch
+    {
+        private static void Postfix(SceneObjectInfo objectInfo, UnityEngine.Events.UnityEvent __result)
+        {
+            try { Portals.Early(objectInfo, __result); }
+            catch (Exception e) { Plugin.Trace("[portal] keeper button: " + e.Message); }
         }
     }
 

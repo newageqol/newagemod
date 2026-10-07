@@ -1632,6 +1632,10 @@ namespace NewAgeQoL
             veil.blocksRaycasts = false;
             veil.interactable = false;
 
+            var lift = _tipGo.AddComponent<Canvas>();
+            lift.overrideSorting = true;
+            lift.sortingOrder = 29000;
+
             var box = _tipGo.GetComponent<VerticalLayoutGroup>();
             box.padding = new RectOffset(10, 10, 8, 8);
             box.childControlWidth = true;
