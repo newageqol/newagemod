@@ -1981,7 +1981,6 @@ namespace NewAgeQoL
             {
                 var point = data as PointerEventData;
                 if (point != null && point.button != PointerEventData.InputButton.Left) return;
-                if (Cooldown.Catch(shot)) return;
                 if (Focused(shot)) return;
                 if (!button.interactable) return;
                 Pick(shot);
