@@ -62,6 +62,10 @@ public sealed class DollPicture
     public bool Raw;
     public int Mips = 1;
     public float Scale = 1f;
+    public float ContentLeft;
+    public float ContentRight = 1f;
+    public float ContentBottom;
+    public float ContentTop = 1f;
     public List<string> Notes = new();
     public string Error;
 }
@@ -936,7 +940,37 @@ public static class Doll
             Buffer.BlockCopy(picture.Rgba, (2 * extra - 1 - row) * stride, picture.Rgba, row * stride, stride);
         picture.PivotX = -left * scale / width;
         picture.PivotY = (height + top * scale) / height;
+        Content(picture);
         return picture;
+    }
+
+    private static void Content(DollPicture picture)
+    {
+        int width = picture.Width, height = picture.Height;
+        var rgba = picture.Rgba;
+        int x0 = width, x1 = -1, y0 = height, y1 = -1;
+        for (int y = 0; y < height; y++)
+        {
+            int row = y * width * 4;
+            int first = -1, last = -1;
+            for (int x = 0; x < width; x++)
+            {
+                int at = row + x * 4;
+                if (rgba[at] + rgba[at + 1] + rgba[at + 2] <= 12) continue;
+                if (first < 0) first = x;
+                last = x;
+            }
+            if (first < 0) continue;
+            if (first < x0) x0 = first;
+            if (last > x1) x1 = last;
+            if (y < y0) y0 = y;
+            y1 = y;
+        }
+        if (x1 < x0 || y1 < y0) return;
+        picture.ContentLeft = x0 / (float)width;
+        picture.ContentRight = (x1 + 1) / (float)width;
+        picture.ContentBottom = y0 / (float)height;
+        picture.ContentTop = (y1 + 1) / (float)height;
     }
 
     public static DollSequence RenderClip(SwfMovie movie, string symbol, float scale, int smooth, bool sharp = true)

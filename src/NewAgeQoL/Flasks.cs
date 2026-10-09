@@ -641,6 +641,18 @@ namespace NewAgeQoL
             System.Array.Clear(Checked, 0, Rows);
         }
 
+        internal static void Reset()
+        {
+            for (int row = 0; row < Rows; row++) Left[row] = -1;
+            System.Array.Clear(Resolved, 0, Rows);
+            lock (Scanned) { Scanned.Clear(); ScannedInv.Clear(); GotTabs.Clear(); }
+            _seen = 0;
+            _scanFull = false;
+            _purse = -1f;
+            _urgent = true;
+            Forget();
+        }
+
         private static IEnumerator RefreshRoutine()
         {
             if (!Connected())

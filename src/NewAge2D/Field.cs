@@ -40,6 +40,10 @@ internal static class Field
         public float PivotX;
         public float PivotY;
         public float Scale = 1f;
+        public float Left;
+        public float Right = 1f;
+        public float Bottom;
+        public float Top = 1f;
     }
 
     internal static readonly List<GameObject> Scenery = new();
@@ -268,6 +272,10 @@ internal static class Field
         backdrop.Height = Mathf.RoundToInt(picture.Height / scale);
         backdrop.PivotX = picture.PivotX;
         backdrop.PivotY = picture.PivotY;
+        backdrop.Left = picture.ContentLeft;
+        backdrop.Right = picture.ContentRight;
+        backdrop.Bottom = picture.ContentBottom;
+        backdrop.Top = picture.ContentTop;
     }
 
     private static void Remember(Backdrop backdrop)
@@ -490,14 +498,16 @@ internal sealed class FieldView : MonoBehaviour
 
         float width = backdrop.Width / Field.PxPerUnit;
         float height = backdrop.Height / Field.RowPx;
-        _xMin = origin.x - backdrop.PivotX * width;
-        _xMax = _xMin + width;
-        _zMin = origin.z - backdrop.PivotY * height;
-        _zMax = _zMin + height;
+        float left = origin.x - backdrop.PivotX * width;
+        float bottom = origin.z - backdrop.PivotY * height;
+        _xMin = left + backdrop.Left * width;
+        _xMax = left + backdrop.Right * width;
+        _zMin = bottom + backdrop.Bottom * height;
+        _zMax = bottom + backdrop.Top * height;
         _hasBounds = true;
         _pictureObject.SetActive(Applied);
 
-        Plugin.Log.LogInfo($"[field] {backdrop.File} on field: corner ({x:0}, {y:0}) → grid ({origin.x:0.00}, {origin.z:0.00}), camera at {Field.Pitch:0.0}°");
+        Plugin.Log.LogInfo($"[field] {backdrop.File} on field: corner ({x:0}, {y:0}) → grid ({origin.x:0.00}, {origin.z:0.00}), camera at {Field.Pitch:0.0}°, drawn part x {backdrop.Left:0.00}..{backdrop.Right:0.00}, y {backdrop.Bottom:0.00}..{backdrop.Top:0.00}");
     }
 
     private TransparencySortMode _wasSort;

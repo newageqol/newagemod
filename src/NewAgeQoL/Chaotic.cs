@@ -745,6 +745,9 @@ namespace NewAgeQoL
             colors.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
             colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
             button.colors = colors;
+            var roster = go.AddComponent<RosterHover>();
+            roster.Id = widget.Id;
+            roster.Fight = started;
             var host = widget.gameObject;
             float lastClick = -10f;
             button.onClick.AddListener(() =>

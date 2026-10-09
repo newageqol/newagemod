@@ -165,6 +165,7 @@ namespace NewAgeQoL
     internal sealed class CloseSeat : MonoBehaviour
     {
         private const float Rise = 16f;
+        private const float Sink = 0.08f;
 
         private RectTransform _button;
 
@@ -189,6 +190,22 @@ namespace NewAgeQoL
             return "x " + local.x.ToString("0") + ".." + high.x.ToString("0") + " y " + local.y.ToString("0") + ".." + high.y.ToString("0");
         }
 
+        private float Seat(RectTransform caption)
+        {
+            var frame = _button.parent;
+            if (caption == null || frame == null) return Rise;
+            var corners = new Vector3[4];
+            caption.GetWorldCorners(corners);
+            float top = frame.InverseTransformPoint(corners[1]).y;
+            float bottom = frame.InverseTransformPoint(corners[0]).y;
+            _button.GetWorldCorners(corners);
+            float foot = frame.InverseTransformPoint(corners[0]).y;
+            float head = frame.InverseTransformPoint(corners[1]).y - foot;
+            float tall = top - bottom;
+            if (tall <= 0f || tall < 0.4f * head) return Rise;
+            return top - Sink * tall - foot;
+        }
+
         private void LateUpdate()
         {
             try
@@ -206,9 +223,10 @@ namespace NewAgeQoL
                 own.overrideSorting = true;
                 own.sortingLayerID = host.sortingLayerID;
                 own.sortingOrder = host.sortingOrder + 1;
-                _button.anchoredPosition += new Vector2(0f, Rise);
-                Plugin.Trace("[windows] " + transform.root.name + ": close button drawn above the caption bar, order " + own.sortingOrder
-                    + ", raised " + Rise + "; button " + Edges(_button) + ", caption " + Edges(transform.Find("DialogCaption") as RectTransform) + ", window " + Edges(transform as RectTransform));
+                float rise = Seat(transform.Find("DialogCaption") as RectTransform);
+                _button.anchoredPosition += new Vector2(0f, rise);
+                Plugin.Trace("[windows] " + transform.root.name + ": close button seated on the caption bar, order " + own.sortingOrder
+                    + ", raised " + rise.ToString("0.0") + "; button " + Edges(_button) + ", caption " + Edges(transform.Find("DialogCaption") as RectTransform) + ", window " + Edges(transform as RectTransform));
                 Destroy(this);
             }
             catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); Destroy(this); }

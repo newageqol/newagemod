@@ -231,7 +231,7 @@ namespace NewAgeQoL
         {
             float wide = HelpColumn.Wide;
             float x = wide > 0f ? -(wide + 8f) : -HelpColumn.SideGap;
-            float below = Roster.Bottom;
+            float below = Mathf.Max(Roster.Bottom, FightBoard.Bottom);
             float y = below > 0f ? -(below + 10f) : -HelpColumn.Head;
             var want = new Vector2(x, y);
             if ((_stack.anchoredPosition - want).sqrMagnitude > 0.25f) _stack.anchoredPosition = want;

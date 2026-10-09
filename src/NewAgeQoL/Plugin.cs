@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.15.3";
+        public const string Version = "0.16.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -69,6 +69,10 @@ namespace NewAgeQoL
         internal static ConfigEntry<bool> CfgWalkGlow;
         internal static ConfigEntry<float> CfgSoundVolume;
         internal static ConfigEntry<float> CfgSmallScreen;
+        internal static ConfigEntry<bool> CfgNewPlaces;
+        internal static ConfigEntry<bool> CfgRosterFolded;
+        internal static ConfigEntry<bool> CfgFightsFolded;
+        internal static bool NewPlaces => CfgNewPlaces == null || CfgNewPlaces.Value;
         internal static ConfigEntry<string> CfgEffectsWindow;
         internal static ConfigEntry<bool> CfgHelpFolded;
         internal static ConfigEntry<bool> CfgTravelButton;
@@ -134,21 +138,21 @@ namespace NewAgeQoL
 
             Chars.Own("Flasks", "FillToMax", true,
                 "ВКЛ: жизнь/мана/энергия — пить до ПОЛНОГО (после каждого глотка мод ждёт обновления полосы и останавливается, как только она заполнилась); грибы — пока сервер даёт, но не больше 20 штук за нажатие. ВЫКЛ: любая кнопка использует ровно ОДНУ штуку за нажатие.", e => CfgFlaskFillToMax = e);
-            Chars.Own("Flasks", "HpThingId", 0,
+            Chars.Fresh("Flasks", "HpThingId", 0,
                 "thingId внебоевой банки ЖИЗНИ, выбирается в настройках мода. 0 — кнопки нет.", e => CfgFlaskHpId = e);
-            Chars.Own("Flasks", "ManaThingId", 0,
+            Chars.Fresh("Flasks", "ManaThingId", 0,
                 "thingId внебоевой банки МАНЫ, выбирается в настройках мода. 0 — кнопки нет.", e => CfgFlaskManaId = e);
-            Chars.Own("Flasks", "EnergyThingId", 0,
+            Chars.Fresh("Flasks", "EnergyThingId", 0,
                 "thingId внебоевой банки ЭНЕРГИИ, выбирается в настройках мода. 0 — кнопки нет.", e => CfgFlaskEnergyId = e);
-            Chars.Own("Flasks", "MushroomThingId", 0,
+            Chars.Fresh("Flasks", "MushroomThingId", 0,
                 "thingId грибов (пополнение зарядов), выбирается в настройках мода. 0 — кнопки нет.", e => CfgFlaskMushroomId = e);
-            Chars.Own("Flasks", "HpThingName", "",
+            Chars.Fresh("Flasks", "HpThingName", "",
                 "Старая настройка: названия больше не сравниваются. Если здесь что-то записано, а HpThingId = 0, мод один раз возьмёт из сумки банку жизни по списку известных id, запишет её id и очистит это поле.", e => CfgFlaskHpName = e);
-            Chars.Own("Flasks", "ManaThingName", "",
+            Chars.Fresh("Flasks", "ManaThingName", "",
                 "Старая настройка, как HpThingName: переводится в ManaThingId по списку id банок маны.", e => CfgFlaskManaName = e);
-            Chars.Own("Flasks", "EnergyThingName", "",
+            Chars.Fresh("Flasks", "EnergyThingName", "",
                 "Старая настройка, как HpThingName: переводится в EnergyThingId по списку id банок энергии.", e => CfgFlaskEnergyName = e);
-            Chars.Own("Flasks", "MushroomThingName", "",
+            Chars.Fresh("Flasks", "MushroomThingName", "",
                 "Старая настройка, как HpThingName: переводится в MushroomThingId по списку id грибов.", e => CfgFlaskMushroomName = e);
 
 
@@ -243,6 +247,12 @@ namespace NewAgeQoL
                 "Столбец «Помощь» справа свёрнут. Меняется кнопкой со стрелкой над столбцом, состояние сохраняется между боями и входами в игру.", e => CfgHelpFolded = e);
             Chars.Own("Sounds", "FlashVolume", 1f,
                 "Громкость звуков из старого клиента, от 0 (тишина) до 1. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат в любом случае, пока включён звук мода.", e => CfgSoundVolume = e);
+            CfgNewPlaces = Config.Bind("Interface", "NewLocations", true,
+                "Новые локации мода (ночной Иллениум, банк, рынок и другие) и экран загрузки мода. Выключено — игра показывает свои локации и свои картинки загрузки локаций и боёв. Меняется со следующего захода в локацию.");
+            CfgRosterFolded = Config.Bind("Interface", "CharactersFolded", false,
+                "Список персонажей аккаунта справа свёрнут вправо. Меняется кнопкой «Персонажи» сбоку от списка, запоминается между заходами.");
+            CfgFightsFolded = Config.Bind("Interface", "FightsFolded", false,
+                "Список заявок и боёв Иллениума справа свёрнут вправо. Меняется кнопкой «Бои» сбоку от списка, запоминается между заходами.");
             CfgSmallScreen = Config.Bind("Interface", "SmallScreenScale", 1.2f,
                 "Во сколько раз крупнее делать интерфейс мода (чат, приёмы, подсказки, кнопки) на экранах ниже 1080 точек по высоте: 1 — как в игре, 1.2 — на пятую часть крупнее, до 1.5. Крупнее пиксель в пиксель не растёт, на 1080p и больше ничего не меняется.");
             CfgSoundVolume.Value = UnityEngine.Mathf.Clamp01(CfgSoundVolume.Value);
@@ -479,6 +489,8 @@ namespace NewAgeQoL
                 new Part { Name = "Focus.Tick", Do = Focus.Tick },
                 new Part { Name = "Chest.Tick", Do = Chest.Tick },
                 new Part { Name = "Roster.Tick", Do = Roster.Tick },
+                new Part { Name = "FightBoard.Tick", Do = FightBoard.Tick },
+                new Part { Name = "Mail.Tick", Do = Mail.Tick },
                 new Part { Name = "UiScale.Tick", Do = UiScale.Tick },
                 new Part { Name = "Dialogs.Tick", Do = Dialogs.Tick },
                 new Part { Name = "Claims.Tick", Do = Claims.Tick },
@@ -502,6 +514,7 @@ namespace NewAgeQoL
                 new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
+                new Part { Name = "SpareSession.Tick", Do = SpareSession.Tick },
                 new Part { Name = "OnlineList.Tick", Do = OnlineList.Tick },
                 new Part { Name = "GoldTransfer.Tick", Do = GoldTransfer.Tick },
                 new Part { Name = "CardAsk.Tick", Do = CardAsk.Tick },
@@ -533,6 +546,7 @@ namespace NewAgeQoL
                 new Part { Name = "HelpColumn.Tick", Do = HelpColumn.Tick },
                 new Part { Name = "SpeedBar.Tick", Do = SpeedBar.Tick },
                 new Part { Name = "Chaotic.Tick", Do = Chaotic.Tick },
+                new Part { Name = "ClaimRoster.Tick", Do = ClaimRoster.Tick },
                 new Part { Name = "Sounds.Tick", Do = Sounds.Tick },
                 new Part { Name = "Curtain.Tick", Do = Curtain.Tick },
             };
@@ -585,6 +599,7 @@ namespace NewAgeQoL
             DressDrag.Shutdown();
             CardAsk.Shutdown();
             Claims.Shutdown();
+            SpareSession.Shutdown();
             DiskJournal.Detach(Logger);
         }
 

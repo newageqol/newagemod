@@ -26,6 +26,8 @@ namespace NewAgeQoL
 
         private static GameObject _canvasGo;
         private static RectTransform _panel;
+        private static SideFold _fold;
+        private static float _top;
         private static GameObject _up;
         private static GameObject _down;
         private static Image _upPic;
@@ -38,7 +40,7 @@ namespace NewAgeQoL
         private static ConfirmMessageBox _confirm;
         private static int _enterFrame = -1;
 
-        internal static float Bottom => _canvasGo != null && _canvasGo.activeInHierarchy && _panel != null && _away < 0.5f ? -_panel.anchoredPosition.y + _panel.rect.height : 0f;
+        internal static float Bottom => _canvasGo != null && _canvasGo.activeInHierarchy && _fold != null && _away < 0.5f ? _top + _fold.Height : 0f;
 
         internal static bool Asking => _enterFrame == Time.frameCount || (_confirm != null && _confirm.isActiveAndEnabled);
 
@@ -91,7 +93,7 @@ namespace NewAgeQoL
             SideButtons.WindowsMoved();
         }
 
-        private static bool Shopping()
+        internal static bool Shopping()
         {
             if (Time.unscaledTime < _shopAt) return _shop;
             _shopAt = Time.unscaledTime + 0.2f;
@@ -112,8 +114,7 @@ namespace NewAgeQoL
 
         internal static bool Under()
         {
-            return _panel != null && _canvasGo != null && _canvasGo.activeInHierarchy
-                && RectTransformUtility.RectangleContainsScreenPoint(_panel, Input.mousePosition, null);
+            return _fold != null && _canvasGo != null && _canvasGo.activeInHierarchy && _fold.Under();
         }
 
         private static void Build()
@@ -131,11 +132,8 @@ namespace NewAgeQoL
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
 
-            var go = new GameObject("list", typeof(RectTransform));
-            go.transform.SetParent(_canvasGo.transform, false);
-            _panel = (RectTransform)go.transform;
-            _panel.anchorMin = _panel.anchorMax = new Vector2(1f, 1f);
-            _panel.pivot = new Vector2(1f, 1f);
+            _fold = new SideFold(_canvasGo.transform, "list", "Персонажи", Plugin.CfgRosterFolded);
+            _panel = _fold.Body;
             _panel.sizeDelta = new Vector2(RowW, RowH);
 
             _up = Arrow(true);
@@ -197,7 +195,7 @@ namespace NewAgeQoL
             if (CharacterPick.Known.Count <= Visible) return;
             float wheel = Input.GetAxis("Mouse ScrollWheel");
             if (Mathf.Abs(wheel) < 0.01f) return;
-            if (!Under()) return;
+            if (!_fold.Open || !RectTransformUtility.RectangleContainsScreenPoint(_panel, Input.mousePosition, null)) return;
             Scroll(wheel > 0f ? -1 : 1);
         }
 
@@ -372,8 +370,9 @@ namespace NewAgeQoL
             float wide = HelpColumn.Wide;
             var want = new Vector2(wide > 0f ? -(wide + Edge) : -HelpColumn.SideGap, -HelpColumn.Head);
             float e = _away * _away * (3f - 2f * _away);
-            want.x += e * (_panel.rect.width + Mathf.Abs(want.x) + 20f);
-            if ((_panel.anchoredPosition - want).sqrMagnitude > 0.25f) _panel.anchoredPosition = want;
+            want.x += e * (_panel.rect.width + 30f + Mathf.Abs(want.x) + 20f);
+            _top = -want.y;
+            _fold.Lay(want, _panel.sizeDelta);
         }
 
         private static void Drop()
@@ -382,6 +381,7 @@ namespace NewAgeQoL
             UnityEngine.Object.Destroy(_canvasGo);
             _canvasGo = null;
             _panel = null;
+            _fold = null;
             _up = null;
             _down = null;
             _upPic = null;

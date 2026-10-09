@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -707,25 +708,63 @@ namespace NewAgeQoL
 
             var head = new StringBuilder();
             head.Append("<b>").Append(step).Append(". ").Append(KuData.Step(step)).Append("</b>");
-            int price = elite ? step : KuData.Cost(step);
-            head.Append("   <size=12><color=#747b85>всего ").Append(price).Append(' ')
-                .Append(elite ? Wardrobe.Plural(price, "трофей", "трофея", "трофеев") : Wardrobe.Plural(price, "очко", "очка", "очков")).Append("</color></size>");
-            var cost = skill.Costs[step - 1];
-            int charges = cost != null && cost.Length >= 4 ? cost[3] : 0;
-            if (cost != null && cost.Length >= 3 && (cost[0] > 0 || cost[1] > 0 || cost[2] > 0 || charges > 0))
-            {
-                var parts = new List<string>();
-                if (cost[0] > 0) parts.Add("энергия " + cost[0]);
-                if (charges > 0) parts.Add("заряды " + charges);
-                if (cost[1] > 0) parts.Add("действует " + cost[1]);
-                if (cost[2] > 0) parts.Add("перезарядка " + cost[2]);
-                head.Append("\n<size=12><color=#acb3bd>").Append(string.Join(" · ", parts.ToArray())).Append("</color></size>");
-            }
             var title = Say(go.transform, head.ToString(), 15, FontStyle.Normal, have ? WardrobeLook.Accent : next ? WardrobeLook.Bright : WardrobeLook.Label, TextAnchor.UpperLeft);
             title.supportRichText = true;
             title.horizontalOverflow = HorizontalWrapMode.Wrap;
-            var body = Say(go.transform, skill.Texts[step - 1] ?? "", 14, FontStyle.Normal, have || next ? WardrobeLook.Body : WardrobeLook.Faint, TextAnchor.UpperLeft);
+
+            string text = skill.Texts[step - 1] ?? "";
+            string lasts = Taken(ref text, LastsRx);
+            string reload = Taken(ref text, ReloadRx);
+            var cost = skill.Costs[step - 1];
+            int energy = cost != null && cost.Length >= 1 ? cost[0] : 0;
+            if (cost != null && cost.Length >= 2 && cost[1] > 0) lasts = Rounds(cost[1]);
+            if (cost != null && cost.Length >= 3 && cost[2] > 0) reload = Rounds(cost[2]);
+            int charges = cost != null && cost.Length >= 4 ? cost[3] : 0;
+            bool dim = !have && !next;
+            var stats = new List<string>();
+            if (energy > 0) stats.Add(Stat("Энергия", energy.ToString(), dim));
+            if (charges > 0) stats.Add(Stat("Заряды", charges.ToString(), dim));
+            if (lasts != null) stats.Add(Stat("Длительность", lasts, dim));
+            if (reload != null) stats.Add(Stat("Перезарядка", reload, dim));
+            else if (HasReload(skill)) stats.Add(Stat("Перезарядка", "нет", dim));
+            if (stats.Count > 0)
+            {
+                var lines = Say(go.transform, string.Join("\n", stats.ToArray()), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.UpperLeft);
+                lines.supportRichText = true;
+                lines.horizontalOverflow = HorizontalWrapMode.Wrap;
+            }
+            var body = Say(go.transform, text, 14, FontStyle.Normal, have || next ? WardrobeLook.Body : WardrobeLook.Faint, TextAnchor.UpperLeft);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
+        }
+
+        private static readonly Regex LastsRx = new Regex(@"\s*Длительность(?: эффекта)?:?\s*(\d+(?:\s*раунд[а-я]*)?|до конца [^.]+|текущий раунд)\.?");
+        private static readonly Regex ReloadRx = new Regex(@"\s*Перезарядка:?\s*(\d+(?:\s*раунд[а-я]*)?|до конца [^.]+|текущий раунд)\.?");
+
+        private static string Taken(ref string text, Regex rx)
+        {
+            var m = rx.Match(text);
+            if (!m.Success) return null;
+            text = (text.Substring(0, m.Index) + " " + text.Substring(m.Index + m.Length)).Trim();
+            while (text.Contains("  ")) text = text.Replace("  ", " ");
+            string value = m.Groups[1].Value.Trim();
+            int n;
+            var digits = Regex.Match(value, @"^\d+");
+            return digits.Success && int.TryParse(digits.Value, out n) ? Rounds(n) : value;
+        }
+
+        private static string Rounds(int n) => n + " " + Wardrobe.Plural(n, "раунд", "раунда", "раундов");
+
+        private static string Stat(string name, string value, bool dim)
+        {
+            string hue = ColorUtility.ToHtmlStringRGB(dim ? WardrobeLook.Label : WardrobeLook.Accent);
+            return name + ": <b><color=#" + hue + ">" + value + "</color></b>";
+        }
+
+        private static bool HasReload(KuSkill skill)
+        {
+            foreach (var cost in skill.Costs)
+                if (cost != null && cost.Length >= 3 && cost[2] > 0) return true;
+            return false;
         }
 
         private static Text Say(Transform host, string text, int size, FontStyle style, Color color, TextAnchor anchor)

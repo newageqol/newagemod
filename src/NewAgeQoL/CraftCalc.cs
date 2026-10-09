@@ -45,6 +45,9 @@ namespace NewAgeQoL
         private static ScrollRect _treeScroll;
         private static RectTransform _cart;
         private static RectTransform _drops;
+        private static RectTransform _cartView;
+        private static RectTransform _dropHead;
+        private static RectTransform _dropView;
         private static Text _found;
         private static Text _craftText;
         private static InputField _fromField;
@@ -108,6 +111,32 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Fault("[craft] window: " + e); Close(); }
         }
 
+        internal static bool Has(int thing) => thing > 0 && RecipeData.Ready && RecipeData.Making(thing) != null;
+
+        internal static int Crafted(int thing, string name)
+        {
+            if (Has(thing)) return thing;
+            if (string.IsNullOrEmpty(name) || !RecipeData.Ready) return 0;
+            foreach (var recipe in RecipeData.Recipes)
+                if (string.Equals(RecipeData.ThingName(recipe.Result), name, StringComparison.CurrentCultureIgnoreCase)) return recipe.Result;
+            return 0;
+        }
+
+        internal static void ShowRecipe(int thing)
+        {
+            if (!Has(thing)) return;
+            _craft = 0;
+            _from = 0;
+            _to = 0;
+            _picked = thing;
+            Show();
+            if (_canvasGo == null) return;
+            Pick(thing);
+            string name = RecipeData.ThingName(thing);
+            if (_search != null && !string.IsNullOrEmpty(name)) _search.text = name;
+            Plugin.Trace("[craft] opened on recipe of " + name + " (" + thing + ")");
+        }
+
         internal static void Close()
         {
             _hoverId = 0;
@@ -124,6 +153,9 @@ namespace NewAgeQoL
             _treeScroll = null;
             _cart = null;
             _drops = null;
+            _cartView = null;
+            _dropHead = null;
+            _dropView = null;
             _found = null;
             _craftText = null;
             _fromField = null;
@@ -388,11 +420,25 @@ namespace NewAgeQoL
             var head = Say(box, "Корзина", 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
             Wardrobe.At(head.rectTransform, 16f, 10f, 200f, 30f);
             Wardrobe.At(Wardrobe.GameButton(box, "Очистить", ClearCart, true), CartW - 128f, 10f, 112f, 30f);
-            Scroller(box, 8f, 46f, CartW - 16f, 230f, 2f, out _cart);
+            _cartView = (RectTransform)Scroller(box, 8f, 46f, CartW - 16f, CartMax, 2f, out _cart).transform;
 
             var drop = Say(box, "Всего дропа", 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
-            Wardrobe.At(drop.rectTransform, 16f, 284f, CartW - 32f, 28f);
-            Scroller(box, 8f, 316f, CartW - 16f, BodyH - 316f - 8f, 2f, out _drops);
+            _dropHead = drop.rectTransform;
+            _dropView = (RectTransform)Scroller(box, 8f, 0f, CartW - 16f, 100f, 2f, out _drops).transform;
+            FitCart();
+        }
+
+        private const float CartMax = 230f;
+
+        private static void FitCart()
+        {
+            if (_cartView == null || _dropHead == null || _dropView == null) return;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_cart);
+            float h = Mathf.Clamp(LayoutUtility.GetPreferredHeight(_cart), 50f, CartMax);
+            Wardrobe.At(_cartView, 8f, 46f, CartW - 16f, h);
+            float y = 46f + h + 8f;
+            Wardrobe.At(_dropHead, 16f, y, CartW - 32f, 28f);
+            Wardrobe.At(_dropView, 8f, y + 32f, CartW - 16f, BodyH - y - 32f - 8f);
         }
 
         private static ScrollRect Scroller(RectTransform host, float x, float y, float w, float h, float gap, out RectTransform content)
@@ -796,6 +842,7 @@ namespace NewAgeQoL
             Prune();
             foreach (var line in Cart) CartRow(line);
             if (Cart.Count == 0) Note(_cart, "Пусто — выбери вещь и нажми «В корзину»");
+            FitCart();
 
             var drops = new Dictionary<int, long>();
             Sum(drops, new Dictionary<int, long>());

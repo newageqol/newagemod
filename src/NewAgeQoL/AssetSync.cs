@@ -54,7 +54,7 @@ namespace NewAgeQoL
         internal static bool Asking => _running && !_done;
 
         internal static bool Off(string group) =>
-            Declined && _need != null && _need.Any(e => e.Path.StartsWith(group + "/", StringComparison.OrdinalIgnoreCase));
+            !Plugin.NewPlaces || Declined && _need != null && _need.Any(e => e.Path.StartsWith(group + "/", StringComparison.OrdinalIgnoreCase));
 
         internal static float Progress => _totalBytes > 0 ? Mathf.Clamp01(_gotBytes / (float)_totalBytes) : 0f;
 

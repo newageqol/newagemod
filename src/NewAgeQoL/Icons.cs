@@ -10,7 +10,7 @@ namespace NewAgeQoL
 
         private static Sprite _drop, _bolt, _spark, _enter, _bin, _cap, _head, _burst, _scroll, _quest;
         private static Sprite _star, _starEmpty;
-        private static Sprite _blades, _downward, _again;
+        private static Sprite _blades, _downward, _again, _chevron;
 
         private static readonly Vector2[] Zigzag =
         {
@@ -205,6 +205,19 @@ namespace NewAgeQoL
                     return false;
                 });
             return _downward;
+        }
+
+        internal static Sprite Chevron()
+        {
+            if (Gone(_chevron))
+                _chevron = Shape((x, y) =>
+                {
+                    float ay = Mathf.Abs(y);
+                    if (ay > 0.78f) return false;
+                    float mid = 0.38f - 0.8f * ay;
+                    return Mathf.Abs(x - mid) <= 0.24f;
+                });
+            return _chevron;
         }
 
         internal static Sprite Quest()

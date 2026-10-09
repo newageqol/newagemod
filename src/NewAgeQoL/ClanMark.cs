@@ -69,7 +69,7 @@ namespace NewAgeQoL
                 bool had;
                 if (id > 0 && Seen.TryGetValue(id, out had)) return had;
 
-                if (string.IsNullOrEmpty(login) || !OnlineList.Configured) return false;
+                if (string.IsNullOrEmpty(login)) return false;
 
                 int version = OnlineList.Version;
                 if (version != _guessVersion) { _guessVersion = version; Guess.Clear(); }

@@ -350,15 +350,29 @@ namespace NewAgeQoL
         {
             if (string.IsNullOrEmpty(binding)) return null;
             Read();
+            var acts = All();
             foreach (var pair in Bound)
             {
                 if (pair.Key == except || pair.Value != binding) continue;
                 if (sameSide && Shared(except, pair.Key)) continue;
-                foreach (var act in All())
+                foreach (var act in acts)
                     if (act.Key == pair.Key) return act.Title;
+                if (Skilly(pair.Key)) continue;
                 return pair.Key;
             }
             return null;
+        }
+
+        private static void Revive(string key)
+        {
+            Read();
+            string binding;
+            if (!Bound.TryGetValue(key, out binding) || string.IsNullOrEmpty(binding)) return;
+            string busy = Taken(binding, key, true);
+            if (busy == null) return;
+            Bound.Remove(key);
+            Save();
+            Plugin.Trace("[hotkeys] " + key + " is back, its old key " + binding + " now belongs to " + busy + ", removed");
         }
 
         internal static string Tail(string key)
@@ -653,7 +667,8 @@ namespace NewAgeQoL
                 if (msg == null) return;
                 _heard |= 1;
                 Known();
-                int added = 0, saw = 0, passive = 0, noName = 0;
+                int added = 0, saw = 0, passive = 0, noName = 0, dropped = 0;
+                var have = new HashSet<int>();
                 if (msg.ClassMasteries != null)
                     foreach (var one in msg.ClassMasteries)
                     {
@@ -661,6 +676,7 @@ namespace NewAgeQoL
                         saw++;
                         int id = one.SkillId;
                         if (id <= 0) continue;
+                        have.Add(id);
                         if (!Active(id)) { passive++; continue; }
                         string name = Named(id);
                         if (name == null) { noName++; continue; }
@@ -669,11 +685,20 @@ namespace NewAgeQoL
                         if (Learned.TryGetValue(key, out was) && was == name) continue;
                         Learned[key] = name;
                         added++;
+                        Revive(key);
                     }
+                foreach (string key in new List<string>(Learned.Keys))
+                {
+                    if (!key.StartsWith("skill:", StringComparison.Ordinal)) continue;
+                    int id;
+                    if (!int.TryParse(key.Substring(6), out id) || have.Contains(id) || !Classy(id)) continue;
+                    Learned.Remove(key);
+                    dropped++;
+                }
                 Plugin.Trace("[hotkeys] character class skills " + saw + ": stored " + added
-                             + ", passive skipped " + passive + ", unnamed " + noName
+                             + ", no longer learned " + dropped + ", passive skipped " + passive + ", unnamed " + noName
                              + "; general skills skipped, they are passive");
-                if (added > 0) KeepKnown();
+                if (added > 0 || dropped > 0) KeepKnown();
             }
             catch (Exception e) { Plugin.Trace("[hotkeys] skills list: " + e.Message); }
         }
@@ -703,6 +728,7 @@ namespace NewAgeQoL
                     if (Learned.TryGetValue(key, out was) && was == name) continue;
                     Learned[key] = name;
                     added++;
+                    Revive(key);
                 }
                 Plugin.Trace("[hotkeys] " + (dodges ? "dodges" : "spells of school " + msg.Selector) + " of the character " + msg.Items.Count
                              + ": stored " + added + ", unnamed " + noName + (noName > 0 ? " (id" + unnamed + ")" : ""));
@@ -745,6 +771,16 @@ namespace NewAgeQoL
             catch { return true; }
         }
 
+        private static bool Classy(int id)
+        {
+            try
+            {
+                var db = ClassSkillsDatabase.Instance;
+                return db != null && db.GetData(id) != null;
+            }
+            catch { return false; }
+        }
+
         private static string Named(int id)
         {
             try
@@ -777,6 +813,7 @@ namespace NewAgeQoL
                     if (Learned.TryGetValue(key, out var was) && was == name) continue;
                     Learned[key] = name;
                     fresh = true;
+                    Revive(key);
                 }
             }
             string seen = string.Join(", ", counted.ToArray());

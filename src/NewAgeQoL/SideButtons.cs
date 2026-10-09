@@ -83,7 +83,7 @@ namespace NewAgeQoL
                 Col = 3,
                 Fight = true,
                 Order = 90,
-                Hint = () => (OnlineList.Configured ? "Кто в игре" : "Кто в игре: укажи запасной аккаунт в настройках мода") + OnlineWindow.KeyHint(),
+                Hint = () => "Кто в игре" + OnlineWindow.KeyHint(),
                 Sprite = () => Pick(1, "assassin_list", "friends", "clan"),
                 Badge = () => OnlineList.Busy ? "…" : "",
                 Click = OnlineWindow.Toggle,

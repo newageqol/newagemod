@@ -12,12 +12,9 @@ namespace NewAgeQoL
 {
     internal static class GoldTransfer
     {
-        private const string Host = "nura.biz";
-        private const int Port = 2000;
         private const string RootName = "QoLGoldTransfer";
 
         private static readonly object Gate = new object();
-        private static readonly Regex Money = new Regex("realcash=\"([0-9.]+)\"");
         private static bool _busy;
         private static string _status = "";
         private static bool _good;
@@ -161,27 +158,41 @@ namespace NewAgeQoL
 
         internal static bool Start(string target, double amount, string comment)
         {
-            string login = Spare();
-            string pass = Plugin.CfgOnlinePassword?.Value ?? "";
-            string ver = (Plugin.CfgOnlineVersion?.Value ?? "").Trim();
-            if (ver.Length == 0) ver = "11073";
-            if (login.Length == 0 || pass.Length == 0)
+            string why = SpareSession.Refuse();
+            if (why != null)
             {
-                Set("Укажи логин и пароль запасного аккаунта в настройках мода.", false);
+                Set(why + ".", false);
                 return false;
             }
             lock (Gate)
             {
                 if (_busy) return false;
                 _busy = true;
-                _status = "Вхожу запасным аккаунтом…";
+                _status = SpareSession.Online ? "Отправляю перевод…" : "Вхожу запасным аккаунтом…";
                 _good = true;
                 _version++;
             }
             Plugin.Trace("[gold] transfer started");
-            var t = new Thread(() => Work(login, pass, ver, target, amount, comment ?? "")) { IsBackground = true, Name = "QoLGoldTransfer" };
-            t.Start();
+            SpareSession.Run("gold", false, link => Work(link, target, amount, comment ?? ""), Failed);
             return true;
+        }
+
+        private static void Failed(string why)
+        {
+            Plugin.Trace("[gold] transfer not done");
+            Done("Не вышло: " + why, false);
+        }
+
+        private static void Done(string result, bool ok)
+        {
+            lock (Gate)
+            {
+                _status = result;
+                _good = ok;
+                _busy = false;
+                _announce = result;
+                _version++;
+            }
         }
 
         internal static bool Read(ref int seen, out string status, out bool good, out bool busy)
@@ -197,129 +208,32 @@ namespace NewAgeQoL
             }
         }
 
-        private static string Esc(string s) =>
-            (s ?? "").Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
-
         private static string Attr(string xml, string key)
         {
             var m = Regex.Match(xml ?? "", "\\b" + key + "=\"([^\"]*)\"");
             return m.Success ? System.Net.WebUtility.HtmlDecode(m.Groups[1].Value) : "";
         }
 
-        private static void Work(string login, string pass, string ver, string target, double amount, string comment)
+        private static void Work(SpareLink link, string target, double amount, string comment)
         {
-            string result;
-            bool ok = false;
-            try
-            {
-                var waitList = DateTime.UtcNow.AddSeconds(20);
-                while (OnlineList.Busy && DateTime.UtcNow < waitList) Thread.Sleep(200);
+            double? balance = link.Balance;
+            if (balance == null) throw new Exception("не удалось узнать, есть ли золото на запасном аккаунте");
+            if (balance.Value <= 0.0001) throw new Exception("на запасном аккаунте нет золота");
+            if (balance.Value + 0.0001 < amount) throw new Exception("на запасном аккаунте не хватает золота на эту сумму");
 
-                using (var client = new TcpClient())
-                {
-                    client.NoDelay = true;
-                    var ar = client.BeginConnect(Host, Port, null, null);
-                    if (!ar.AsyncWaitHandle.WaitOne(8000)) throw new Exception("нет соединения с " + Host);
-                    client.EndConnect(ar);
-                    var stream = client.GetStream();
-                    var acc = new List<byte>();
-                    var early = new Queue<string>();
-                    double? balance = null;
+            Plugin.Trace("[gold] spare has gold, sending request");
+            Set("Отправляю перевод…", true);
 
-                    Pump(stream, acc, early, 1.5, null, ref balance);
-                    Send(stream, "<Message type=\"315\"><auth account=\"" + Esc(login) + "\" password=\"" + Esc(pass) + "\" ver=\"" + Esc(ver) + "\" site=\"1\" /></Message>");
-                    string lr = null;
-                    foreach (var m in Pump(stream, acc, early, 8, m => m.Contains("LoginResponce"), ref balance))
-                        if (m.Contains("LoginResponce")) lr = m;
-                    if (lr == null) throw new Exception("сервер не ответил на вход запасным аккаунтом");
-                    if (!lr.Contains("LoggedIn=\"1\""))
-                    {
-                        string why = Attr(lr, "Msg");
-                        throw new Exception("запасной аккаунт не пустили" + (why.Length > 0 ? ": " + why : ""));
-                    }
-
-                    if (balance == null) Pump(stream, acc, early, 4, m => Money.IsMatch(m), ref balance);
-                    if (balance == null) throw new Exception("не удалось узнать, есть ли золото на запасном аккаунте");
-                    if (balance.Value <= 0.0001) throw new Exception("на запасном аккаунте нет золота");
-                    if (balance.Value + 0.0001 < amount) throw new Exception("на запасном аккаунте не хватает золота на эту сумму");
-
-                    Plugin.Trace("[gold] spare has gold, sending request");
-                    Set("Отправляю перевод…", true);
-
-                    Send(stream, "<Message type=\"79\"><CashTransfer amount=\"" + Esc(Shown(amount)) + "\" user=\"" + Esc(target) + "\" signature=\"" + Esc(comment) + "\" /></Message>");
-                    string answer = null;
-                    foreach (var m in Pump(stream, acc, early, 15, m => m.Contains("type=\"217\""), ref balance))
-                        if (m.Contains("type=\"217\"")) answer = m;
-                    if (answer == null) throw new Exception("сервер не ответил на перевод");
-                    string success = Attr(answer, "success");
-                    ok = success == "1" || success == "true";
-                    string msg = Attr(answer, "msg");
-                    result = (ok ? "Перевод принят" : "Перевод отклонён") + (msg.Length > 0 ? ": " + msg : ".");
-                    Plugin.Trace("[gold] transfer " + (ok ? "accepted" : "refused") + " by server");
-                }
-            }
-            catch (Exception e)
-            {
-                result = "Не вышло: " + e.Message;
-                Plugin.Trace("[gold] transfer not done");
-            }
-            lock (Gate)
-            {
-                _status = result;
-                _good = ok;
-                _busy = false;
-                _announce = result;
-                _version++;
-            }
-        }
-
-        private static void Send(NetworkStream s, string xml)
-        {
-            var b = Encoding.UTF8.GetBytes(xml + "\0");
-            s.Write(b, 0, b.Length);
-            s.Flush();
-        }
-
-        private static List<string> Pump(NetworkStream s, List<byte> acc, Queue<string> early, double seconds, Func<string, bool> stopWhen, ref double? balance)
-        {
-            var got = new List<string>();
-            while (early.Count > 0)
-            {
-                string m = early.Dequeue();
-                got.Add(m);
-                if (stopWhen != null && stopWhen(m)) return got;
-            }
-            var end = DateTime.UtcNow.AddSeconds(seconds);
-            var tmp = new byte[65536];
-            var chunk = new List<string>();
-            while (DateTime.UtcNow < end)
-            {
-                if (!s.DataAvailable) { Thread.Sleep(40); continue; }
-                int n = s.Read(tmp, 0, tmp.Length);
-                if (n <= 0) break;
-                chunk.Clear();
-                for (int i = 0; i < n; i++)
-                {
-                    if (tmp[i] != 0) { acc.Add(tmp[i]); continue; }
-                    if (acc.Count == 0) continue;
-                    string m = Encoding.UTF8.GetString(acc.ToArray());
-                    acc.Clear();
-                    if (m.Trim().Length == 0) continue;
-                    var money = Money.Match(m);
-                    double value;
-                    if (money.Success && double.TryParse(money.Groups[1].Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value))
-                        balance = value;
-                    chunk.Add(m);
-                }
-                for (int k = 0; k < chunk.Count; k++)
-                {
-                    got.Add(chunk[k]);
-                    if (stopWhen == null || !stopWhen(chunk[k])) continue;
-                    for (int rest = k + 1; rest < chunk.Count; rest++) early.Enqueue(chunk[rest]);
-                    return got;
-                }
-            }
-            return got;
+            SpareSession.Send(link, "<Message type=\"79\"><CashTransfer amount=\"" + SpareSession.Esc(Shown(amount)) + "\" user=\"" + SpareSession.Esc(target) + "\" signature=\"" + SpareSession.Esc(comment) + "\" /></Message>");
+            string answer = null;
+            foreach (var m in SpareSession.Pump(link, 15, m => m.Contains("type=\"217\"")))
+                if (m.Contains("type=\"217\"")) answer = m;
+            if (answer == null) throw new SpareReset("сервер не ответил на перевод, соединение запасного аккаунта сброшено");
+            string success = Attr(answer, "success");
+            bool ok = success == "1" || success == "true";
+            string msg = Attr(answer, "msg");
+            Plugin.Trace("[gold] transfer " + (ok ? "accepted" : "refused") + " by server");
+            Done((ok ? "Перевод принят" : "Перевод отклонён") + (msg.Length > 0 ? ": " + msg : "."), ok);
         }
     }
 

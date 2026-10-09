@@ -54,6 +54,7 @@ namespace NewAgeQoL
                 AssetSync.Pending
                     ? A("Новые версии старых локаций: " + AssetSync.PendingSize + " МБ", "Скачать", AssetSync.Retry)
                     : null,
+                B("Новые локации и экран загрузки мода", Plugin.CfgNewPlaces),
                 new Header { Title = "Кнопки" },
                 B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
                 B("Кнопка запасного набора", Plugin.CfgArtifactButtons),
@@ -1001,7 +1002,7 @@ namespace NewAgeQoL
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
                     if (ChatColors.EscapeClose()) return false;
-                    if (Wardrobe.EscapeClose() || KuCalc.EscapeClose() || CraftCalc.EscapeClose()) return false;
+                    if (CraftCalc.EscapeClose() || KuCalc.EscapeClose() || Wardrobe.EscapeClose()) return false;
                     if (Smiles.EscapeClose()) return false;
                     if (FlaskPicker.EscapeClose()) return false;
                     if (TravelEdit.EscapeClose()) return false;
@@ -1010,6 +1011,7 @@ namespace NewAgeQoL
                     if (Manikin.EscapeClose()) return false;
                     if (Changelog.EscapeClose()) return false;
                     if (Chaotic.EscapeClose()) return false;
+                    if (Mail.EscapeClose()) return false;
                     if (Report.EscapeClose()) return false;
                     if (ModalDialogList.IsEmpty())
                     {

@@ -759,10 +759,17 @@ namespace NewAgeQoL
             change(probe);
             Trim(probe);
             var race = probe.Race;
-            if (race == null) { Refresh(); return; }
+            if (race == null || s.Race == null) { Refresh(); return; }
             for (int i = 0; i < 7; i++)
             {
+                int was = Math.Max(0, s.Floor(i) - race.Base[i] - s.Potion(i));
                 int need = Math.Max(0, probe.Floor(i) - race.Base[i] - probe.Potion(i));
+                if (need < was && probe.Dist[i] == was)
+                {
+                    int target = need;
+                    while (target < was && probe.Blocker(i, race.Base[i] + target + probe.Potion(i)) != null) target++;
+                    probe.Dist[i] = target;
+                }
                 if (probe.Dist[i] < need) probe.Dist[i] = need;
             }
             if (probe.Spent > WardrobeState.Points(probe.Level))

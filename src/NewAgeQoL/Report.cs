@@ -27,7 +27,8 @@ namespace NewAgeQoL
         private const int OneFileMost = 20 * 1024 * 1024;
         private const int Room = 44 * 1024 * 1024;
         private const int Least = 10;
-        private const string BakedUrl = "https://newagemod.outerlab.org/report";
+        private const string BakedUrl = "https://newagemod-report.outerlab.org/report";
+        private const string OldUrl = "https://newagemod.outerlab.org/report";
         private const string BakedKey = "";
 
         private sealed class Item
@@ -66,9 +67,19 @@ namespace NewAgeQoL
             if (_url == null)
                 _url = home.Bind("Report", "Url", BakedUrl,
                     "Куда уходит отчёт об ошибке: адрес приёмника. Пусто — отчёт только складывается в папку, отправлять его нужно самому.");
+            if (string.Equals((_url.Value ?? "").Trim(), OldUrl, StringComparison.OrdinalIgnoreCase)) _url.Value = BakedUrl;
             if (_key == null)
                 _key = home.Bind("Report", "Key", BakedKey,
                     "Общий ключ приёмника, чтобы туда не слал кто попало.");
+        }
+
+        internal static string Address
+        {
+            get
+            {
+                Bind();
+                return _url != null && _url.Value != null ? _url.Value.Trim() : "";
+            }
         }
 
         internal static void Open()
@@ -332,6 +343,7 @@ namespace NewAgeQoL
                         Plugin.Log?.LogInfo("[report] sent, response " + web.responseCode);
                         Say("Отчёт ушёл. Спасибо!");
                         Thanks();
+                        Mail.Wake();
                         yield return new WaitForSecondsRealtime(1.2f);
                         if (era != _era) yield break;
                         Files.Clear();
@@ -364,6 +376,8 @@ namespace NewAgeQoL
                 form.AddField("who", Login(), Encoding.UTF8);
                 form.AddField("mod", Badge(), Encoding.UTF8);
                 form.AddField("text", Short(told), Encoding.UTF8);
+                string mailbox = Mail.Box;
+                if (mailbox.Length > 0) form.AddField("box", mailbox, Encoding.UTF8);
                 form.AddBinaryData("document", box.Zip, string.IsNullOrEmpty(box.File) ? "report.zip" : Path.GetFileName(box.File), "application/zip");
                 var web = UnityWebRequest.Post(url, form);
                 web.timeout = 300;
@@ -767,6 +781,7 @@ namespace NewAgeQoL
             row.childControlHeight = true;
             row.childForceExpandWidth = false;
             row.childForceExpandHeight = false;
+            if (Mail.Any) Fixed(Wardrobe.GameButton(rowGo.transform, "Переписка", Mail.Open, false));
             Fixed(Wardrobe.GameButton(rowGo.transform, "Выбрать файлы", Choose, false));
             var send = Wardrobe.GameButton(rowGo.transform, "Отправить", Go, false);
             Fixed(send);

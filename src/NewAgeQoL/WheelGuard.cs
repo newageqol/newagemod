@@ -7,7 +7,7 @@ namespace NewAgeQoL
     {
         internal static bool Over()
         {
-            try { return HelpColumn.Under() || SkillList.Things.Under() || Roster.Under(); }
+            try { return HelpColumn.Under() || SkillList.Things.Under() || Roster.Under() || FightBoard.Under(); }
             catch { return false; }
         }
     }

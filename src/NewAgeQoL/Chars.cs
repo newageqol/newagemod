@@ -178,6 +178,7 @@ namespace NewAgeQoL
             try { Storage.Forget(); } catch { }
             try { MoveMode.Forget(); } catch { }
             try { Manikin.Forget(); } catch { }
+            try { Flasks.Reset(); } catch { }
         }
     }
 }

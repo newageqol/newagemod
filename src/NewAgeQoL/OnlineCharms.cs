@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -41,9 +40,6 @@ namespace NewAgeQoL
     internal static class OnlineCharms
     {
         private const int Premium = 8;
-        private const int Gap = 20;
-        private const double Patience = 5.0;
-        private const int Most = 400;
         private const float Side = 24f;
         private const float TipWide = 340f;
         private const string Site = "https://files.nura.biz/assets/enchantments/";
@@ -64,7 +60,6 @@ namespace NewAgeQoL
         private static readonly Dictionary<string, float> Failed = new Dictionary<string, float>();
         private static readonly Dictionary<int, string> Names = new Dictionary<int, string>();
         private static readonly FieldInfo CrownField = AccessTools.Field(typeof(UserRowWidget), "PremiumImage");
-        private static readonly byte[] Buffer = new byte[65536];
 
         private static RectTransform _panel;
         private static CharmHover _hover;
@@ -86,47 +81,42 @@ namespace NewAgeQoL
             }
         }
 
-        internal static void Fetch(NetworkStream stream, List<byte> acc, List<OnlinePlayer> list)
+        internal static void Apply(List<string> records, List<OnlinePlayer> list, long now)
         {
             try
             {
-                var clock = System.Diagnostics.Stopwatch.StartNew();
                 var byId = new Dictionary<int, OnlinePlayer>();
                 foreach (var p in list)
                     if (p != null && p.Id != 0) byId[p.Id] = p;
-                if (byId.Count == 0) return;
-
-                var inbox = new List<string>();
+                var lists = new List<string>();
+                foreach (var r in records)
+                    if (r.StartsWith("379\u001f", StringComparison.Ordinal)) lists.Add(r.Substring(4));
                 var found = new Dictionary<int, List<OnlineCharm>>();
-                foreach (int id in byId.Keys)
+                Lists(lists, found);
+                bool changed = false;
+                foreach (int key in new List<int>(found.Keys))
                 {
-                    Send(stream, "<Message type=\"350\"><g id=\"" + id + "\" /></Message>");
-                    Thread.Sleep(Gap);
-                    Take(stream, acc, inbox);
-                    Lists(inbox, found);
+                    OnlinePlayer owner;
+                    if (byId.TryGetValue(key, out owner) && Same(owner.Charms, found[key])) found[key] = owner.Charms;
+                    else changed = true;
                 }
-                Settle(stream, acc, inbox, () => { Lists(inbox, found); return found.Count >= byId.Count; });
 
-                int rounds = 0;
-                foreach (var one in found.Values) rounds = Math.Max(rounds, one.Count);
-                int sent = 0, heard = 0;
-                var mute = new HashSet<int>();
-                for (int r = 0; r < rounds && sent < Most; r++)
+                int heard = 0;
+                foreach (var r in records)
                 {
-                    var pending = new Dictionary<int, OnlineCharm>();
-                    foreach (var pair in found)
-                    {
-                        if (r >= pair.Value.Count || sent >= Most || mute.Contains(pair.Key)) continue;
-                        var charm = pair.Value[r];
-                        pending[pair.Key] = charm;
-                        Send(stream, "<Message type=\"349\"><g id=\"" + charm.Id + "\" userid=\"" + pair.Key + "\" /></Message>");
-                        sent++;
-                        Thread.Sleep(Gap);
-                        Take(stream, acc, inbox);
-                        heard += Hints(inbox, pending);
-                    }
-                    Settle(stream, acc, inbox, () => { heard += Hints(inbox, pending); return pending.Count == 0; });
-                    foreach (int u in pending.Keys) mute.Add(u);
+                    if (!r.StartsWith("377\u001f", StringComparison.Ordinal)) continue;
+                    var bits = r.Split(new[] { '\u001f' }, 4);
+                    int id, u;
+                    long at;
+                    if (bits.Length < 4 || !int.TryParse(bits[1], out id) || !long.TryParse(bits[2], out at)) continue;
+                    var head = Regex.Match(bits[3], "<g\\b([^>]*?)/?>");
+                    List<OnlineCharm> charms;
+                    if (!head.Success || !int.TryParse(Attr(head.Groups[1].Value, "u"), out u) || !found.TryGetValue(u, out charms)) continue;
+                    var charm = charms.Find(c => c.Id == id);
+                    if (charm == null) continue;
+                    Read(bits[3], head.Groups[1].Value, charm);
+                    charm.At = DateTime.UtcNow.AddSeconds(-Math.Max(0L, now - at));
+                    heard++;
                 }
 
                 foreach (var pair in found)
@@ -134,45 +124,49 @@ namespace NewAgeQoL
                     OnlinePlayer p;
                     if (byId.TryGetValue(pair.Key, out p)) p.Charms = pair.Value;
                 }
-                Plugin.Trace("[online] player states: lists " + found.Count + " of " + byId.Count
-                             + ", durations " + heard + " of " + sent + ", " + clock.ElapsedMilliseconds + " ms");
+                if (changed) Version++;
+                Plugin.Trace("[online] player states: lists " + found.Count + " of " + byId.Count + ", durations " + heard);
             }
             catch (Exception e) { Plugin.Trace("[online] player states: " + e.Message); }
         }
 
-        private static void Send(NetworkStream s, string xml)
+        internal static int Version;
+        internal static bool Gathering;
+
+        private static bool Same(List<OnlineCharm> had, List<OnlineCharm> got)
         {
-            var b = Encoding.UTF8.GetBytes(xml + "\0");
-            s.Write(b, 0, b.Length);
-            s.Flush();
+            if (had == null || got == null || had.Count != got.Count) return false;
+            for (int i = 0; i < had.Count; i++)
+                if (had[i] == null || got[i] == null || had[i].Id != got[i].Id) return false;
+            return true;
         }
 
-        private static bool Take(NetworkStream s, List<byte> acc, List<string> into)
+        internal static string Shape(OnlinePlayer p)
         {
-            bool any = false;
-            var tmp = Buffer;
-            while (s.DataAvailable)
+            var charms = p != null ? p.Charms : null;
+            if (charms == null) return "";
+            var sb = new StringBuilder();
+            foreach (var c in charms) if (c != null) sb.Append(c.Id).Append(',');
+            return sb.ToString();
+        }
+
+        internal static void Redress(UserRowWidget widget, OnlinePlayer p)
+        {
+            try
             {
-                int n = s.Read(tmp, 0, tmp.Length);
-                if (n <= 0) throw new IOException("server closed the connection");
-                any = true;
-                for (int i = 0; i < n; i++)
+                var crown = CrownField?.GetValue(widget) as Image;
+                if (crown == null) return;
+                var host = crown.transform.parent;
+                for (int i = host.childCount - 1; i >= 0; i--)
                 {
-                    if (tmp[i] != 0) { acc.Add(tmp[i]); continue; }
-                    if (acc.Count == 0) continue;
-                    string m = Encoding.UTF8.GetString(acc.ToArray());
-                    acc.Clear();
-                    if (m.Trim().Length > 0) into.Add(m);
+                    var child = host.GetChild(i);
+                    if (child.name != "QoLCharm") continue;
+                    child.SetParent(null, false);
+                    UnityEngine.Object.Destroy(child.gameObject);
                 }
+                Badges(crown, p);
             }
-            return any;
-        }
-
-        private static void Settle(NetworkStream s, List<byte> acc, List<string> inbox, Func<bool> done)
-        {
-            var end = DateTime.UtcNow.AddSeconds(Patience);
-            while (!done() && DateTime.UtcNow < end)
-                if (!Take(s, acc, inbox)) Thread.Sleep(30);
+            catch (Exception e) { Plugin.Trace("[online] state icons again " + p?.Login + ": " + e.Message); }
         }
 
         private static void Lists(List<string> inbox, Dictionary<int, List<OnlineCharm>> found)
@@ -196,28 +190,10 @@ namespace NewAgeQoL
             inbox.Clear();
         }
 
-        private static int Hints(List<string> inbox, Dictionary<int, OnlineCharm> pending)
-        {
-            int got = 0;
-            foreach (var m in inbox)
-            {
-                if (m.IndexOf("type=\"377\"", StringComparison.Ordinal) < 0) continue;
-                var head = Regex.Match(m, "<g\\b([^>]*?)/?>");
-                if (!head.Success) continue;
-                int u;
-                OnlineCharm charm;
-                if (!int.TryParse(Attr(head.Groups[1].Value, "u"), out u) || !pending.TryGetValue(u, out charm)) continue;
-                pending.Remove(u);
-                Read(m, head.Groups[1].Value, charm);
-                got++;
-            }
-            inbox.Clear();
-            return got;
-        }
-
         private static void Read(string xml, string head, OnlineCharm charm)
         {
             charm.At = DateTime.UtcNow;
+            charm.Parts.Clear();
             charm.Title = Clean(Attr(head, "h"));
             foreach (Match hi in Regex.Matches(xml, "<hi\\b([^>]*)>(.*?)</hi>", RegexOptions.Singleline))
             {
@@ -263,36 +239,41 @@ namespace NewAgeQoL
                 if (crown == null || p == null) return;
                 crown.raycastTarget = true;
                 Hover(crown.gameObject, p, Premium);
-                var charms = p.Charms;
-                if (charms == null || charms.Count == 0) return;
-                var host = crown.transform.parent;
-                int at = crown.transform.GetSiblingIndex() + 1;
-                var size = Size(crown);
-                foreach (var charm in charms)
-                {
-                    if (charm == null || charm.Id == Premium) continue;
-                    var go = new GameObject("QoLCharm", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-                    go.transform.SetParent(host, false);
-                    go.transform.SetSiblingIndex(at++);
-                    var rt = (RectTransform)go.transform;
-                    rt.sizeDelta = size;
-                    var le = go.GetComponent<LayoutElement>();
-                    le.minWidth = le.preferredWidth = size.x;
-                    le.minHeight = le.preferredHeight = size.y;
-                    le.flexibleWidth = 0f;
-                    var image = go.GetComponent<Image>();
-                    image.preserveAspect = true;
-                    image.raycastTarget = true;
-                    var sprite = Picture(charm.Id, charm.Picture);
-                    image.sprite = sprite;
-                    image.enabled = sprite != null;
-                    var count = Count(go.transform);
-                    Mark(count, Living(charm));
-                    Hover(go, p, charm.Id);
-                    Live.Add(new Badge { Image = image, Id = charm.Id, Picture = charm.Picture, Charm = charm, Count = count });
-                }
+                Badges(crown, p);
             }
             catch (Exception e) { Plugin.Trace("[online] state icons " + p?.Login + ": " + e.Message); }
+        }
+
+        private static void Badges(Image crown, OnlinePlayer p)
+        {
+            var charms = p != null ? p.Charms : null;
+            if (charms == null || charms.Count == 0) return;
+            var host = crown.transform.parent;
+            int at = crown.transform.GetSiblingIndex() + 1;
+            var size = Size(crown);
+            foreach (var charm in charms)
+            {
+                if (charm == null || charm.Id == Premium) continue;
+                var go = new GameObject("QoLCharm", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                go.transform.SetParent(host, false);
+                go.transform.SetSiblingIndex(at++);
+                var rt = (RectTransform)go.transform;
+                rt.sizeDelta = size;
+                var le = go.GetComponent<LayoutElement>();
+                le.minWidth = le.preferredWidth = size.x;
+                le.minHeight = le.preferredHeight = size.y;
+                le.flexibleWidth = 0f;
+                var image = go.GetComponent<Image>();
+                image.preserveAspect = true;
+                image.raycastTarget = true;
+                var sprite = Picture(charm.Id, charm.Picture);
+                image.sprite = sprite;
+                image.enabled = sprite != null;
+                var count = Count(go.transform);
+                Mark(count, Living(charm));
+                Hover(go, p, charm.Id);
+                Live.Add(new Badge { Image = image, Id = charm.Id, Picture = charm.Picture, Charm = charm, Count = count });
+            }
         }
 
         private static void Mark(Text label, int copies)

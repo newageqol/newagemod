@@ -1048,6 +1048,13 @@ namespace NewAgeQoL
             var leave = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
             leave.callback.AddListener(data => Untip());
             trigger.triggers.Add(leave);
+            var click = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            click.callback.AddListener(data =>
+            {
+                var e = data as PointerEventData;
+                if (e != null && e.button == PointerEventData.InputButton.Right) Choose(slot);
+            });
+            trigger.triggers.Add(click);
             var innerGo = new GameObject("inner", typeof(RectTransform), typeof(Image));
             innerGo.transform.SetParent(frameGo.transform, false);
             OnlineWindow.Place((RectTransform)innerGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 2f), new Vector2(-2f, -2f));
@@ -1150,7 +1157,8 @@ namespace NewAgeQoL
             }
             LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
             float tall = rt.rect.height;
-            At(rt, x, Mathf.Max(boxT, Mathf.Min(cy, boxB - tall)), Width, tall);
+            float y = cy >= boxB ? Mathf.Max(Head + 6f, boxB - tall) : Mathf.Max(boxT, Mathf.Min(cy, boxB - tall));
+            At(rt, x, y, Width, tall);
         }
 
         private static void TipRule()
@@ -1245,12 +1253,12 @@ namespace NewAgeQoL
                     WardrobeArt.Pop((RectTransform)_panelGo.transform, slot, 16f + SideW + 16f, Head, StageW, BodyH);
                     return;
                 }
-                Menu(slot, worn.Name, WardrobeData.RarityColor(worn.Rarity), "Снять");
+                Menu(slot, worn.Name, WardrobeData.RarityColor(worn.Rarity), "Снять", CraftCalc.Crafted(worn.Id, worn.Name));
                 return;
             }
             if (S.Unknown.TryGetValue(slot, out raw))
             {
-                Menu(slot, WardrobeState.Title(raw) + " — нет в базе", WardrobeLook.Label, "Убрать");
+                Menu(slot, WardrobeState.Title(raw) + " — нет в базе", WardrobeLook.Label, "Убрать", 0);
                 return;
             }
             WardrobePicker.Open(_side, slot);
@@ -1290,12 +1298,13 @@ namespace NewAgeQoL
             if (_canvasGo != null && _side != null) WardrobePicker.Open(_side, slot);
         }
 
-        private static void Menu(int slot, string name, Color32 color, string offText)
+        private static void Menu(int slot, string name, Color32 color, string offText, int thing)
         {
             RectTransform cell;
             if (_panelGo == null || !Cells.TryGetValue(slot, out cell) || cell == null) { WardrobePicker.Open(_side, slot); return; }
+            bool craft = thing > 0;
             const float Width = 260f;
-            const float Height = 116f;
+            float Height = craft ? 166f : 116f;
             float stageX = 16f + SideW + 16f;
             float cx = stageX + cell.anchoredPosition.x;
             float cy = Head - cell.anchoredPosition.y;
@@ -1303,11 +1312,13 @@ namespace NewAgeQoL
             if (x + Width > stageX + StageW) x = cx - 8f - Width;
             float y = Mathf.Clamp(cy, Head, Head + BodyH - Height);
 
-            _menuGo = new GameObject("QoLWardrobeMenu", typeof(RectTransform), typeof(Image), typeof(Button));
+            _menuGo = new GameObject("QoLWardrobeMenu", typeof(RectTransform), typeof(Image), typeof(EventTrigger));
             _menuGo.transform.SetParent(_panelGo.transform, false);
             OnlineWindow.Place((RectTransform)_menuGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             _menuGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.001f);
-            _menuGo.GetComponent<Button>().onClick.AddListener(() => CloseMenu());
+            var catcher = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            catcher.callback.AddListener(data => MenuMiss(data as PointerEventData));
+            _menuGo.GetComponent<EventTrigger>().triggers.Add(catcher);
 
             var box = Box(_menuGo.transform, "menu", x, y, Width, Height, WardrobeLook.Popup, 10);
             box.GetComponent<Image>().raycastTarget = true;
@@ -1324,6 +1335,20 @@ namespace NewAgeQoL
             float bw = (Width - 24f - 8f) / 2f;
             Place(GameButton(box, offText, () => { CloseMenu(); Pick(slot, null, false); }, true), 12f, 62f, bw, 42f);
             Place(GameButton(box, "Заменить", () => Replace(slot), false), 12f + bw + 8f, 62f, bw, 42f);
+            if (craft) Place(GameButton(box, "Рецепт в книге крафта", () => { CloseMenu(); CraftCalc.ShowRecipe(thing); }, false), 12f, 112f, Width - 24f, 42f);
+        }
+
+        private static void MenuMiss(PointerEventData e)
+        {
+            var menu = _menuGo;
+            CloseMenu();
+            if (e == null || e.pointerCurrentRaycast.gameObject != menu) return;
+            foreach (var pair in Cells)
+                if (pair.Value != null && pair.Value.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(pair.Value, e.position, e.pressEventCamera))
+                {
+                    Choose(pair.Key);
+                    return;
+                }
         }
 
         private static bool CloseMenu()

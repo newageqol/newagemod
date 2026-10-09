@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Transport.Messages.Responses.User.Info;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace NewAgeQoL
 {
@@ -28,17 +30,30 @@ namespace NewAgeQoL
 
     internal static class OnlineList
     {
-        private const string Host = "nura.biz";
-        private const int Port = 2000;
         private const float AskEvery = 0.12f;
+        private const string Server = "https://newage-observers.outerlab.org/v1/online";
+        private const string CharmServer = "https://newage-observers.outerlab.org/v1/charms";
+        private const float CharmEvery = 0.8f;
+        private const int CharmRounds = 30;
+        private const string Mark = "newage-observers 1";
 
         private static readonly object Gate = new object();
         private static List<OnlinePlayer> _players = new List<OnlinePlayer>();
         private static string _status = "";
-        private static string _stamp = "";
         private static bool _busy;
         private static int _version;
-        private static DateTime _at = DateTime.MinValue;
+        private static DateTime _made = DateTime.MinValue;
+        private static int _fresh = 30;
+
+        internal static int Age
+        {
+            get { lock (Gate) return _made == DateTime.MinValue ? -1 : (int)(DateTime.UtcNow - _made).TotalSeconds; }
+        }
+
+        internal static int Wait
+        {
+            get { lock (Gate) return _made == DateTime.MinValue ? 0 : Math.Max(0, (int)Math.Ceiling(_fresh - (DateTime.UtcNow - _made).TotalSeconds)); }
+        }
 
         private static readonly Dictionary<string, int> ClanCodes = new Dictionary<string, int>();
         private static readonly Dictionary<string, string> ClanSprites = new Dictionary<string, string>();
@@ -52,7 +67,6 @@ namespace NewAgeQoL
 
         internal static bool Busy { get { lock (Gate) return _busy; } }
         internal static string Status { get { lock (Gate) return _status; } }
-        internal static string Stamp { get { lock (Gate) return _stamp; } }
         internal static int Version { get { lock (Gate) return _version; } }
         internal static OnlinePlayer ByLogin(string login)
         {
@@ -68,15 +82,20 @@ namespace NewAgeQoL
             return null;
         }
 
+        internal static OnlinePlayer ById(int id)
+        {
+            lock (Gate)
+                for (int i = 0; i < _players.Count; i++)
+                    if (_players[i] != null && _players[i].Id == id) return _players[i];
+            return null;
+        }
+
         internal static void CopyTo(List<OnlinePlayer> into)
         {
             if (into == null) return;
             into.Clear();
             lock (Gate) into.AddRange(_players);
         }
-
-        internal static bool Configured =>
-            !string.IsNullOrEmpty(Plugin.CfgOnlineLogin?.Value?.Trim()) && !string.IsNullOrEmpty(Plugin.CfgOnlinePassword?.Value);
 
         internal static void Tick()
         {
@@ -234,147 +253,127 @@ namespace NewAgeQoL
 
         internal static void Refresh()
         {
-            string login = (Plugin.CfgOnlineLogin?.Value ?? "").Trim();
-            string pass = Plugin.CfgOnlinePassword?.Value ?? "";
-            string ver = (Plugin.CfgOnlineVersion?.Value ?? "").Trim();
-            if (ver.Length == 0) ver = "11073";
-            if (login.Length == 0 || pass.Length == 0)
-            {
-                Set("Укажи логин и пароль запасного аккаунта в настройках мода");
-                return;
-            }
-            string me = Mine();
-            if (me.Length > 0 && string.Equals(me, login, StringComparison.OrdinalIgnoreCase))
-            {
-                Set("В настройках указан тот же персонаж, которым ты играешь — нужен запасной");
-                return;
-            }
             lock (Gate)
             {
                 if (_busy) return;
                 _busy = true;
                 _status = "обновляю…";
-                _stamp = "";
                 _version++;
             }
-            var t = new Thread(() => Work(login, pass, ver)) { IsBackground = true, Name = "QoLOnlineList" };
-            t.Start();
+            if (Plugin.Instance == null) { Failed("мод ещё не готов"); return; }
+            Plugin.Instance.StartCoroutine(Fetch());
         }
 
-        internal static string SameOne()
+        private static void Failed(string why)
         {
-            string login = (Plugin.CfgOnlineLogin?.Value ?? "").Trim();
-            if (login.Length == 0) return null;
-            string me = Mine();
-            if (me.Length == 0 || !string.Equals(me, login, StringComparison.OrdinalIgnoreCase)) return null;
-            return "В настройках указан тот же персонаж, которым ты играешь — для списка нужен запасной аккаунт";
+            lock (Gate) { _status = "Ошибка: " + why; _busy = false; _version++; }
+            Plugin.Warn("[online] " + why);
         }
 
-        private static string Mine()
+        private static IEnumerator Fetch()
         {
-            try
+            var req = UnityWebRequest.Get(Server);
+            req.timeout = 20;
+            req.redirectLimit = 0;
+            req.SetRequestHeader("User-Agent", "NewAgeQoL");
+            yield return req.SendWebRequest();
+            long code = req.responseCode;
+            string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
+            req.Dispose();
+            List<OnlinePlayer> list = null;
+            long gen = 0;
+            try { list = Take(code, body, out gen); }
+            catch (Exception e) { Failed(e.Message); }
+            if (list != null) yield return Charms(list, gen);
+        }
+
+        private static List<OnlinePlayer> Take(long code, string body, out long gen)
+        {
+            gen = 0;
+            var records = Records(code, body);
+            if (records == null) return null;
+            string m50 = records.Find(r => r.StartsWith("50\u001f", StringComparison.Ordinal));
+            if (m50 == null) { Failed("список не пришёл"); return null; }
+            gen = Field(records, "gen");
+            long fresh = Field(records, "fresh");
+            lock (Gate)
             {
-                var ud = Controllers.User;
-                var info = ud != null ? ud.UserInfo : null;
-                return info != null && !string.IsNullOrEmpty(info.Login) ? info.Login.Trim() : "";
+                _made = DateTime.UtcNow.AddSeconds(-Field(records, "age"));
+                if (fresh > 0) _fresh = (int)fresh;
             }
-            catch { return ""; }
+
+            var list = Parse(m50.Substring(3));
+            lock (Gate) OnlineCharms.Carry(_players, list);
+            OnlineCharms.Gathering = true;
+            lock (Gate)
+            {
+                _players = list;
+                _status = "В игре: " + list.Count;
+                _busy = false;
+                _version++;
+            }
+            Plugin.Trace("[online] received " + list.Count + " players");
+            return list;
         }
 
-        private static void Set(string status)
-        {
-            lock (Gate) { _status = status; _stamp = ""; _version++; }
-        }
-
-        private static string Esc(string s) =>
-            (s ?? "").Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
-
-        private static void Work(string login, string pass, string ver)
+        private static IEnumerator Charms(List<OnlinePlayer> list, long gen)
         {
             try
             {
-                using (var client = new TcpClient())
+                for (int round = 0; round < CharmRounds; round++)
                 {
-                    client.NoDelay = true;
-                    var ar = client.BeginConnect(Host, Port, null, null);
-                    if (!ar.AsyncWaitHandle.WaitOne(8000)) throw new Exception("нет соединения с " + Host);
-                    client.EndConnect(ar);
-                    var stream = client.GetStream();
-                    var acc = new List<byte>();
-
-                    Pump(stream, acc, 1.5, null);
-
-                    Send(stream, "<Message type=\"315\"><auth account=\"" + Esc(login) + "\" password=\"" + Esc(pass) + "\" ver=\"" + Esc(ver) + "\" site=\"1\" /></Message>");
-                    string lr = null;
-                    foreach (var m in Pump(stream, acc, 8, m => m.Contains("LoginResponce")))
-                        if (m.Contains("LoginResponce")) lr = m;
-                    if (lr == null) throw new Exception("сервер не ответил на вход");
-                    if (!lr.Contains("LoggedIn=\"1\""))
-                    {
-                        var mm = Regex.Match(lr, "Msg=\"([^\"]*)\"");
-                        throw new Exception("вход отклонён" + (mm.Success && mm.Groups[1].Value.Length > 0 ? ": " + System.Net.WebUtility.HtmlDecode(mm.Groups[1].Value) : ""));
-                    }
-
-                    Send(stream, "<Message type=\"49\" />");
-                    string m50 = null;
-                    foreach (var m in Pump(stream, acc, 12, m => m.Contains("type=\"50\"")))
-                        if (m.Contains("type=\"50\"")) m50 = m;
-                    if (m50 == null) throw new Exception("список не пришёл");
-
-                    var list = Parse(m50);
-                    lock (Gate)
-                    {
-                        OnlineCharms.Carry(_players, list);
-                        _players = list;
-                        _at = DateTime.Now;
-                        _stamp = _at.ToString("HH:mm:ss");
-                        _status = "В игре: " + list.Count + " · " + _stamp;
-                        _version++;
-                    }
-                    Plugin.Trace("[online] received " + list.Count + " players");
-                    OnlineCharms.Fetch(stream, acc, list);
+                    yield return new WaitForSecondsRealtime(CharmEvery);
+                    bool current;
+                    lock (Gate) current = ReferenceEquals(_players, list);
+                    if (!current) yield break;
+                    var req = UnityWebRequest.Get(CharmServer);
+                    req.timeout = 10;
+                    req.redirectLimit = 0;
+                    req.SetRequestHeader("User-Agent", "NewAgeQoL");
+                    yield return req.SendWebRequest();
+                    long code = req.responseCode;
+                    string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
+                    req.Dispose();
+                    lock (Gate) current = ReferenceEquals(_players, list);
+                    if (!current) yield break;
+                    var records = Records(code, body, false);
+                    if (records == null) continue;
+                    if (Field(records, "gen") != gen) yield break;
+                    OnlineCharms.Apply(records, list, Field(records, "now"));
+                    if (records.Contains("state\u001fdone")) yield break;
                 }
-            }
-            catch (Exception e)
-            {
-                Set("Ошибка: " + e.Message);
-                Plugin.Warn("[online] " + e.Message);
+                Plugin.Trace("[online] player states: server did not finish in time");
             }
             finally
             {
-                lock (Gate) { _busy = false; _version++; }
-            }
-        }
-
-        private static void Send(NetworkStream s, string xml)
-        {
-            var b = Encoding.UTF8.GetBytes(xml + "\0");
-            s.Write(b, 0, b.Length);
-            s.Flush();
-        }
-
-        private static List<string> Pump(NetworkStream s, List<byte> acc, double seconds, Func<string, bool> stopWhen)
-        {
-            var got = new List<string>();
-            var end = DateTime.UtcNow.AddSeconds(seconds);
-            var tmp = new byte[65536];
-            while (DateTime.UtcNow < end)
-            {
-                if (!s.DataAvailable) { Thread.Sleep(40); continue; }
-                int n = s.Read(tmp, 0, tmp.Length);
-                if (n <= 0) break;
-                for (int i = 0; i < n; i++)
+                bool current;
+                lock (Gate) current = ReferenceEquals(_players, list);
+                if (current)
                 {
-                    if (tmp[i] != 0) { acc.Add(tmp[i]); continue; }
-                    if (acc.Count == 0) continue;
-                    string m = Encoding.UTF8.GetString(acc.ToArray());
-                    acc.Clear();
-                    if (m.Trim().Length == 0) continue;
-                    got.Add(m);
-                    if (stopWhen != null && stopWhen(m)) return got;
+                    OnlineCharms.Gathering = false;
+                    OnlineCharms.Version++;
                 }
             }
-            return got;
+        }
+
+        private static List<string> Records(long code, string body, bool loud = true)
+        {
+            string trouble = null;
+            if (!body.StartsWith(Mark, StringComparison.Ordinal))
+                trouble = code == 0 ? "сервер наблюдателей недоступен" : "сервер наблюдателей ответил " + code;
+            string rest = trouble == null && body.Length > Mark.Length ? body.Substring(Mark.Length + 1) : "";
+            if (trouble == null && rest.StartsWith("!\t", StringComparison.Ordinal)) trouble = rest.Substring(2).Trim();
+            if (trouble == null) return new List<string>(rest.Split('\0'));
+            if (loud) Failed(trouble);
+            else Plugin.Trace("[online] player states: " + trouble);
+            return null;
+        }
+
+        private static long Field(List<string> records, string name)
+        {
+            string found = records.Find(r => r.StartsWith(name + "\u001f", StringComparison.Ordinal));
+            long value;
+            return found != null && long.TryParse(found.Substring(name.Length + 1), out value) ? value : 0;
         }
 
         private static List<OnlinePlayer> Parse(string xml)

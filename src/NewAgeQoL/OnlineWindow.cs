@@ -33,7 +33,17 @@ namespace NewAgeQoL
         private static bool _byClan;
         private static string _query = "";
         private static int _seenVersion = -1;
+        private static int _seenCharms = -1;
         private static float _pollAt;
+
+        private sealed class Dressed
+        {
+            internal UserRowWidget Widget;
+            internal OnlinePlayer Player;
+            internal string Shape;
+        }
+
+        private static readonly List<Dressed> Dressing = new List<Dressed>();
         private static float _iconAt;
         private static bool _wantOpen;
         private static float _reopenAt;
@@ -60,13 +70,6 @@ namespace NewAgeQoL
         {
             try
             {
-                string trouble = OnlineList.SameOne();
-                if (trouble != null)
-                {
-                    Notice.Show(trouble, 7f);
-                    Plugin.Warn("[online] " + trouble);
-                    return;
-                }
                 _query = "";
                 Build();
                 _wantOpen = true;
@@ -148,9 +151,66 @@ namespace NewAgeQoL
             if (Time.unscaledTime < _pollAt) return;
             _pollAt = Time.unscaledTime + 0.2f;
             int v = OnlineList.Version;
-            if (v == _seenVersion) return;
-            _seenVersion = v;
-            Rebuild();
+            if (v != _seenVersion)
+            {
+                _seenVersion = v;
+                _seenCharms = OnlineCharms.Version;
+                Rebuild();
+                return;
+            }
+            if (OnlineCharms.Version != _seenCharms)
+            {
+                _seenCharms = OnlineCharms.Version;
+                Dress();
+            }
+            Pace();
+        }
+
+        private static void Pace()
+        {
+            if (_refresh != null)
+            {
+                bool can = !OnlineList.Busy && OnlineList.Wait == 0;
+                if (_refresh.interactable != can) _refresh.interactable = can;
+            }
+            if (_status == null) return;
+            string text = StatusText(Shown.Count);
+            if (_status.text != text) _status.text = text;
+        }
+
+        private static void Dress()
+        {
+            foreach (var row in Dressing)
+            {
+                if (row.Widget == null) continue;
+                string shape = OnlineCharms.Shape(row.Player);
+                if (shape == row.Shape) continue;
+                row.Shape = shape;
+                OnlineCharms.Redress(row.Widget, row.Player);
+            }
+            if (_status != null) _status.text = StatusText(Shown.Count);
+        }
+
+        private static string StatusText(int shown)
+        {
+            string st = OnlineList.Status ?? "";
+            int age = OnlineList.Age;
+            if (age >= 0 && !OnlineList.Busy && !st.StartsWith("Ошибка", StringComparison.Ordinal))
+            {
+                int wait = OnlineList.Wait;
+                st += " · обновлено " + age + " с назад · " + (wait > 0 ? "новый список через " + wait + " с" : "можно обновить");
+            }
+            if (OnlineCharms.Gathering && st.Length > 0) st += " · заклятия загружаются…";
+            if (_query.Length > 0) st = "найдено " + shown + (st.Length > 0 ? " · " + st : "");
+            return st;
+        }
+
+        internal static GameObject RowPrefab()
+        {
+            if (_rowPrefab != null) return _rowPrefab;
+            var holder = VisualPrefabsHolder.Instance.ChatUserListPanelContentPrefab?.GetComponent<ChatUserListPanelContent>();
+            _rowPrefab = holder != null ? AccessTools.Field(typeof(ChatUserListPanelContent), "SmallUserRowPrefab")?.GetValue(holder) as GameObject : null;
+            return _rowPrefab;
         }
 
         private static void Build()
@@ -250,7 +310,7 @@ namespace NewAgeQoL
             _filter = MakeInput(barGo.transform, 168f, "поиск по нику");
             _filter.text = _query;
             _filter.onValueChanged.AddListener(v => { _query = Norm(v); Rebuild(); });
-            _refresh = MakeGameButton(barGo.transform, "Обновить", 118f, BarH, () => { if (!OnlineList.Busy) OnlineList.Refresh(); });
+            _refresh = MakeGameButton(barGo.transform, "Обновить", 118f, BarH, () => { if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh(); });
             _status = Label(barGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
             _status.alignment = TextAnchor.MiddleLeft;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -384,6 +444,7 @@ namespace NewAgeQoL
 
             for (int i = _rows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
             Pending.Clear();
+            Dressing.Clear();
             OnlineCharms.Clear();
 
             var shown = Shown;
@@ -399,16 +460,8 @@ namespace NewAgeQoL
             bool busy = OnlineList.Busy;
             if (_title != null) _title.text = "Кто в игре" + (players.Count > 0 ? ": " + players.Count : "");
             if (_rowsFade != null) _rowsFade.alpha = busy ? 0.4f : 1f;
-            if (_status != null)
-            {
-                string st = OnlineList.Stamp;
-                if (st.Length == 0) st = OnlineList.Status ?? "";
-                if (_query.Length > 0) st = "найдено " + shown.Count + (st.Length > 0 ? " · " + st : "");
-                _status.text = players.Count == 0 && !OnlineList.Busy && !OnlineList.Configured
-                    ? "нет запасного аккаунта"
-                    : st;
-            }
-            if (_refresh != null) _refresh.interactable = !busy;
+            if (_status != null) _status.text = StatusText(shown.Count);
+            if (_refresh != null) _refresh.interactable = !busy && OnlineList.Wait == 0;
             if (_scroll != null) _scroll.verticalNormalizedPosition = 1f;
         }
 
@@ -549,6 +602,7 @@ namespace NewAgeQoL
             Flatten(w, p.Away);
             MarkAway(w, p.Away);
             OnlineCharms.Decorate(w, p, (RectTransform)_panelGo.transform);
+            Dressing.Add(new Dressed { Widget = w, Player = p, Shape = OnlineCharms.Shape(p) });
             var resolver = _resolver;
             w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Trace("[online] click: " + e.Message); } };
             w.OnRightButtonClickDelegate = item =>
@@ -559,7 +613,7 @@ namespace NewAgeQoL
             if (!drawn) Pending.Add(new KeyValuePair<UserRowWidget, OnlinePlayer>(w, p));
         }
 
-        private static Sprite ClanArt(int code)
+        internal static Sprite ClanArt(int code)
         {
             try
             {
@@ -657,7 +711,7 @@ namespace NewAgeQoL
             return b;
         }
 
-        private static void Flatten(UserRowWidget widget, bool away)
+        internal static void Flatten(UserRowWidget widget, bool away)
         {
             try
             {
@@ -706,7 +760,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (row == null || string.IsNullOrEmpty(row.Login) || !OnlineList.Configured) return;
+                if (row == null || string.IsNullOrEmpty(row.Login)) return;
                 var p = OnlineList.ByLogin(row.Login);
                 if (p == null) return;
                 var full = Row(p);
@@ -742,7 +796,7 @@ namespace NewAgeQoL
             return found;
         }
 
-        private static UserRowInfoMessage Row(OnlinePlayer p)
+        internal static UserRowInfoMessage Row(OnlinePlayer p)
         {
             var m = new UserRowInfoMessage(p.Id, p.Login, p.Level);
             int code;

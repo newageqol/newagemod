@@ -32,7 +32,7 @@ namespace NewAgeQoL
         internal static string Folder => Path.Combine(Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? "", "NightTown");
 
         internal static bool WillRun() =>
-            !_busy && !_prepping && !_ready && File.Exists(Path.Combine(Folder, "illenium_night"));
+            Plugin.NewPlaces && !_busy && !_prepping && !_ready && File.Exists(Path.Combine(Folder, "illenium_night"));
 
         internal static bool SceneLoaded() => SceneManager.GetSceneByName(SceneName).isLoaded;
 
@@ -64,7 +64,8 @@ namespace NewAgeQoL
                     Drop();
                     return;
                 }
-                if (_busy || AssetSync.Off("NightTown")) return;
+                if (_busy) return;
+                if (AssetSync.Off("NightTown")) { Drop(); return; }
                 if (!_prepping && !_ready)
                 {
                     if (!File.Exists(Path.Combine(Folder, "illenium_night")))
