@@ -32,6 +32,15 @@ namespace NewAgeQoL
                 Version = Plugin.Version,
                 Lines = new[]
                 {
+                    "Окно «Что нового»: теперь его можно открыть в любой момент — в настройках мода, кнопкой «Что нового» в строке с версией мода. Каждая версия в окне — отдельный заголовок, который сворачивается и разворачивается щелчком: открыта самая свежая, а у той, что стоит сейчас, подписано «установлена». Починки каждой версии собраны отдельным списком.",
+                    "Обновление мода: кнопка в строке версии больше не ставит обновление сразу. Если вышла новая версия, кнопка подписана «Обновить» и открывает окно «Что нового», а само обновление ставится кнопкой «Обновить» в этом окне.",
+                }
+            },
+            new Entry
+            {
+                Version = "0.16.0",
+                Lines = new[]
+                {
                     "«Кто в игре» больше не требует запасного аккаунта: список приходит с сервера мода. В строке под списком видно, сколько секунд назад он обновлён и через сколько можно взять новый, до этого кнопка «Обновить» неактивна. Значки заклятий игроков подгружаются после списка, пока идёт загрузка, видна надпись «заклятия загружаются…».",
                     "Справа под списком персонажей появился список «Бои»: заявки и идущие бои Иллениума — хаотические, командные и турнирные, до 10 штук. У каждой строки уровни, число игроков и время: до старта для заявки, с начала для идущего боя. Список виден вне боя и прячется, пока открыт магазин.",
                     "Наведи мышь на заявку или бой в списке «Бои» или в окне хаотических боёв — всплывёт состав: кто в заявке или кто дерётся, строками как в «Кто в игре». Состав показывается, когда ты сам в локации хаотических, командных или турнирных боёв.",
@@ -504,7 +513,7 @@ namespace NewAgeQoL
             cont.offsetMin = new Vector2(0f, 0f); cont.offsetMax = new Vector2(0f, 0f);
             var vlg = contentGo.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(16, 16, 14, 16);
-            vlg.spacing = 6f;
+            vlg.spacing = 4f;
             vlg.childControlWidth = true;
             vlg.childControlHeight = true;
             vlg.childForceExpandWidth = true;
@@ -518,35 +527,142 @@ namespace NewAgeQoL
             bool first = true;
             foreach (var entry in Entries)
             {
-                string cap = string.IsNullOrEmpty(entry.Head) ? "Версия " + entry.Version + " · что нового" : entry.Head;
-                var head = OnlineWindow.Label(contentGo.transform, cap,
-                                              19, FontStyle.Bold, WardrobeLook.Accent);
-                head.alignment = TextAnchor.MiddleLeft;
-                head.horizontalOverflow = HorizontalWrapMode.Wrap;
-                var hle = head.gameObject.AddComponent<LayoutElement>();
-                hle.minHeight = 30f;
-                hle.preferredHeight = 30f;
-                if (!first) hle.preferredHeight = 34f;
+                AddEntry(contentGo.transform, entry, first);
                 first = false;
-
-                foreach (var line in entry.Lines)
-                {
-                    var text = OnlineWindow.Label(contentGo.transform, "•  " + line, 15, FontStyle.Normal, WardrobeLook.Body);
-                    text.alignment = TextAnchor.UpperLeft;
-                    text.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    text.verticalOverflow = VerticalWrapMode.Overflow;
-                    var tle = text.gameObject.AddComponent<LayoutElement>();
-                    tle.flexibleHeight = 0f;
-                    tle.minHeight = 22f;
-                }
-
-                var gap = new GameObject("gap", typeof(RectTransform), typeof(LayoutElement));
-                gap.transform.SetParent(contentGo.transform, false);
-                gap.GetComponent<LayoutElement>().minHeight = 10f;
             }
 
             MakeScrollbar(_panelGo.transform, scroll);
             scroll.verticalNormalizedPosition = 1f;
+        }
+
+        private static void AddEntry(Transform host, Entry entry, bool open)
+        {
+            var headGo = new GameObject("head", typeof(RectTransform), typeof(Image), typeof(Button), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            headGo.transform.SetParent(host, false);
+            var himg = headGo.GetComponent<Image>();
+            himg.color = new Color(1f, 1f, 1f, 0.05f);
+            himg.sprite = OnlineWindow.Rounded(8);
+            himg.type = Image.Type.Sliced;
+            var hle = headGo.GetComponent<LayoutElement>();
+            hle.minHeight = 38f;
+            hle.preferredHeight = 38f;
+            var hl = headGo.GetComponent<HorizontalLayoutGroup>();
+            hl.padding = new RectOffset(12, 12, 0, 0);
+            hl.spacing = 10f;
+            hl.childAlignment = TextAnchor.MiddleLeft;
+            hl.childControlWidth = true;
+            hl.childControlHeight = true;
+            hl.childForceExpandWidth = false;
+            hl.childForceExpandHeight = true;
+
+            string cap = string.IsNullOrEmpty(entry.Head) ? "Версия " + entry.Version : entry.Head;
+            var head = OnlineWindow.Label(headGo.transform, cap, 19, FontStyle.Bold, WardrobeLook.Accent);
+            head.alignment = TextAnchor.MiddleLeft;
+            head.raycastTarget = false;
+            var tle = head.gameObject.AddComponent<LayoutElement>();
+            tle.flexibleWidth = 1f;
+
+            if (entry.Version == Plugin.Version)
+            {
+                var now = OnlineWindow.Label(headGo.transform, "установлена", 13, FontStyle.Normal, WardrobeLook.Good);
+                now.alignment = TextAnchor.MiddleRight;
+                now.raycastTarget = false;
+            }
+            var fold = OnlineWindow.Label(headGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Faint);
+            fold.alignment = TextAnchor.MiddleRight;
+            fold.raycastTarget = false;
+            var fle = fold.gameObject.AddComponent<LayoutElement>();
+            fle.minWidth = 64f;
+
+            var bodyGo = new GameObject("body", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            bodyGo.transform.SetParent(host, false);
+            var vl = bodyGo.GetComponent<VerticalLayoutGroup>();
+            vl.padding = new RectOffset(4, 4, 6, 12);
+            vl.spacing = 10f;
+            vl.childControlWidth = true;
+            vl.childControlHeight = true;
+            vl.childForceExpandWidth = true;
+            vl.childForceExpandHeight = false;
+
+            foreach (var line in entry.Lines) AddLine(bodyGo.transform, line);
+
+            Action show = () =>
+            {
+                bodyGo.SetActive(open);
+                fold.text = open ? "скрыть" : "показать";
+            };
+            show();
+            var button = headGo.GetComponent<Button>();
+            button.targetGraphic = himg;
+            button.onClick.AddListener(() => { open = !open; show(); });
+        }
+
+        private static void AddLine(Transform host, string line)
+        {
+            string topic = null;
+            string body = line;
+            int colon = line.IndexOf(": ", StringComparison.Ordinal);
+            int dot = line.IndexOf(". ", StringComparison.Ordinal);
+            if (colon > 0 && colon <= 60 && (dot < 0 || colon < dot))
+            {
+                topic = line.Substring(0, colon);
+                body = line.Substring(colon + 2);
+            }
+
+            if (topic == "Починки")
+            {
+                AddText(host, "", "<b>Починки</b>", 0, WardrobeLook.Bright);
+                foreach (var part in body.Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string p = part.Trim();
+                    if (p.Length == 0) continue;
+                    p = char.ToUpper(p[0]) + p.Substring(1);
+                    if (!p.EndsWith(".")) p += ".";
+                    AddText(host, "–", p, 14, WardrobeLook.Body);
+                }
+                return;
+            }
+
+            if (topic != null) body = char.ToUpper(body[0]) + body.Substring(1);
+            string text = topic == null
+                ? body
+                : "<b><color=#" + ColorUtility.ToHtmlStringRGB(WardrobeLook.Bright) + ">" + topic + "</color></b>\n" + body;
+            AddText(host, "•", text, 0, WardrobeLook.Body);
+        }
+
+        private static void AddText(Transform host, string mark, string text, int indent, Color color)
+        {
+            var row = new GameObject("line", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(host, false);
+            var hl = row.GetComponent<HorizontalLayoutGroup>();
+            hl.padding = new RectOffset(indent, 0, 0, 0);
+            hl.spacing = 6f;
+            hl.childAlignment = TextAnchor.UpperLeft;
+            hl.childControlWidth = true;
+            hl.childControlHeight = true;
+            hl.childForceExpandWidth = false;
+            hl.childForceExpandHeight = false;
+
+            if (mark.Length > 0)
+            {
+                var m = OnlineWindow.Label(row.transform, mark, 15, FontStyle.Bold, WardrobeLook.Accent);
+                m.alignment = TextAnchor.UpperCenter;
+                m.raycastTarget = false;
+                var mle = m.gameObject.AddComponent<LayoutElement>();
+                mle.minWidth = 14f;
+                mle.preferredWidth = 14f;
+            }
+
+            var t = OnlineWindow.Label(row.transform, text, 15, FontStyle.Normal, color);
+            t.alignment = TextAnchor.UpperLeft;
+            t.supportRichText = true;
+            t.lineSpacing = 1.1f;
+            t.raycastTarget = false;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            var le = t.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 0f;
+            le.flexibleWidth = 1f;
         }
 
         private static Button MakeButton(Transform host, string text, float width, Action onClick)

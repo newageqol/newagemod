@@ -66,16 +66,6 @@ namespace NewAgeQoL
             Plugin.Instance.StartCoroutine(CheckRoutine());
         }
 
-        private static bool _install;
-
-        internal static void Press()
-        {
-            if (CanUpdate) { Update(); return; }
-            if (State == Stage.Done || State == Stage.Checking || State == Stage.Downloading) return;
-            _install = true;
-            Check();
-        }
-
         internal static void Update()
         {
             if (!CanUpdate || Plugin.Instance == null) return;
@@ -98,7 +88,6 @@ namespace NewAgeQoL
 
             if (json.Length == 0)
             {
-                _install = false;
                 State = Stage.Failed;
                 Message = "не удалось проверить: " + (error ?? "нет ответа");
                 Plugin.Trace("[update] " + Message);
@@ -133,7 +122,6 @@ namespace NewAgeQoL
 
             if (string.IsNullOrEmpty(tag))
             {
-                _install = false;
                 State = Stage.Failed;
                 Message = "не удалось разобрать ответ сервера";
                 yield break;
@@ -158,8 +146,6 @@ namespace NewAgeQoL
                 Message = "вышла версия " + LatestVersion;
             }
             Plugin.Trace("[update] installed " + Plugin.Version + ", on server " + LatestVersion);
-            if (_install && CanUpdate) Update();
-            _install = false;
         }
 
         private static readonly char[] Cuts = { '/', '\\' };

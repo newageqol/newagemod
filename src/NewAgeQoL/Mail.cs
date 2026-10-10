@@ -21,6 +21,7 @@ namespace NewAgeQoL
         private const float Icon = 52f;
         private const float Every = 60f;
         private const float OpenEvery = 5f;
+        private const float ShownEvery = 10f;
         private const int Most = 1000;
         private const long Fresh = 7L * 24L * 3600L;
 
@@ -159,7 +160,11 @@ namespace NewAgeQoL
                 }
                 bool want = _loaded && !SideButtons.InCombat() && (Unread() > 0 || Recent());
                 if (!want) { DropIcon(); return; }
-                if (_iconCanvas == null) BuildIcon();
+                if (_iconCanvas == null)
+                {
+                    BuildIcon();
+                    _askAt = Mathf.Min(_askAt, now + ShownEvery);
+                }
                 PlaceIcon();
                 Blink(now);
             }
@@ -187,7 +192,7 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Trace("[mail] answer: " + e.Message); }
             _busy = false;
-            _askAt = Time.unscaledTime + (_panelGo != null ? OpenEvery : Every);
+            _askAt = Time.unscaledTime + (_panelGo != null ? OpenEvery : _iconCanvas != null ? ShownEvery : Every);
         }
 
         private static void Take(string body)

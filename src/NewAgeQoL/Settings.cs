@@ -49,7 +49,7 @@ namespace NewAgeQoL
             var rows = new List<RowDef>
             {
                 new Header { Title = "Мод" },
-                new ActionRow { Title = UpdateTitle(), ButtonText = UpdateButton(), Do = Updater.Press, TitleNow = UpdateTitle, ButtonNow = UpdateButton },
+                new ActionRow { Title = UpdateTitle(), ButtonText = UpdateButton(), Do = Changelog.Toggle, TitleNow = UpdateTitle, ButtonNow = UpdateButton },
                 A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
                 AssetSync.Pending
                     ? A("Новые версии старых локаций: " + AssetSync.PendingSize + " МБ", "Скачать", AssetSync.Retry)
@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 case Updater.Stage.Checking: return "Проверяю…";
                 case Updater.Stage.Downloading: return "Качаю…";
                 case Updater.Stage.Done: return "Готово";
-                default: return "Обновить";
+                default: return Updater.CanUpdate ? "Обновить" : "Что нового";
             }
         }
 
