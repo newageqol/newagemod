@@ -19,6 +19,7 @@ namespace NewAgeQoL
         private const float Pad = 6f;
         private const int Most = 10;
         private const float OpenEvery = 3f;
+        private const float ClaimEvery = 1f;
         private const float FoldedEvery = 15f;
 
         private sealed class Item
@@ -97,7 +98,7 @@ namespace NewAgeQoL
             try { Take(code, body); }
             catch (Exception e) { _error = "ответ не разобран"; _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
             _busy = false;
-            _askAt = Time.unscaledTime + (_fold != null && _fold.Folded ? FoldedEvery : OpenEvery);
+            _askAt = Time.unscaledTime + (_fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
         }
 
         private static void Take(long code, string body)
@@ -136,6 +137,15 @@ namespace NewAgeQoL
             items.Sort((a, b) => a.Fight != b.Fight ? (a.Fight ? 1 : -1) : a.Seconds.CompareTo(b.Seconds));
             _items = items;
             _error = down.Count == 3 ? "наблюдатели не в сети" : null;
+        }
+
+        private static bool Claims()
+        {
+            var items = _items;
+            if (items != null)
+                foreach (var it in items)
+                    if (!it.Fight) return true;
+            return false;
         }
 
         private static int Num(string s)

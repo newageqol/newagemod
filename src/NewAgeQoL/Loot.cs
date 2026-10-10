@@ -243,7 +243,7 @@ namespace NewAgeQoL
             plate.Shut = shut;
             foreach (var part in plate.Body) if (part != null) part.SetActive(!shut);
             plate.Size.preferredWidth = shut ? Folded : Wide;
-            plate.Title.fontSize = shut ? 15 : 18;
+            plate.Title.fontSize = shut ? 14 : 16;
             plate.Title.text = shut ? "Последняя добыча" : plate.Head;
             plate.Title.GetComponent<LayoutElement>().preferredWidth = (shut ? Folded : Wide) - Pad * 2f - 26f;
             if (!shut) plate.Until = Time.unscaledTime + Life;
@@ -302,7 +302,7 @@ namespace NewAgeQoL
             column.childForceExpandHeight = false;
 
             plate.Head = result.Win ? "Победа" : "Поражение";
-            var title = Line(go.transform, plate.Head, 18, FontStyle.Bold, result.Win ? WardrobeLook.Good : WardrobeLook.Bad);
+            var title = Line(go.transform, plate.Head, 16, FontStyle.Bold, result.Win ? WardrobeLook.Good : WardrobeLook.Bad);
             title.GetComponent<LayoutElement>().preferredWidth = Wide - Pad * 2f - 26f;
             plate.Title = title;
             var close = Shut(go.transform, plate);
@@ -310,16 +310,16 @@ namespace NewAgeQoL
             var gains = new List<string>();
             if (result.Exp != 0) gains.Add(Paint("Опыт", WardrobeLook.Label) + " " + Paint(Signed(result.Exp), Exp));
             if (Math.Abs(result.Cash) > 0.0001) gains.Add(Paint("Таллы", WardrobeLook.Label) + " " + Paint(Signed(result.Cash), WardrobeLook.Accent));
-            if (gains.Count > 0) Line(go.transform, string.Join("    ", gains.ToArray()), 16, FontStyle.Bold, WardrobeLook.Body);
+            if (gains.Count > 0) Line(go.transform, string.Join("   ", gains.ToArray()), 14, FontStyle.Bold, WardrobeLook.Body);
 
             if (result.Items.Count > 0)
             {
-                Line(go.transform, "Добыча", 13, FontStyle.Normal, WardrobeLook.Faint);
+                Line(go.transform, "Добыча", 12, FontStyle.Normal, WardrobeLook.Faint);
                 foreach (var item in result.Items) Row(go.transform, plate, item);
             }
             else if (gains.Count == 0)
             {
-                Line(go.transform, "Без добычи", 14, FontStyle.Normal, WardrobeLook.Faint);
+                Line(go.transform, "Без добычи", 13, FontStyle.Normal, WardrobeLook.Faint);
             }
 
             if (result.Worn.Count > 0)
@@ -388,7 +388,7 @@ namespace NewAgeQoL
             var kind = (EDialogDescriptionItemType)item.ItemType;
             Color tint = item.Frame.HasValue && kind == EDialogDescriptionItemType.ITEM_TYPE_THING
                 ? (Color)WardrobeData.RarityColor(item.Frame.Value) : WardrobeLook.Body;
-            var label = OnlineWindow.Label(go.transform, Name(item), 15, FontStyle.Bold, tint);
+            var label = OnlineWindow.Label(go.transform, Name(item), 13, FontStyle.Bold, tint);
             label.alignment = TextAnchor.MiddleLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.raycastTarget = false;
@@ -464,7 +464,7 @@ namespace NewAgeQoL
 
             var names = new List<string>();
             foreach (var one in worn) names.Add(Known(one.Id));
-            var text = Line(go.transform, "Вещи изношены: " + string.Join(", ", names.ToArray()), 14, FontStyle.Bold, WardrobeLook.Bad);
+            var text = Line(go.transform, "Вещи изношены: " + string.Join(", ", names.ToArray()), 13, FontStyle.Bold, WardrobeLook.Bad);
             for (int i = 0; i < worn.Count; i++)
             {
                 int at = i;
