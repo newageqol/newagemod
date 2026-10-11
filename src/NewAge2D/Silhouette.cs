@@ -11,6 +11,9 @@ internal sealed class Silhouette
     private readonly int _high;
     private readonly byte[] _bits;
 
+    [ThreadStatic] private static bool[] _solid;
+    [ThreadStatic] private static int[] _palette;
+
     private Silhouette(int wide, int high, byte[] bits)
     {
         _wide = wide;
@@ -25,7 +28,10 @@ internal sealed class Silhouette
         {
             int wide = (picture.Width + Block - 1) / Block;
             int high = (picture.Height + Block - 1) / Block;
-            var solid = new bool[wide * high];
+            int cells = wide * high;
+            if (_solid == null || _solid.Length < cells) _solid = new bool[cells];
+            var solid = _solid;
+            Array.Clear(solid, 0, cells);
             if (picture.Dxt != null)
             {
                 if (picture.Width % Block != 0 || picture.Height % Block != 0) return null;
@@ -77,7 +83,7 @@ internal sealed class Silhouette
     private static bool Dxt(byte[] dxt, int wide, int high, bool[] solid)
     {
         if (dxt.Length < wide * high * 16) return false;
-        var palette = new int[8];
+        var palette = _palette ??= new int[8];
         for (int block = 0; block < wide * high; block++)
         {
             int at = block * 16;

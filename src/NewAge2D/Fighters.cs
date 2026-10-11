@@ -421,7 +421,6 @@ internal static class Fighters
     {
         Alive.Remove(doll);
         if (Alive.Count == 0) { _emptySince = Time.unscaledTime; _crowd = false; }
-        else Prune();
     }
 
     private static readonly Dictionary<AbstractCharacter, (List<Renderer> Renderers, float At)> Veils = new();
@@ -560,10 +559,9 @@ internal static class Fighters
         }
         if (Alive.Count > 0 || _emptySince <= 0f || Time.unscaledTime - _emptySince < 180f) return;
         _emptySince = 0f;
-        FrameCache.Clear();
+        FrameCache.Trim();
         SpellFx.Reset();
         Summoned.Clear();
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo("[frames] no fights for a long time, doll frames unloaded");
     }
 
     internal static int Layer(Camera eye, Vector3 point, OffsetCoord spot)
@@ -636,22 +634,6 @@ internal static class Fighters
             hot.Add(FrameCache.SequenceKey(look, "stop"));
             hot.Add(FrameCache.SequenceKey(look, "move"));
         }
-    }
-
-    internal static void Prune()
-    {
-        var used = new HashSet<string>();
-        foreach (var doll in Alive)
-        {
-            if (doll == null) continue;
-            if (doll.Look != null) used.Add(doll.Look);
-            if (doll.ViewLook != null) used.Add(doll.ViewLook);
-            if (doll.OtherLook != null) used.Add(doll.OtherLook);
-            if (!doll.Warm)
-                foreach (string look in doll.OlderLooks) used.Add(look);
-        }
-        foreach (string look in SummonWarm.Kept) used.Add(look);
-        FrameCache.DropUnused(used);
     }
 
     internal static void ClearAll()
@@ -1049,40 +1031,6 @@ internal static class FrameCache
         }
     }
 
-    internal static void DropUnused(HashSet<string> used)
-    {
-        var dead = new HashSet<string>();
-        foreach (string look in Labels.Keys)
-            if (!look.StartsWith("fx/", StringComparison.Ordinal) && !used.Contains(look)) dead.Add(look);
-        foreach (string sequence in Owner.Values)
-        {
-            int cut = sequence.LastIndexOf('|');
-            if (cut <= 0) continue;
-            string look = sequence.Substring(0, cut);
-            if (!look.StartsWith("fx/", StringComparison.Ordinal) && !used.Contains(look)) dead.Add(look);
-        }
-        if (dead.Count == 0) return;
-        foreach (string key in Sprites.Keys.ToList())
-        {
-            int cut = key.IndexOf('#');
-            if (cut > 0 && dead.Contains(key.Substring(0, cut))) Drop(key);
-        }
-        foreach (string look in dead)
-        {
-            Labels.Remove(look);
-            Rates.Remove(look);
-            Stops.Remove(look);
-            Heads.Remove(look);
-            string prefix = look + "|";
-            Ready.RemoveWhere(s => s.StartsWith(prefix, StringComparison.Ordinal));
-            foreach (string sequence in Counts.Keys.Where(s => s.StartsWith(prefix, StringComparison.Ordinal)).ToList()) Counts.Remove(sequence);
-            foreach (string sequence in Hits.Keys.Where(s => s.StartsWith(prefix, StringComparison.Ordinal)).ToList()) Hits.Remove(sequence);
-            foreach (string sequence in Maps.Keys.Where(s => s.StartsWith(prefix, StringComparison.Ordinal)).ToList()) Maps.Remove(sequence);
-        }
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[frames] looks freed: {string.Join(", ", dead)}; sprites left {Sprites.Count}");
-        if (Trace.On) Trace.Write($"looks unloaded from memory {string.Join(", ", dead.Select(Trace.Look))}; sprites left {Sprites.Count}");
-    }
-
     internal static bool TryGet(string key, out Sprite sprite)
     {
         if (!Sprites.TryGetValue(key, out sprite)) return false;
@@ -1115,7 +1063,7 @@ internal static class FrameCache
         texture.Apply(raw, true);
         var sprite = Sprite.Create(texture, new Rect(0, 0, picture.Width, picture.Height),
             new Vector2(picture.PivotX, picture.PivotY), pixelsPerUnit, 0, SpriteMeshType.FullRect);
-        var shape = Silhouette.From(picture);
+        var shape = picture.Shape ?? Silhouette.From(picture);
         if (shape != null) Shapes[sprite] = shape;
         Sprites.TryGetValue(key, out var previous);
         Drop(key, Owner.TryGetValue(key, out string was) && was == sequence);
@@ -1147,6 +1095,14 @@ internal static class FrameCache
     }
 
     private static readonly HashSet<string> Hot = new();
+
+    internal static void Trim()
+    {
+        long half = Plugin.FrameMemory / 2;
+        long before = _bytes;
+        if (before > half) Spill(half);
+        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[frames] no fights for a long time, doll frames kept {_bytes / 1048576.0:0} of {before / 1048576.0:0} MB, sprites {Sprites.Count}");
+    }
 
     private static void Spill(long budget)
     {
@@ -2038,11 +1994,7 @@ internal sealed class FighterDoll : MonoBehaviour
         hot.Add(FrameCache.SequenceKey(look, "move"));
     }
 
-    internal string Look => _look;
-
     internal string ViewLook => _viewLook;
-
-    internal string OtherLook => _otherLook;
 
     private float _lookSince;
 
@@ -2682,7 +2634,6 @@ internal sealed class FighterDoll : MonoBehaviour
                     var first = result.Frames[0];
                     Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': doll shown, {first.Width}x{first.Height}, {ppu:0} px per unit");
                     if (_view == null || _view.sprite == null) Show("stop", 0);
-                    Fighters.Prune();
                 }
                 else if (Plugin.CfgVerbose.Value)
                     Plugin.Log.LogInfo($"[combat] '{_owner?.Login}': {label} ready, frames {result.Frames.Count}, {clock.ElapsedMilliseconds} ms");
@@ -2735,8 +2686,6 @@ internal sealed class FighterDoll : MonoBehaviour
         _older.Insert(0, look);
         if (_older.Count > 4) _older.RemoveAt(_older.Count - 1);
     }
-
-    internal IReadOnlyList<string> OlderLooks => _older;
 
     private string Spare(string label)
     {

@@ -37,6 +37,8 @@ internal static class Captions
         public Vector3 Origin = Vector3.one;
         public float Base = 1f;
         public float Traced;
+        public Vector3 Placed;
+        public bool Pinned;
     }
 
     private static readonly ConditionalWeakTable<LifeManaEnergyDisplay, Board> Boards = new();
@@ -94,6 +96,9 @@ internal static class Captions
         try
         {
             Numbers(__instance);
+            Boards.TryGetValue(__instance, out var board);
+            bool pinned = board != null && board.Pinned;
+            if (board != null) board.Pinned = false;
             var character = __instance.Character;
             if (character == null || !character.Initialized) return true;
             var doll = Fighters.DollOf(character);
@@ -116,7 +121,12 @@ internal static class Captions
             }
             float scale = Scale(__instance, character, doll.Feet, location.CombatCamera);
             screen.y += Fighters.Caption + Fighters.CaptionRaise * scale;
-            __instance.transform.position = screen;
+            if (!pinned || (screen - board.Placed).sqrMagnitude > 0.01f)
+            {
+                __instance.transform.position = screen;
+                if (board != null) board.Placed = screen;
+            }
+            if (board != null) board.Pinned = true;
             return false;
         }
         catch

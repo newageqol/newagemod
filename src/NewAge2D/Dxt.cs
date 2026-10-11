@@ -37,6 +37,7 @@ internal static class Dxt
         picture.Dxt = EncodeChain(picture.Rgba, picture.Width, picture.Height, out int mips, picture.Pooled, out int size);
         picture.DxtSize = size;
         picture.Mips = mips;
+        picture.Shape = Silhouette.From(picture);
         if (picture.Pooled) Pixels.Return(picture.Rgba);
         picture.Rgba = null;
     }

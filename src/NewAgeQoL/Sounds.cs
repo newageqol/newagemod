@@ -113,6 +113,11 @@ namespace NewAgeQoL
             Fire(Clip(name));
         }
 
+        internal static void Horn(AudioClip clip)
+        {
+            Fire(clip);
+        }
+
         private static void Fire(AudioClip clip)
         {
             try
@@ -215,6 +220,11 @@ namespace NewAgeQoL
                 if (audioClip == null) return true;
                 var holder = VisualPrefabsHolder.Instance;
                 if (holder != null && holder.PrivateMessageSound != null && audioClip == holder.PrivateMessageSound) return false;
+                if (holder != null && holder.MercenaryInvitationSound != null && audioClip == holder.MercenaryInvitationSound)
+                {
+                    Sounds.Horn(audioClip);
+                    return false;
+                }
             }
             catch { }
             return true;

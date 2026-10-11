@@ -57,6 +57,7 @@ public sealed class DollPicture
     public Dictionary<string, LabelRange> Labels;
     public byte[] Rgba;
     public byte[] Dxt;
+    internal Silhouette Shape;
     public int DxtSize;
     public bool Pooled;
     public bool Raw;

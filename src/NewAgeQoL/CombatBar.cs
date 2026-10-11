@@ -593,6 +593,29 @@ namespace NewAgeQoL
             Make(1, "effects", () => Icons.Flash("effects"), EffectsWindow.Toggle);
             Make(2, "team", () => Icons.Flash("team"), ChatDock.TeamAim);
             Make(3, "info", InfoFace, Card);
+            Lay(Spectate.Peeking);
+        }
+
+        private static void Lay(bool peeking)
+        {
+            if (_mid == null || Seats.Count < 3 || Seats[2] == null) return;
+            var chase = Seats[2].gameObject;
+            if (chase.activeSelf == peeking)
+            {
+                chase.SetActive(!peeking);
+                Plugin.Trace("[bar] pursuit button " + (peeking ? "hidden while spectating" : "shown"));
+            }
+            float x = Wide(2);
+            for (int i = 2; i < Seats.Count; i++)
+            {
+                var seat = Seats[i];
+                if (seat == null || !seat.gameObject.activeSelf) continue;
+                var spot = new Vector2(x, seat.anchoredPosition.y);
+                if (seat.anchoredPosition != spot) seat.anchoredPosition = spot;
+                x += SmallSide + Space;
+            }
+            var size = new Vector2(Mathf.Max(0f, x - Space), High);
+            if (_mid.sizeDelta != size) _mid.sizeDelta = size;
         }
 
         private static void Make(int slot, string name, Func<Sprite> face, UnityEngine.Events.UnityAction act)

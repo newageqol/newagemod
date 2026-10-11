@@ -177,7 +177,7 @@ namespace NewAgeQoL
             try { who = Controllers.User?.UserInfo?.Login ?? ""; }
             catch { }
             int read = _seen != null ? _seen.Value : 0;
-            var req = UnityWebRequest.Get(url + "?box=" + box + "&after=" + _last + "&read=" + read + "&who=" + Uri.EscapeDataString(who));
+            var req = UnityWebRequest.Get(url + "?box=" + box + "&after=" + _last + "&read=" + read + "&who=" + Uri.EscapeDataString(who) + "&v=" + Plugin.Version);
             req.timeout = 15;
             req.redirectLimit = 0;
             req.SetRequestHeader("User-Agent", "NewAgeQoL");

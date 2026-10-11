@@ -1231,7 +1231,11 @@ namespace NewAgeQoL
                     cell.Count.enabled = show;
                     if (show) cell.Count.text = Num(skill.Count);
                 }
-                if (cell.Edge != null) cell.Edge.effectColor = bright ? WardrobeLook.FieldEdge : new Color(WardrobeLook.Edge.r, WardrobeLook.Edge.g, WardrobeLook.Edge.b, 0.7f);
+                if (cell.Edge != null)
+                {
+                    var edge = bright ? WardrobeLook.FieldEdge : new Color(WardrobeLook.Edge.r, WardrobeLook.Edge.g, WardrobeLook.Edge.b, 0.7f);
+                    if (cell.Edge.effectColor != edge) cell.Edge.effectColor = edge;
+                }
                 if (cell.Lit != null)
                 {
                     bool lit = Focus.Lit(skill);
