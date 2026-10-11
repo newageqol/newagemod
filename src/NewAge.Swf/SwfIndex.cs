@@ -25,15 +25,18 @@ public sealed class SwfIndex
 
     public IReadOnlyList<SwfTag> MainTimeline { get; private init; }
 
+    public const int MaxNesting = 32;
+
     public static SwfIndex Build(SwfFile file)
     {
         var index = new SwfIndex { File = file, MainTimeline = file.Tags };
-        index.Walk(file.Tags, spriteId: 0);
+        index.Walk(file.Tags, spriteId: 0, nesting: 0);
         return index;
     }
 
-    private void Walk(IReadOnlyList<SwfTag> tags, int spriteId)
+    private void Walk(IReadOnlyList<SwfTag> tags, int spriteId, int nesting)
     {
+        if (nesting > MaxNesting) throw new InvalidDataException("sprites nested deeper than " + MaxNesting);
         int frame = 0;
 
         foreach (var tag in tags)
@@ -66,7 +69,7 @@ public sealed class SwfIndex
                     Characters[id] = tag;
                     Sprites[id] = inner;
                     SpriteFrameCounts[id] = declaredFrames;
-                    Walk(inner, id);
+                    Walk(inner, id, nesting + 1);
                     break;
                 }
 

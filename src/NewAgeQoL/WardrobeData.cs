@@ -457,6 +457,7 @@ namespace NewAgeQoL
             _loaded = true;
             try
             {
+                WardrobeStore.Recover(CacheFile);
                 if (File.Exists(CacheFile))
                 {
                     string text = File.ReadAllText(CacheFile, Encoding.UTF8);

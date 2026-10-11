@@ -475,8 +475,6 @@ namespace NewAgeQoL
             Tail(zip, Path.Combine(flash, "plugin.log.old"), "flash/plugin.log.old", 1000000);
             foreach (var path in Latest(Path.Combine(flash, "trace"), "*.log", 3))
                 Tail(zip, path, "бои/" + Path.GetFileName(path), 3000000);
-            foreach (var path in Latest(Path.Combine(Paths.ConfigPath, "NewAgeQoL-replays"), "*.natape", 3))
-                Whole(zip, path, "записи-боёв/" + Path.GetFileName(path), 8000000);
             Tail(zip, Path.Combine(Paths.BepInExRootPath, "LogOutput.log"), "игра/LogOutput.log", 2000000);
             Tail(zip, player, "игра/Player.log", 2000000);
             string near = Path.GetDirectoryName(player);

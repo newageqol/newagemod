@@ -208,7 +208,17 @@ public sealed class SwfRenderer(SwfMovie movie) : IDisposable
         return hidden ? glow : Keep(made, SKImageFilter.CreateBlendMode(SKBlendMode.SrcOver, glow, input));
     }
 
+    private int _buttonNesting;
+
     private void DrawButton(SKCanvas canvas, SwfMovie owner, int characterId, in SwfMatrix matrix, in SwfColorTransform colorTransform, int state = 0)
+    {
+        if (_buttonNesting >= SwfIndex.MaxNesting) return;
+        _buttonNesting++;
+        try { DrawButtonRecords(canvas, owner, characterId, matrix, colorTransform, state); }
+        finally { _buttonNesting--; }
+    }
+
+    private void DrawButtonRecords(SKCanvas canvas, SwfMovie owner, int characterId, in SwfMatrix matrix, in SwfColorTransform colorTransform, int state)
     {
         var button = owner.GetButton(characterId);
         if (button is null) return;

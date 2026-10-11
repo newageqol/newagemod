@@ -201,20 +201,22 @@ namespace NewAgeQoL
             bool finished = false;
             try
             {
-                var request = UnityWebRequest.Get(Base + ManifestName + "?t=" + DateTime.UtcNow.Ticks);
-                request.SetRequestHeader("User-Agent", "NewAgeQoL");
-                request.timeout = 30;
-                yield return request.SendWebRequest();
-                string error = request.error;
-                string text = string.IsNullOrEmpty(error) ? request.downloadHandler.text ?? "" : "";
-                long code = request.responseCode;
-                request.Dispose();
-                if (text.Length == 0)
+                byte[] manifest = null, signature = null;
+                string error = null;
+                long code = 0;
+                yield return Download(ManifestName, (d, e, c) => { manifest = d; error = e; code = c; });
+                if (manifest == null || manifest.Length == 0)
                 {
                     Plugin.Log.LogInfo("[assets] manifest unavailable: code " + code + ", " + (error ?? "empty"));
                     yield break;
                 }
-                var entries = Parse(text);
+                yield return Download(ManifestName + ".sig", (d, e, c) => { signature = d; error = e; code = c; });
+                if (!Sign.Valid(manifest, signature))
+                {
+                    Plugin.Warn("[assets] manifest rejected: " + (signature == null ? "signature unavailable, code " + code + ", " + (error ?? "empty") : "signature does not match"));
+                    yield break;
+                }
+                var entries = Parse(Encoding.UTF8.GetString(manifest));
                 Plugin.Log.LogInfo("[assets] manifest: " + entries.Count + " files");
                 LoadState();
 
@@ -264,6 +266,19 @@ namespace NewAgeQoL
             }
         }
 
+        private static IEnumerator Download(string name, Action<byte[], string, long> done)
+        {
+            var request = UnityWebRequest.Get(Base + name + "?t=" + DateTime.UtcNow.Ticks);
+            request.SetRequestHeader("User-Agent", "NewAgeQoL");
+            request.timeout = 30;
+            yield return request.SendWebRequest();
+            string error = request.error;
+            byte[] data = string.IsNullOrEmpty(error) ? request.downloadHandler.data : null;
+            long code = request.responseCode;
+            request.Dispose();
+            done(data, error, code);
+        }
+
         private static List<Entry> Parse(string text)
         {
             var list = new List<Entry>();
@@ -284,6 +299,7 @@ namespace NewAgeQoL
         {
             if (!Regex.IsMatch(path, @"^[A-Za-z0-9_]+(/[A-Za-z0-9._-]+)+$")) return false;
             if (path.Contains("..")) return false;
+            foreach (var part in path.Split('/')) if (part.EndsWith(".", StringComparison.Ordinal)) return false;
             var ext = Path.GetExtension(path).ToLowerInvariant();
             if (ext == ".dll" || ext == ".exe" || ext == ".cfg") return false;
             var top = path.Substring(0, path.IndexOf('/'));

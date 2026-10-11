@@ -34,6 +34,17 @@ public sealed class MovieClip(SwfMovie movie, SwfTimeline timeline, int characte
     public SwfTimeline Timeline { get; } = timeline;
     public int CharacterId { get; } = characterId;
 
+    public int Nesting { get; init; }
+
+    public MovieClip Parent { get; init; }
+
+    private bool Inside(int sprite)
+    {
+        for (var clip = this; clip is not null; clip = clip.Parent)
+            if (clip.CharacterId == sprite && ReferenceEquals(clip.Movie, Movie)) return true;
+        return false;
+    }
+
     public int CurrentFrame { get; private set; } = -1;
     public bool Playing { get; set; } = true;
     public string Name { get; set; }
@@ -145,12 +156,12 @@ public sealed class MovieClip(SwfMovie movie, SwfTimeline timeline, int characte
             target.CharacterId = characterId;
             target.Clip = null;
 
-            if (Movie.KindOf(characterId) == SwfCharacterKind.Sprite)
+            if (Movie.KindOf(characterId) == SwfCharacterKind.Sprite && Nesting < SwfIndex.MaxNesting && !Inside(characterId))
             {
                 var childTimeline = Movie.GetTimeline(characterId);
                 if (childTimeline is not null)
                 {
-                    target.Clip = new MovieClip(Movie, childTimeline, characterId) { Name = place.Name };
+                    target.Clip = new MovieClip(Movie, childTimeline, characterId) { Name = place.Name, Nesting = Nesting + 1, Parent = this };
                     if (place.Name is not null) target.Name = place.Name;
                     ChildCreated?.Invoke(this, target);
                     target.Clip.GotoFrame(0);

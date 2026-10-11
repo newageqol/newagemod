@@ -166,12 +166,28 @@ public sealed class SwfStore
                 {
                     reason = "не разбирается: " + ex.Message;
                     lock (_movies) _failed[file] = reason;
+                    Drop(path);
                 }
             }
         }
         try { Arrived?.Invoke(file); }
         catch { }
         return movie;
+    }
+
+    private void Drop(string path)
+    {
+        try
+        {
+            string folder = Path.GetFullPath(CacheDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!Path.GetFullPath(path).StartsWith(folder, StringComparison.OrdinalIgnoreCase)) return;
+            File.Delete(path);
+            Log?.Invoke($"removed broken {Path.GetFileName(path)} from the cache");
+        }
+        catch (Exception ex)
+        {
+            Log?.Invoke($"could not remove broken {Path.GetFileName(path)}: {ex.Message}");
+        }
     }
 
     private string Locate(string file, out string reason)

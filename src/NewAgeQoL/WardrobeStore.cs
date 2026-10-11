@@ -58,12 +58,22 @@ namespace NewAgeQoL
             return text.Length > MaxTitle ? text.Substring(0, MaxTitle) : text;
         }
 
+        internal static void Recover(string path)
+        {
+            try
+            {
+                if (!File.Exists(path) && File.Exists(path + ".new")) File.Move(path + ".new", path);
+            }
+            catch (Exception e) { Plugin.Trace("[wardrobe] restoring " + Path.GetFileName(path) + ": " + e.Message); }
+        }
+
         internal static void Load()
         {
             if (_loaded) return;
             _loaded = true;
             try
             {
+                Recover(FilePath);
                 if (!File.Exists(FilePath)) return;
                 foreach (var line in File.ReadAllLines(FilePath, Encoding.UTF8))
                 {

@@ -102,7 +102,7 @@ namespace NewAgeQoL
             Status = "Качаю базу вещей";
             var db = new Reply();
             yield return Get(BaseUrl + "?t=" + DateTime.UtcNow.Ticks, db, false);
-            string baseText = db.Code == 200 && db.Body.IndexOf("\nI\t", StringComparison.Ordinal) >= 0 ? db.Body : null;
+            string baseText = db.Code == 200 && string.IsNullOrEmpty(db.Error) && db.Body.IndexOf("\nI\t", StringComparison.Ordinal) >= 0 ? db.Body : null;
             bool kept = false;
             if (baseText == null)
             {

@@ -239,7 +239,7 @@ namespace NewAgeQoL
         private static IEnumerator Dress(int id, int kind, ESlots.SlotType? into)
         {
             int backId = 0, backTab = 0;
-            if (into.HasValue && Slots.TryGetValue(into.Value, out var there) && there != null && there.Id > 0 && there.Id != id && there.Kind == kind)
+            if (into.HasValue && Slots.TryGetValue(into.Value, out var there) && there != null && there.Id > 0 && there.Id != id)
             {
                 ThingContextActionResponseMessage freed = null;
                 yield return Act(there.Id, EThingActionButton.TAKE_OFF, 0, r => freed = r);
@@ -269,6 +269,17 @@ namespace NewAgeQoL
             }
             catch { }
             return order;
+        }
+
+        private static bool FreeBeside(int kind, ESlots.SlotType a, ESlots.SlotType b)
+        {
+            try
+            {
+                foreach (var slot in ESlots.GetSlotsByThingSubtype((EThingSubType)kind))
+                    if (slot != a && slot != b && ESlots.IsAdditionalSlot(slot) == ESlots.IsAdditionalSlot(a) && !Busy(slot)) return true;
+                return false;
+            }
+            catch { return true; }
         }
 
         private static bool Busy(ESlots.SlotType slot) => Slots.TryGetValue(slot, out var worn) && worn != null && worn.Id != 0;
@@ -338,6 +349,61 @@ namespace NewAgeQoL
 
             yield return Act(movedId, Into(to), movedTab, null);
             if (staying != null) yield return Act(stayedId, Into(from), stayedTab, null);
+        }
+
+        private static IEnumerator Shift(ESlots.SlotType from, ESlots.SlotType to)
+        {
+            if (!Slots.TryGetValue(from, out var moving) || moving == null || moving.Id <= 0) yield break;
+            if (!Slots.TryGetValue(to, out var staying) || staying == null || staying.Id <= 0) yield break;
+            if (moving.ThingId == staying.ThingId) yield break;
+            var button = Into(to);
+
+            ThingContextActionResponseMessage reply = null;
+            yield return Act(moving.Id, EThingActionButton.TAKE_OFF, 0, r => reply = r);
+            if (!Landed(reply, moving.ThingId, out int movedId, out int movedTab)) yield break;
+
+            reply = null;
+            yield return Act(staying.Id, EThingActionButton.TAKE_OFF, 0, r => reply = r);
+            if (!Landed(reply, staying.ThingId, out int stayedId, out int stayedTab))
+            {
+                yield return Act(movedId, button, movedTab, null);
+                yield break;
+            }
+
+            reply = null;
+            yield return Act(movedId, button, movedTab, r => reply = r);
+            if (!Seated(reply, moving.ThingId, out var where, out int wornId))
+            {
+                yield return Act(stayedId, button, stayedTab, null);
+                yield break;
+            }
+            if (where == to)
+            {
+                yield return Act(stayedId, button, stayedTab, null);
+                yield break;
+            }
+
+            Plugin.Trace("[items] item went to slot " + where + " instead of " + to + ", putting the other one on first");
+            reply = null;
+            yield return Act(wornId, EThingActionButton.TAKE_OFF, 0, r => reply = r);
+            yield return Act(stayedId, button, stayedTab, null);
+            if (Landed(reply, moving.ThingId, out movedId, out movedTab))
+                yield return Act(movedId, button, movedTab, null);
+        }
+
+        private static bool Seated(ThingContextActionResponseMessage reply, int thingId, out ESlots.SlotType slot, out int id)
+        {
+            slot = default;
+            id = 0;
+            if (reply == null || !reply.Success || reply.ChangesInSlots == null) return false;
+            foreach (var change in reply.ChangesInSlots)
+                if (change != null && change.IsDressed && change.ThingId == thingId && change.InventoryId.HasValue)
+                {
+                    slot = (ESlots.SlotType)change.SlotId;
+                    id = change.InventoryId.Value;
+                    return id > 0;
+                }
+            return false;
         }
 
         private static bool Landed(ThingContextActionResponseMessage reply, int thingId, out int id, out int tab)
@@ -593,7 +659,20 @@ namespace NewAgeQoL
                 if (!Accepts(KindOf(from.Slot), slot)) { Notice.Show("Эту вещь сюда не надеть", 3f); return; }
                 if (ESlots.IsAdditionalSlot(slot) == ESlots.IsAdditionalSlot(from.Slot))
                 {
-                    Notice.Show("Переставить можно только между основными и запасными слотами", 4f);
+                    int other = KindOf(slot);
+                    if (other <= 0)
+                    {
+                        Notice.Show("В пустой слот этого ряда не переставить: сервер кладёт вещь в первый свободный", 4f);
+                        return;
+                    }
+                    if (!Accepts(other, from.Slot)) { Notice.Show("Эти вещи местами не поменять", 3f); return; }
+                    if (FreeBeside(KindOf(from.Slot), from.Slot, slot) || FreeBeside(other, from.Slot, slot))
+                    {
+                        Notice.Show("Сначала займи свободный слот этого ряда: сервер кладёт вещь в первый свободный", 4f);
+                        return;
+                    }
+                    Plugin.Trace("[items] swapping items between slots " + from.Slot + " and " + slot);
+                    Run(Shift(from.Slot, slot));
                     return;
                 }
                 Plugin.Trace("[items] moving item from slot " + from.Slot + " to slot " + slot);

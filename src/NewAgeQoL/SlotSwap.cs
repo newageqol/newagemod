@@ -260,7 +260,11 @@ namespace NewAgeQoL
             {
                 _reply = null;
                 _waitFor = piece.Id;
-                if (!Send(piece.Id, action, tab)) yield break;
+                if (!Send(piece.Id, action, tab))
+                {
+                    if (_failed == null) _failed = "запрос не ушёл на сервер";
+                    yield break;
+                }
 
                 float t = 0f;
                 while (_reply == null && t < 0.8f) { yield return null; t += Time.unscaledDeltaTime; }

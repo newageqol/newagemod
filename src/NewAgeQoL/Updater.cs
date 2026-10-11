@@ -37,6 +37,10 @@ namespace NewAgeQoL
         internal static string LatestVersion = "";
         private static string _dllUrl = "";
         private static string _zipUrl = "";
+        private static string _dllFile = "";
+        private static string _zipFile = "";
+        private const string SigExt = ".sig";
+        private static readonly Dictionary<string, string> Signatures = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
 
         internal static bool CanUpdate => State == Stage.Newer && (_dllUrl.Length > 0 || _zipUrl.Length > 0);
@@ -101,6 +105,9 @@ namespace NewAgeQoL
             string tag = release != null ? release.tag_name : null;
             _dllUrl = "";
             _zipUrl = "";
+            _dllFile = "";
+            _zipFile = "";
+            Signatures.Clear();
             if (release != null && release.assets != null)
                 foreach (var asset in release.assets)
                 {
@@ -119,6 +126,10 @@ namespace NewAgeQoL
                     string url = m.Groups[1].Value;
                     Remember(url, url);
                 }
+            bool noSignature = _dllUrl.Length > 0 || _zipUrl.Length > 0;
+            if (_zipUrl.Length > 0 && !Signatures.ContainsKey(_zipFile)) _zipUrl = "";
+            if (_dllUrl.Length > 0 && !Signatures.ContainsKey(_dllFile)) _dllUrl = "";
+            noSignature = noSignature && _dllUrl.Length == 0 && _zipUrl.Length == 0;
 
             if (string.IsNullOrEmpty(tag))
             {
@@ -138,7 +149,7 @@ namespace NewAgeQoL
             else if (_dllUrl.Length == 0 && _zipUrl.Length == 0)
             {
                 State = Stage.Failed;
-                Message = "вышла " + LatestVersion + ", но " + DllName + " в релизе нет";
+                Message = "вышла " + LatestVersion + ", но " + (noSignature ? "у файла мода в релизе нет подписи" : DllName + " в релизе нет");
             }
             else
             {
@@ -152,38 +163,62 @@ namespace NewAgeQoL
 
         private static void Remember(string name, string url)
         {
-            if (Ours(name) && _dllUrl.Length == 0) _dllUrl = url;
-            else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && _zipUrl.Length == 0) _zipUrl = url;
+            string file = FileName(name);
+            if (file.EndsWith(SigExt, StringComparison.OrdinalIgnoreCase))
+            {
+                Signatures[file.Substring(0, file.Length - SigExt.Length)] = url;
+                return;
+            }
+            if (file.Equals(DllName, StringComparison.OrdinalIgnoreCase) && _dllUrl.Length == 0) { _dllUrl = url; _dllFile = file; }
+            else if (file.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && _zipUrl.Length == 0) { _zipUrl = url; _zipFile = file; }
         }
 
-        private static bool Ours(string name)
+        private static string FileName(string name)
         {
-            if (string.IsNullOrEmpty(name)) return false;
+            if (string.IsNullOrEmpty(name)) return "";
             string tail = name;
             int ask = tail.IndexOf('?');
             if (ask >= 0) tail = tail.Substring(0, ask);
             int cut = tail.LastIndexOfAny(Cuts);
             if (cut >= 0) tail = tail.Substring(cut + 1);
-            return tail.Equals(DllName, StringComparison.OrdinalIgnoreCase);
+            return tail;
+        }
+
+        private static IEnumerator Fetch(string url, int timeout, Action<byte[], string> done)
+        {
+            var request = UnityWebRequest.Get(url);
+            request.SetRequestHeader("User-Agent", "NewAgeQoL");
+            request.timeout = timeout;
+            yield return request.SendWebRequest();
+            string error = request.error;
+            byte[] data = string.IsNullOrEmpty(error) ? request.downloadHandler.data : null;
+            request.Dispose();
+            done(data, error);
         }
 
         private static IEnumerator UpdateRoutine()
         {
             bool zip = _zipUrl.Length > 0;
             string url = zip ? _zipUrl : _dllUrl;
-            var request = UnityWebRequest.Get(url);
-            request.SetRequestHeader("User-Agent", "NewAgeQoL");
-            request.timeout = 120;
-            yield return request.SendWebRequest();
+            string file = zip ? _zipFile : _dllFile;
 
-            string error = request.error;
-            byte[] data = error == null || error.Length == 0 ? request.downloadHandler.data : null;
-            request.Dispose();
-
+            byte[] data = null;
+            string error = null;
+            yield return Fetch(url, 120, (d, e) => { data = d; error = e; });
             if (data == null || data.Length == 0)
             {
                 State = Stage.Failed;
                 Message = "не скачалось: " + (error ?? "пустой файл");
+                yield break;
+            }
+
+            byte[] signature = null;
+            yield return Fetch(Signatures[file], 30, (d, e) => { signature = d; error = e; });
+            if (!Sign.Valid(data, signature))
+            {
+                State = Stage.Failed;
+                Message = signature == null ? "не скачалась подпись: " + (error ?? "пустой файл") : "подпись файла не сошлась, обновление не поставлено";
+                Plugin.Warn("[update] " + file + ": " + Message);
                 yield break;
             }
 
@@ -238,17 +273,15 @@ namespace NewAgeQoL
             if (main == null) throw new Exception("в архиве нет " + DllName);
 
             string root = BepInEx.Paths.PluginPath;
-            int changed = 0;
+            var files = new List<KeyValuePair<string, byte[]>> { new KeyValuePair<string, byte[]>(Main(main), main) };
             foreach (var file in flash)
             {
                 string path = Path.Combine(root, file.Key.Replace('/', Path.DirectorySeparatorChar));
                 if (Same(path, file.Value)) continue;
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                Put(path, file.Value);
-                changed++;
+                files.Add(new KeyValuePair<string, byte[]>(path, file.Value));
             }
-            Plugin.Trace("[update] Flash view: " + changed + " of " + flash.Count + " files replaced");
-            Install(main);
+            Put(files);
+            Plugin.Trace("[update] Flash view: " + (files.Count - 1) + " of " + flash.Count + " files replaced");
         }
 
         private static bool Same(string path, byte[] bytes)
@@ -270,6 +303,11 @@ namespace NewAgeQoL
 
         private static void Install(byte[] data)
         {
+            Put(new List<KeyValuePair<string, byte[]>> { new KeyValuePair<string, byte[]>(Main(data), data) });
+        }
+
+        private static string Main(byte[] data)
+        {
             string path = Assembly.GetExecutingAssembly().Location;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
@@ -285,15 +323,35 @@ namespace NewAgeQoL
             }
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception("не нашёл файл мода на диске");
             if (data.Length < 20000) throw new Exception("файл подозрительно маленький");
-            Put(path, data);
+            return path;
         }
 
-        private static void Put(string path, byte[] data)
+        private static void Put(List<KeyValuePair<string, byte[]>> files)
+        {
+            var written = new List<string>();
+            try
+            {
+                foreach (var file in files)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(file.Key));
+                    string fresh = file.Key + ".new";
+                    File.WriteAllBytes(fresh, file.Value);
+                    written.Add(fresh);
+                }
+            }
+            catch
+            {
+                foreach (var fresh in written) try { File.Delete(fresh); } catch { }
+                throw;
+            }
+            foreach (var file in files) Commit(file.Key);
+        }
+
+        private static void Commit(string path)
         {
             string folder = Path.GetDirectoryName(path);
             string name = Path.GetFileName(path);
             string fresh = path + ".new";
-            File.WriteAllBytes(fresh, data);
             if (!File.Exists(path))
             {
                 File.Move(fresh, path);

@@ -453,6 +453,7 @@ namespace NewAgeQoL
         private static IEnumerator Run()
         {
             _busy = true;
+            bool showing = false;
             var clock = System.Diagnostics.Stopwatch.StartNew();
             Watch();
             try
@@ -466,6 +467,9 @@ namespace NewAgeQoL
                 var scene = SceneManager.GetSceneByName(SceneName);
                 if (old == null || !scene.IsValid() || !scene.isLoaded) { Plugin.Warn("[night] old town or night scene not found"); yield break; }
                 Phase("show");
+                showing = true;
+                Hidden.Clear();
+                _darkCam = null;
                 var step = System.Diagnostics.Stopwatch.StartNew();
                 Relight();
                 long relightMs = step.ElapsedMilliseconds;
@@ -485,6 +489,7 @@ namespace NewAgeQoL
             }
             finally
             {
+                if (!showing) ShowOld();
                 if (_labels != null) { _labels.enabled = true; _labels = null; }
                 _busy = false;
                 NightLoad.Release(false);
@@ -633,18 +638,45 @@ namespace NewAgeQoL
             mr.receiveShadows = false;
         }
 
+        private static readonly List<GameObject> Hidden = new List<GameObject>();
+        private static Camera _darkCam;
+        private static CameraClearFlags _camFlags;
+        private static Color _camColor;
+
         private static void HideOld(GameObject old)
         {
+            Hidden.Clear();
             _labels = old.GetComponentInChildren<Canvas>(true);
             if (_labels != null) _labels.enabled = false;
             foreach (Transform ch in old.transform)
                 if (ch.name == "illenium_fon" || ch.name == "illenium_floor" || ch.name == "illenium_flora" || ch.name == "illeniumBilding" || ch.name == "AnimationEffects")
-                    ch.gameObject.SetActive(false);
+                    Hide(ch.gameObject);
             foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
                 if (root != old && (root.name == "illenium_fon" || root.name == "illenium_floor" || root.name == "illenium_flora" || root.name == "illeniumBilding"))
-                    root.SetActive(false);
-            var cam = Camera.main;
-            if (cam != null) { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.035f, 0.035f, 0.07f); }
+                    Hide(root);
+            _darkCam = Camera.main;
+            if (_darkCam != null)
+            {
+                _camFlags = _darkCam.clearFlags;
+                _camColor = _darkCam.backgroundColor;
+                _darkCam.clearFlags = CameraClearFlags.SolidColor;
+                _darkCam.backgroundColor = new Color(0.035f, 0.035f, 0.07f);
+            }
+        }
+
+        private static void Hide(GameObject go)
+        {
+            if (!go.activeSelf) return;
+            go.SetActive(false);
+            Hidden.Add(go);
+        }
+
+        private static void ShowOld()
+        {
+            foreach (var go in Hidden) if (go != null) go.SetActive(true);
+            Hidden.Clear();
+            if (_darkCam != null) { _darkCam.clearFlags = _camFlags; _darkCam.backgroundColor = _camColor; }
+            _darkCam = null;
         }
 
         private static GameObject FindOld()

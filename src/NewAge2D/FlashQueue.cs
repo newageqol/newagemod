@@ -410,10 +410,16 @@ internal static class FlashQueue
         return true;
     }
 
+    private static FighterDoll Working(AbstractCharacter who)
+    {
+        var doll = Fighters.DollOf(who);
+        return doll != null && !doll.Broken ? doll : null;
+    }
+
     internal static bool ClipReady(AbstractCharacter who)
     {
         if (!who.Initialized) return true;
-        var doll = Fighters.DollOf(who);
+        var doll = Working(who);
         if (doll != null) return !doll.Acting && !doll.Gliding && who.MoverState == MoverState.Idle;
         if (who.Dead) return true;
         return who.MoverState == MoverState.Idle && Idle(who);
@@ -551,10 +557,10 @@ internal static class FlashQueue
         var item = play.Item;
         var who = item.Source;
         play.Began = now;
+        if (who != null && item.AnimationName == "die") Dying.Remove(who);
         if (who == null || !who.Initialized) return;
         if (item.AnimationName == "die")
         {
-            Dying.Remove(who);
             if (!who.Dead)
             {
                 if (Trace.On) Trace.Write($"'{NameOf(who)}' already raised by the time of death queue, death not played");
@@ -567,7 +573,7 @@ internal static class FlashQueue
             return;
         }
         string animation = item is KickAnimationItem kick ? kick.GetAnimationName() : item.AnimationName;
-        var doll = Fighters.DollOf(who);
+        var doll = Working(who);
         if (doll != null)
         {
             doll.Play(animation ?? "", Fighters.HandOf(item));
@@ -591,7 +597,7 @@ internal static class FlashQueue
                 var who = play.Item.Source;
                 if (who == null || !who.Initialized || !play.Body) return true;
                 if (play.Item.AnimationName == "die") return now >= play.Began + DieSeconds;
-                var doll = Fighters.DollOf(who);
+                var doll = Working(who);
                 if (doll != null) return doll.Finished(play.Request);
                 return now >= play.Began + Frame * 2f && Idle(who);
             case 2:
