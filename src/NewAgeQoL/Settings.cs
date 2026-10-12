@@ -58,9 +58,6 @@ namespace NewAgeQoL
                 new Header { Title = "Кнопки" },
                 B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
                 B("Кнопка запасного набора", Plugin.CfgArtifactButtons),
-
-                new Header { Title = "Переодевание" },
-                A("Запасной набор", "Открыть", Manikin.Toggle),
                 Artifacts.Pending > 0
                     ? A("Ждут возврата: " + Artifacts.Pending, "Забыть", Artifacts.ForgetStash)
                     : null,

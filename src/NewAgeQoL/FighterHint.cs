@@ -402,7 +402,7 @@ namespace NewAgeQoL
         private static void Fill(AbstractCharacter ch, ICombatData cd)
         {
             bool me = cd.MyCharacter != null && cd.MyCharacter.UserId == ch.UserId;
-            bool friend = me || (cd.MyCharacter != null && ch.Team == cd.MyCharacter.Team);
+            bool friend = me || (!ch.IsBot && cd.MyCharacter != null && ch.Team == cd.MyCharacter.Team);
             _title.text = (ch.Login ?? "?") + (me ? "  (ты)" : "");
             _range.text = Steps(ch, cd, me);
             _range.gameObject.SetActive(_range.text.Length > 0);

@@ -150,7 +150,7 @@ namespace NewAgeQoL
             }
 
             bool me = cd.MyCharacter != null && cd.MyCharacter.UserId == ch.UserId;
-            bool friend = me || (cd.MyCharacter != null && ch.Team == cd.MyCharacter.Team);
+            bool friend = me || (!ch.IsBot && cd.MyCharacter != null && ch.Team == cd.MyCharacter.Team);
             bool fresh = !_headFresh;
             _headFresh = true;
             if (fresh || _headId != ch.UserId || _headMe != me || _headLevel != ch.Level)

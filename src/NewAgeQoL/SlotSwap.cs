@@ -79,9 +79,9 @@ namespace NewAgeQoL
 
         private static UserMenuCharacterSlotsPanelContent _panel;
         private static string _told;
-        private static Sprite _cycle;
+        private static Sprite _cycle, _shirt;
         private static float _nextArrange;
-        private static Button _weapons, _relics;
+        private static Button _weapons, _relics, _kit;
         private static Text _note;
         private static float _noteUntil;
         private static bool _busy;
@@ -112,12 +112,15 @@ namespace NewAgeQoL
                 if (_relics == null)
                     _relics = Build(RelicToggle(panel), face, "QoLSwapRelics",
                                     () => Swap("реликвии", MainRelics, SpareRelics));
+                if (_kit == null)
+                    _kit = Build(RelicToggle(panel), face, "QoLKitOpen", Manikin.Toggle, Shirt());
 
                 _panel = panel;
                 Arrange(panel);
 
                 Show(_weapons, Any(MainWeapons) || Any(SpareWeapons));
                 Show(_relics, Any(MainRelics) || Any(SpareRelics));
+                Show(_kit, true);
             }
             catch (System.Exception e) { Plugin.Fault("[slots] gear window: " + e.Message); }
         }
@@ -394,7 +397,11 @@ namespace NewAgeQoL
                     _note.alignment = TextAnchor.MiddleCenter;
                     _note.color = new Color(1f, 0.93f, 0.6f);
                     _note.raycastTarget = false;
-                    _note.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    _note.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    _note.verticalOverflow = VerticalWrapMode.Truncate;
+                    _note.resizeTextForBestFit = true;
+                    _note.resizeTextMinSize = 13;
+                    _note.resizeTextMaxSize = 20;
 
                     var outline = go.GetComponent<Outline>();
                     outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
@@ -402,6 +409,7 @@ namespace NewAgeQoL
                 }
 
                 var nrt = (RectTransform)_note.transform;
+                nrt.sizeDelta = new Vector2(Mathf.Max(200f, host.rect.width - 24f), 56f);
                 nrt.anchoredPosition = new Vector2(0f, host.rect.height * 0.24f);
                 nrt.SetAsLastSibling();
                 _note.text = text;
@@ -411,7 +419,8 @@ namespace NewAgeQoL
             catch { }
         }
 
-        private static Button Build(Button sample, RectTransform face, string name, UnityEngine.Events.UnityAction click)
+        private static Button Build(Button sample, RectTransform face, string name, UnityEngine.Events.UnityAction click,
+                                    Sprite sign = null)
         {
             if (sample == null || face == null) return null;
             var host = sample.transform.parent as RectTransform;
@@ -459,7 +468,7 @@ namespace NewAgeQoL
             box.anchorMax = new Vector2(0.78f, 0.78f);
             box.offsetMin = box.offsetMax = Vector2.zero;
             var art = mark.GetComponent<Image>();
-            art.sprite = Cycle();
+            art.sprite = sign != null ? sign : Cycle();
             art.color = WardrobeLook.Accent;
             art.preserveAspect = true;
             art.raycastTarget = false;
@@ -486,7 +495,39 @@ namespace NewAgeQoL
 
         private static Sprite Cycle()
         {
-            if (_cycle != null && _cycle.texture != null) return _cycle;
+            if (_cycle == null || _cycle.texture == null) _cycle = Paint(Arrows);
+            return _cycle;
+        }
+
+        private static readonly Vector2[] Coat =
+        {
+            new Vector2(47f, 108f), new Vector2(18f, 90f), new Vector2(8f, 70f), new Vector2(26f, 58f),
+            new Vector2(36f, 72f), new Vector2(36f, 20f), new Vector2(92f, 20f), new Vector2(92f, 72f),
+            new Vector2(102f, 58f), new Vector2(120f, 70f), new Vector2(110f, 90f), new Vector2(81f, 108f),
+            new Vector2(74f, 96f), new Vector2(64f, 91f), new Vector2(54f, 96f),
+        };
+
+        private static Sprite Shirt()
+        {
+            if (_shirt == null || _shirt.texture == null) _shirt = Paint(Clothed);
+            return _shirt;
+        }
+
+        private static bool Clothed(float x, float y)
+        {
+            bool hit = false;
+            for (int i = 0, j = Coat.Length - 1; i < Coat.Length; j = i++)
+            {
+                var a = Coat[i];
+                var b = Coat[j];
+                if ((a.y > y) == (b.y > y)) continue;
+                if (x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) hit = !hit;
+            }
+            return hit;
+        }
+
+        private static Sprite Paint(System.Func<float, float, bool> inside)
+        {
             const int size = 128;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
@@ -501,14 +542,14 @@ namespace NewAgeQoL
                     int hit = 0;
                     for (int sy = 0; sy < 4; sy++)
                         for (int sx = 0; sx < 4; sx++)
-                            if (Arrows(x + (sx + 0.5f) / 4f, y + (sy + 0.5f) / 4f)) hit++;
+                            if (inside(x + (sx + 0.5f) / 4f, y + (sy + 0.5f) / 4f)) hit++;
                     px[y * size + x] = new Color32(255, 255, 255, (byte)(hit * 255 / 16));
                 }
             tex.SetPixels32(px);
             tex.Apply();
-            _cycle = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-            _cycle.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            return _cycle;
+            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return sprite;
         }
 
         private static bool Arrows(float x, float y)
@@ -549,7 +590,7 @@ namespace NewAgeQoL
         private struct Plan
         {
             internal float Side, Spread, Lift, Drop, Shove;
-            internal Vector2 Relics, Weapons;
+            internal Vector2 Relics, Weapons, Kit;
             internal bool Fits;
         }
 
@@ -598,6 +639,7 @@ namespace NewAgeQoL
 
             Put(host, _relics, plan.Relics, plan.Side);
             Put(host, _weapons, plan.Weapons, plan.Side);
+            Put(host, _kit, plan.Kit, plan.Side);
 
             string told = "scale " + k.ToString("0.00") + ", side " + plan.Side.ToString("0") + ", lift " + plan.Lift.ToString("0")
                         + ", drop " + plan.Drop.ToString("0") + ", spread " + plan.Spread.ToString("0") + (plan.Fits ? "" : ", does not fit");
@@ -629,6 +671,7 @@ namespace NewAgeQoL
                      && cell.xMin - plan.Spread >= area.xMin - 0.5f
                      && edge.xMax + plan.Spread <= area.xMax + 0.5f;
             plan.Relics = new Vector2(cell.center.x - plan.Spread, relicBox.center.y + plan.Lift);
+            plan.Kit = new Vector2(edge.center.x + plan.Spread, plan.Relics.y);
             plan.Weapons = new Vector2(handBox.xMin + plan.Shove - Gap - plan.Side * 0.5f, handBox.center.y);
             return plan;
         }

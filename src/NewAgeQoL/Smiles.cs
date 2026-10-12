@@ -43,8 +43,38 @@ namespace NewAgeQoL
             internal int Solid;
         }
 
+        private const string Unknown = "[эмодзи]";
+
+        private static readonly Dictionary<string, int[]> Likeness = new Dictionary<string, int[]>
+        {
+            { ":-)", new[] { 0x1F642, 0x263A, 0x1F60A, 0x1F643, 0x1F60C, 0x1F917 } },
+            { ":D", new[] { 0x1F600, 0x1F603, 0x1F604, 0x1F601, 0x1F606, 0x1F638, 0x1F63A } },
+            { "%}", new[] { 0x1F602, 0x1F923, 0x1F639, 0x1F605 } },
+            { ";-)", new[] { 0x1F609 } },
+            { ":-p", new[] { 0x1F61B, 0x1F61C, 0x1F61D, 0x1F60B, 0x1F92A } },
+            { ":-8", new[] { 0x1F618, 0x1F617, 0x1F619, 0x1F61A, 0x1F48B, 0x1F60D, 0x1F970, 0x2764, 0x1F496, 0x1F495, 0x1F497, 0x1F49E } },
+            { ":-(", new[] { 0x1F641, 0x2639, 0x1F61E, 0x1F61F, 0x1F614, 0x1F63F } },
+            { ":-/", new[] { 0x1F615, 0x1F610, 0x1F611, 0x1F612, 0x1F928 } },
+            { ";-(", new[] { 0x1F622, 0x1F62D, 0x1F625, 0x1F63E } },
+            { "):(", new[] { 0x1F620, 0x1F621, 0x1F92C, 0x1F624 } },
+            { "}:)", new[] { 0x1F608, 0x1F47F } },
+            { "8-)", new[] { 0x1F60E } },
+            { ":-O", new[] { 0x1F62E, 0x1F62F, 0x1F632, 0x1F631, 0x1F626, 0x1F627, 0x1F640 } },
+            { ":-]", new[] { 0x1F633, 0x1F60F } },
+            { ":-!", new[] { 0x1F922, 0x1F92E } },
+            { "||-Z", new[] { 0x1F634, 0x1F4A4, 0x1F62A } },
+            { "))@((", new[] { 0x1F607 } },
+            { ":-U", new[] { 0x1F37A, 0x1F37B } },
+            { "*\"\"0", new[] { 0x1F4A3 } },
+            { "|:)v", new[] { 0x1F44B } },
+            { ":o)", new[] { 0x1F437, 0x1F416, 0x1F43D } },
+            { "}%{", new[] { 0x1F430, 0x1F407 } },
+            { "(B-))", new[] { 0x2600, 0x1F31E } },
+        };
+
         private static readonly List<Face> Faces = new List<Face>();
         private static readonly Dictionary<char, List<Face>> Heads = new Dictionary<char, List<Face>>();
+        private static readonly Dictionary<int, Face> Pictures = new Dictionary<int, Face>();
         private static Texture2D _sheet;
         private static TMP_SpriteAsset _asset;
         private static int _rate = 25;
@@ -178,6 +208,13 @@ namespace NewAgeQoL
             }
             foreach (var bucket in Heads.Values)
                 bucket.Sort((a, b) => b.Code.Length.CompareTo(a.Code.Length));
+            Pictures.Clear();
+            foreach (var pair in Likeness)
+            {
+                var face = Faces.Find(one => one.Code == pair.Key);
+                if (face == null) { Plugin.Trace("[smiles] no smile for emoji code " + pair.Key); continue; }
+                foreach (int code in pair.Value) Pictures[code] = face;
+            }
             return true;
         }
 
@@ -301,17 +338,75 @@ namespace NewAgeQoL
                     at = shut > at ? shut + 1 : at + 1;
                     continue;
                 }
-                var face = Hit(text, at);
-                if (face == null) { at++; continue; }
+                int from = at;
+                string swap = Picture(text, ref at);
+                if (swap == null)
+                {
+                    var face = Hit(text, at);
+                    if (face == null) { at++; continue; }
+                    swap = face.Tag;
+                    at += face.Code.Length;
+                }
                 if (box == null) box = new StringBuilder(text.Length + 96);
-                box.Append(text, kept, at - kept);
-                box.Append(face.Tag);
-                at += face.Code.Length;
+                box.Append(text, kept, from - kept);
+                box.Append(swap);
                 kept = at;
             }
             if (box == null) return text;
             box.Append(text, kept, text.Length - kept);
             return box.ToString();
+        }
+
+        private static string Picture(string text, ref int at)
+        {
+            int step;
+            int code = Point(text, at, out step);
+            bool joint = code == 0xFE0F || code == 0xFE0E || code == 0x200D || code == 0x20E3;
+            Face face;
+            bool known = Pictures.TryGetValue(code, out face);
+            if (!known && !joint && !Strange(code)) return null;
+            int end = at + step;
+            bool flag = code >= 0x1F1E6 && code <= 0x1F1FF;
+            while (end < text.Length)
+            {
+                int next = Point(text, end, out step);
+                if (next == 0xFE0F || next == 0xFE0E || next == 0x20E3 || (next >= 0x1F3FB && next <= 0x1F3FF)) { end += step; continue; }
+                if (flag && next >= 0x1F1E6 && next <= 0x1F1FF) { end += step; flag = false; known = false; continue; }
+                if (next == 0x200D && end + 1 < text.Length)
+                {
+                    end++;
+                    Point(text, end, out step);
+                    end += step;
+                    known = false;
+                    continue;
+                }
+                break;
+            }
+            at = end;
+            if (known) return face.Tag;
+            return joint ? "" : Unknown;
+        }
+
+        private static int Point(string text, int at, out int step)
+        {
+            if (char.IsHighSurrogate(text[at]) && at + 1 < text.Length && char.IsLowSurrogate(text[at + 1]))
+            {
+                step = 2;
+                return char.ConvertToUtf32(text[at], text[at + 1]);
+            }
+            step = 1;
+            return text[at];
+        }
+
+        private static bool Strange(int code)
+        {
+            if (code >= 0x1F000 && code <= 0x1FAFF) return true;
+            bool symbol = (code >= 0x2190 && code <= 0x21FF) || (code >= 0x2300 && code <= 0x23FF)
+                || (code >= 0x2600 && code <= 0x27BF) || (code >= 0x2900 && code <= 0x297F)
+                || (code >= 0x2B00 && code <= 0x2BFF) || code == 0x3030 || code == 0x303D || code == 0x3297 || code == 0x3299;
+            if (!symbol) return false;
+            var font = _wanted ?? TMP_Settings.defaultFontAsset;
+            return font == null || !font.HasCharacter((char)code, true, true);
         }
 
         private static Face Hit(string text, int at)
