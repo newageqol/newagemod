@@ -563,6 +563,7 @@ namespace NewAgeQoL
                 trt.anchoredPosition = new Vector2(x, y);
                 _tipGo.transform.SetAsLastSibling();
                 if (!_tipGo.activeSelf) _tipGo.SetActive(true);
+                Lift();
 
                 LayoutRebuilder.ForceRebuildLayoutImmediate(trt);
                 float floor = -Tall() + 8f;
@@ -570,6 +571,18 @@ namespace NewAgeQoL
                 if (bottom < floor) trt.anchoredPosition = new Vector2(x, y + (floor - bottom));
             }
             catch (Exception e) { Plugin.Trace("[help] hint: " + e.Message); }
+        }
+
+        private static void Lift()
+        {
+            var host = _panel.GetComponentInParent<Canvas>();
+            var root = host != null ? host.rootCanvas : null;
+            if (root == null) return;
+            var own = _tipGo.GetComponent<Canvas>();
+            if (own == null) own = _tipGo.AddComponent<Canvas>();
+            own.overrideSorting = true;
+            own.sortingLayerID = root.sortingLayerID;
+            own.sortingOrder = root.sortingOrder + 5;
         }
 
         private static void HideTip()
