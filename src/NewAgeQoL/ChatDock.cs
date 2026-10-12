@@ -90,7 +90,7 @@ namespace NewAgeQoL
         private static GameObject _rowPrefab;
         private static readonly ListWrapper<UserRowInfoMessage>[] Lists = new ListWrapper<UserRowInfoMessage>[3];
         private static readonly Action[] ListHooks = { () => ListChanged(0), () => ListChanged(1), () => ListChanged(2) };
-        private static readonly string[] ListCaptions = { "в локации: ", "в клане: ", "в альянсе: " };
+        private static readonly string[] ListCaptions = { Lang.T("в локации: "), Lang.T("в клане: "), Lang.T("в альянсе: ") };
         private static readonly Button[] ListSheets = new Button[3];
         private static readonly Text[] ListLabels = new Text[3];
         private static int _list;
@@ -807,7 +807,7 @@ namespace NewAgeQoL
                 if (tint != null) line = Paints2.Replace(line, "");
                 if (secret)
                     line = Names.Replace(line, m => ChatLinks.Has(m.Groups[1].Value) ? m.Value
-                        : (m.Groups[2].Success ? " приватно " : "")
+                        : (m.Groups[2].Success ? Lang.T(" приватно ") : "")
                         + "<link=" + m.Groups[1].Value + ">[<u>" + m.Groups[3].Value + "</u>]</link>");
                 if (lost) line = FirstName.Replace(line, "</u></link> -> [] ", 1);
                 if (tint != null) line = ChatLinks.Dress("<color=" + tint + ">" + line + "</color>");
@@ -1322,7 +1322,7 @@ namespace NewAgeQoL
             var info = Whose();
             if (info == null) return "";
             long left = info.NextLevelExperience - info.Experience;
-            return "До уровня: " + Split(left > 0L ? left : 0L);
+            return Lang.F("До уровня: {0}", Split(left > 0L ? left : 0L));
         }
 
         private static string Split(long value)
@@ -2061,14 +2061,14 @@ namespace NewAgeQoL
             keyRow.childForceExpandWidth = false;
             keyRow.childForceExpandHeight = true;
 
-            Tip(Pic(keys.transform, Icons.Enter(), () => Send(EChatMessageType.MSG_COMMON), WardrobeLook.OnAccent, WardrobeLook.Accent), "Всем (Enter)");
-            Tip(Key(keys.transform, "К", KeySide, () => Send(EChatMessageType.MSG_CLAN)), "В клан");
-            Tip(Key(keys.transform, "А", KeySide, () => Send(EChatMessageType.MSG_ALLIANCE)), "В альянс");
-            Tip(Pic(keys.transform, Icons.Head(), () => Send(EChatMessageType.MSG_PRIVATE)), "Приватное сообщение (Shift+Пробел)");
+            Tip(Pic(keys.transform, Icons.Enter(), () => Send(EChatMessageType.MSG_COMMON), WardrobeLook.OnAccent, WardrobeLook.Accent), Lang.T("Всем (Enter)"));
+            Tip(Key(keys.transform, Lang.T("К"), KeySide, () => Send(EChatMessageType.MSG_CLAN)), Lang.T("В клан"));
+            Tip(Key(keys.transform, Lang.T("А"), KeySide, () => Send(EChatMessageType.MSG_ALLIANCE)), Lang.T("В альянс"));
+            Tip(Pic(keys.transform, Icons.Head(), () => Send(EChatMessageType.MSG_PRIVATE)), Lang.T("Приватное сообщение (Shift+Пробел)"));
             Button faces = null;
             faces = Pic(keys.transform, Smiles.Icon(), () => Smiles.Toggle((RectTransform)faces.transform), Color.white);
-            Tip(faces, "Смайлики");
-            Tip(Pic(keys.transform, Icons.Bin(), WipeOpen, WardrobeLook.Label), "Очистить открытую вкладку");
+            Tip(faces, Lang.T("Смайлики"));
+            Tip(Pic(keys.transform, Icons.Bin(), WipeOpen, WardrobeLook.Label), Lang.T("Очистить открытую вкладку"));
         }
 
         private static TMP_Text _ink;
@@ -2092,9 +2092,9 @@ namespace NewAgeQoL
             strip.childForceExpandWidth = false;
             strip.childForceExpandHeight = true;
 
-            Sheets[0] = Sheet(row.transform, "Чат", 0, 40f);
-            Sheets[1] = Sheet(row.transform, "Системные", 1, 64f);
-            _seekButton = Leaf(row.transform, "Поиск", 46f, out _seekLabel);
+            Sheets[0] = Sheet(row.transform, Lang.T("Чат"), 0, 40f);
+            Sheets[1] = Sheet(row.transform, Lang.T("Системные"), 1, 64f);
+            _seekButton = Leaf(row.transform, Lang.T("Поиск"), 46f, out _seekLabel);
             _seekButton.onClick.AddListener(SeekOpen);
             SeekPaint();
             _tabsRt = (RectTransform)row.transform;
@@ -2243,9 +2243,9 @@ namespace NewAgeQoL
             strip.childControlHeight = true;
             strip.childForceExpandWidth = false;
             strip.childForceExpandHeight = true;
-            ListSheets[0] = ListSheet(row.transform, "Локация", 0, 52f);
-            ListSheets[1] = ListSheet(row.transform, "Клан", 1, 36f);
-            ListSheets[2] = ListSheet(row.transform, "Альянс", 2, 46f);
+            ListSheets[0] = ListSheet(row.transform, Lang.T("Локация"), 0, 52f);
+            ListSheets[1] = ListSheet(row.transform, Lang.T("Клан"), 1, 36f);
+            ListSheets[2] = ListSheet(row.transform, Lang.T("Альянс"), 2, 46f);
             _listTabsRt = (RectTransform)row.transform;
             ListAim(true);
             ShowList(_list);
@@ -2580,7 +2580,7 @@ namespace NewAgeQoL
             if (_count == null) return;
             if (Peek && _list == 0)
             {
-                string watching = "в бою: " + Cast().Count;
+                string watching = Lang.F("в бою: {0}", Cast().Count);
                 if (_count.text != watching) _count.text = watching;
                 return;
             }
@@ -3139,7 +3139,7 @@ namespace NewAgeQoL
             OnlineWindow.Place(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
                 new Vector2(7f, 0f), new Vector2(-7f, 0f));
 
-            var hint = OnlineWindow.Label(go.transform, "искать в ленте", 11, FontStyle.Normal, WardrobeLook.Faint);
+            var hint = OnlineWindow.Label(go.transform, Lang.T("искать в ленте"), 11, FontStyle.Normal, WardrobeLook.Faint);
             hint.alignment = TextAnchor.MiddleLeft;
             hint.verticalOverflow = VerticalWrapMode.Overflow;
             hint.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -3180,7 +3180,7 @@ namespace NewAgeQoL
             OnlineWindow.Place(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
                 new Vector2(9f, 1f), new Vector2(-9f, -1f));
 
-            var hint = OnlineWindow.Label(go.transform, "написать в чат", 13, FontStyle.Normal, WardrobeLook.Faint);
+            var hint = OnlineWindow.Label(go.transform, Lang.T("написать в чат"), 13, FontStyle.Normal, WardrobeLook.Faint);
             hint.alignment = TextAnchor.MiddleLeft;
             hint.verticalOverflow = VerticalWrapMode.Overflow;
             hint.horizontalOverflow = HorizontalWrapMode.Overflow;

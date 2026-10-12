@@ -18,14 +18,12 @@ public class Plugin : BaseUnityPlugin
 
     private Harmony _harmony;
 
-    internal static ConfigEntry<bool> CfgEnabled;
-    internal static ConfigEntry<bool> CfgFlashOnce;
+    private static bool _modOff;
     internal static ConfigEntry<bool> CfgVerbose;
     internal static ConfigEntry<bool> CfgTrace;
     internal static ConfigEntry<bool> CfgQuiet;
     internal static ConfigEntry<float> CfgScale;
     internal static ConfigEntry<string> CfgServer;
-    internal static ConfigEntry<bool> CfgCombat;
     internal static ConfigEntry<float> CfgDollSize;
     internal static ConfigEntry<bool> CfgCombatFlip;
     internal static ConfigEntry<bool> CfgFlashSpeed;
@@ -41,9 +39,9 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<bool> CfgHoverGlow;
     internal static ConfigEntry<bool> CfgFlashMagic;
     internal static ConfigEntry<bool> CfgSpellMarks;
+    internal static ConfigEntry<bool> CfgStunStars;
     internal static ConfigEntry<float> CfgVivid;
     internal static ConfigEntry<int> CfgFrameMemory;
-    internal static ConfigEntry<bool> CfgField;
     internal static ConfigEntry<float> CfgFieldView;
     internal static ConfigEntry<float> CfgFieldOffsetX;
     internal static ConfigEntry<float> CfgFieldOffsetY;
@@ -57,7 +55,6 @@ public class Plugin : BaseUnityPlugin
         Trace.MainThreadId = Thread.CurrentThread.ManagedThreadId;
         Journal.Attach(Log);
 
-        CfgEnabled = Config.Bind("General", "Enabled", true, "Рисовать Flash-куклу вместо 3D-модели в окне персонажа и в бою. В окне настроек мода — строка «Внешний вид»: смена вида закрывает клиент, вид меняется со следующего запуска.");
         CfgVerbose = Config.Bind("General", "Verbose", true, "Подробный журнал");
         CfgTrace = Config.Bind("General", "Trace", true, "Журнал боя по кадрам: появление и пропадание кукол, 3D-модели, действия, очереди рисования и выгрузки, задержки кадров. Каждый бой — отдельный файл в BepInEx/cache/NewAge2D/trace, хранятся последние 20, вместе не больше 20 МБ");
         CfgQuiet = Config.Bind("General", "QuietOnce", false, "Служебная отметка: подробные журналы после обновления мода уже выключены. Пока её нет, мод один раз выключит их, даже если в старых настройках они были включены. После этого включённые журналы — твоя настройка, мод их не трогает.");
@@ -76,7 +73,6 @@ public class Plugin : BaseUnityPlugin
         }
         CfgScale = Config.Bind("General", "Scale", 3f, "Масштаб растеризации куклы: 1 = размер как во Flash");
         CfgServer = Config.Bind("Files", "FileServer", "http://files.nura.biz/", "Откуда качать ролики вещей и карт; тела персонажей и эффекты заклинаний лежат в папке мода swf");
-        CfgCombat = Config.Bind("Combat", "Enabled", true, "Рисовать игроков в бою Flash-куклами вместо 3D-моделей");
         CfgDollSize = Config.Bind("Combat", "DollSize", 0.85f, "Размер кукол на экране, один масштаб Flash для всех: 1 — пиксель в пиксель с клетками Flash, меньше — мельче. Пропорции рас как во Flash");
         CfgCombatFlip = Config.Bind("Combat", "Flip", false, "Зеркалить кукол в бою наоборот, если смотрят не в ту сторону");
         CfgFlashSpeed = Config.Bind("Combat", "FlashSpeed", true, "Скорости как во Flash: шаг HexSeconds на клетку у кукол, удары и касты в родном темпе Flash. 3D-монстры ходят со скоростью Unity. ВЫКЛ — скорость Unity: шаг и анимации кукол ускоряются под модели Unity");
@@ -92,11 +88,11 @@ public class Plugin : BaseUnityPlugin
         CfgKeepMagic = Config.Bind("Combat", "UnityMagic", false, "Оставлять 3D-эффекты заклинаний Unity в режиме Flash");
         CfgFlashMagic = Config.Bind("Combat", "FlashMagic", true, "Рисовать ауры школ магии из Flash-клиента (BM, WM, NM) и эффект вещей (EF) на цели заклинания");
         CfgSpellMarks = Config.Bind("Combat", "SpellTargets", true, "Показывать, на кого легло заклинание: над целью появляется игровой значок заклинания, как в 3D-клиенте. У массовых заклинаний — над каждым, на кого легло");
+        CfgStunStars = Config.Bind("Combat", "StunStars", true, "Показывать над бойцом игровые звёздочки оглушения и паралича, как в 3D-клиенте: от «Угрозы», «Сокрушающего удара», «Астральной тюрьмы» и других. Пропадают, когда эффект кончился, боец погиб или бой закончился");
         CfgVivid = Config.Bind("Combat", "Vivid", 1.15f,
             "Сочность кукол, вещей и эффектов: 1 — цвета ровно как во Flash, больше — насыщеннее и контрастнее. Считается один раз при отрисовке кадра, в бою ничего не стоит");
         CfgFrameMemory = Config.Bind("Combat", "FrameMemory", 0,
             "Предел видеопамяти под кадры кукол, МБ; 0 — сам по видеокарте (четверть её памяти, от 256 МБ до 6 ГБ). Это предохранитель от разрастания: при превышении выгружаются целиком самые давно не нужные наборы кадров, а то, что нужно прямо сейчас (стойка, ходьба, текущее действие живых бойцов), остаётся. Слишком низкий предел заставляет мод перерисовывать кадры заново, и анимации начинают запаздывать — в больших боях это видно по ходьбе");
-        CfgField = Config.Bind("Field", "Enabled", true, "Поле боя как во Flash: плоская камера под углом Flash и картинка карты из Flash вместо 3D-локации. Работает, только когда включён General/Enabled");
         CfgFieldView = Config.Bind("Field", "ViewHeight", 0f, "Сколько пикселей Flash видно на экране по высоте; 0 — отдалить до краёв карты. Колесо мыши меняет и запоминает, дальше краёв карты не отдаляет");
         CfgFieldOffsetX = Config.Bind("Field", "OffsetX", 0f, "Сдвиг картинки поля вправо в пикселях Flash, если клетки разошлись с рисунком");
         CfgFieldOffsetY = Config.Bind("Field", "OffsetY", 0f, "Сдвиг картинки поля вниз в пикселях Flash");
@@ -105,23 +101,8 @@ public class Plugin : BaseUnityPlugin
         CfgSoundBefore = Config.Bind("General", "GameSoundBeforeFlash", -1f,
             "Служебное: громкость звука игры до включения Flash-вида. При Flash-виде звук игры уходит в 0, а ползунок «Звук» в настройках игры прячется: свои звуки игра привязывает к 3D-моделям и анимациям Unity. При выключении вида громкость возвращается. -1 — мод звук не глушил.");
 
-        CfgFlashOnce = Config.Bind("General", "SwitchedToFlash", false,
-            "Служебная отметка: мод один раз включил Flash-вид, когда он стал видом по умолчанию.");
-        if (!CfgFlashOnce.Value)
-        {
-            CfgFlashOnce.Value = true;
-            if (!CfgEnabled.Value)
-            {
-                CfgEnabled.Value = true;
-                Log.LogInfo("View switched to Flash: it is now the default view");
-            }
-        }
-
-        if (CfgEnabled.Value)
-        {
-            CfgCombat.Value = true;
-            CfgField.Value = true;
-        }
+        _modOff = ModOff();
+        if (_modOff) Log.LogInfo("New Age QoL is disabled: Flash view is off until the mod is enabled again");
         Tidy();
 
         System.Net.ServicePointManager.DefaultConnectionLimit = Math.Max(System.Net.ServicePointManager.DefaultConnectionLimit, 16);
@@ -149,17 +130,6 @@ public class Plugin : BaseUnityPlugin
 
         _harmony = new Harmony(Guid);
         _harmony.PatchAll();
-        CfgEnabled.SettingChanged += (_, _) =>
-        {
-            if (CfgEnabled.Value)
-            {
-                CfgCombat.Value = true;
-                CfgField.Value = true;
-            }
-            Apply();
-        };
-        CfgCombat.SettingChanged += (_, _) => Apply();
-        CfgField.SettingChanged += (_, _) => Apply();
         CfgKeepMagic.SettingChanged += (_, _) => Effects.Set(HideMagic);
         Log.LogInfo($"New Age 2D {Version} loaded, clip cache: {Store.CacheDir}, draw threads {DollWorker.WorkerCount}");
     }
@@ -171,7 +141,7 @@ public class Plugin : BaseUnityPlugin
             var left = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries")?.GetValue(Config, null) as Dictionary<ConfigDefinition, string>;
             if (left == null) return;
             var gone = new List<string>();
-            foreach (var key in new[] { new ConfigDefinition("General", "SwitchedToUnity"), new ConfigDefinition("Field", "HexFaint"), new ConfigDefinition("Field", "HexLook"), new ConfigDefinition("Field", "HexGrid") })
+            foreach (var key in new[] { new ConfigDefinition("General", "SwitchedToUnity"), new ConfigDefinition("General", "Enabled"), new ConfigDefinition("General", "SwitchedToFlash"), new ConfigDefinition("Combat", "Enabled"), new ConfigDefinition("Field", "Enabled"), new ConfigDefinition("Field", "HexFaint"), new ConfigDefinition("Field", "HexLook"), new ConfigDefinition("Field", "HexGrid") })
                 if (left.Remove(key)) gone.Add(key.Section + "/" + key.Key);
             if (gone.Count == 0) return;
             Config.Save();
@@ -180,11 +150,31 @@ public class Plugin : BaseUnityPlugin
         catch (Exception e) { Log.LogWarning("Settings cleanup: " + e.Message); }
     }
 
-    internal static bool FlashLook => CfgEnabled != null && CfgEnabled.Value;
+    private static bool ModOff()
+    {
+        try
+        {
+            string path = Path.Combine(Paths.ConfigPath, "newage.qol.cfg");
+            if (!File.Exists(path)) return false;
+            bool mod = false;
+            foreach (var raw in File.ReadAllLines(path))
+            {
+                string line = raw.Trim();
+                if (line.StartsWith("[")) { mod = line == "[Mod]"; continue; }
+                int eq = line.IndexOf('=');
+                if (!mod || eq <= 0 || line.Substring(0, eq).Trim() != "Enabled") continue;
+                return line.Substring(eq + 1).Trim().Equals("false", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch (Exception e) { Log.LogWarning("New Age QoL switch: " + e.Message); }
+        return false;
+    }
 
-    internal static bool FlashFight => FlashLook && CfgCombat != null && CfgCombat.Value;
+    internal static bool FlashLook => !_modOff;
 
-    internal static bool FlashField => FlashLook && CfgField != null && CfgField.Value;
+    internal static bool FlashFight => FlashLook;
+
+    internal static bool FlashField => FlashLook;
 
     internal static bool FlashSpeed => CfgFlashSpeed == null || CfgFlashSpeed.Value;
 
@@ -206,20 +196,6 @@ public class Plugin : BaseUnityPlugin
             }
             return (long)Mathf.Clamp(megabytes, 256, 6144) * 1048576L;
         }
-    }
-
-    private static void Apply()
-    {
-        try
-        {
-            Doll.Vivid = CfgVivid != null ? UnityEngine.Mathf.Clamp(CfgVivid.Value, 1f, 2f) : 1f;
-            WindowDoll.Set(FlashLook);
-            Fighters.Set(FlashFight);
-            Effects.Set(HideMagic);
-            Field.Set(FlashField);
-            Log.LogInfo($"Flash view: window {(FlashLook ? "on" : "off")}, combat {(FlashFight ? "on" : "off")}, field {(FlashField ? "on" : "off")}");
-        }
-        catch (Exception ex) { Log.LogError("view switch: " + ex); }
     }
 
     private void OnDestroy()

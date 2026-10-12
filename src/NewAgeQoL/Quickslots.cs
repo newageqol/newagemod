@@ -141,7 +141,7 @@ namespace NewAgeQoL
             {
                 if (button == null) return null;
                 var nc = NetworkConnection.Instance;
-                if (nc == null || !nc.IsConnected()) return "Нет соединения";
+                if (nc == null || !nc.IsConnected()) return Lang.T("Нет соединения");
                 var holder = Holder();
                 int id = button.Id;
                 var context = new ResponseCallbackContext(387);
@@ -161,7 +161,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[slots] using " + button.Name + ", record " + id);
                 return null;
             }
-            catch (Exception e) { Plugin.Fault("[slots] " + e); return "Ошибка: " + e.Message; }
+            catch (Exception e) { Plugin.Fault("[slots] " + e); return Lang.F("Ошибка: {0}", e.Message); }
         }
 
         private static void Shrink(QuickButtonStateHolder holder, QuickButton source, ChangesInTabMessage change)

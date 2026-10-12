@@ -87,7 +87,7 @@ namespace NewAgeQoL
             {
                 if (!RecipeData.Ready)
                 {
-                    Notice.Show("Калькулятор крафта: в сборке нет рецептов", 6f);
+                    Notice.Show(global::NewAgeQoL.Lang.T("Калькулятор крафта: в сборке нет рецептов"), 6f);
                     return;
                 }
                 RecipeData.Fetch();
@@ -118,7 +118,11 @@ namespace NewAgeQoL
             if (Has(thing)) return thing;
             if (string.IsNullOrEmpty(name) || !RecipeData.Ready) return 0;
             foreach (var recipe in RecipeData.Recipes)
-                if (string.Equals(RecipeData.ThingName(recipe.Result), name, StringComparison.CurrentCultureIgnoreCase)) return recipe.Result;
+            {
+                string made = RecipeData.ThingName(recipe.Result);
+                if (string.Equals(made, name, StringComparison.CurrentCultureIgnoreCase)
+                    || string.Equals(global::NewAgeQoL.Lang.Game(made), name, StringComparison.CurrentCultureIgnoreCase)) return recipe.Result;
+            }
             return 0;
         }
 
@@ -133,7 +137,7 @@ namespace NewAgeQoL
             if (_canvasGo == null) return;
             Pick(thing);
             string name = RecipeData.ThingName(thing);
-            if (_search != null && !string.IsNullOrEmpty(name)) _search.text = name;
+            if (_search != null && !string.IsNullOrEmpty(name)) _search.text = global::NewAgeQoL.Lang.Game(name);
             Plugin.Trace("[craft] opened on recipe of " + name + " (" + thing + ")");
         }
 
@@ -310,7 +314,7 @@ namespace NewAgeQoL
             WardrobeLook.Frame(panelGo, WardrobeLook.Edge);
             var panel = panelGo.transform;
 
-            var title = Say(panel, "Калькулятор крафта", 22, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleLeft);
+            var title = Say(panel, global::NewAgeQoL.Lang.T("Калькулятор крафта"), 22, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleLeft);
             Wardrobe.At(title.rectTransform, 20f, 12f, 400f, 36f);
             OnlineWindow.MakeCloseButton(panel, Close);
 
@@ -321,7 +325,7 @@ namespace NewAgeQoL
 
         private static void BuildList(RectTransform box)
         {
-            _search = OnlineWindow.MakeInput(box, ListW - 24f, "Поиск: вещь или компонент");
+            _search = OnlineWindow.MakeInput(box, ListW - 24f, global::NewAgeQoL.Lang.T("Поиск: вещь или компонент"));
             Wardrobe.At((RectTransform)_search.transform, 12f, 12f, ListW - 24f, 36f);
             WardrobeLook.Style(_search);
             _search.characterLimit = 40;
@@ -340,11 +344,11 @@ namespace NewAgeQoL
             _craftText.resizeTextMaxSize = 14;
             Wardrobe.At((RectTransform)Wardrobe.Arrow(box, "›", () => Step(1)).transform, ListW - 12f - 34f, 56f, 34f, 32f);
 
-            var levelLabel = Say(box, "Уровень от", 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            var levelLabel = Say(box, global::NewAgeQoL.Lang.T("Уровень от"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(levelLabel.rectTransform, 14f, 94f, 90f, 32f);
             _fromField = LevelInput(box, _from);
             Wardrobe.At((RectTransform)_fromField.transform, 106f, 94f, 70f, 32f);
-            var toLabel = Say(box, "до", 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleCenter);
+            var toLabel = Say(box, global::NewAgeQoL.Lang.T("до"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleCenter);
             Wardrobe.At(toLabel.rectTransform, 180f, 94f, 34f, 32f);
             _toField = LevelInput(box, _to);
             Wardrobe.At((RectTransform)_toField.transform, 218f, 94f, 70f, 32f);
@@ -410,19 +414,19 @@ namespace NewAgeQoL
             _head = (RectTransform)headGo.transform;
             Wardrobe.At(_head, 0f, 0f, MidW, 214f);
 
-            var need = Say(box, "Из чего крафтится", 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
+            var need = Say(box, global::NewAgeQoL.Lang.T("Из чего крафтится"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
             Wardrobe.At(need.rectTransform, 16f, 214f, MidW - 32f, 28f);
             _treeScroll = Scroller(box, 8f, 246f, MidW - 16f, BodyH - 254f, 2f, out _tree);
         }
 
         private static void BuildCart(RectTransform box)
         {
-            var head = Say(box, "Корзина", 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
+            var head = Say(box, global::NewAgeQoL.Lang.T("Корзина"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
             Wardrobe.At(head.rectTransform, 16f, 10f, 200f, 30f);
-            Wardrobe.At(Wardrobe.GameButton(box, "Очистить", ClearCart, true), CartW - 128f, 10f, 112f, 30f);
+            Wardrobe.At(Wardrobe.GameButton(box, global::NewAgeQoL.Lang.T("Очистить"), ClearCart, true), CartW - 128f, 10f, 112f, 30f);
             _cartView = (RectTransform)Scroller(box, 8f, 46f, CartW - 16f, CartMax, 2f, out _cart).transform;
 
-            var drop = Say(box, "Всего дропа", 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
+            var drop = Say(box, global::NewAgeQoL.Lang.T("Всего дропа"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
             _dropHead = drop.rectTransform;
             _dropView = (RectTransform)Scroller(box, 8f, 0f, CartW - 16f, 100f, 2f, out _drops).transform;
             FitCart();
@@ -535,7 +539,7 @@ namespace NewAgeQoL
         private static void Fill()
         {
             if (_items == null) return;
-            if (_craftText != null) _craftText.text = _craft == 0 ? "Все профессии" : RecipeData.Profession(_craft);
+            if (_craftText != null) _craftText.text = _craft == 0 ? global::NewAgeQoL.Lang.T("Все профессии") : RecipeData.Profession(_craft);
             Clear(_items);
             ItemBacks.Clear();
             Prune();
@@ -544,14 +548,14 @@ namespace NewAgeQoL
                 if (Fits(thing)) Listed.Add(thing);
             _drawn = 0;
             int total = Listed.Count;
-            if (total == 0) Note(_items, "Ничего не нашлось");
+            if (total == 0) Note(_items, global::NewAgeQoL.Lang.T("Ничего не нашлось"));
             if (_found != null)
             {
-                string many = Wardrobe.Plural(total, "вещь", "вещи", "вещей");
-                if (_query.Length > 0) _found.text = "Найдено: " + total + " " + many;
-                else if (_from > 0 || _to > 0) _found.text = "Подходит " + total + " " + many;
-                else if (_craft != 0) _found.text = "В этой профессии " + total + " " + many;
-                else _found.text = "Всего " + total + " " + many + ", многие крафтятся в нескольких профессиях";
+                string many = Wardrobe.Plural(total, global::NewAgeQoL.Lang.T("вещь"), global::NewAgeQoL.Lang.T("вещи"), global::NewAgeQoL.Lang.T("вещей"));
+                if (_query.Length > 0) _found.text = global::NewAgeQoL.Lang.F("Найдено: {0} {1}", total, many);
+                else if (_from > 0 || _to > 0) _found.text = global::NewAgeQoL.Lang.F("Подходит {0} {1}", total, many);
+                else if (_craft != 0) _found.text = global::NewAgeQoL.Lang.F("В этой профессии {0} {1}", total, many);
+                else _found.text = global::NewAgeQoL.Lang.F("Всего {0} {1}, многие крафтятся в нескольких профессиях", total, many);
             }
             if (_itemsScroll != null) _itemsScroll.verticalNormalizedPosition = 1f;
             Draw(Batch);
@@ -585,7 +589,7 @@ namespace NewAgeQoL
             var rt = Clickable(_items, "thing" + thing, RowH, () => Pick(thing));
             ItemBacks[thing] = rt.GetComponent<Image>();
             Icon(rt, info != null && !string.IsNullOrEmpty(info.Image) ? info.Image : recipe.ResultImage, 6f, 5f, 40f, rarity, thing);
-            var name = Say(rt, RecipeData.ThingName(thing), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
+            var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(thing)), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
             Wardrobe.At(name.rectTransform, 54f, 4f, ListW - 16f - 62f, 22f);
             Fit(name, 10, 14);
             var all = RecipeData.Making(thing);
@@ -594,11 +598,11 @@ namespace NewAgeQoL
             {
                 int low = int.MaxValue;
                 foreach (var one in all) low = Math.Min(low, one.Skill);
-                sub = all.Count + " " + Wardrobe.Plural(all.Count, "профессия", "профессии", "профессий") + ", нужно от " + low;
+                sub = global::NewAgeQoL.Lang.F("{0} {1}, нужно от {2}", all.Count, Wardrobe.Plural(all.Count, global::NewAgeQoL.Lang.T("профессия"), global::NewAgeQoL.Lang.T("профессии"), global::NewAgeQoL.Lang.T("профессий")), low);
             }
-            else sub = "нужно: " + RecipeData.Profession(recipe.Profession) + " " + recipe.Skill;
+            else sub = global::NewAgeQoL.Lang.F("нужно: {0} {1}", RecipeData.Profession(recipe.Profession), recipe.Skill);
             int level = LevelOf(thing);
-            if (level > 0) sub = "вещь ур. " + level + " · " + sub;
+            if (level > 0) sub = global::NewAgeQoL.Lang.F("вещь ур. {0} · {1}", level, sub);
             var line = Say(rt, sub, 12, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(line.rectTransform, 54f, 26f, ListW - 16f - 62f, 20f);
             Fit(line, 9, 12);
@@ -645,19 +649,19 @@ namespace NewAgeQoL
             var info = RecipeData.Thing(_picked);
             int rarity = info != null ? info.Rarity : recipe.ResultRarity;
             Icon(_head, recipe.ResultImage, 16f, 14f, 72f, rarity, _picked);
-            var name = Say(_head, RecipeData.ThingName(_picked), 19, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
+            var name = Say(_head, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(_picked)), 19, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
             Wardrobe.At(name.rectTransform, 100f, 14f, MidW - 116f, 28f);
             Fit(name, 12, 19);
             var kind = new List<string>();
-            if (recipe.ResultCount > 1) kind.Add("за один крафт " + recipe.ResultCount + " шт.");
-            if (recipe.ResultLevel > 0) kind.Add("уровень " + recipe.ResultLevel);
+            if (recipe.ResultCount > 1) kind.Add(global::NewAgeQoL.Lang.F("за один крафт {0} шт.", recipe.ResultCount));
+            if (recipe.ResultLevel > 0) kind.Add(global::NewAgeQoL.Lang.F("уровень {0}", recipe.ResultLevel));
             string rare = WardrobeData.RarityName(rarity);
             if (!string.IsNullOrEmpty(rare)) kind.Add(rare);
             var sub = Say(_head, string.Join(" · ", kind.ToArray()), 13, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(sub.rectTransform, 100f, 42f, MidW - 116f, 20f);
 
             var list = RecipeData.Making(_picked);
-            string craft = "Нужно: " + RecipeData.Profession(recipe.Profession) + " не ниже " + recipe.Skill;
+            string craft = global::NewAgeQoL.Lang.F("Нужно: {0} не ниже {1}", RecipeData.Profession(recipe.Profession), recipe.Skill);
             if (list.Count > 1)
             {
                 Wardrobe.At((RectTransform)Wardrobe.Arrow(_head, "‹", () => Turn(-1)).transform, 100f, 66f, 30f, 26f);
@@ -673,17 +677,17 @@ namespace NewAgeQoL
                 Wardrobe.At(text.rectTransform, 100f, 66f, MidW - 116f, 26f);
             }
 
-            var facts = Say(_head, "Шанс " + recipe.Chance + "% · цена крафта " + recipe.Price + " " + Talls(recipe.Price) + " · " + recipe.Name, 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
+            var facts = Say(_head, global::NewAgeQoL.Lang.F("Шанс {0}% · цена крафта {1} {2} · {3}", recipe.Chance, recipe.Price, Talls(recipe.Price), global::NewAgeQoL.Lang.Game(recipe.Name)), 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
             Wardrobe.At(facts.rectTransform, 16f, 98f, MidW - 32f, 22f);
             Fit(facts, 9, 13);
 
-            var label = Say(_head, "Крафтов", 15, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            var label = Say(_head, global::NewAgeQoL.Lang.T("Крафтов"), 15, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(label.rectTransform, 16f, 130f, 110f, 34f);
             Wardrobe.At((RectTransform)Wardrobe.Arrow(_head, "−", () => Qty(_qty - 1)).transform, 126f, 131f, 32f, 32f);
             _qtyField = Number(_head, _qty, value => Qty(value));
             Wardrobe.At((RectTransform)_qtyField.transform, 162f, 131f, 70f, 32f);
             Wardrobe.At((RectTransform)Wardrobe.Arrow(_head, "+", () => Qty(_qty + 1)).transform, 236f, 131f, 32f, 32f);
-            Wardrobe.At(Wardrobe.GameButton(_head, "В корзину", AddToCart, false), MidW - 16f - 170f, 128f, 170f, 38f);
+            Wardrobe.At(Wardrobe.GameButton(_head, global::NewAgeQoL.Lang.T("В корзину"), AddToCart, false), MidW - 16f - 170f, 128f, 170f, 38f);
 
             _note = Say(_head, "", 12, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
             Wardrobe.At(_note.rectTransform, 16f, 172f, MidW - 32f, 36f);
@@ -715,7 +719,7 @@ namespace NewAgeQoL
 
         private static string Output(int runs, Recipe recipe)
         {
-            return "получится " + (long)runs * Math.Max(1, recipe.ResultCount) + " шт.";
+            return global::NewAgeQoL.Lang.F("получится {0} шт.", (long)runs * Math.Max(1, recipe.ResultCount));
         }
 
         private static void Hint()
@@ -724,12 +728,12 @@ namespace NewAgeQoL
             var recipe = Variant(_picked);
             if (recipe != null && recipe.ResultCount > 1)
             {
-                _note.text = "За один крафт получается " + recipe.ResultCount + " шт. — за " + _qty + " " + Wardrobe.Plural(_qty, "крафт", "крафта", "крафтов") + " " + Output(_qty, recipe);
+                _note.text = global::NewAgeQoL.Lang.F("За один крафт получается {0} шт. — за {1} {2} {3}", recipe.ResultCount, _qty, Wardrobe.Plural(_qty, global::NewAgeQoL.Lang.T("крафт"), global::NewAgeQoL.Lang.T("крафта"), global::NewAgeQoL.Lang.T("крафтов")), Output(_qty, recipe));
                 _note.color = WardrobeLook.Accent;
             }
             else
             {
-                _note.text = "Нажми на крафтовый компонент, чтобы раскрыть, из чего он делается";
+                _note.text = global::NewAgeQoL.Lang.T("Нажми на крафтовый компонент, чтобы раскрыть, из чего он делается");
                 _note.color = WardrobeLook.Faint;
             }
         }
@@ -744,7 +748,7 @@ namespace NewAgeQoL
             if (recipe == null) return;
             var stack = new List<int> { _picked };
             Branch(recipe, _qty, 0, _picked.ToString(), stack);
-            if (recipe.Parts.Count == 0) Note(_tree, "Сервер не назвал компонентов");
+            if (recipe.Parts.Count == 0) Note(_tree, global::NewAgeQoL.Lang.T("Сервер не назвал компонентов"));
             Icons();
             if (_treeScroll != null)
             {
@@ -788,12 +792,12 @@ namespace NewAgeQoL
             float right = MidW - 16f - 8f;
             float countW = 110f;
             float nameW = right - countW - 6f - (x + 44f);
-            var name = Say(rt, RecipeData.ThingName(id), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
+            var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(id)), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
             Wardrobe.At(name.rectTransform, x + 44f, 3f, nameW, 22f);
             Fit(name, 9, 14);
-            string sub = craftable ? (open ? "крафтится — нажми, чтобы свернуть" : "крафтится — нажми, чтобы увидеть состав") : "дроп";
-            if (craftable && RecipeData.Drops(id)) sub = open ? "дроп · можно и скрафтить — нажми, чтобы свернуть" : "дроп · можно и скрафтить: " + Yield(id) + " — нажми, чтобы увидеть";
-            if (info != null && info.Level > 0) sub = "ур. " + info.Level + " · " + sub;
+            string sub = craftable ? (open ? global::NewAgeQoL.Lang.T("крафтится — нажми, чтобы свернуть") : global::NewAgeQoL.Lang.T("крафтится — нажми, чтобы увидеть состав")) : global::NewAgeQoL.Lang.T("дроп");
+            if (craftable && RecipeData.Drops(id)) sub = open ? global::NewAgeQoL.Lang.T("дроп · можно и скрафтить — нажми, чтобы свернуть") : global::NewAgeQoL.Lang.F("дроп · можно и скрафтить: {0} — нажми, чтобы увидеть", Yield(id));
+            if (info != null && info.Level > 0) sub = global::NewAgeQoL.Lang.F("ур. {0} · {1}", info.Level, sub);
             var line = Say(rt, sub, 12, FontStyle.Normal, craftable ? WardrobeLook.Good : WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(line.rectTransform, x + 44f, 24f, nameW, 18f);
             Fit(line, 9, 12);
@@ -806,11 +810,11 @@ namespace NewAgeQoL
         private static string Yield(int id)
         {
             var recipe = Variant(id);
-            if (recipe == null || recipe.Parts.Count == 0) return "есть рецепт";
+            if (recipe == null || recipe.Parts.Count == 0) return global::NewAgeQoL.Lang.T("есть рецепт");
             var main = recipe.Parts[0];
             foreach (var part in recipe.Parts)
                 if (part.Count > main.Count) main = part;
-            return main.Count + " × " + RecipeData.ThingName(main.Id) + " → " + Math.Max(1, recipe.ResultCount) + " шт.";
+            return global::NewAgeQoL.Lang.F("{0} × {1} → {2} шт.", main.Count, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(main.Id)), Math.Max(1, recipe.ResultCount));
         }
 
         private static void Unfold(string key)
@@ -841,7 +845,7 @@ namespace NewAgeQoL
             Clear(_drops);
             Prune();
             foreach (var line in Cart) CartRow(line);
-            if (Cart.Count == 0) Note(_cart, "Пусто — выбери вещь и нажми «В корзину»");
+            if (Cart.Count == 0) Note(_cart, global::NewAgeQoL.Lang.T("Пусто — выбери вещь и нажми «В корзину»"));
             FitCart();
 
             var drops = new Dictionary<int, long>();
@@ -849,7 +853,7 @@ namespace NewAgeQoL
             var order = new List<int>(drops.Keys);
             order.Sort((a, b) => string.Compare(RecipeData.ThingName(a), RecipeData.ThingName(b), StringComparison.CurrentCultureIgnoreCase));
             foreach (int id in order) DropRow(id, drops[id]);
-            if (Cart.Count > 0 && drops.Count == 0) Note(_drops, "Дропа не нужно");
+            if (Cart.Count > 0 && drops.Count == 0) Note(_drops, global::NewAgeQoL.Lang.T("Дропа не нужно"));
             Icons();
         }
 
@@ -931,8 +935,8 @@ namespace NewAgeQoL
         private static string Talls(string amount)
         {
             int whole;
-            if (!int.TryParse(amount, NumberStyles.Integer, CultureInfo.InvariantCulture, out whole)) return "таллов";
-            return Wardrobe.Plural(whole, "талл", "талла", "таллов");
+            if (!int.TryParse(amount, NumberStyles.Integer, CultureInfo.InvariantCulture, out whole)) return global::NewAgeQoL.Lang.T("таллов");
+            return Wardrobe.Plural(whole, global::NewAgeQoL.Lang.T("талл"), global::NewAgeQoL.Lang.T("талла"), global::NewAgeQoL.Lang.T("таллов"));
         }
 
         private static void Add(Dictionary<int, long> map, int id, long count)
@@ -951,7 +955,7 @@ namespace NewAgeQoL
             Icon(rt, info != null && !string.IsNullOrEmpty(info.Image) ? info.Image : recipe != null ? recipe.ResultImage : null, 6f, 4f, 36f, rarity, thing);
             float w = CartW - 16f;
             bool batch = recipe != null && recipe.ResultCount > 1;
-            var name = Say(rt, RecipeData.ThingName(thing), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
+            var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(thing)), 14, FontStyle.Bold, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
             float nameW = w - 50f - 170f;
             Wardrobe.At(name.rectTransform, 50f, batch ? 2f : 0f, nameW, batch ? 22f : 44f);
             Fit(name, 9, 14);
@@ -1016,7 +1020,7 @@ namespace NewAgeQoL
             var rt = Plain(_drops, "drop" + id, 40f);
             Icon(rt, info != null ? info.Image : null, 6f, 4f, 32f, rarity, id);
             float w = CartW - 16f;
-            var name = Say(rt, RecipeData.ThingName(id), 14, FontStyle.Normal, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
+            var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(id)), 14, FontStyle.Normal, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
             Wardrobe.At(name.rectTransform, 46f, 0f, w - 46f - 132f, 40f);
             Fit(name, 9, 14);
             var amount = Say(rt, "× " + count, 16, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleRight);
@@ -1126,7 +1130,7 @@ namespace NewAgeQoL
             {
                 int thing = _hoverId;
                 _tipFor = thing;
-                _tipText.text = TipTitle(thing) + "\n<color=#747b85>загружаю…</color>";
+                _tipText.text = TipTitle(thing) + "\n<color=#747b85>" + global::NewAgeQoL.Lang.T("загружаю…") + "</color>";
                 Ask(thing);
             }
             if (!_tip.activeSelf) _tip.SetActive(true);
@@ -1185,7 +1189,7 @@ namespace NewAgeQoL
         {
             var info = RecipeData.Thing(thing);
             int rarity = info != null ? info.Rarity : 0;
-            return "<b><size=16><color=#" + ColorUtility.ToHtmlStringRGB(WardrobeData.RarityColor(rarity)) + ">" + RecipeData.ThingName(thing) + "</color></size></b>";
+            return "<b><size=16><color=#" + ColorUtility.ToHtmlStringRGB(WardrobeData.RarityColor(rarity)) + ">" + global::NewAgeQoL.Lang.Game(RecipeData.ThingName(thing)) + "</color></size></b>";
         }
 
         private static void Ask(int thing)
@@ -1218,15 +1222,15 @@ namespace NewAgeQoL
             if (head.Count > 0) text.Append("\n<color=#acb3bd>").Append(string.Join(" · ", head.ToArray())).Append("</color>");
 
             var need = new List<string>();
-            if (about.Level.HasValue) need.Add((Lang("things.level") ?? "Уровень") + ": " + about.Level.Value);
+            if (about.Level.HasValue) need.Add((Lang("things.level") ?? global::NewAgeQoL.Lang.T("Уровень")) + ": " + about.Level.Value);
             var classes = ERPGClassExtension.DecodeClassMask(about.PreferableClassMask);
             if (classes != null && classes.Count > 0)
             {
                 var names = new List<string>();
                 foreach (var one in classes) names.Add(Lang("character.params.class." + (int)one) ?? one.ToString());
-                need.Add((Lang("character.params.class_label") ?? "Класс") + ": " + string.Join(", ", names.ToArray()));
+                need.Add((Lang("character.params.class_label") ?? global::NewAgeQoL.Lang.T("Класс")) + ": " + string.Join(", ", names.ToArray()));
             }
-            if (about.MaxDurability.HasValue) need.Add((Lang("things.durability") ?? "Прочность") + ": " + about.MaxDurability.Value);
+            if (about.MaxDurability.HasValue) need.Add((Lang("things.durability") ?? global::NewAgeQoL.Lang.T("Прочность")) + ": " + about.MaxDurability.Value);
             if (need.Count > 0) text.Append("\n\n").Append(string.Join("\n", need.ToArray()));
 
             var p = about.AddedParams;
@@ -1246,8 +1250,8 @@ namespace NewAgeQoL
                 Stat(stats, "character.params.name.protection.black", p.BlackMagicProtection);
                 Stat(stats, "character.params.name.protection.white", p.WhiteMagicProtection);
                 if (p.MinDamage.HasValue && p.MaxDamage.HasValue)
-                    stats.Add((Lang("things.damage") ?? "Урон") + ": <b>" + p.MinDamage.Value + "–" + p.MaxDamage.Value + "</b>");
-                if (p.Range.HasValue) stats.Add((Lang("things.range") ?? "Дальность") + ": <b>" + p.Range.Value + "</b>");
+                    stats.Add((Lang("things.damage") ?? global::NewAgeQoL.Lang.T("Урон")) + ": <b>" + p.MinDamage.Value + "–" + p.MaxDamage.Value + "</b>");
+                if (p.Range.HasValue) stats.Add((Lang("things.range") ?? global::NewAgeQoL.Lang.T("Дальность")) + ": <b>" + p.Range.Value + "</b>");
                 if (stats.Count > 0) text.Append("\n\n").Append(string.Join("\n", stats.ToArray()));
             }
 

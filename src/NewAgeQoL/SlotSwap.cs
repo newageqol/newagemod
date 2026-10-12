@@ -188,7 +188,7 @@ namespace NewAgeQoL
             foreach (var job in Waiting) if (job.What == what) return;
             if (Waiting.Count >= 2) return;
             Waiting.Add(new Job { What = what, Main = main, Spare = spare });
-            Note(what + ": в очереди", 6f);
+            Note(Lang.F("{0}: в очереди", Lang.T(what)), 6f);
         }
 
         private static void Next()
@@ -208,11 +208,11 @@ namespace NewAgeQoL
                 var stash = Pieces(spare);
                 if (dressed.Count == 0 && stash.Count == 0)
                 {
-                    Note("менять нечего", 2f);
+                    Note(Lang.T("менять нечего"), 2f);
                     yield break;
                 }
 
-                Note("меняю " + what + "…", 6f);
+                Note(Lang.F("меняю {0}…", Lang.T(what)), 6f);
                 Plugin.Trace("[slots] swapping " + what + ": worn " + dressed.Count + ", spare " + stash.Count);
                 _failed = null;
 
@@ -224,8 +224,8 @@ namespace NewAgeQoL
 
                 try { NetworkConnection.Instance?.SendRequest(new InventoryWearRequest()); }
                 catch { }
-                if (_failed != null) Note(what + ": не удалось — " + _failed, 6f);
-                else Note(what + ": готово", 3f);
+                if (_failed != null) Note(Lang.F("{0}: не удалось — {1}", Lang.T(what), _failed), 6f);
+                else Note(Lang.F("{0}: готово", Lang.T(what)), 3f);
             }
             finally { _busy = false; Next(); }
         }
@@ -300,7 +300,7 @@ namespace NewAgeQoL
                 _waitFor = piece.Id;
                 if (!Send(piece.Id, action, tab))
                 {
-                    if (_failed == null) _failed = "запрос не ушёл на сервер";
+                    if (_failed == null) _failed = Lang.T("запрос не ушёл на сервер");
                     yield break;
                 }
 
@@ -311,7 +311,7 @@ namespace NewAgeQoL
             }
             Plugin.Warn("[slots] server rejected " + action + ": item " + piece.Id
                                    + " (thing " + piece.ThingId + ", subtype " + piece.Kind + ")");
-            if (_failed == null) _failed = "сервер не ответил";
+            if (_failed == null) _failed = Lang.T("сервер не ответил");
         }
 
         private static IEnumerable<int> Tabs(Piece piece)
@@ -326,7 +326,7 @@ namespace NewAgeQoL
 
         private static string Said(string key)
         {
-            if (string.IsNullOrEmpty(key)) return "сервер отказал";
+            if (string.IsNullOrEmpty(key)) return Lang.T("сервер отказал");
             try
             {
                 string text = ResourceStrings.GetString(key);
@@ -360,7 +360,7 @@ namespace NewAgeQoL
             try
             {
                 var conn = NetworkConnection.Instance;
-                if (conn == null || !conn.IsConnected()) { Note("нет соединения", 3f); return false; }
+                if (conn == null || !conn.IsConnected()) { Note(Lang.T("нет соединения"), 3f); return false; }
                 conn.SendRequest(new ContextActionRequest(inventoryId, (int)action,
                                                           (int)EThingContextWindow.WINDOW_INVENTORY, tab, null));
                 Plugin.Trace("[slots] " + action + " item " + inventoryId + " tab " + tab);
@@ -369,7 +369,7 @@ namespace NewAgeQoL
             catch (System.Exception e)
             {
                 Plugin.Fault("[slots] send: " + e.Message);
-                Note("не вышло: " + e.Message, 4f);
+                Note(Lang.F("не вышло: {0}", e.Message), 4f);
                 return false;
             }
         }

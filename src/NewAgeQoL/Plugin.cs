@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.22.0";
+        public const string Version = "0.23.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -110,6 +110,7 @@ namespace NewAgeQoL
             }
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
             Chars.Home(Config);
+            Lang.Bind(Config);
             AssetSync.Boot();
 
 
@@ -221,7 +222,7 @@ namespace NewAgeQoL
             Chars.Fresh("Artifacts", "StorageCache", "",
                 "Что мод в последний раз видел в хранилище, пары «номер вещи:количество». Нужно, чтобы окно запасного набора показывало вещи из хранилища, когда ты не в нём. Заполняется само.", e => CfgStorageCache = e);
             Chars.Own("Online", "Login", "",
-                "Логин запасного аккаунта для списка «Кто в игре». Пусто — кнопка подскажет, что настроить.", e => CfgOnlineLogin = e);
+                "Логин запасного аккаунта: через него мод переводит золото. Пусто — кнопка подскажет, что настроить.", e => CfgOnlineLogin = e);
             Chars.Own("Online", "Password", "",
                 "Пароль запасного аккаунта. Хранится в этом файле открытым текстом.", e => CfgOnlinePassword = e);
             Chars.Own("Online", "FlashVersion", "11073",
@@ -473,6 +474,7 @@ namespace NewAgeQoL
             _parts = new[]
             {
                 new Part { Name = "Chars.Tick", Do = Chars.Tick },
+                new Part { Name = "Lang.Tick", Do = Lang.Tick },
                 new Part { Name = "SideButtons.Tick", Do = SideButtons.Tick },
                 new Part { Name = "Backdrop.Tick", Do = Backdrop.Tick },
                 new Part { Name = "Flasks.Tick", Do = Flasks.Tick },
@@ -511,6 +513,7 @@ namespace NewAgeQoL
                 new Part { Name = "ItemTip.Tick", Do = ItemTip.Tick },
                 new Part { Name = "Relog.Tick", Do = Relog.Tick },
                 new Part { Name = "BankHall.Tick", Do = BankHall.Tick },
+                new Part { Name = "Locations.Tick", Do = Locations.Tick },
                 new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },

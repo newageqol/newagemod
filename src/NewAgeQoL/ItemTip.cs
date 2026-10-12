@@ -87,7 +87,7 @@ namespace NewAgeQoL
                 _about = null;
                 Head(null, Picture(_hover));
                 Clear();
-                Line(_body, "загружаю…", 13, FontStyle.Italic, WardrobeLook.Faint);
+                Line(_body, NewAgeQoL.Lang.T("загружаю…"), 13, FontStyle.Italic, WardrobeLook.Faint);
                 Describe(thing);
                 AskWear(inv);
                 _dirty = true;
@@ -248,13 +248,13 @@ namespace NewAgeQoL
 
             int start = _body.childCount;
             if (about.Level.HasValue)
-                Row(Lang("things.level") ?? "Уровень", about.Level.Value.ToString(), ThingsHelper.IsLevelRequired(canUse) ? WardrobeLook.Bad : WardrobeLook.Bright);
+                Row(Lang("things.level") ?? NewAgeQoL.Lang.T("Уровень"), about.Level.Value.ToString(), ThingsHelper.IsLevelRequired(canUse) ? WardrobeLook.Bad : WardrobeLook.Bright);
             var classes = ERPGClassExtension.DecodeClassMask(about.PreferableClassMask);
             if (classes != null && classes.Count > 0)
             {
                 var names = new List<string>();
                 foreach (var one in classes) names.Add(Lang("character.params.class." + (int)one) ?? one.ToString());
-                Row(Lang("character.params.class_label") ?? "Класс", string.Join(", ", names.ToArray()), ThingsHelper.IsClassRequired(canUse) ? WardrobeLook.Bad : WardrobeLook.Bright);
+                Row(Lang("character.params.class_label") ?? NewAgeQoL.Lang.T("Класс"), string.Join(", ", names.ToArray()), ThingsHelper.IsClassRequired(canUse) ? WardrobeLook.Bad : WardrobeLook.Bright);
             }
             if (about.MaxDurability.HasValue)
             {
@@ -263,7 +263,7 @@ namespace NewAgeQoL
                 Color color = WardrobeLook.Bright;
                 if (wear.HasValue && wear.Value <= 0) color = WardrobeLook.Bad;
                 else if (wear.HasValue && max > 0 && wear.Value * 4 < max) color = WardrobeLook.Accent;
-                Row(Lang("things.durability") ?? "Прочность", value, color);
+                Row(Lang("things.durability") ?? NewAgeQoL.Lang.T("Прочность"), value, color);
             }
             any |= _body.childCount > start;
 
@@ -273,8 +273,8 @@ namespace NewAgeQoL
                 start = _body.childCount;
                 if (any) Rule();
                 if (p.MinDamage.HasValue && p.MaxDamage.HasValue)
-                    Row(Lang("things.damage") ?? "Урон", p.MinDamage.Value + " – " + p.MaxDamage.Value, WardrobeLook.Accent);
-                if (p.Range.HasValue) Row(Lang("things.range") ?? "Дальность", p.Range.Value.ToString(), WardrobeLook.Accent);
+                    Row(Lang("things.damage") ?? NewAgeQoL.Lang.T("Урон"), p.MinDamage.Value + " – " + p.MaxDamage.Value, WardrobeLook.Accent);
+                if (p.Range.HasValue) Row(Lang("things.range") ?? NewAgeQoL.Lang.T("Дальность"), p.Range.Value.ToString(), WardrobeLook.Accent);
                 Stat("character.params.name.strength", p.Strength);
                 Stat("character.params.name.reaction", p.Reaction);
                 Stat("character.params.name.constitution", p.Constitution);

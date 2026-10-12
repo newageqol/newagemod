@@ -73,15 +73,16 @@ namespace NewAgeQoL
                 bool here = Here();
                 if (here != _here)
                 {
-                    if (Running) Stop("ушёл из хранилища — остановлено");
+                    if (Running) Stop(Lang.T("ушёл из хранилища — остановлено"));
                     _here = here;
                     _said = "";
+                    _known = -1;
                     if (_here) Flasks.RequestScanNow();
                 }
                 bool show = _here && SideButtons.InWorld() && !SideButtons.InCombat();
                 if (!show)
                 {
-                    if (Running) Stop("начался бой — остановлено");
+                    if (Running) Stop(Lang.T("начался бой — остановлено"));
                     if (_canvasGo != null && _canvasGo.activeSelf) _canvasGo.SetActive(false);
                     return;
                 }
@@ -162,10 +163,13 @@ namespace NewAgeQoL
             return ud != null && ud.Cash != null ? ud.Cash.Gold : 0f;
         }
 
+        private static int _known = -1;
+
         private static int InBag()
         {
-            if (Flasks.Scanning || Flasks.BagThings().Count == 0) return -1;
-            return Flasks.QtyOf(Ingot);
+            if (Flasks.Scanning || Flasks.BagThings().Count == 0) return _known;
+            _known = Flasks.QtyOf(Ingot);
+            return _known;
         }
 
         private static int Left()
@@ -176,14 +180,14 @@ namespace NewAgeQoL
 
         private static void GiveSome()
         {
-            if (Running) { Stop("остановлено"); return; }
+            if (Running) { Stop(Lang.T("остановлено")); return; }
             int want;
             string text = _count != null ? _count.text.Trim() : "";
-            if (!int.TryParse(text, out want) || want <= 0) { _said = "впиши, сколько слитков сдать"; return; }
+            if (!int.TryParse(text, out want) || want <= 0) { _said = Lang.T("впиши, сколько слитков сдать"); return; }
             int have = InBag();
             if (have >= 0 && want > have) want = have;
-            if (want <= 0) { _said = "в сумке нет слитков"; return; }
-            Ask("Сдать " + want + " " + Bars(want) + " и получить " + Num(want * Per) + " золота?", () => Start(want));
+            if (want <= 0) { _said = Lang.T("в сумке нет слитков"); return; }
+            Ask(Lang.F("Сдать {0} {1} и получить {2} золота?", want, Bars(want), Num(want * Per)), () => Start(want));
         }
 
         private static void Most()
@@ -197,13 +201,13 @@ namespace NewAgeQoL
         private static string Bars(int n)
         {
             int tail = n % 100;
-            if (tail >= 11 && tail <= 14) return "слитков";
+            if (tail >= 11 && tail <= 14) return Lang.T("слитков");
             switch (n % 10)
             {
-                case 1: return "слиток";
-                case 2: case 3: case 4: return "слитка";
+                case 1: return Lang.T("слиток");
+                case 2: case 3: case 4: return Lang.T("слитка");
             }
-            return "слитков";
+            return Lang.T("слитков");
         }
 
         private static ConfirmMessageBox _confirm;
@@ -247,7 +251,7 @@ namespace NewAgeQoL
             _cap = -1;
             Close();
             Send(0, 1, 0);
-            _said = "говорю с кассиршей…";
+            _said = Lang.T("говорю с кассиршей…");
             Plugin.Trace("[ingots] starting: wanted " + want + ", in bag " + _startCount + ", gold " + Gold());
         }
 
@@ -255,7 +259,7 @@ namespace NewAgeQoL
         {
             if (_step == Step.Idle) return;
             _step = Step.Idle;
-            _said = (_done > 0 ? "сдано слитков: " + _done + " · " : "") + why;
+            _said = (_done > 0 ? Lang.F("сдано слитков: {0}", _done) + " · " : "") + why;
             Plugin.Trace("[ingots] " + _said);
             Flasks.RequestScanNow();
         }
@@ -263,7 +267,7 @@ namespace NewAgeQoL
         private static void Finish(string why)
         {
             _step = Step.Idle;
-            _said = "сдано слитков: " + _done + ", получено " + Num(_done * Per) + " золота" + (string.IsNullOrEmpty(why) ? "" : " · " + why);
+            _said = Lang.F("сдано слитков: {0}, получено {1} золота", _done, Num(_done * Per)) + (string.IsNullOrEmpty(why) ? "" : " · " + why);
             Plugin.Trace("[ingots] " + _said);
             Flasks.RequestScanNow();
         }
@@ -285,7 +289,7 @@ namespace NewAgeQoL
                 case Step.Talk:
                     if (!_replyFresh)
                     {
-                        if (Time.unscaledTime > _deadline) Stop("кассирша не отвечает");
+                        if (Time.unscaledTime > _deadline) Stop(Lang.T("кассирша не отвечает"));
                         return;
                     }
                     _replyFresh = false;
@@ -307,7 +311,7 @@ namespace NewAgeQoL
                     if (Time.unscaledTime > _deadline)
                     {
                         Tell(_reply);
-                        Stop("кассирша слитки не приняла");
+                        Stop(Lang.T("кассирша слитки не приняла"));
                     }
                     return;
             }
@@ -318,7 +322,7 @@ namespace NewAgeQoL
             bool fresh = _replyFresh;
             _replyFresh = false;
             _done += _batch;
-            _said = "сдано " + _done + " из " + _want + "…";
+            _said = Lang.F("сдано {0} из {1}…", _done, _want);
             if (_done >= _want) { Finish(""); return; }
             _hops = 0;
             _nextAt = Time.unscaledTime + Pause;
@@ -335,7 +339,7 @@ namespace NewAgeQoL
             Tell(reply);
             if (have == 0)
             {
-                Finish(_done > 0 ? "слитки кончились" : "в сумке нет слитков");
+                Finish(_done > 0 ? Lang.T("слитки кончились") : Lang.T("в сумке нет слитков"));
                 return;
             }
             if (_batch > 1 && have > 0)
@@ -348,16 +352,16 @@ namespace NewAgeQoL
                 Send(0, 1, 0);
                 return;
             }
-            Stop("кассирша слитки не приняла");
+            Stop(Lang.T("кассирша слитки не приняла"));
         }
 
         private static void Walk(QuestDialogResponseMessage reply)
         {
-            if (++_hops > 8) { Tell(reply); Stop("диалог пошёл не туда"); return; }
+            if (++_hops > 8) { Tell(reply); Stop(Lang.T("диалог пошёл не туда")); return; }
             if (reply == null || reply.NpcPhrase == null || reply.Forwards == null || reply.Forwards.Count == 0)
             {
                 Tell(reply);
-                Stop("кассирша закрыла разговор");
+                Stop(Lang.T("кассирша закрыла разговор"));
                 return;
             }
             var one = ById(reply, OneFid);
@@ -369,7 +373,7 @@ namespace NewAgeQoL
                 var pick = rest >= 10 && !_noTen && ten != null ? ten : one;
                 if (pick == null || rest <= 0)
                 {
-                    Finish(rest <= 0 ? "" : "кассирша не предлагает сдать");
+                    Finish(rest <= 0 ? "" : Lang.T("кассирша не предлагает сдать"));
                     return;
                 }
                 _batch = pick == ten ? 10 : 1;
@@ -386,7 +390,7 @@ namespace NewAgeQoL
             var deals = ById(reply, DealsFid);
             if (deals != null) { Send(deals.ForwardId, deals.ForwardType, reply.QuestId); return; }
             Tell(reply);
-            Stop("кассирша на незнакомой странице — варианты записаны в журнал");
+            Stop(Lang.T("кассирша на незнакомой странице — варианты записаны в журнал"));
         }
 
         private static QuestForward ById(QuestDialogResponseMessage reply, int id)
@@ -467,7 +471,7 @@ namespace NewAgeQoL
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             _title = Line(_root, 13, FontStyle.Bold, WardrobeLook.Accent);
-            _title.text = "Сдача золотых слитков";
+            _title.text = Lang.T("Сдача золотых слитков");
             _state = Line(_root, 11, FontStyle.Normal, WardrobeLook.Body);
 
             var row = new GameObject("row", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
@@ -495,9 +499,9 @@ namespace NewAgeQoL
                 OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(4f, 0f), new Vector2(-4f, 0f));
             }
             Small(OnlineWindow.MakeGameButton(row.transform, "+", RowHigh, RowHigh, () => Bump(1)));
-            _most = OnlineWindow.MakeGameButton(row.transform, "Макс", 50f, RowHigh, Most);
+            _most = OnlineWindow.MakeGameButton(row.transform, Lang.T("Макс"), 50f, RowHigh, Most);
             Small(_most);
-            _give = OnlineWindow.MakeGameButton(row.transform, "Сдать", 70f, RowHigh, GiveSome);
+            _give = OnlineWindow.MakeGameButton(row.transform, Lang.T("Сдать"), 70f, RowHigh, GiveSome);
             Small(_give);
             _giveLabel = _give != null ? _give.GetComponentInChildren<Text>() : null;
 
@@ -567,17 +571,17 @@ namespace NewAgeQoL
             bool can;
             if (left < 0)
             {
-                state = Running ? "Сдаю слитки…" : "Считаю слитки в сумке…";
+                state = Running ? Lang.T("Сдаю слитки…") : Lang.T("Считаю слитки в сумке…");
                 can = true;
             }
             else if (left == 0)
             {
-                state = "В сумке нет золотых слитков.";
+                state = Lang.T("В сумке нет золотых слитков.");
                 can = false;
             }
             else
             {
-                state = "В сумке: " + left + " · за все " + Num(left * Per) + " золота";
+                state = Lang.F("В сумке: {0} · за все {1} золота", left, Num(left * Per));
                 can = true;
             }
             Set(_state, state);
@@ -585,7 +589,7 @@ namespace NewAgeQoL
             if (_give != null) _give.interactable = Running || can;
             if (_most != null) _most.interactable = !Running && can && left > 0;
             if (_count != null) _count.interactable = !Running;
-            if (_giveLabel != null) Set(_giveLabel, Running ? "Стоп" : "Сдать");
+            if (_giveLabel != null) Set(_giveLabel, Running ? Lang.T("Стоп") : Lang.T("Сдать"));
             if (_progress != null && _progress.gameObject.activeSelf != (_said.Length > 0)) _progress.gameObject.SetActive(_said.Length > 0);
         }
 

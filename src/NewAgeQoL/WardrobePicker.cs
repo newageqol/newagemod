@@ -78,14 +78,14 @@ namespace NewAgeQoL
             crt.anchoredPosition = new Vector2(-10f, -11f);
             if (arts)
             {
-                var art = Wardrobe.Arrow(rt, "Артефакт", () => WardrobeArt.Open(rt, _slot));
+                var art = Wardrobe.Arrow(rt, Lang.T("Артефакт"), () => WardrobeArt.Open(rt, _slot));
                 Wardrobe.At((RectTransform)art.transform, artX, 11f, 120f, 32f);
                 art.GetComponent<Image>().color = WardrobeLook.Mix(WardrobeLook.Button, WardrobeData.RarityColor(WardrobeArt.Rarity), 0.45f);
                 var artLabel = art.GetComponentInChildren<Text>();
                 if (artLabel != null) artLabel.fontSize = 15;
             }
 
-            var search = OnlineWindow.MakeInput(rt, width - 28f, "поиск по названию");
+            var search = OnlineWindow.MakeInput(rt, width - 28f, Lang.T("поиск по названию"));
             WardrobeLook.Style(search);
             Wardrobe.At((RectTransform)search.transform, 14f, 56f, width - 28f, 32f);
             search.text = _query;
@@ -105,7 +105,7 @@ namespace NewAgeQoL
             }
 
             const float Row = 180f;
-            var fromLabel = OnlineWindow.Label(rt, "С уровня", 14, FontStyle.Normal, WardrobeLook.Label);
+            var fromLabel = OnlineWindow.Label(rt, Lang.T("С уровня"), 14, FontStyle.Normal, WardrobeLook.Label);
             Wardrobe.At(fromLabel.rectTransform, 14f, Row, 72f, 30f);
             fromLabel.alignment = TextAnchor.MiddleLeft;
             var down = Wardrobe.Arrow(rt, "‹", () => StepFrom(-1));
@@ -127,7 +127,7 @@ namespace NewAgeQoL
             _upTo.resizeTextForBestFit = true;
             _upTo.resizeTextMinSize = 10;
             _upTo.resizeTextMaxSize = 14;
-            MakeChip(rt, "Можно надеть", width - 14f - 136f, Row, 136f, 30f, () => _fitOnly, () => { _fitOnly = !_fitOnly; Fill(); }, WardrobeLook.Accent);
+            MakeChip(rt, Lang.T("Можно надеть"), width - 14f - 136f, Row, 136f, 30f, () => _fitOnly, () => { _fitOnly = !_fitOnly; Fill(); }, WardrobeLook.Accent);
 
             _count = OnlineWindow.Label(rt, "", 12, FontStyle.Normal, WardrobeLook.Faint);
             Wardrobe.At(_count.rectTransform, 14f, 218f, width - 28f, 20f);
@@ -264,7 +264,8 @@ namespace NewAgeQoL
             if (!WardrobeData.Fits(slot, thing.Sub) || thing.Level > s.Level || thing.Level < Math.Min(_from, s.Level)) return false;
             if (Hidden.Contains(thing.Rarity)) return false;
             if (_fitOnly && !s.Fits(thing)) return false;
-            if (_query.Length > 0 && thing.Name.IndexOf(_query, StringComparison.OrdinalIgnoreCase) < 0) return false;
+            if (_query.Length > 0 && thing.Name.IndexOf(_query, StringComparison.OrdinalIgnoreCase) < 0
+                && Lang.Game(thing.Name).IndexOf(_query, StringComparison.OrdinalIgnoreCase) < 0) return false;
             return true;
         }
 
@@ -283,7 +284,7 @@ namespace NewAgeQoL
             if (_title != null) _title.text = WardrobeData.SlotName(_slot);
             string from = Math.Min(_from, s.Level).ToString();
             if (_fromInput != null && !_fromInput.isFocused && _fromInput.text != from) _fromInput.text = from;
-            if (_upTo != null) _upTo.text = "по " + s.Level + " ур.";
+            if (_upTo != null) _upTo.text = Lang.F("по {0} ур.", s.Level);
             PaintChips();
 
             var list = new List<WardrobeThing>();
@@ -305,8 +306,8 @@ namespace NewAgeQoL
             WardrobeThing worn;
             s.Worn.TryGetValue(_slot, out worn);
             string raw;
-            if (worn != null) Clear("Снять «" + worn.Name + "»");
-            else if (s.Unknown.TryGetValue(_slot, out raw)) Clear("Убрать «" + WardrobeState.Title(raw) + "» — её нет в базе");
+            if (worn != null) Clear(Lang.F("Снять «{0}»", Lang.Game(worn.Name)));
+            else if (s.Unknown.TryGetValue(_slot, out raw)) Clear(Lang.F("Убрать «{0}» — её нет в базе", Lang.Game(WardrobeState.Title(raw))));
 
             int baseRating = s.Rating;
             int shown = 0;
@@ -318,17 +319,17 @@ namespace NewAgeQoL
                 if (now != group)
                 {
                     group = now;
-                    if (now == 0) Section("Для класса «" + (klass != null ? klass.Name : "?") + "»: " + groups[0]);
-                    else if (now == 1) Section("Для всех классов: " + groups[1]);
-                    else Section("Для других классов: " + groups[2]);
+                    if (now == 0) Section(Lang.F("Для класса «{0}»: {1}", klass != null ? Lang.Game(klass.Name) : "?", groups[0]));
+                    else if (now == 1) Section(Lang.F("Для всех классов: {0}", groups[1]));
+                    else Section(Lang.F("Для других классов: {0}", groups[2]));
                 }
                 Make(list[i], s, baseRating, worn == list[i]);
                 shown++;
             }
             if (_count != null)
                 _count.text = list.Count == 0
-                    ? "Подходящих вещей нет: включи другое качество или смени уровень."
-                    : "Вещей: " + list.Count + (list.Count > Limit ? ", показаны первые " + Limit : "") + ". Красные сейчас не надеть.";
+                    ? Lang.T("Подходящих вещей нет: включи другое качество или смени уровень.")
+                    : Lang.F("Вещей: {0}{1}. Красные сейчас не надеть.", list.Count, list.Count > Limit ? Lang.F(", показаны первые {0}", Limit) : "");
             if (_scroll != null) _scroll.verticalNormalizedPosition = 1f;
         }
 
@@ -422,7 +423,7 @@ namespace NewAgeQoL
             lines.childControlHeight = true;
             lines.childForceExpandWidth = true;
             lines.childForceExpandHeight = false;
-            Line(column.transform, thing.Name, 15, FontStyle.Bold, WardrobeData.RarityColor(thing.Rarity));
+            Line(column.transform, Lang.Game(thing.Name), 15, FontStyle.Bold, WardrobeData.RarityColor(thing.Rarity));
             Line(column.transform, Needs(thing, s), 12, FontStyle.Normal, WardrobeLook.Faint);
             Line(column.transform, Gives(thing), 13, FontStyle.Normal, WardrobeLook.Label);
 
@@ -439,11 +440,11 @@ namespace NewAgeQoL
             var score = Line(side.transform, can ? (delta > 0 ? "+" + delta : delta.ToString()) : "—", 17, FontStyle.Bold,
                 !can ? WardrobeLook.Faint : delta > 0 ? WardrobeLook.Good : delta < 0 ? WardrobeLook.Bad : WardrobeLook.Label);
             score.alignment = TextAnchor.UpperRight;
-            var caption = Line(side.transform, isWorn ? "надето" : "рейтинг", 11, FontStyle.Normal, WardrobeLook.Faint);
+            var caption = Line(side.transform, isWorn ? Lang.T("надето") : Lang.T("рейтинг"), 11, FontStyle.Normal, WardrobeLook.Faint);
             caption.alignment = TextAnchor.UpperRight;
             if (group != null)
             {
-                var all = Wardrobe.Arrow(side.transform, "Надеть " + group.Length, () => Wardrobe.Pick(slot, thing, true));
+                var all = Wardrobe.Arrow(side.transform, Lang.F("Надеть {0}", group.Length), () => Wardrobe.Pick(slot, thing, true));
                 var ale = all.gameObject.AddComponent<LayoutElement>();
                 ale.minHeight = ale.preferredHeight = 26f;
                 all.GetComponent<Image>().color = WardrobeLook.Button;
@@ -478,18 +479,18 @@ namespace NewAgeQoL
         private static string Needs(WardrobeThing thing, WardrobeState s)
         {
             var text = new StringBuilder();
-            text.Append("ур. ").Append(thing.Level);
+            text.Append(Lang.T("ур. ")).Append(thing.Level);
             string rarity = WardrobeData.RarityName(thing.Rarity);
             if (rarity.Length > 0) text.Append(", ").Append(rarity);
             bool any = false;
             foreach (int i in WardrobeData.StatOrder)
             {
                 if (thing.Req[i] <= 0) continue;
-                text.Append(any ? ", " : " · треб.: ");
+                text.Append(any ? ", " : Lang.T(" · треб.: "));
                 any = true;
                 bool short1 = s.Base(i) < thing.Req[i];
                 if (short1) text.Append("<color=#f07a6e>");
-                text.Append(WardrobeData.StatNames[i]).Append(' ').Append(thing.Req[i]);
+                text.Append(Lang.T(WardrobeData.StatNames[i])).Append(' ').Append(thing.Req[i]);
                 if (short1) text.Append("</color>");
             }
             return text.ToString();
@@ -499,17 +500,17 @@ namespace NewAgeQoL
         {
             var parts = new List<string>();
             foreach (int i in WardrobeData.StatOrder)
-                if (thing.Bonus[i] != 0) parts.Add(WardrobeData.StatNames[i] + " " + Signed(thing.Bonus[i]));
-            if (thing.Energy != 0) parts.Add("Энергия " + Signed(thing.Energy));
+                if (thing.Bonus[i] != 0) parts.Add(Lang.T(WardrobeData.StatNames[i]) + " " + Signed(thing.Bonus[i]));
+            if (thing.Energy != 0) parts.Add(Lang.F("Энергия {0}", Signed(thing.Energy)));
             var armor = new List<string>();
             for (int p = 0; p < 5; p++)
-                if (thing.Armor[p] != 0) armor.Add(WardrobeData.ArmorNames[p].ToLowerInvariant() + " " + thing.Armor[p]);
-            if (armor.Count > 0) parts.Add("броня: " + string.Join(", ", armor.ToArray()));
+                if (thing.Armor[p] != 0) armor.Add(Lang.T(WardrobeData.ArmorNames[p]).ToLowerInvariant() + " " + thing.Armor[p]);
+            if (armor.Count > 0) parts.Add(Lang.F("броня: {0}", string.Join(", ", armor.ToArray())));
             if (thing.Magic[0] != 0 || thing.Magic[1] != 0 || thing.Magic[2] != 0)
-                parts.Add("защита " + thing.Magic[0] + "/" + thing.Magic[1] + "/" + thing.Magic[2]);
-            if (thing.DamageMax > 0) parts.Add("урон " + thing.DamageMin + "–" + thing.DamageMax + (thing.Range > 0 ? ", дальность " + thing.Range : ""));
-            if (WardrobeData.IsTwoHand(thing.Sub)) parts.Add("двуручное");
-            return parts.Count > 0 ? string.Join(" · ", parts.ToArray()) : "без прибавок";
+                parts.Add(Lang.F("защита {0}/{1}/{2}", thing.Magic[0], thing.Magic[1], thing.Magic[2]));
+            if (thing.DamageMax > 0) parts.Add(Lang.F("урон {0}–{1}", thing.DamageMin, thing.DamageMax) + (thing.Range > 0 ? Lang.F(", дальность {0}", thing.Range) : ""));
+            if (WardrobeData.IsTwoHand(thing.Sub)) parts.Add(Lang.T("двуручное"));
+            return parts.Count > 0 ? string.Join(" · ", parts.ToArray()) : Lang.T("без прибавок");
         }
 
         internal sealed class TipBlock
@@ -523,34 +524,34 @@ namespace NewAgeQoL
         internal static List<TipBlock> Sections(WardrobeThing thing)
         {
             var list = new List<TipBlock>();
-            var stats = new TipBlock { Title = "Параметры" };
+            var stats = new TipBlock { Title = Lang.T("Параметры") };
             foreach (int i in WardrobeData.StatOrder)
-                if (thing.Bonus[i] != 0) stats.Add(WardrobeData.StatNames[i], Signed(thing.Bonus[i]));
+                if (thing.Bonus[i] != 0) stats.Add(Lang.T(WardrobeData.StatNames[i]), Signed(thing.Bonus[i]));
             if (stats.Rows.Count > 0) list.Add(stats);
             if (thing.Energy != 0)
             {
-                var energy = new TipBlock { Title = "Энергия" };
-                energy.Add("Энергия", Signed(thing.Energy));
+                var energy = new TipBlock { Title = Lang.T("Энергия") };
+                energy.Add(Lang.T("Энергия"), Signed(thing.Energy));
                 list.Add(energy);
             }
-            var armor = new TipBlock { Title = "Броня" };
+            var armor = new TipBlock { Title = Lang.T("Броня") };
             for (int p = 0; p < 5; p++)
-                if (thing.Armor[p] != 0) armor.Add(WardrobeData.ArmorNames[p], thing.Armor[p].ToString());
+                if (thing.Armor[p] != 0) armor.Add(Lang.T(WardrobeData.ArmorNames[p]), thing.Armor[p].ToString());
             if (armor.Rows.Count > 0) list.Add(armor);
-            var magic = new TipBlock { Title = "Защита от магии" };
+            var magic = new TipBlock { Title = Lang.T("Защита от магии") };
             for (int m = 0; m < 3; m++)
-                if (thing.Magic[m] != 0) magic.Add(WardrobeData.MagicNames[m], thing.Magic[m].ToString());
+                if (thing.Magic[m] != 0) magic.Add(Lang.T(WardrobeData.MagicNames[m]), thing.Magic[m].ToString());
             if (magic.Rows.Count > 0) list.Add(magic);
-            var weapon = new TipBlock { Title = "Оружие" };
-            if (thing.DamageMax > 0) weapon.Add("Урон", thing.DamageMin + "–" + thing.DamageMax);
-            if (thing.DamageMax > 0 && thing.Range > 0) weapon.Add("Дальность", thing.Range.ToString());
-            if (WardrobeData.IsTwoHand(thing.Sub)) weapon.Add("Двуручное", "");
+            var weapon = new TipBlock { Title = Lang.T("Оружие") };
+            if (thing.DamageMax > 0) weapon.Add(Lang.T("Урон"), thing.DamageMin + "–" + thing.DamageMax);
+            if (thing.DamageMax > 0 && thing.Range > 0) weapon.Add(Lang.T("Дальность"), thing.Range.ToString());
+            if (WardrobeData.IsTwoHand(thing.Sub)) weapon.Add(Lang.T("Двуручное"), "");
             if (weapon.Rows.Count > 0) list.Add(weapon);
             var rule = thing.Art ? WardrobeData.ArtRule(thing.Sub, thing.ItemLevel) : null;
             if (rule != null && rule.Price > 0)
             {
-                var price = new TipBlock { Title = "Стоимость" };
-                price.Add("Кристаллы", rule.Price.ToString());
+                var price = new TipBlock { Title = Lang.T("Стоимость") };
+                price.Add(Lang.T("Кристаллы"), rule.Price.ToString());
                 list.Add(price);
             }
             return list;

@@ -525,13 +525,13 @@ namespace NewAgeQoL
             sb.Append("<size=13><b><color=#eceef1>").Append(title).Append("</color></b></size>");
             if (charm == null || charm.Parts.Count == 0)
             {
-                sb.Append("\n<color=#acb3bd>").Append(charms == null ? "срок придёт с обновлением списка" : "срок сервер не сообщил").Append("</color>");
+                sb.Append("\n<color=#acb3bd>").Append(charms == null ? Lang.T("срок придёт с обновлением списка") : Lang.T("срок сервер не сообщил")).Append("</color>");
                 return sb.ToString();
             }
             var alive = Alive(charm);
             if (alive.Count == 0)
             {
-                sb.Append("\n<color=#acb3bd>срок вышел</color>");
+                sb.Append("\n<color=#acb3bd>").Append(Lang.T("срок вышел")).Append("</color>");
                 return sb.ToString();
             }
             long gone = (long)(DateTime.UtcNow - charm.At).TotalSeconds;
@@ -547,13 +547,13 @@ namespace NewAgeQoL
                     if (left < first) first = left;
                     if (left > last) last = left;
                 }
-                sb.Append("\n<color=#eceef1>копий: ").Append(alive.Count).Append(", всё сложено</color>");
+                sb.Append("\n<color=#eceef1>").Append(Lang.F("копий: {0}, всё сложено", alive.Count)).Append("</color>");
                 if (first != long.MaxValue)
                 {
-                    sb.Append("\n<color=#8fd8ff>ближайшая закончится через ").Append(Left(first)).Append("</color>");
-                    if (last > first && !endless) sb.Append("\n<color=#8fd8ff>последняя — через ").Append(Left(last)).Append("</color>");
+                    sb.Append("\n<color=#8fd8ff>").Append(Lang.F("ближайшая закончится через {0}", Left(first))).Append("</color>");
+                    if (last > first && !endless) sb.Append("\n<color=#8fd8ff>").Append(Lang.F("последняя — через {0}", Left(last))).Append("</color>");
                 }
-                if (endless) sb.Append("\n<color=#acb3bd>").Append(first != long.MaxValue ? "часть без срока" : "без срока").Append("</color>");
+                if (endless) sb.Append("\n<color=#acb3bd>").Append(first != long.MaxValue ? Lang.T("часть без срока") : Lang.T("без срока")).Append("</color>");
             }
             foreach (var line in Sum(alive)) sb.Append("\n<color=#d6dae0>· ").Append(line).Append("</color>");
             return sb.ToString();
@@ -596,10 +596,10 @@ namespace NewAgeQoL
 
         private static string Term(long span, long gone)
         {
-            if (span < 0) return "<color=#acb3bd>без срока</color>";
+            if (span < 0) return "<color=#acb3bd>" + Lang.T("без срока") + "</color>";
             long left = span - gone;
-            if (left <= 0) return "<color=#acb3bd>срок вышел</color>";
-            return "<color=#8fd8ff>осталось " + Left(left) + "</color>";
+            if (left <= 0) return "<color=#acb3bd>" + Lang.T("срок вышел") + "</color>";
+            return "<color=#8fd8ff>" + Lang.F("осталось {0}", Left(left)) + "</color>";
         }
 
         private static string Left(long sec)
@@ -607,10 +607,10 @@ namespace NewAgeQoL
             long d = sec / 86400;
             long h = sec % 86400 / 3600;
             long m = sec % 3600 / 60;
-            if (d > 0) return d + " д " + h + " ч";
-            if (h > 0) return h + " ч " + m + " мин";
-            if (m > 0) return m + " мин";
-            return "меньше минуты";
+            if (d > 0) return Lang.F("{0} д {1} ч", d, h);
+            if (h > 0) return Lang.F("{0} ч {1} мин", h, m);
+            if (m > 0) return Lang.F("{0} мин", m);
+            return Lang.T("меньше минуты");
         }
 
         private static string Name(int id)
@@ -620,7 +620,7 @@ namespace NewAgeQoL
             name = null;
             try { name = ResourceStrings.GetGlobalEnchantmentGroupName(id); }
             catch { }
-            if (string.IsNullOrEmpty(name) || name == "enchantment.group." + id) name = "состояние " + id;
+            if (string.IsNullOrEmpty(name) || name == "enchantment.group." + id) name = Lang.F("состояние {0}", id);
             Names[id] = name;
             return name;
         }

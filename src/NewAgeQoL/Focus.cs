@@ -80,8 +80,8 @@ namespace NewAgeQoL
         {
             string key = string.IsNullOrEmpty(binding) ? "" : Hotkeys.Text(binding);
             if (key == "—") key = "";
-            string how = key.Length > 0 ? "Shift+клик или Shift+" + key : "Shift+клик";
-            return how + (_on ? " — снять связку" : " — включить связку");
+            string how = key.Length > 0 ? Lang.F("Shift+клик или Shift+{0}", key) : Lang.T("Shift+клик");
+            return how + (_on ? Lang.T(" — снять связку") : Lang.T(" — включить связку"));
         }
 
         internal static Sprite Glow()

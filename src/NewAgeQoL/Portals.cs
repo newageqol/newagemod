@@ -84,7 +84,7 @@ namespace NewAgeQoL
                 if (_going && Time.unscaledTime > _deadline)
                 {
                     _going = false;
-                    _said = "портал не ответил";
+                    _said = Lang.T("портал не ответил");
                     _askAt = Time.unscaledTime;
                     _tries = 0;
                 }
@@ -121,7 +121,7 @@ namespace NewAgeQoL
             if (_tries >= Tries)
             {
                 _askAt = 0f;
-                _said = "портал не отвечает";
+                _said = Lang.T("портал не отвечает");
                 return;
             }
             _tries++;
@@ -232,7 +232,7 @@ namespace NewAgeQoL
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             _title = Line(_root, 14, FontStyle.Bold, WardrobeLook.Accent);
-            _title.text = "Портал";
+            _title.text = Lang.T("Портал");
             _phrase = Line(_root, 12, FontStyle.Normal, WardrobeLook.Body);
 
             var list = new GameObject("list", typeof(RectTransform), typeof(VerticalLayoutGroup));
@@ -300,8 +300,8 @@ namespace NewAgeQoL
             string state = _said;
             if (state.Length == 0 && !_going && !(_clicked && Time.unscaledTime - _clickedAt <= 1.5f))
             {
-                if (_page == null) state = "узнаю, куда можно перенестись…";
-                else if (Count() == 0) state = "Перенестись некуда: нужны руны портала.";
+                if (_page == null) state = Lang.T("узнаю, куда можно перенестись…");
+                else if (Count() == 0) state = Lang.T("Перенестись некуда: нужны руны портала.");
             }
             Set(_state, state);
             if (_state.gameObject.activeSelf != (state.Length > 0)) _state.gameObject.SetActive(state.Length > 0);

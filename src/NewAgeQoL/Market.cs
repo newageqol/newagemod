@@ -211,7 +211,7 @@ namespace NewAgeQoL
 
         private static void InitLots(int cap, int value)
         {
-            _field.Initialize("Лотов", 1, cap, value);
+            _field.Initialize(Lang.T("Лотов"), 1, cap, value);
             bool live = cap > 1;
             _field.Interactable = true;
             foreach (var name in new[] { "DecrementButton", "IncrementButton" })
@@ -247,7 +247,7 @@ namespace NewAgeQoL
                     _single = msg.SingleLot.GetValueOrDefault();
                     _remaining = _lots - 1;
                     _done = false;
-                    Air("Рынок: выставляю лотов: " + _lots);
+                    Air(Lang.F("Рынок: выставляю лотов: {0}", _lots));
                     Plugin.Trace("[market] lot 1/" + _lots + " sent, still queued " + _remaining);
                     return;
                 }
@@ -267,7 +267,7 @@ namespace NewAgeQoL
                         if (_rQueue.Count >= _removeLots - 1) break;
                     }
                     _rDone = false;
-                    Air("Рынок: снимаю лотов: " + _removeLots);
+                    Air(Lang.F("Рынок: снимаю лотов: {0}", _removeLots));
                     Plugin.Trace("[market] removal 1/" + _removeLots + ", still queued " + _rQueue.Count);
                 }
             }
@@ -303,7 +303,7 @@ namespace NewAgeQoL
                         int placed = _lots - _remaining;
                         _done = true;
                         _remaining = 0;
-                        Air("Рынок: вещи кончились, выставлено лотов: " + placed);
+                        Air(Lang.F("Рынок: вещи кончились, выставлено лотов: {0}", placed));
                         Plugin.Trace("[market] entry " + _id + " is empty, not sending the remaining lots");
                         Refresh(WinPutOnMarket, _tab);
                         return;
@@ -320,7 +320,7 @@ namespace NewAgeQoL
                     return;
                 }
                 _done = true;
-                Air("Рынок: выставлено лотов: " + _lots);
+                Air(Lang.F("Рынок: выставлено лотов: {0}", _lots));
                 Plugin.Trace("[market] all " + _lots + " lots listed");
                 Refresh(WinPutOnMarket, _tab);
                 return;
@@ -350,7 +350,7 @@ namespace NewAgeQoL
                     return;
                 }
                 _rDone = true;
-                Air("Рынок: снято лотов: " + _removeLots);
+                Air(Lang.F("Рынок: снято лотов: {0}", _removeLots));
                 Plugin.Trace("[market] removal finished");
                 Refresh(WinSellerOffers, _rTab);
             }
@@ -431,7 +431,7 @@ namespace NewAgeQoL
                 var field = go.GetComponent<IntegerInputField>();
                 field.OnValueChanged = new IntegerInputField.OnValueChangedEvent();
                 field.OnValueChanged.AddListener(v => _removeLots = v < 1 ? 1 : (v > _removeCap ? _removeCap : v));
-                field.Initialize("Снять лотов", 1, cap, 1);
+                field.Initialize(Lang.T("Снять лотов"), 1, cap, 1);
                 LayoutRebuilder.MarkLayoutForRebuild(qty.transform.parent as RectTransform);
             }
             catch (Exception e) { Plugin.Warn("[market] removal field not added: " + e.Message); }
@@ -477,7 +477,7 @@ namespace NewAgeQoL
                 if (data != null && data.Price != null && data.Quantity > 0 && !Durable(data))
                 {
                     int lot = data.SingleSlot ? data.Quantity : 1;
-                    text = Line(Shown(gold) ? data.Price.Gold : null, lot, "") ?? Line(Shown(talls) ? data.Price.Talls : null, lot, " талл.");
+                    text = Line(Shown(gold) ? data.Price.Gold : null, lot, "") ?? Line(Shown(talls) ? data.Price.Talls : null, lot, Lang.T(" талл."));
                 }
                 fit.Show(text);
             }

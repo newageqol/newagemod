@@ -1302,14 +1302,14 @@ namespace NewAgeQoL
             if (Used.TryGetValue(skill.Id, out used) && Time.unscaledTime - used < (_tricks ? 0f : _things ? 0.08f : 0.15f)) return Sending;
             var cd = FighterHint.Cd();
             bool late = Late;
-            if (Strike.Calculating) return "идёт расчёт раунда";
-            if (!late && cd != null && cd.RoundType != RoundType.WALK_ROUND && cd.RoundType != RoundType.COMBAT_ROUND) return "идёт расчёт раунда";
+            if (Strike.Calculating) return Lang.T("идёт расчёт раунда");
+            if (!late && cd != null && cd.RoundType != RoundType.WALK_ROUND && cd.RoundType != RoundType.COMBAT_ROUND) return Lang.T("идёт расчёт раунда");
             if (cd != null && !QuickButtonHelper.CheckRoundType(skill, cd.RoundType)) return OffPhase;
-            if (!skill.Enabled && !late) return string.IsNullOrEmpty(skill.DisableCause) ? "недоступно" : skill.DisableCause;
+            if (!skill.Enabled && !late) return string.IsNullOrEmpty(skill.DisableCause) ? Lang.T("недоступно") : skill.DisableCause;
             if (!_things)
             {
-                if (Cooling(skill)) return "перезарядка";
-                if (!skill.CanActivate && !late) return "перезарядка";
+                if (Cooling(skill)) return Lang.T("перезарядка");
+                if (!skill.CanActivate && !late) return Lang.T("перезарядка");
             }
             if (_spells && !late && cd != null)
             {
@@ -1319,8 +1319,8 @@ namespace NewAgeQoL
             var me = cd != null ? cd.MyCharacter : null;
             var ind = me != null ? me.Indicators : null;
             if (ind == null) return null;
-            if (skill.StaminaCost > ind.CurrentStamina) return "не хватает энергии";
-            if (skill.ManaCost > ind.CurrentMana) return "не хватает маны";
+            if (skill.StaminaCost > ind.CurrentStamina) return Lang.T("не хватает энергии");
+            if (skill.ManaCost > ind.CurrentMana) return Lang.T("не хватает маны");
             if (skill.ExpowerCost > ind.CurrentExpower) return Poor;
             return null;
         }
@@ -1334,8 +1334,8 @@ namespace NewAgeQoL
                 if (spell == null || units == null) return null;
                 switch (units.CanCastSpell(spell, cd.RoundType))
                 {
-                    case EQuickButtonValidationResult.AlreadyCastSpell: return "в этой фазе заклинание уже было";
-                    case EQuickButtonValidationResult.NotEnoughActionPoints: return "не хватает очков действия";
+                    case EQuickButtonValidationResult.AlreadyCastSpell: return Lang.T("в этой фазе заклинание уже было");
+                    case EQuickButtonValidationResult.NotEnoughActionPoints: return Lang.T("не хватает очков действия");
                     default: return null;
                 }
             }
@@ -1481,20 +1481,20 @@ namespace NewAgeQoL
 
         private string Phase(int phase)
         {
-            if (phase == 1) return "фаза перемещения";
-            if (phase == 2) return "фаза боя";
-            if (phase == 3) return "любая фаза";
+            if (phase == 1) return Lang.T("фаза перемещения");
+            if (phase == 2) return Lang.T("фаза боя");
+            if (phase == 3) return Lang.T("любая фаза");
             return "";
         }
 
         private string Costs(IQuickButton skill)
         {
             var parts = new List<string>();
-            if (skill.ManaCost > 0) parts.Add("мана " + skill.ManaCost);
-            if (skill.StaminaCost > 0) parts.Add("энергия " + skill.StaminaCost);
-            if (skill.ExpowerCost > 0) parts.Add("стоимость " + skill.ExpowerCost);
-            if (skill.Count > 0) parts.Add("зарядов " + skill.Count);
-            if (skill.Recharge > 0 && skill.Recharge < 100 && !Summon(skill)) parts.Add("перезарядка " + skill.Recharge);
+            if (skill.ManaCost > 0) parts.Add(Lang.F("мана {0}", skill.ManaCost));
+            if (skill.StaminaCost > 0) parts.Add(Lang.F("энергия {0}", skill.StaminaCost));
+            if (skill.ExpowerCost > 0) parts.Add(Lang.F("стоимость {0}", skill.ExpowerCost));
+            if (skill.Count > 0) parts.Add(Lang.F("зарядов {0}", skill.Count));
+            if (skill.Recharge > 0 && skill.Recharge < 100 && !Summon(skill)) parts.Add(Lang.F("перезарядка {0}", skill.Recharge));
             return string.Join(", ", parts.ToArray());
         }
 
@@ -1585,7 +1585,7 @@ namespace NewAgeQoL
             if (_tricks && Focus.Is(skill))
                 text.Append("\n<color=#e2b85c>").Append(Focus.Hint(Hotkeys.Of(mark + ":" + id))).Append("</color>\n");
             string block = Reason(id);
-            if (block != null && block != OffPhase) text.Append("\n<color=#f07a6e>").Append(block).Append("</color>");
+            if (block != null && block != OffPhase) text.Append("\n<color=#f07a6e>").Append(Lang.T(block)).Append("</color>");
             if (skill != null)
             {
                 string phase = _things || _spells ? "" : Phase(skill.Phase);

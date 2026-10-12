@@ -89,10 +89,10 @@ namespace NewAgeQoL
         {
             string login = Login();
             if (login.Length == 0 || string.IsNullOrEmpty(Plugin.CfgOnlinePassword?.Value))
-                return "Укажи логин и пароль запасного аккаунта в настройках мода";
+                return Lang.T("Укажи логин и пароль запасного аккаунта в настройках мода");
             string me = Mine();
             if (me.Length > 0 && string.Equals(me, login, StringComparison.OrdinalIgnoreCase))
-                return "В настройках указан тот же персонаж, которым ты играешь — нужен запасной";
+                return Lang.T("В настройках указан тот же персонаж, которым ты играешь — нужен запасной");
             return null;
         }
 
@@ -182,7 +182,7 @@ namespace NewAgeQoL
                         try { job.Work(s.Link); }
                         catch (Exception e) when (e is IOException || e is SocketException || e is ObjectDisposedException)
                         {
-                            Fail(job, e is SpareReset ? e.Message : s.Closing ? "соединение запасного аккаунта закрыто" : "соединение запасного аккаунта оборвалось");
+                            Fail(job, e is SpareReset ? e.Message : s.Closing ? Lang.T("соединение запасного аккаунта закрыто") : Lang.T("соединение запасного аккаунта оборвалось"));
                             throw;
                         }
                         catch (Exception e) { Fail(job, e.Message); }
@@ -232,7 +232,7 @@ namespace NewAgeQoL
                     if (ReferenceEquals(_now, s)) _now = null;
                     if (lost != null) _kicked = true;
                 }
-                string say = lost != null && !s.Ready ? lost : "соединение запасного аккаунта закрыто";
+                string say = lost != null && !s.Ready ? lost : Lang.T("соединение запасного аккаунта закрыто");
                 foreach (var job in left) Fail(job, say);
                 if (lost != null) Plugin.Trace("[spare] session lost: " + lost);
             }
@@ -253,7 +253,7 @@ namespace NewAgeQoL
             s.Client = client;
             if (s.Closing) throw new IOException("closed");
             var ar = client.BeginConnect(Host, Port, null, null);
-            if (!ar.AsyncWaitHandle.WaitOne(8000)) throw new Exception("нет соединения с " + Host);
+            if (!ar.AsyncWaitHandle.WaitOne(8000)) throw new Exception(Lang.F("нет соединения с {0}", Host));
             client.EndConnect(ar);
             s.Link = new SpareLink { Stream = client.GetStream(), Socket = client.Client };
             Pump(s.Link, 1.5, null);
@@ -261,11 +261,11 @@ namespace NewAgeQoL
             string lr = null;
             foreach (var m in Pump(s.Link, 8, m => m.Contains("LoginResponce")))
                 if (m.Contains("LoginResponce")) lr = m;
-            if (lr == null) throw new Exception("сервер не ответил на вход запасным аккаунтом");
+            if (lr == null) throw new Exception(Lang.T("сервер не ответил на вход запасным аккаунтом"));
             if (!lr.Contains("LoggedIn=\"1\""))
             {
                 var mm = Regex.Match(lr, "Msg=\"([^\"]*)\"");
-                throw new Exception("вход отклонён" + (mm.Success && mm.Groups[1].Value.Length > 0 ? ": " + System.Net.WebUtility.HtmlDecode(mm.Groups[1].Value) : ""));
+                throw new Exception(Lang.T("вход отклонён") + (mm.Success && mm.Groups[1].Value.Length > 0 ? ": " + System.Net.WebUtility.HtmlDecode(mm.Groups[1].Value) : ""));
             }
             if (s.Link.Balance == null) Pump(s.Link, 4, m => Money.IsMatch(m));
         }

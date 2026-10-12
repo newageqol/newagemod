@@ -195,13 +195,13 @@ namespace NewAgeQoL
         {
             string st = OnlineList.Status ?? "";
             int age = OnlineList.Age;
-            if (age >= 0 && !OnlineList.Busy && !st.StartsWith("Ошибка", StringComparison.Ordinal))
+            if (age >= 0 && !OnlineList.Busy && !st.StartsWith(Lang.T("Ошибка"), StringComparison.Ordinal))
             {
                 int wait = OnlineList.Wait;
-                st += " · обновлено " + age + " с назад · " + (wait > 0 ? "новый список через " + wait + " с" : "можно обновить");
+                st += Lang.F(" · обновлено {0} с назад · ", age) + (wait > 0 ? Lang.F("новый список через {0} с", wait) : Lang.T("можно обновить"));
             }
-            if (OnlineCharms.Gathering && st.Length > 0) st += " · заклятия загружаются…";
-            if (_query.Length > 0) st = "найдено " + shown + (st.Length > 0 ? " · " + st : "");
+            if (OnlineCharms.Gathering && st.Length > 0) st += Lang.T(" · заклятия загружаются…");
+            if (_query.Length > 0) st = Lang.F("найдено {0}", shown) + (st.Length > 0 ? " · " + st : "");
             return st;
         }
 
@@ -279,7 +279,7 @@ namespace NewAgeQoL
             var sideMark = Label(sideGo.transform, "•\n•\n•", 12, FontStyle.Bold, WardrobeLook.Faint);
             Place(sideMark.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-            _title = Label(_panelGo.transform, "Кто в игре", 20, FontStyle.Bold, WardrobeLook.Bright);
+            _title = Label(_panelGo.transform, Lang.T("Кто в игре"), 20, FontStyle.Bold, WardrobeLook.Bright);
             Place(_title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -45f), new Vector2(184f, -13f));
             _title.raycastTarget = false;
             _title.alignment = TextAnchor.MiddleLeft;
@@ -307,10 +307,10 @@ namespace NewAgeQoL
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
 
-            _filter = MakeInput(barGo.transform, 168f, "поиск по нику");
+            _filter = MakeInput(barGo.transform, 168f, Lang.T("поиск по нику"));
             _filter.text = _query;
             _filter.onValueChanged.AddListener(v => { _query = Norm(v); Rebuild(); });
-            _refresh = MakeGameButton(barGo.transform, "Обновить", 118f, BarH, () => { if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh(); });
+            _refresh = MakeGameButton(barGo.transform, Lang.T("Обновить"), 118f, BarH, () => { if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh(); });
             _status = Label(barGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
             _status.alignment = TextAnchor.MiddleLeft;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -458,7 +458,7 @@ namespace NewAgeQoL
             else foreach (var p in shown) Line(p, _rows);
 
             bool busy = OnlineList.Busy;
-            if (_title != null) _title.text = "Кто в игре" + (players.Count > 0 ? ": " + players.Count : "");
+            if (_title != null) _title.text = Lang.T("Кто в игре") + (players.Count > 0 ? ": " + players.Count : "");
             if (_rowsFade != null) _rowsFade.alpha = busy ? 0.4f : 1f;
             if (_status != null) _status.text = StatusText(shown.Count);
             if (_refresh != null) _refresh.interactable = !busy && OnlineList.Wait == 0;
@@ -505,7 +505,7 @@ namespace NewAgeQoL
 
         private static string ClanTitle(string icon)
         {
-            if (string.IsNullOrEmpty(icon)) return "Без клана";
+            if (string.IsNullOrEmpty(icon)) return Lang.T("Без клана");
             string name = OnlineList.ClanName(icon);
             return name.Length > 0 ? name : icon;
         }
@@ -571,8 +571,8 @@ namespace NewAgeQoL
         {
             if (_modeText == null) return;
             _modeText.text = _byClan
-                ? "Кланы: <color=#e2b85c>вкл</color>"
-                : "Кланы: <color=#747b85>выкл</color>";
+                ? Lang.T("Кланы: <color=#e2b85c>вкл</color>")
+                : Lang.T("Кланы: <color=#747b85>выкл</color>");
         }
 
         private static void SwitchMode()

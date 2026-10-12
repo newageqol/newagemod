@@ -135,7 +135,7 @@ namespace NewAgeQoL
             var picture = new WardrobePicture { Job = job };
             try
             {
-                if (result == null) picture.Error = "пустой ответ";
+                if (result == null) picture.Error = Lang.T("пустой ответ");
                 else if (result is Exception ex) picture.Error = (ex.InnerException ?? ex).Message;
                 else
                 {

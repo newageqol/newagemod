@@ -32,6 +32,22 @@ namespace NewAgeQoL
                 Version = Plugin.Version,
                 Lines = new[]
                 {
+                    "При первом запуске после обновления мод спросит язык игры: три карточки — «Українська», «Русский» и «English». Поменять язык можно потом в настройках игры, там в списке языков появился украинский.",
+                    "Появился украинский язык: интерфейс игры, названия и описания вещей, окна мода и лог боя в чате. Файл перевода (около 1 МБ) мод скачивает сам и только если выбран украинский; пока он качается, вход в игру ждёт. Если скачать не вышло, игра запустится на русском, а мод попробует ещё раз при следующем запуске. Поиск в переодевалке и в калькуляторе крафта находит вещи и по украинским, и по русским названиям. При английском языке окна мода остаются на русском.",
+                    "Вид как во Flash теперь включён всегда: строки «Вернуть 3D» в настройках мода больше нет, и у тех, кто раньше вернул 3D, бой и персонажи снова будут как во Flash. Обычный 3D-вид возвращается только вместе с выключением всего мода: настройки мода, раздел «Мод», кнопка «Выключить».",
+                    "В бою над оглушённым или парализованным бойцом снова видны игровые звёздочки, как в 3D-клиенте: от «Угрозы», «Сокрушающего удара», «Астральной тюрьмы» и других. Они пропадают, когда эффект кончился, боец погиб или бой закончился.",
+                    "Когда «Угроза» сработала на тебе или на союзнике, она теперь видна и в списке эффектов бойца. Раньше игра показывала её только противникам того, кто её наложил.",
+                    "В настройках мода в списках клавиш для умений, приёмов и заклинаний рядом с названием теперь видна их иконка.",
+                    "Окно загрузки локаций мода теперь называет, что именно нужно скачать, например: «Нужно скачать локации мода: рынок, касса банка. Остальные уже на месте.» Так же подписаны строка в настройках мода и сообщение, если скачать не удалось.",
+                    "Раздел настроек с логином и паролем запасного аккаунта теперь называется «Запасной аккаунт» (раньше «Кто в игре»): через этот аккаунт мод переводит золото.",
+                    "Починки: в запасном наборе двуручное оружие теперь занимает обе руки, а наборы, сохранённые раньше с вещью во второй руке рядом с двуручным, исправляются сами; панель слитков в хранилище больше не мигает, когда переодеваешься; при входе в локацию мода экран загрузки держится, пока она не появится (не дольше 8 секунд), и вместо локации больше не мелькает пустая сцена.",
+                }
+            },
+            new Entry
+            {
+                Version = "0.22.0",
+                Lines = new[]
+                {
                     "В меню персонажа в правом верхнем углу, в одном ряду с кнопкой реликвий, появилась кнопка-ячейка с золотой рубашкой: она открывает и закрывает окно «Запасной набор». Раздел «Переодевание» из настроек мода убран, а строка «Ждут возврата» теперь в разделе «Кнопки».",
                     "Эмодзи в чате, которые игра не умеет рисовать (из-за них сообщение выглядело пустым), теперь заменяются похожими смайликами: улыбка, смех до слёз, подмигивание, язык, поцелуй и сердце, грусть, слёзы, злость, чертёнок, очки, удивление, смущение, тошнота, сон, ангел, пиво, бомба, приветствие, свинка, зайчик, солнце. Если похожего смайлика нет, в строке видно «[эмодзи]». Флаги и составные эмодзи показываются одной такой пометкой.",
                     "Починки: надпись под кнопками смены оружия и реликвий (например, отказ сервера менять снаряжение не в ту фазу боя) больше не вылезает за окно: она переносится на строки и при нехватке места становится мельче.",
@@ -455,14 +471,14 @@ namespace NewAgeQoL
             _shownStage = stage;
             _shownMessage = message;
             bool done = stage == Updater.Stage.Done;
-            _state.text = done ? message : "Установлена версия " + Plugin.Version + " · " + message;
+            _state.text = done ? message : Lang.F("Установлена версия {0}", Plugin.Version) + " · " + message;
             _state.color = done ? WardrobeLook.Good : WardrobeLook.Label;
             if (_action == null || _actionText == null) return;
             bool offer = Updater.CanUpdate;
             bool busy = stage == Updater.Stage.Checking || stage == Updater.Stage.Downloading;
             _action.gameObject.SetActive(!done);
             _action.interactable = !busy;
-            _actionText.text = offer ? "Обновить" : "Проверить";
+            _actionText.text = offer ? Lang.T("Обновить") : Lang.T("Проверить");
         }
 
         internal static bool EscapeClose()
@@ -503,7 +519,7 @@ namespace NewAgeQoL
             mover.Target = prt;
             mover.Canvas = canvas;
 
-            var title = OnlineWindow.Label(_panelGo.transform, "Что нового в моде", 24, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Что нового в моде"), 24, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(18f, -50f), new Vector2(-70f, -8f));
             title.alignment = TextAnchor.MiddleLeft;
             title.raycastTarget = false;
@@ -512,16 +528,17 @@ namespace NewAgeQoL
 
             var barGo = new GameObject("bar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             barGo.transform.SetParent(_panelGo.transform, false);
-            OnlineWindow.Place((RectTransform)barGo.transform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(16f, -104f), new Vector2(-16f, -58f));
+            OnlineWindow.Place((RectTransform)barGo.transform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(16f, -114f), new Vector2(-16f, -64f));
             var hlg = barGo.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 10f;
+            hlg.padding = new RectOffset(0, 0, 3, 3);
             hlg.childAlignment = TextAnchor.MiddleLeft;
             hlg.childControlWidth = true;
             hlg.childControlHeight = true;
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
 
-            _state = OnlineWindow.Label(barGo.transform, "Установлена версия " + Plugin.Version, 15, FontStyle.Normal, WardrobeLook.Label);
+            _state = OnlineWindow.Label(barGo.transform, Lang.F("Установлена версия {0}", Plugin.Version), 15, FontStyle.Normal, WardrobeLook.Label);
             _state.alignment = TextAnchor.MiddleLeft;
             _state.horizontalOverflow = HorizontalWrapMode.Wrap;
             _state.verticalOverflow = VerticalWrapMode.Truncate;
@@ -532,7 +549,7 @@ namespace NewAgeQoL
             stateLe.flexibleWidth = 1f;
             stateLe.minWidth = 120f;
 
-            _action = MakeButton(barGo.transform, "Проверить", 132f, () =>
+            _action = MakeButton(barGo.transform, Lang.T("Проверить"), 132f, () =>
             {
                 if (Updater.CanUpdate) Updater.Update(); else Updater.Check();
             });
@@ -544,7 +561,7 @@ namespace NewAgeQoL
             var scrollGo = new GameObject("scroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             scrollGo.transform.SetParent(_panelGo.transform, false);
             var srt = (RectTransform)scrollGo.transform;
-            OnlineWindow.Place(srt, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(16f, 16f), new Vector2(-26f, -110f));
+            OnlineWindow.Place(srt, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(16f, 16f), new Vector2(-26f, -120f));
             var simg = scrollGo.GetComponent<Image>();
             simg.color = new Color(0f, 0f, 0f, 0.18f);
             simg.sprite = OnlineWindow.Rounded(10);
@@ -603,7 +620,7 @@ namespace NewAgeQoL
             hl.childForceExpandWidth = false;
             hl.childForceExpandHeight = true;
 
-            string cap = string.IsNullOrEmpty(entry.Head) ? "Версия " + entry.Version : entry.Head;
+            string cap = string.IsNullOrEmpty(entry.Head) ? Lang.F("Версия {0}", entry.Version) : entry.Head;
             var head = OnlineWindow.Label(headGo.transform, cap, 19, FontStyle.Bold, WardrobeLook.Accent);
             head.alignment = TextAnchor.MiddleLeft;
             head.raycastTarget = false;
@@ -612,7 +629,7 @@ namespace NewAgeQoL
 
             if (entry.Version == Plugin.Version)
             {
-                var now = OnlineWindow.Label(headGo.transform, "установлена", 13, FontStyle.Normal, WardrobeLook.Good);
+                var now = OnlineWindow.Label(headGo.transform, Lang.T("установлена"), 13, FontStyle.Normal, WardrobeLook.Good);
                 now.alignment = TextAnchor.MiddleRight;
                 now.raycastTarget = false;
             }
@@ -637,7 +654,7 @@ namespace NewAgeQoL
             Action show = () =>
             {
                 bodyGo.SetActive(open);
-                fold.text = open ? "скрыть" : "показать";
+                fold.text = open ? Lang.T("скрыть") : Lang.T("показать");
             };
             show();
             var button = headGo.GetComponent<Button>();
@@ -659,7 +676,7 @@ namespace NewAgeQoL
 
             if (topic == "Починки")
             {
-                AddText(host, "", "<b>Починки</b>", 0, WardrobeLook.Bright);
+                AddText(host, "", "<b>" + Lang.T("Починки") + "</b>", 0, WardrobeLook.Bright);
                 foreach (var part in body.Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string p = part.Trim();

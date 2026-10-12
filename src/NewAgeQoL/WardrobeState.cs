@@ -56,12 +56,12 @@ namespace NewAgeQoL
                 if (reference.StartsWith("~"))
                 {
                     var bits = reference.Split('~');
-                    if (bits.Length >= 2 && bits[1].Length > 0) return Uri.UnescapeDataString(bits[1]);
+                    if (bits.Length >= 2 && bits[1].Length > 0) return Lang.Game(Uri.UnescapeDataString(bits[1]));
                 }
-                if (reference.StartsWith("@")) return "артефакт";
+                if (reference.StartsWith("@")) return Lang.T("артефакт");
             }
             catch { }
-            return "вещь " + reference;
+            return Lang.F("вещь {0}", reference);
         }
 
         private static bool Plain(string reference)
@@ -520,10 +520,10 @@ namespace NewAgeQoL
         internal string Blocker(int i, int value)
         {
             foreach (var pair in Active())
-                if (pair.Value.Req[i] > value) return "«" + pair.Value.Name + "» требует " + WardrobeData.StatNames[i].ToLowerInvariant() + " " + pair.Value.Req[i];
+                if (pair.Value.Req[i] > value) return Lang.F("«{0}» требует {1} {2}", Lang.Game(pair.Value.Name), Lang.T(WardrobeData.StatNames[i]).ToLowerInvariant(), pair.Value.Req[i]);
             var rank = RankInfo;
             if (i == 2 && rank != null && rank.N > MinRank && rank.MinCon > value)
-                return "крепость «" + rank.Name + "» требует сложение " + rank.MinCon;
+                return Lang.F("крепость «{0}» требует сложение {1}", Lang.Game(rank.Name), rank.MinCon);
             return null;
         }
 

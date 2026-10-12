@@ -1,45 +1,14 @@
 ﻿using BepInEx.Bootstrap;
-using BepInEx.Configuration;
 
 namespace NewAgeQoL
 {
     internal static class FlashLook
     {
-        internal static ConfigEntry<bool> Entry(string section, string key)
-        {
-            try
-            {
-                if (!Chainloader.PluginInfos.TryGetValue("newage.2d", out var info) || info.Instance == null) return null;
-                return info.Instance.Config.TryGetEntry<bool>(new ConfigDefinition(section, key), out var entry) ? entry : null;
-            }
-            catch { return null; }
-        }
-
-        private static ConfigEntry<bool> _look;
-        private static ConfigEntry<bool> _combat;
-        private static bool _entriesLooked;
-
         internal static bool Fight
         {
             get
             {
-                try
-                {
-                    if (!Chainloader.PluginInfos.TryGetValue("newage.2d", out var info) || info.Instance == null)
-                    {
-                        _entriesLooked = false;
-                        _look = null;
-                        _combat = null;
-                        return false;
-                    }
-                    if (!_entriesLooked)
-                    {
-                        _entriesLooked = true;
-                        _look = Entry("General", "Enabled");
-                        _combat = Entry("Combat", "Enabled");
-                    }
-                    return _look != null && _look.Value && (_combat == null || _combat.Value);
-                }
+                try { return Chainloader.PluginInfos.TryGetValue("newage.2d", out var info) && info.Instance != null; }
                 catch { return false; }
             }
         }
@@ -97,26 +66,6 @@ namespace NewAgeQoL
                 return true;
             }
             catch { return false; }
-        }
-
-        internal static void AskSwitch()
-        {
-            var look = Entry("General", "Enabled");
-            if (look == null) return;
-            bool toFlash = !look.Value;
-            string text = (toFlash ? "Включить вид как во Flash?" : "Вернуть 3D-вид?")
-                + " Вид меняется только после перезапуска игры: клиент сейчас закроется, запусти его снова.";
-            try
-            {
-                DialogFactory.ShowConfirmMessageBox("dialogs.artworkshop.confirm.caption", result =>
-                {
-                    if (result != EMessageBoxResult.MB_OK) return;
-                    look.Value = toFlash;
-                    Plugin.Log?.LogInfo("[look] " + (toFlash ? "Flash" : "3D") + " view from the next game start, closing the client");
-                    Quit();
-                }, text);
-            }
-            catch (System.Exception e) { Plugin.Log?.LogWarning("[look] switch dialog: " + e.Message); }
         }
 
         internal static void Quit()

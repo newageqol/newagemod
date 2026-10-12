@@ -204,7 +204,7 @@ namespace NewAgeQoL
             var sideMark = OnlineWindow.Label(sideGo.transform, "•\n•\n•", 12, FontStyle.Bold, WardrobeLook.Faint);
             OnlineWindow.Place(sideMark.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-            _title = OnlineWindow.Label(_panelGo.transform, "Задания", 20, FontStyle.Bold, WardrobeLook.Bright);
+            _title = OnlineWindow.Label(_panelGo.transform, Lang.T("Задания"), 20, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(_title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(18f, -42f), new Vector2(-56f, -10f));
             _title.alignment = TextAnchor.MiddleLeft;
             _title.raycastTarget = false;
@@ -222,15 +222,15 @@ namespace NewAgeQoL
             hlg.childForceExpandWidth = false;
             hlg.childForceExpandHeight = true;
 
-            _find = OnlineWindow.MakeInput(barGo.transform, 150f, "Поиск");
+            _find = OnlineWindow.MakeInput(barGo.transform, 150f, Lang.T("Поиск"));
             var fle = _find.GetComponent<LayoutElement>();
             if (fle != null) { fle.preferredHeight = BarH; fle.minHeight = BarH; fle.minWidth = 70f; fle.flexibleWidth = 1f; }
             _find.text = _query;
             _find.onValueChanged.AddListener(v => { _query = Norm(v); Fill(); });
-            Shrink(OnlineWindow.MakeGameButton(barGo.transform, "Обновить", 96f, BarH, () => { QuestBoard.Reask(); Fill(); }));
-            _talk = OnlineWindow.MakeGameButton(barGo.transform, "Открыть", 96f, BarH, () => { if (_picked > 0) QuestBoard.Talk(_picked); });
+            Shrink(OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Обновить"), 96f, BarH, () => { QuestBoard.Reask(); Fill(); }));
+            _talk = OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Открыть"), 96f, BarH, () => { if (_picked > 0) QuestBoard.Talk(_picked); });
             Shrink(_talk);
-            _track = OnlineWindow.MakeGameButton(barGo.transform, "Сбросить", 110f, BarH, () => { QuestTrack.Clear(); Paint(); });
+            _track = OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Сбросить"), 110f, BarH, () => { QuestTrack.Clear(); Paint(); });
             Shrink(_track);
             _status = OnlineWindow.Label(_panelGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
             OnlineWindow.Place(_status.rectTransform, new Vector2(0.4f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -42f), new Vector2(-64f, -10f));
@@ -260,7 +260,7 @@ namespace NewAgeQoL
             _rows = Content(listGo.transform, _scroll, lrt, 3f);
             Bar(_panelGo.transform, _scroll, new Vector2(1f, Split), new Vector2(1f, 1f), new Vector2(-26f, 4f), new Vector2(-14f, -head));
 
-            var deskTitle = OnlineWindow.Label(_panelGo.transform, "Описание", 15, FontStyle.Bold, WardrobeLook.Accent);
+            var deskTitle = OnlineWindow.Label(_panelGo.transform, Lang.T("Описание"), 15, FontStyle.Bold, WardrobeLook.Accent);
             deskTitle.alignment = TextAnchor.MiddleLeft;
             deskTitle.raycastTarget = false;
             var drt = deskTitle.rectTransform;
@@ -372,17 +372,17 @@ namespace NewAgeQoL
             }
             if (!alive) _picked = cards.Count > 0 ? cards[0].Id : 0;
 
-            if (_title != null) _title.text = "Задания" + (all.Count > 0 ? ": " + all.Count : "");
+            if (_title != null) _title.text = Lang.T("Задания") + (all.Count > 0 ? ": " + all.Count : "");
             if (_status != null)
             {
                 string tail = "";
                 int fresh = QuestBoard.NewOnes();
                 int done = QuestBoard.Ready();
-                if (done > 0) tail = "готовы сдать: " + done;
-                if (fresh > 0) tail = (tail.Length > 0 ? tail + " · " : "") + "новых: " + fresh;
-                if (QuestBoard.Busy) tail = (tail.Length > 0 ? tail + " · " : "") + "читаю…";
-                if (_query.Length > 0) tail = "найдено: " + cards.Count + (tail.Length > 0 ? " · " + tail : "");
-                if (all.Count == 0) tail = "заданий нет";
+                if (done > 0) tail = Lang.F("готовы сдать: {0}", done);
+                if (fresh > 0) tail = (tail.Length > 0 ? tail + " · " : "") + Lang.F("новых: {0}", fresh);
+                if (QuestBoard.Busy) tail = (tail.Length > 0 ? tail + " · " : "") + Lang.T("читаю…");
+                if (_query.Length > 0) tail = Lang.F("найдено: {0}", cards.Count) + (tail.Length > 0 ? " · " + tail : "");
+                if (all.Count == 0) tail = Lang.T("заданий нет");
                 _status.text = tail;
             }
             Paint();
@@ -473,7 +473,7 @@ namespace NewAgeQoL
         {
             if (!string.IsNullOrEmpty(card.Name)) return card.Name;
             if (!string.IsNullOrEmpty(card.Npc)) return card.Npc;
-            return card.Known ? "Задание " + card.Id : "…";
+            return card.Known ? Lang.F("Задание {0}", card.Id) : "…";
         }
 
         private static Color Tint(int status)
@@ -525,18 +525,18 @@ namespace NewAgeQoL
             if (card == null)
             {
                 _desk.text = QuestBoard.All.Count == 0
-                    ? "Заданий нет."
-                    : "Выбери задание в списке.";
+                    ? Lang.T("Заданий нет.")
+                    : Lang.T("Выбери задание в списке.");
                 return;
             }
 
             var text = new System.Text.StringBuilder();
             text.Append("<b>").Append(Title(card)).Append("</b>");
             if (!string.IsNullOrEmpty(card.Desc)) text.Append("\n\n").Append(card.Desc.Trim());
-            if (!string.IsNullOrEmpty(card.Goal)) text.Append("\n\n<color=#ffd67a>Цель:</color> ").Append(card.Goal.Trim());
+            if (!string.IsNullOrEmpty(card.Goal)) text.Append("\n\n<color=#ffd67a>").Append(Lang.T("Цель:")).Append("</color> ").Append(card.Goal.Trim());
             if (card.Counters != null)
                 foreach (var line in card.Counters) text.Append("\n<color=#c8b48c>").Append(line).Append("</color>");
-            if (!card.Known) text.Append("\n\n<color=#c8b48c>Читаю задание…</color>");
+            if (!card.Known) text.Append("\n\n<color=#c8b48c>").Append(Lang.T("Читаю задание…")).Append("</color>");
             _desk.text = text.ToString();
             if (_deskScroll != null) _deskScroll.verticalNormalizedPosition = 1f;
         }

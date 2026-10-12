@@ -96,7 +96,7 @@ namespace NewAgeQoL
             string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
             req.Dispose();
             try { Take(code, body); }
-            catch (Exception e) { _error = "ответ не разобран"; _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
+            catch (Exception e) { _error = Lang.T("ответ не разобран"); _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
             _busy = false;
             _askAt = Time.unscaledTime + (_fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
         }
@@ -105,7 +105,7 @@ namespace NewAgeQoL
         {
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
             {
-                _error = code == 0 ? "сервер наблюдателей недоступен" : "сервер наблюдателей ответил " + code;
+                _error = code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code);
                 _items = null;
                 return;
             }
@@ -136,7 +136,7 @@ namespace NewAgeQoL
             }
             items.Sort((a, b) => a.Fight != b.Fight ? (a.Fight ? 1 : -1) : a.Seconds.CompareTo(b.Seconds));
             _items = items;
-            _error = down.Count == 3 ? "наблюдатели не в сети" : null;
+            _error = down.Count == 3 ? Lang.T("наблюдатели не в сети") : null;
         }
 
         private static bool Claims()
@@ -160,7 +160,7 @@ namespace NewAgeQoL
             return low == high ? low : low + "–" + high;
         }
 
-        private static string Kind(int room) => room == 14 ? "Хаот" : room == 19 ? "Командный" : room == 334 ? "Турнир" : "Бой";
+        private static string Kind(int room) => room == 14 ? Lang.T("Хаот") : room == 19 ? Lang.T("Командный") : room == 334 ? Lang.T("Турнир") : Lang.T("Бой");
 
         private static void Build()
         {
@@ -177,7 +177,7 @@ namespace NewAgeQoL
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
 
-            _fold = new SideFold(_canvasGo.transform, "fights", "Бои", Plugin.CfgFightsFolded);
+            _fold = new SideFold(_canvasGo.transform, "fights", Lang.T("Бои"), Plugin.CfgFightsFolded);
             _panel = _fold.Body;
             _panel.sizeDelta = new Vector2(RowW, RowH);
             var back = _panel.gameObject.AddComponent<Image>();
@@ -210,7 +210,7 @@ namespace NewAgeQoL
         {
             var items = _items;
             int count = items == null ? 0 : items.Count;
-            _fold.Title(count > 0 ? "Бои  " + count : "Бои");
+            _fold.Title(count > 0 ? Lang.F("Бои  {0}", count) : Lang.T("Бои"));
 
             var sig = new StringBuilder();
             sig.Append(_error ?? "").Append('|').Append(items == null ? "-" : "+").Append('|');
@@ -229,8 +229,8 @@ namespace NewAgeQoL
             Rows.Clear();
             Lines.Clear();
 
-            string empty = items == null ? (_error ?? "спрашиваю наблюдателей…")
-                : count == 0 ? (_error ?? "сейчас ни заявок, ни боёв") : null;
+            string empty = items == null ? (_error ?? Lang.T("спрашиваю наблюдателей…"))
+                : count == 0 ? (_error ?? Lang.T("сейчас ни заявок, ни боёв")) : null;
             if (empty != null)
             {
                 _note.gameObject.SetActive(true);
@@ -249,7 +249,7 @@ namespace NewAgeQoL
             }
             if (count > shown)
             {
-                var more = OnlineWindow.Label(_panel, "и ещё " + (count - shown), 11, FontStyle.Normal, WardrobeLook.Faint);
+                var more = OnlineWindow.Label(_panel, Lang.F("и ещё {0}", count - shown), 11, FontStyle.Normal, WardrobeLook.Faint);
                 more.raycastTarget = false;
                 more.alignment = TextAnchor.MiddleLeft;
                 var mrt = more.rectTransform;
@@ -316,12 +316,12 @@ namespace NewAgeQoL
                 if (line.Time == null) continue;
                 var it = line.It;
                 string text;
-                if (!it.Timed) text = it.Fight ? "идёт" : "";
+                if (!it.Timed) text = it.Fight ? Lang.T("идёт") : "";
                 else if (it.Fight) text = Clock(it.Seconds + (int)(now - it.At));
                 else
                 {
                     int left = it.Seconds - (int)(now - it.At);
-                    text = left > 0 ? Clock(left) : "старт";
+                    text = left > 0 ? Clock(left) : Lang.T("старт");
                 }
                 if (line.Time.text != text) line.Time.text = text;
             }
@@ -350,10 +350,10 @@ namespace NewAgeQoL
         {
             var tries = new[]
             {
-                Meta(kind, levels, players, "  ·  ", "ур. ", Players(players)),
-                Meta(kind, levels, players, " · ", "ур. ", Players(players)),
+                Meta(kind, levels, players, "  ·  ", Lang.T("ур. "), Players(players)),
+                Meta(kind, levels, players, " · ", Lang.T("ур. "), Players(players)),
                 Meta(kind, levels, players, " · ", "", Players(players)),
-                Meta(kind, levels, players, " · ", "", players + " игр."),
+                Meta(kind, levels, players, " · ", "", Lang.F("{0} игр.", players)),
                 Meta(kind, levels, 0, " · ", "", ""),
                 kind,
             };
@@ -372,7 +372,7 @@ namespace NewAgeQoL
         private static string Players(int n)
         {
             int tail = n % 100;
-            string word = tail >= 11 && tail <= 14 ? "игроков" : n % 10 == 1 ? "игрок" : n % 10 >= 2 && n % 10 <= 4 ? "игрока" : "игроков";
+            string word = tail >= 11 && tail <= 14 ? Lang.T("игроков") : n % 10 == 1 ? Lang.T("игрок") : n % 10 >= 2 && n % 10 <= 4 ? Lang.T("игрока") : Lang.T("игроков");
             return n + " " + word;
         }
 

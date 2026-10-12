@@ -244,7 +244,7 @@ namespace NewAgeQoL
             foreach (var part in plate.Body) if (part != null) part.SetActive(!shut);
             plate.Size.preferredWidth = shut ? Folded : Wide;
             plate.Title.fontSize = shut ? 14 : 16;
-            plate.Title.text = shut ? "Последняя добыча" : plate.Head;
+            plate.Title.text = shut ? global::NewAgeQoL.Lang.T("Последняя добыча") : plate.Head;
             plate.Title.GetComponent<LayoutElement>().preferredWidth = (shut ? Folded : Wide) - Pad * 2f - 26f;
             if (!shut) plate.Until = Time.unscaledTime + Life;
             plate.Veil.alpha = 1f;
@@ -301,25 +301,25 @@ namespace NewAgeQoL
             column.childForceExpandWidth = false;
             column.childForceExpandHeight = false;
 
-            plate.Head = result.Win ? "Победа" : "Поражение";
+            plate.Head = result.Win ? global::NewAgeQoL.Lang.T("Победа") : global::NewAgeQoL.Lang.T("Поражение");
             var title = Line(go.transform, plate.Head, 16, FontStyle.Bold, result.Win ? WardrobeLook.Good : WardrobeLook.Bad);
             title.GetComponent<LayoutElement>().preferredWidth = Wide - Pad * 2f - 26f;
             plate.Title = title;
             var close = Shut(go.transform, plate);
 
             var gains = new List<string>();
-            if (result.Exp != 0) gains.Add(Paint("Опыт", WardrobeLook.Label) + " " + Paint(Signed(result.Exp), Exp));
-            if (Math.Abs(result.Cash) > 0.0001) gains.Add(Paint("Таллы", WardrobeLook.Label) + " " + Paint(Signed(result.Cash), WardrobeLook.Accent));
+            if (result.Exp != 0) gains.Add(Paint(global::NewAgeQoL.Lang.T("Опыт"), WardrobeLook.Label) + " " + Paint(Signed(result.Exp), Exp));
+            if (Math.Abs(result.Cash) > 0.0001) gains.Add(Paint(global::NewAgeQoL.Lang.T("Таллы"), WardrobeLook.Label) + " " + Paint(Signed(result.Cash), WardrobeLook.Accent));
             if (gains.Count > 0) Line(go.transform, string.Join("   ", gains.ToArray()), 14, FontStyle.Bold, WardrobeLook.Body);
 
             if (result.Items.Count > 0)
             {
-                Line(go.transform, "Добыча", 12, FontStyle.Normal, WardrobeLook.Faint);
+                Line(go.transform, global::NewAgeQoL.Lang.T("Добыча"), 12, FontStyle.Normal, WardrobeLook.Faint);
                 foreach (var item in result.Items) Row(go.transform, plate, item);
             }
             else if (gains.Count == 0)
             {
-                Line(go.transform, "Без добычи", 13, FontStyle.Normal, WardrobeLook.Faint);
+                Line(go.transform, global::NewAgeQoL.Lang.T("Без добычи"), 13, FontStyle.Normal, WardrobeLook.Faint);
             }
 
             if (result.Worn.Count > 0)
@@ -464,7 +464,7 @@ namespace NewAgeQoL
 
             var names = new List<string>();
             foreach (var one in worn) names.Add(Known(one.Id));
-            var text = Line(go.transform, "Вещи изношены: " + string.Join(", ", names.ToArray()), 13, FontStyle.Bold, WardrobeLook.Bad);
+            var text = Line(go.transform, global::NewAgeQoL.Lang.F("Вещи изношены: {0}", string.Join(", ", names.ToArray())), 13, FontStyle.Bold, WardrobeLook.Bad);
             for (int i = 0; i < worn.Count; i++)
             {
                 int at = i;
@@ -472,12 +472,12 @@ namespace NewAgeQoL
                 {
                     if (text == null) return;
                     names[at] = name;
-                    text.text = "Вещи изношены: " + string.Join(", ", names.ToArray());
+                    text.text = global::NewAgeQoL.Lang.F("Вещи изношены: {0}", string.Join(", ", names.ToArray()));
                 });
             }
 
             var copy = new List<DialogDescriptionItemMessage>(worn);
-            var fix = OnlineWindow.MakeGameButton(go.transform, "Починить", 130f, 28f, () => Repair(copy));
+            var fix = OnlineWindow.MakeGameButton(go.transform, global::NewAgeQoL.Lang.T("Починить"), 130f, 28f, () => Repair(copy));
             fix.GetComponent<Image>().color = WardrobeLook.Danger;
             return go;
         }
@@ -497,12 +497,12 @@ namespace NewAgeQoL
             switch ((EDialogDescriptionItemType)item.ItemType)
             {
                 case EDialogDescriptionItemType.ITEM_TYPE_THING: return Known(item.Id) + Count(item);
-                case EDialogDescriptionItemType.ITEM_TYPE_CLAN_RATING: return "Рейтинг клана " + Signed2(item.Value);
-                case EDialogDescriptionItemType.ITEM_TYPE_KARMA: return "Карма " + Signed2(item.Value);
+                case EDialogDescriptionItemType.ITEM_TYPE_CLAN_RATING: return global::NewAgeQoL.Lang.F("Рейтинг клана {0}", Signed2(item.Value));
+                case EDialogDescriptionItemType.ITEM_TYPE_KARMA: return global::NewAgeQoL.Lang.F("Карма {0}", Signed2(item.Value));
                 case EDialogDescriptionItemType.ITEM_TYPE_PROFESSION:
-                    return (Lang("professions.id" + item.Id + ".name") ?? "Профессия") + " " + Signed2(item.Value);
-                case EDialogDescriptionItemType.ITEM_TYPE_ENCHANTMENT: return "Эффект";
-                default: return "Награда " + item.Id;
+                    return (Lang("professions.id" + item.Id + ".name") ?? global::NewAgeQoL.Lang.T("Профессия")) + " " + Signed2(item.Value);
+                case EDialogDescriptionItemType.ITEM_TYPE_ENCHANTMENT: return global::NewAgeQoL.Lang.T("Эффект");
+                default: return global::NewAgeQoL.Lang.F("Награда {0}", item.Id);
             }
         }
 
@@ -517,10 +517,10 @@ namespace NewAgeQoL
             try
             {
                 var local = RecipeData.Thing(thing);
-                if (local != null && !string.IsNullOrEmpty(local.Name)) return local.Name;
+                if (local != null && !string.IsNullOrEmpty(local.Name)) return global::NewAgeQoL.Lang.Game(local.Name);
             }
             catch { }
-            return "Предмет " + thing;
+            return global::NewAgeQoL.Lang.F("Предмет {0}", thing);
         }
 
         private static void Ask(int thing, Text label, string count)

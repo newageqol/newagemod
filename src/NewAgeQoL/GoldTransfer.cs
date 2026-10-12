@@ -76,23 +76,23 @@ namespace NewAgeQoL
             edge.effectDistance = new Vector2(1f, -1f);
 
             float y = 14f;
-            var title = Say(prt, "Перевод золота игроку " + target, 17, FontStyle.Bold, WardrobeLook.Accent, font);
+            var title = Say(prt, Lang.F("Перевод золота игроку {0}", target), 17, FontStyle.Bold, WardrobeLook.Accent, font);
             Wardrobe.At(title.rectTransform, 16f, y, w - 32f, 28f);
             y += 32f;
 
             string spare = Spare();
             string me = Mine();
             string from = spare.Length == 0
-                ? "Запасной аккаунт не указан в настройках мода (тот же, что для «Кто в игре»)"
-                : "Перевод пойдёт с персонажа " + spare + " — запасного аккаунта из настроек мода";
+                ? Lang.T("Запасной аккаунт не указан в настройках мода (тот же, что для «Кто в игре»)")
+                : Lang.F("Перевод пойдёт с персонажа {0} — запасного аккаунта из настроек мода", spare);
             var source = Say(prt, from, 14, FontStyle.Normal, WardrobeLook.Body, font);
             source.horizontalOverflow = HorizontalWrapMode.Wrap;
             Wardrobe.At(source.rectTransform, 16f, y, w - 32f, 40f);
             y += 46f;
 
-            var amountLabel = Say(prt, "Сумма", 15, FontStyle.Normal, WardrobeLook.Label, font);
+            var amountLabel = Say(prt, Lang.T("Сумма"), 15, FontStyle.Normal, WardrobeLook.Label, font);
             Wardrobe.At(amountLabel.rectTransform, 16f, y, 120f, 32f);
-            var amount = OnlineWindow.MakeInput(prt, w - 152f, "сколько золота");
+            var amount = OnlineWindow.MakeInput(prt, w - 152f, Lang.T("сколько золота"));
             WardrobeLook.Style(amount);
             amount.contentType = InputField.ContentType.Custom;
             amount.characterValidation = InputField.CharacterValidation.None;
@@ -101,9 +101,9 @@ namespace NewAgeQoL
             Wardrobe.At((RectTransform)amount.transform, 136f, y, w - 152f, 32f);
             y += 40f;
 
-            var noteLabel = Say(prt, "Комментарий", 15, FontStyle.Normal, WardrobeLook.Label, font);
+            var noteLabel = Say(prt, Lang.T("Комментарий"), 15, FontStyle.Normal, WardrobeLook.Label, font);
             Wardrobe.At(noteLabel.rectTransform, 16f, y, 120f, 32f);
-            var note = OnlineWindow.MakeInput(prt, w - 152f, "необязательно");
+            var note = OnlineWindow.MakeInput(prt, w - 152f, Lang.T("необязательно"));
             WardrobeLook.Style(note);
             note.characterLimit = 100;
             Wardrobe.At((RectTransform)note.transform, 136f, y, w - 152f, 32f);
@@ -122,17 +122,17 @@ namespace NewAgeQoL
             keeper.From = spare;
 
             float bw = (w - 32f - 12f) / 2f;
-            var send = Wardrobe.GameButton(prt, "Перевести", () => keeper.Press(target, amount.text, note.text), false);
+            var send = Wardrobe.GameButton(prt, Lang.T("Перевести"), () => keeper.Press(target, amount.text, note.text), false);
             Wardrobe.At(send, 16f, h - 48f, bw, 34f);
             keeper.Send = send.GetComponent<Button>();
-            var close = Wardrobe.GameButton(prt, "Закрыть", () => UnityEngine.Object.Destroy(veil), false);
+            var close = Wardrobe.GameButton(prt, Lang.T("Закрыть"), () => UnityEngine.Object.Destroy(veil), false);
             Wardrobe.At(close, 16f + bw + 12f, h - 48f, bw, 34f);
 
-            if (spare.Length == 0) keeper.Lock("Укажи логин и пароль запасного аккаунта в настройках мода.");
+            if (spare.Length == 0) keeper.Lock(Lang.T("Укажи логин и пароль запасного аккаунта в настройках мода."));
             else if (me.Length > 0 && string.Equals(me, spare, StringComparison.OrdinalIgnoreCase))
-                keeper.Lock("В настройках указан тот же персонаж, которым ты играешь — нужен запасной.");
+                keeper.Lock(Lang.T("В настройках указан тот же персонаж, которым ты играешь — нужен запасной."));
             else if (string.Equals(target, spare, StringComparison.OrdinalIgnoreCase))
-                keeper.Lock("Это и есть запасной персонаж — переводить самому себе нельзя.");
+                keeper.Lock(Lang.T("Это и есть запасной персонаж — переводить самому себе нельзя."));
             else if (Busy) keeper.Lock(null);
         }
 
@@ -168,7 +168,7 @@ namespace NewAgeQoL
             {
                 if (_busy) return false;
                 _busy = true;
-                _status = SpareSession.Online ? "Отправляю перевод…" : "Вхожу запасным аккаунтом…";
+                _status = SpareSession.Online ? Lang.T("Отправляю перевод…") : Lang.T("Вхожу запасным аккаунтом…");
                 _good = true;
                 _version++;
             }
@@ -180,7 +180,7 @@ namespace NewAgeQoL
         private static void Failed(string why)
         {
             Plugin.Trace("[gold] transfer not done");
-            Done("Не вышло: " + why, false);
+            Done(Lang.F("Не вышло: {0}", why), false);
         }
 
         private static void Done(string result, bool ok)
@@ -217,23 +217,23 @@ namespace NewAgeQoL
         private static void Work(SpareLink link, string target, double amount, string comment)
         {
             double? balance = link.Balance;
-            if (balance == null) throw new Exception("не удалось узнать, есть ли золото на запасном аккаунте");
-            if (balance.Value <= 0.0001) throw new Exception("на запасном аккаунте нет золота");
-            if (balance.Value + 0.0001 < amount) throw new Exception("на запасном аккаунте не хватает золота на эту сумму");
+            if (balance == null) throw new Exception(Lang.T("не удалось узнать, есть ли золото на запасном аккаунте"));
+            if (balance.Value <= 0.0001) throw new Exception(Lang.T("на запасном аккаунте нет золота"));
+            if (balance.Value + 0.0001 < amount) throw new Exception(Lang.T("на запасном аккаунте не хватает золота на эту сумму"));
 
             Plugin.Trace("[gold] spare has gold, sending request");
-            Set("Отправляю перевод…", true);
+            Set(Lang.T("Отправляю перевод…"), true);
 
             SpareSession.Send(link, "<Message type=\"79\"><CashTransfer amount=\"" + SpareSession.Esc(Shown(amount)) + "\" user=\"" + SpareSession.Esc(target) + "\" signature=\"" + SpareSession.Esc(comment) + "\" /></Message>");
             string answer = null;
             foreach (var m in SpareSession.Pump(link, 15, m => m.Contains("type=\"217\"")))
                 if (m.Contains("type=\"217\"")) answer = m;
-            if (answer == null) throw new SpareReset("сервер не ответил на перевод, соединение запасного аккаунта сброшено");
+            if (answer == null) throw new SpareReset(Lang.T("сервер не ответил на перевод, соединение запасного аккаунта сброшено"));
             string success = Attr(answer, "success");
             bool ok = success == "1" || success == "true";
             string msg = Attr(answer, "msg");
             Plugin.Trace("[gold] transfer " + (ok ? "accepted" : "refused") + " by server");
-            Done((ok ? "Перевод принят" : "Перевод отклонён") + (msg.Length > 0 ? ": " + msg : "."), ok);
+            Done((ok ? Lang.T("Перевод принят") : Lang.T("Перевод отклонён")) + (msg.Length > 0 ? ": " + msg : "."), ok);
         }
     }
 
@@ -264,7 +264,7 @@ namespace NewAgeQoL
             double amount;
             if (!GoldTransfer.Amount(typed, out amount))
             {
-                Paint("Впиши сумму больше нуля.", false);
+                Paint(Lang.T("Впиши сумму больше нуля."), false);
                 return;
             }
             Paint("", true);
@@ -296,8 +296,8 @@ namespace NewAgeQoL
             edge.effectColor = WardrobeLook.Accent;
             edge.effectDistance = new Vector2(1f, -1f);
 
-            string question = "Перевести " + GoldTransfer.Shown(amount) + " золота игроку " + target
-                              + (string.IsNullOrEmpty(From) ? "?" : " с персонажа " + From + "?");
+            string question = string.IsNullOrEmpty(From) ? Lang.F("Перевести {0} золота игроку {1}?", GoldTransfer.Shown(amount), target)
+                              : Lang.F("Перевести {0} золота игроку {1} с персонажа {2}?", GoldTransfer.Shown(amount), target, From);
             var text = OnlineWindow.Label(box.transform, question, 16, FontStyle.Bold, WardrobeLook.Bright);
             if (Font != null) text.font = Font;
             text.alignment = TextAnchor.MiddleCenter;
@@ -306,13 +306,13 @@ namespace NewAgeQoL
             Wardrobe.At(text.rectTransform, 16f, 14f, w - 32f, h - 80f);
 
             float bw = (w - 32f - 12f) / 2f;
-            var yes = Wardrobe.GameButton(brt, "Перевести", () =>
+            var yes = Wardrobe.GameButton(brt, Lang.T("Перевести"), () =>
             {
                 Close();
                 if (GoldTransfer.Start(target, amount, comment) && Send != null) Send.interactable = false;
             }, false);
             Wardrobe.At(yes, 16f, h - 50f, bw, 34f);
-            var no = Wardrobe.GameButton(brt, "Отмена", Close, false);
+            var no = Wardrobe.GameButton(brt, Lang.T("Отмена"), Close, false);
             Wardrobe.At(no, 16f + bw + 12f, h - 50f, bw, 34f);
         }
 

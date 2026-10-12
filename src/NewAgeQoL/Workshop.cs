@@ -135,9 +135,9 @@ namespace NewAgeQoL
             try
             {
                 string got = ResourceStrings.GetString(row.Key);
-                return string.IsNullOrEmpty(got) ? row.Plain : got;
+                return string.IsNullOrEmpty(got) ? Lang.T(row.Plain) : got;
             }
-            catch { return row.Plain; }
+            catch { return Lang.T(row.Plain); }
         }
 
         private static void Place()

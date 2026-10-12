@@ -56,7 +56,7 @@ namespace NewAgeQoL
             bool armed = Time.unscaledTime < _armedUntil;
             bool tell = armed || (_over != null && _over.Over);
             if (_plate.activeSelf != tell) _plate.SetActive(tell);
-            string caption = armed ? "Точно? Нажмите ещё раз" : "Перезайти этим персонажем";
+            string caption = armed ? Lang.T("Точно? Нажмите ещё раз") : Lang.T("Перезайти этим персонажем");
             if (_label.text != caption) _label.text = caption;
             var paint = armed ? Warn : Ink;
             if (_label.color != paint) _label.color = paint;
@@ -170,13 +170,13 @@ namespace NewAgeQoL
             if (id <= 0) id = Plugin.CfgLastCharacter != null ? Plugin.CfgLastCharacter.Value : 0;
             if (id <= 0)
             {
-                Notice.Show("Не знаю, каким персонажем перезайти", 4f);
+                Notice.Show(Lang.T("Не знаю, каким персонажем перезайти"), 4f);
                 return;
             }
             var session = DependencyContainer.GetContainer()?.Resolve<SessionController>();
             if (session == null)
             {
-                Notice.Show("Перезайти не получилось: сессия игры не найдена", 4f);
+                Notice.Show(Lang.T("Перезайти не получилось: сессия игры не найдена"), 4f);
                 return;
             }
             _who = string.IsNullOrEmpty(login) ? Name(id) : login;
@@ -189,7 +189,7 @@ namespace NewAgeQoL
                 CharacterPick.Target = 0;
                 Uncover("error");
                 Plugin.Warn("[relog] change character: " + e.Message);
-                Notice.Show("Перезайти не получилось", 4f);
+                Notice.Show(Lang.T("Перезайти не получилось"), 4f);
             }
         }
 
@@ -210,7 +210,7 @@ namespace NewAgeQoL
             if (_coverText != null)
             {
                 int dots = 1 + (int)(now * 2.5f) % 3;
-                string text = "Перезаход" + (string.IsNullOrEmpty(_who) ? "" : ": " + _who) + new string('.', dots);
+                string text = Lang.T("Перезаход") + (string.IsNullOrEmpty(_who) ? "" : ": " + _who) + new string('.', dots);
                 if (_coverText.text != text) _coverText.text = text;
             }
         }
@@ -239,7 +239,7 @@ namespace NewAgeQoL
             back.color = new Color(0.055f, 0.06f, 0.07f, 1f);
             back.raycastTarget = true;
 
-            _coverText = Say(_coverGo.transform, "Перезаход", 30, FontStyle.Bold, WardrobeLook.Accent, Vector2.zero);
+            _coverText = Say(_coverGo.transform, Lang.T("Перезаход"), 30, FontStyle.Bold, WardrobeLook.Accent, Vector2.zero);
 
             _coverAt = Time.unscaledTime;
             _left = false;

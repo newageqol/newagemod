@@ -228,7 +228,7 @@ namespace NewAgeQoL
             if (fresh > 0 && unread > 0)
             {
                 Plugin.Log?.LogInfo("[mail] letters from the developer: " + unread + " unread");
-                Notice.Show(first ? "Есть письмо от naqol — конверт слева внизу" : "Новое письмо от naqol — конверт слева внизу", 6f);
+                Notice.Show(first ? Lang.T("Есть письмо от naqol — конверт слева внизу") : Lang.T("Новое письмо от naqol — конверт слева внизу"), 6f);
             }
         }
 
@@ -457,7 +457,7 @@ namespace NewAgeQoL
             mover.Target = panel;
             mover.Canvas = canvas;
 
-            var title = OnlineWindow.Label(_panelGo.transform, "Переписка с naqol", 17, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Переписка с naqol"), 17, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(14f, -32f), new Vector2(-52f, -8f));
             title.alignment = TextAnchor.MiddleLeft;
@@ -502,7 +502,7 @@ namespace NewAgeQoL
             OnlineWindow.Place((RectTransform)_field.transform, Vector2.zero, new Vector2(1f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(14f, 16f), new Vector2(-150f, 16f + InputH));
 
-            var send = Wardrobe.GameButton(_panelGo.transform, "Отправить", Send, false);
+            var send = Wardrobe.GameButton(_panelGo.transform, Lang.T("Отправить"), Send, false);
             OnlineWindow.Place(send, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f),
                 new Vector2(-142f, 16f), new Vector2(-14f, 16f + InputH));
             send.GetComponent<Image>().color = WardrobeLook.Accent;
@@ -536,7 +536,7 @@ namespace NewAgeQoL
             text.verticalOverflow = VerticalWrapMode.Truncate;
             OnlineWindow.Place(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 6f), new Vector2(-10f, -6f));
 
-            var ph = OnlineWindow.Label(go.transform, "Напиши ответ", 14, FontStyle.Normal, WardrobeLook.Faint);
+            var ph = OnlineWindow.Label(go.transform, Lang.T("Напиши ответ"), 14, FontStyle.Normal, WardrobeLook.Faint);
             ph.alignment = TextAnchor.UpperLeft;
             ph.horizontalOverflow = HorizontalWrapMode.Wrap;
             OnlineWindow.Place(ph.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 6f), new Vector2(-10f, -6f));
@@ -572,7 +572,7 @@ namespace NewAgeQoL
                 UnityEngine.Object.Destroy(_content.GetChild(i).gameObject);
             if (Letters.Count == 0)
             {
-                var none = OnlineWindow.Label(_content, _loaded ? "Писем пока нет." : "Забираю письма…", 13, FontStyle.Normal, WardrobeLook.Faint);
+                var none = OnlineWindow.Label(_content, _loaded ? Lang.T("Писем пока нет.") : Lang.T("Забираю письма…"), 13, FontStyle.Normal, WardrobeLook.Faint);
                 none.alignment = TextAnchor.MiddleCenter;
                 none.raycastTarget = false;
                 none.gameObject.AddComponent<LayoutElement>().minHeight = 40f;
@@ -609,7 +609,7 @@ namespace NewAgeQoL
             stack.childForceExpandWidth = true;
             stack.childForceExpandHeight = false;
 
-            var head = OnlineWindow.Label(cloud.transform, (one.Dev ? "naqol" : "Я") + "  ·  " + When(one.At), 11, FontStyle.Bold,
+            var head = OnlineWindow.Label(cloud.transform, (one.Dev ? "naqol" : Lang.T("Я")) + "  ·  " + When(one.At), 11, FontStyle.Bold,
                 one.Dev ? WardrobeLook.Accent : WardrobeLook.Label);
             head.alignment = TextAnchor.MiddleLeft;
             head.raycastTarget = false;
@@ -643,9 +643,9 @@ namespace NewAgeQoL
             if (text.Length == 0) { Focus(); return; }
             string url = Where();
             string box = Stored();
-            if (url.Length == 0 || box.Length == 0) { Say("Отправлять некуда: приёмник отчётов не настроен."); return; }
+            if (url.Length == 0 || box.Length == 0) { Say(Lang.T("Отправлять некуда: приёмник отчётов не настроен.")); return; }
             _sending = true;
-            Say("Отправляю…");
+            Say(Lang.T("Отправляю…"));
             Plugin.Instance.StartCoroutine(Post(url, box, text));
         }
 
@@ -668,15 +668,15 @@ namespace NewAgeQoL
             {
                 Plugin.Log?.LogInfo("[mail] letter sent, " + text.Length + " chars");
                 if (_field != null && (_field.text ?? "").Trim() == text) _field.text = "";
-                Say("Ушло.");
+                Say(Lang.T("Ушло."));
                 Wake();
                 Focus();
                 yield break;
             }
             Plugin.Warn("[mail] letter not sent: code " + code);
-            Say(code == 429 ? "Слишком много писем за час, подожди немного."
-                : code == 404 ? "Сервер ещё не знает этот ящик, попробуй через минуту."
-                : "Не ушло (" + (code == 0 ? "нет связи" : code.ToString()) + "), попробуй ещё раз.");
+            Say(code == 429 ? Lang.T("Слишком много писем за час, подожди немного.")
+                : code == 404 ? Lang.T("Сервер ещё не знает этот ящик, попробуй через минуту.")
+                : Lang.F("Не ушло ({0}), попробуй ещё раз.", code == 0 ? Lang.T("нет связи") : code.ToString()));
         }
 
         private static void Say(string text)

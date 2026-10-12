@@ -89,7 +89,7 @@ namespace NewAgeQoL
             Forget();
             ManikinOn = false;
             KeepTaken(new Dictionary<int, int>());
-            Say("список возврата очищен");
+            Say(Lang.T("список возврата очищен"));
         }
 
         internal static void Stash()
@@ -115,14 +115,14 @@ namespace NewAgeQoL
             {
                 if (ManikinOn && HasStash)
                 {
-                    Say("запасной набор уже надет, сначала верни вещи");
+                    Say(Lang.T("запасной набор уже надет, сначала верни вещи"));
                     yield break;
                 }
 
                 yield return Plugin.Instance.StartCoroutine(EnsureStorage());
-                if (!AtStorage()) { Say("не дошёл до хранилища (см. лог)"); yield break; }
+                if (!AtStorage()) { Say(Lang.T("не дошёл до хранилища (см. лог)")); yield break; }
 
-                Say("смотрю, что надето");
+                Say(Lang.T("смотрю, что надето"));
                 yield return Plugin.Instance.StartCoroutine(ScanWear());
                 var plan = Manikin.Saved();
                 var worn = Worn.Where(w => w != null && w.ThingId > 0 && w.SlotId > 0
@@ -148,19 +148,19 @@ namespace NewAgeQoL
 
                 if (worn.Count > 0)
                 {
-                    Say("снимаю надетое: " + worn.Count);
+                    Say(Lang.F("снимаю надетое: {0}", worn.Count));
                     int off = 0;
                     foreach (var w in worn)
                     {
                         yield return Plugin.Instance.StartCoroutine(
                             Act(w.InventoryId, BtnTakeOff, WinInventory, 1, 1));
                         off++;
-                        Step("снимаю надетое: " + off + " из " + worn.Count);
+                        Step(Lang.F("снимаю надетое: {0} из {1}", off, worn.Count));
                     }
                     yield return Wait(0.2f);
                 }
 
-                Say("собираю вещи для хранилища");
+                Say(Lang.T("собираю вещи для хранилища"));
                 yield return Plugin.Instance.StartCoroutine(Scan(WinBox, 380));
                 var store = new Dictionary<int, int>();
                 foreach (var m in memory)
@@ -210,23 +210,23 @@ namespace NewAgeQoL
                 }
                 if (art.Count == 0)
                 {
-                    if (memory.Count == 0) Say("вещей для хранилища не нашёл");
+                    if (memory.Count == 0) Say(Lang.T("вещей для хранилища не нашёл"));
                     yield return Plugin.Instance.StartCoroutine(DressManikin());
                     yield break;
                 }
 
                 int total = art.Sum(i => i.Qty);
-                Say("кладу в хранилище: " + total);
+                Say(Lang.F("кладу в хранилище: {0}", total));
                 int done = 0;
                 foreach (var it in art)
                 {
                     yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnPutToBox, WinBox, it.Tab, it.Qty));
                     if (_lastOk) done += it.Qty;
-                    Step("кладу в хранилище: " + done + " из " + total);
+                    Step(Lang.F("кладу в хранилище: {0} из {1}", done, total));
                 }
 
-                Say(done < total ? "сдал в хранилище: " + done + ", осталось в сумке: " + (total - done)
-                                 : "сдал в хранилище: " + done);
+                Say(done < total ? Lang.F("сдал в хранилище: {0}, осталось в сумке: {1}", done, total - done)
+                                 : Lang.F("сдал в хранилище: {0}", done));
                 yield return Plugin.Instance.StartCoroutine(DressManikin());
             }
             finally { Busy = false; }
@@ -238,10 +238,10 @@ namespace NewAgeQoL
             try
             {
                 var memory = Recall();
-                if (memory.Count == 0) { Say("список пуст — сначала сдай вещи"); yield break; }
+                if (memory.Count == 0) { Say(Lang.T("список пуст — сначала сдай вещи")); yield break; }
 
                 yield return Plugin.Instance.StartCoroutine(EnsureStorage());
-                if (!AtStorage()) { Say("не дошёл до хранилища (см. лог)"); yield break; }
+                if (!AtStorage()) { Say(Lang.T("не дошёл до хранилища (см. лог)")); yield break; }
 
                 yield return Plugin.Instance.StartCoroutine(ScanWear());
                 bool sure = _gotWear;
@@ -262,7 +262,7 @@ namespace NewAgeQoL
                     have[it.ThingId] = had + it.Qty;
                 }
 
-                Say("смотрю хранилище");
+                Say(Lang.T("смотрю хранилище"));
                 yield return Plugin.Instance.StartCoroutine(Scan(WinByLocation, 381));
                 KeepStorage();
                 Plugin.Trace("[art] visible in storage " + Scanned.Count + ": "
@@ -328,17 +328,17 @@ namespace NewAgeQoL
                 if (take.Count > 0)
                 {
                     int total = take.Sum(i => i.Qty);
-                    Say("забираю из хранилища: " + total);
+                    Say(Lang.F("забираю из хранилища: {0}", total));
                     foreach (var it in take)
                     {
                         yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnGetFromBox, WinByLocation, it.Tab, it.Qty));
                         if (_lastOk) done += it.Qty;
-                        Step("забираю из хранилища: " + done + " из " + total);
+                        Step(Lang.F("забираю из хранилища: {0} из {1}", done, total));
                     }
                     yield return Wait(0.25f);
                     yield return Plugin.Instance.StartCoroutine(Scan(WinInventory, 380));
                 }
-                else Say("в хранилище нет вещей из списка, смотрю сумку");
+                else Say(Lang.T("в хранилище нет вещей из списка, смотрю сумку"));
 
                 yield return Plugin.Instance.StartCoroutine(UndressManikin(memory));
 
@@ -384,7 +384,7 @@ namespace NewAgeQoL
 
                     if (busySlots.Count > 0)
                     {
-                        Say("освобождаю слоты: " + busySlots.Count);
+                        Say(Lang.F("освобождаю слоты: {0}", busySlots.Count));
                         foreach (var w in busySlots)
                             yield return Plugin.Instance.StartCoroutine(
                                 Act(w.InventoryId, BtnTakeOff, WinInventory, 1, 1));
@@ -393,13 +393,13 @@ namespace NewAgeQoL
                         yield return Plugin.Instance.StartCoroutine(Scan(WinInventory, 380));
                     }
 
-                    Say("надеваю: " + dress.Count);
+                    Say(Lang.F("надеваю: {0}", dress.Count));
                     var used = new HashSet<int>();
                     foreach (var d in dress)
                     {
                         yield return Plugin.Instance.StartCoroutine(Put(d.ThingId, d.SlotId, used));
                         if (_put) back++;
-                        Step("надеваю: " + back + " из " + dress.Count);
+                        Step(Lang.F("надеваю: {0} из {1}", back, dress.Count));
                     }
                 }
 
@@ -433,14 +433,14 @@ namespace NewAgeQoL
                 {
                     ManikinOn = false;
                     Forget();
-                    Say("вернул " + memory.Count + ", надел " + back
-                        + (gone > 0 ? ", нет нигде: " + gone : ""));
+                    Say(Lang.F("вернул {0}, надел {1}", memory.Count, back)
+                        + (gone > 0 ? Lang.F(", нет нигде: {0}", gone) : ""));
                 }
                 else
                 {
                     Remember(memory);
-                    Say("вернул " + (memory.Count - missed.Count) + ", осталось " + missed.Count
-                        + (gone > 0 ? ", нет нигде: " + gone : "") + " — нажми ещё раз");
+                    Say(Lang.F("вернул {0}, осталось {1}", memory.Count - missed.Count, missed.Count)
+                        + (gone > 0 ? Lang.F(", нет нигде: {0}", gone) : "") + Lang.T(" — нажми ещё раз"));
                 }
             }
             finally { Busy = false; }
@@ -501,18 +501,18 @@ namespace NewAgeQoL
 
             int missing = 0;
             foreach (var pair in need) if (pair.Value > 0) missing += pair.Value;
-            if (free.Count == 0 && missing == 0) { ManikinOn = true; Say("запасной набор уже надет"); yield break; }
+            if (free.Count == 0 && missing == 0) { ManikinOn = true; Say(Lang.T("запасной набор уже надет")); yield break; }
 
             var wish = new System.Text.StringBuilder();
             foreach (var pair in need)
                 if (pair.Value > 0) wish.Append(Name(pair.Key)).Append(" x").Append(pair.Value).Append("; ");
             Plugin.Trace("[kit] to wear: " + (wish.Length > 0 ? wish.ToString() : "nothing")
                                 + " | extra to remove: " + free.Count);
-            Say("переодеваюсь в запасной набор");
+            Say(Lang.T("переодеваюсь в запасной набор"));
 
             if (free.Count > 0)
             {
-                Say("освобождаю слоты: " + free.Count);
+                Say(Lang.F("освобождаю слоты: {0}", free.Count));
                 foreach (var w in free)
                     yield return Plugin.Instance.StartCoroutine(
                         Act(w.InventoryId, BtnTakeOff, WinInventory, 1, 1));
@@ -559,7 +559,7 @@ namespace NewAgeQoL
                     }
                     KeepTaken(out_of_box);
 
-                    Say("беру из хранилища: " + take.Sum(i => i.Qty));
+                    Say(Lang.F("беру из хранилища: {0}", take.Sum(i => i.Qty)));
                     foreach (var it in take)
                         yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnGetFromBox, WinByLocation, it.Tab, it.Qty));
                     yield return Wait(0.25f);
@@ -581,7 +581,7 @@ namespace NewAgeQoL
                 if (!need.TryGetValue(thing, out n) || n <= 0) continue;
                 need[thing] = n - 1;
                 yield return Plugin.Instance.StartCoroutine(Put(thing, slot, used));
-                if (_put) { on++; Step("надеваю запасной набор: " + on); }
+                if (_put) { on++; Step(Lang.F("надеваю запасной набор: {0}", on)); }
                 else lost++;
             }
 
@@ -604,7 +604,7 @@ namespace NewAgeQoL
                 Plugin.Warn("[kit] left unworn: " + notOn);
                 Plugin.Warn("[kit] worn in the end: " + now);
             }
-            Say(lost > 0 ? "переоделся: надел " + on + ", не нашёл " + lost : "переоделся: надел " + on);
+            Say(lost > 0 ? Lang.F("переоделся: надел {0}, не нашёл {1}", on, lost) : Lang.F("переоделся: надел {0}", on));
         }
 
         private static string Name(int thingId)
@@ -675,7 +675,7 @@ namespace NewAgeQoL
 
             if (back.Count > 0)
             {
-                Say("возвращаю в хранилище: " + back.Sum(i => i.Qty));
+                Say(Lang.F("возвращаю в хранилище: {0}", back.Sum(i => i.Qty)));
                 foreach (var it in back)
                     yield return Plugin.Instance.StartCoroutine(Act(it.Inv, BtnPutToBox, WinBox, it.Tab, it.Qty));
                 yield return Wait(0.25f);
@@ -731,7 +731,7 @@ namespace NewAgeQoL
             }
             if (off.Count == 0) yield break;
 
-            Say("снимаю запасной набор: " + off.Count);
+            Say(Lang.F("снимаю запасной набор: {0}", off.Count));
             foreach (var w in off)
                 yield return Plugin.Instance.StartCoroutine(
                     Act(w.InventoryId, BtnTakeOff, WinInventory, 1, 1));
@@ -747,7 +747,7 @@ namespace NewAgeQoL
 
             if (Loc() != IlleniumLoc && Loc() != BankLoc)
             {
-                Say("возвращаюсь в город");
+                Say(Lang.T("возвращаюсь в город"));
                 Send(new ReturnToIlleniumRequest(true));
                 float t = 0f;
                 while (t < 60f && Loc() != IlleniumLoc) { yield return null; t += Time.unscaledDeltaTime; }
@@ -756,7 +756,7 @@ namespace NewAgeQoL
 
             if (Loc() == IlleniumLoc)
             {
-                Say("иду в банк");
+                Say(Lang.T("иду в банк"));
                 Send(new ChangeMapRequest(BankLoc));
                 float t = 0f;
                 while (t < 60f && Loc() != BankLoc) { yield return null; t += Time.unscaledDeltaTime; }
@@ -766,8 +766,8 @@ namespace NewAgeQoL
             if (Loc() == BankLoc)
             {
                 int door = StorageDoor();
-                if (door <= 0) { Say("в банке не нашёл дверь хранилища"); yield break; }
-                Say("иду в хранилище");
+                if (door <= 0) { Say(Lang.T("в банке не нашёл дверь хранилища")); yield break; }
+                Say(Lang.T("иду в хранилище"));
                 Send(new ChangeMapRequest(door));
                 float t = 0f;
                 while (t < 60f && Loc() != door) { yield return null; t += Time.unscaledDeltaTime; }
@@ -1089,7 +1089,7 @@ namespace NewAgeQoL
             Status = text;
             StatusAt = Time.unscaledTime;
             Plugin.Trace("[art] " + text + " (loc=" + Loc() + ")");
-            try { AirMessageScript.ShowInformationNotification("Вещи: " + text); } catch { }
+            try { AirMessageScript.ShowInformationNotification(Lang.F("Вещи: {0}", text)); } catch { }
         }
 
         internal static void Step(string text)

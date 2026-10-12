@@ -25,6 +25,7 @@ internal static class Effects
         {
             if (Plugin.CfgVerbose.Value && Asked.Add(name ?? "")) Plugin.Log.LogInfo($"[effects] game requested prefab '{name}'");
             Remember(__result);
+            StunStars.Remember(name, __result);
             if (Plugin.HideMagic) Strip(__result, name);
         }
         catch (Exception ex) { Plugin.Log.LogError("[effects] " + ex); }
@@ -149,6 +150,21 @@ internal static class Effects
         StrippedLights[id] = lights;
         if (Plugin.CfgVerbose.Value && Seen.Add(name ?? ""))
             Plugin.Log.LogInfo($"[effects] 3D effect '{name}' hidden: renderers {renderers.Count}, lights {lights.Count}");
+    }
+
+    internal static void Revive(GameObject copy, GameObject prefab)
+    {
+        if (copy == null || prefab == null || !Known.TryGetValue(prefab.name, out var info)) return;
+        foreach (string path in info.Renderers)
+        {
+            var renderer = Resolve<Renderer>(copy.transform, path);
+            if (renderer != null) renderer.enabled = true;
+        }
+        foreach (string path in info.Lights)
+        {
+            var light = Resolve<Light>(copy.transform, path);
+            if (light != null) light.enabled = true;
+        }
     }
 
     internal static void Set(bool on)

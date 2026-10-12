@@ -318,14 +318,14 @@ namespace NewAgeQoL
                     {
                         if (s.Mastery(pair.Key) >= pair.Value) done = true;
                         var skill = Get(pair.Key);
-                        if (skill != null && Allowed(s, skill)) names.Add(skill.Name);
+                        if (skill != null && Allowed(s, skill)) names.Add(Lang.Game(skill.Name));
                     }
-                    if (!done && rule.Pairs.Count > 0) list.Add(string.Join(" или ", names.ToArray()) + " " + rule.Pairs[0].Value);
+                    if (!done && rule.Pairs.Count > 0) list.Add(string.Join(Lang.T(" или "), names.ToArray()) + " " + rule.Pairs[0].Value);
                 }
                 else
                 {
                     foreach (var pair in rule.Pairs)
-                        if (s.Mastery(pair.Key) > 0) list.Add("без «" + Name(pair.Key) + "»");
+                        if (s.Mastery(pair.Key) > 0) list.Add(Lang.F("без «{0}»", Name(pair.Key)));
                 }
             }
             return list;
@@ -334,14 +334,14 @@ namespace NewAgeQoL
         private static string Name(int id)
         {
             var skill = Get(id);
-            return skill != null ? skill.Name : "умение " + id;
+            return skill != null ? Lang.Game(skill.Name) : Lang.F("умение {0}", id);
         }
 
         internal static string Caption(WardrobeState s)
         {
-            if (!Ready) return "нет данных";
+            if (!Ready) return Lang.T("нет данных");
             int free = s.SkillFree;
-            return s.SkillSpent + " из " + s.SkillPoints + (free >= 0 ? ", свободно " + free : ", лишних " + (-free));
+            return Lang.F("{0} из {1}", s.SkillSpent, s.SkillPoints) + (free >= 0 ? Lang.F(", свободно {0}", free) : Lang.F(", лишних {0}", -free));
         }
 
         internal static void Open()
@@ -349,7 +349,7 @@ namespace NewAgeQoL
             Close();
             var panel = Wardrobe.Panel;
             if (panel == null) return;
-            if (!Ready) { Notice.Show("Переодевалка: в сборке нет данных об общих умениях", 5f); return; }
+            if (!Ready) { Notice.Show(Lang.T("Переодевалка: в сборке нет данных об общих умениях"), 5f); return; }
             var s = Wardrobe.S;
             for (int id = 0; id < Size; id++) KeptMast[id] = s.Mast[id];
             Array.Copy(s.Dist, KeptDist, 7);
@@ -376,7 +376,7 @@ namespace NewAgeQoL
             edge.effectColor = WardrobeLook.Edge;
             edge.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(box, "Общие умения", 20, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(box, Lang.T("Общие умения"), 20, FontStyle.Bold, WardrobeLook.Bright);
             Wardrobe.At(title.rectTransform, 18f, 12f, W - 90f, 32f);
             title.alignment = TextAnchor.MiddleLeft;
             var close = Wardrobe.Arrow(box, "×", Cancel);
@@ -389,7 +389,7 @@ namespace NewAgeQoL
             var used = new HashSet<int>();
             var sub = s.Sub;
             float y = Top;
-            Section(box, sub != null ? "Нужно подклассу «" + sub.Name + "»" : "Подкласса пока нет — все умения свободные", y);
+            Section(box, sub != null ? Lang.F("Нужно подклассу «{0}»", Lang.Game(sub.Name)) : Lang.T("Подкласса пока нет — все умения свободные"), y);
             y += RowH;
             if (sub != null)
             {
@@ -418,7 +418,7 @@ namespace NewAgeQoL
                 }
             }
             y += 8f;
-            Section(box, "Остальные", y);
+            Section(box, Lang.T("Остальные"), y);
             y += RowH;
             foreach (var skill in Skills)
             {
@@ -440,12 +440,12 @@ namespace NewAgeQoL
 
             float by = H - 56f;
             float bw = (W - 32f - 12f) / 2f;
-            var done = Wardrobe.GameButton(box, "Готово", Close, false);
+            var done = Wardrobe.GameButton(box, Lang.T("Готово"), Close, false);
             Wardrobe.At(done, 16f, by, bw, 40f);
             done.GetComponent<Image>().color = Green;
             var label = done.GetComponentInChildren<Text>();
             if (label != null) label.color = Color.white;
-            Wardrobe.At(Wardrobe.GameButton(box, "Сбросить свободные", Reset, true), 16f + bw + 12f, by, bw, 40f);
+            Wardrobe.At(Wardrobe.GameButton(box, Lang.T("Сбросить свободные"), Reset, true), 16f + bw + 12f, by, bw, 40f);
 
             Refresh();
         }
@@ -576,7 +576,7 @@ namespace NewAgeQoL
             if (_go == null) return;
             var s = Wardrobe.S;
             int free = s.SkillFree;
-            _info.text = free >= 0 ? "Свободно умений: " + free : "Лишних умений: " + (-free);
+            _info.text = free >= 0 ? Lang.F("Свободно умений: {0}", free) : Lang.F("Лишних умений: {0}", -free);
             _info.color = free < 0 ? WardrobeLook.Bad : WardrobeLook.Accent;
 
             var sub = s.Sub;
@@ -589,7 +589,7 @@ namespace NewAgeQoL
             {
                 var miss = sub != null ? Missing(s, sub.N) : new List<string>();
                 _status.text = miss.Count > 0
-                    ? "«" + sub.Name + "»: не хватает " + string.Join(", ", miss.ToArray()) + "."
+                    ? Lang.F("«{0}»: не хватает {1}.", Lang.Game(sub.Name), string.Join(", ", miss.ToArray()))
                     : "";
                 _status.color = miss.Count > 0 ? WardrobeLook.Bad : WardrobeLook.Label;
             }
@@ -607,9 +607,9 @@ namespace NewAgeQoL
             var clash = level > 0 ? null : Clash(s, skill);
             bool start = skill.Id == Start(s.RaceId);
             row.Back.color = row.Id == _picked ? WardrobeLook.Mix(WardrobeLook.Tab, WardrobeLook.Accent, 0.28f) : WardrobeLook.Stripe(n);
-            row.Name.text = skill.Name + (start ? " ★" : "");
+            row.Name.text = Lang.Game(skill.Name) + (start ? " ★" : "");
             row.Name.color = clash != null ? WardrobeLook.Faint : WardrobeLook.Bright;
-            row.Step.text = clash != null ? "" : level > 0 ? Steps[level - 1] : "";
+            row.Step.text = clash != null ? "" : level > 0 ? Lang.T(Steps[level - 1]) : "";
             row.Step.color = clash != null ? WardrobeLook.Faint : WardrobeLook.Label;
 
             for (int k = 1; k <= 5; k++)
@@ -642,24 +642,24 @@ namespace NewAgeQoL
             int level = s.Mastery(skill.Id);
             int forced = Forced(s, skill.Id);
             var text = new StringBuilder();
-            text.Append("<size=18><b>").Append(skill.Name).Append("</b></size>\n");
+            text.Append("<size=18><b>").Append(Lang.Game(skill.Name)).Append("</b></size>\n");
             var sub = s.Sub;
-            if (forced > 0 && sub != null) text.Append(Hex(WardrobeLook.Accent, "Нужно «" + sub.Name + "»: " + Steps[forced - 1].ToLowerInvariant())).Append('\n');
+            if (forced > 0 && sub != null) text.Append(Hex(WardrobeLook.Accent, Lang.F("Нужно «{0}»: {1}", Lang.Game(sub.Name), Lang.T(Steps[forced - 1]).ToLowerInvariant()))).Append('\n');
             var group = Group(s, skill.Id);
             if (group != null && forced == 0 && sub != null)
             {
                 int chosen = Choice(s, group);
-                if (chosen > 0) text.Append(Hex(WardrobeLook.Accent, "Для «" + sub.Name + "» можно вместо «" + Name(chosen) + "» — отметь кружок слева от названия")).Append('\n');
+                if (chosen > 0) text.Append(Hex(WardrobeLook.Accent, Lang.F("Для «{0}» можно вместо «{1}» — отметь кружок слева от названия", Lang.Game(sub.Name), Name(chosen)))).Append('\n');
             }
             var clash = level > 0 ? null : Clash(s, skill);
-            if (clash != null) text.Append(Hex(WardrobeLook.Bad, "Нельзя вместе с «" + clash.Name + "»")).Append('\n');
+            if (clash != null) text.Append(Hex(WardrobeLook.Bad, Lang.F("Нельзя вместе с «{0}»", Lang.Game(clash.Name)))).Append('\n');
             for (int k = 1; k <= 5; k++)
             {
                 bool mine = k == level;
                 var head = Hex(mine ? WardrobeLook.Accent : k < level ? WardrobeLook.Label : WardrobeLook.Bright,
-                    (mine ? "▸ " : "") + Steps[k - 1] + " (" + Terms(skill, k) + ")");
+                    (mine ? "▸ " : "") + Lang.T(Steps[k - 1]) + " (" + Terms(skill, k) + ")");
                 text.Append('\n').Append(mine ? "<b>" + head + "</b>" : head).Append('\n');
-                text.Append(Hex(k <= level ? WardrobeLook.Body : WardrobeLook.Faint, skill.Text[k - 1])).Append('\n');
+                text.Append(Hex(k <= level ? WardrobeLook.Body : WardrobeLook.Faint, Lang.Game(skill.Text[k - 1]))).Append('\n');
             }
             _detail.text = text.ToString();
         }
@@ -668,12 +668,12 @@ namespace NewAgeQoL
 
         private static string Terms(WardrobeSkill skill, int level)
         {
-            var parts = new List<string> { "с " + skill.Min[level - 1] + " ур." };
+            var parts = new List<string> { Lang.F("с {0} ур.", skill.Min[level - 1]) };
             for (int n = 0; n < 7; n++)
             {
                 int i = WardrobeData.StatOrder[n];
                 int value = skill.Req[level - 1][i];
-                if (value > 0) parts.Add(WardrobeData.StatNames[i].ToLowerInvariant() + " " + value);
+                if (value > 0) parts.Add(Lang.T(WardrobeData.StatNames[i]).ToLowerInvariant() + " " + value);
             }
             return string.Join(", ", parts.ToArray());
         }
@@ -693,10 +693,10 @@ namespace NewAgeQoL
             if (want > level)
             {
                 var clash = Clash(s, skill);
-                if (clash != null) { Say("«" + skill.Name + "» нельзя вместе с «" + clash.Name + "»"); return; }
-                if (skill.Min[want - 1] > s.Level) { Say("«" + skill.Name + "» " + Steps[want - 1].ToLowerInvariant() + " — с " + skill.Min[want - 1] + " уровня"); return; }
+                if (clash != null) { Say(Lang.F("«{0}» нельзя вместе с «{1}»", Lang.Game(skill.Name), Lang.Game(clash.Name))); return; }
+                if (skill.Min[want - 1] > s.Level) { Say(Lang.F("«{0}» {1} — с {2} уровня", Lang.Game(skill.Name), Lang.T(Steps[want - 1]).ToLowerInvariant(), skill.Min[want - 1])); return; }
                 int more = want - level;
-                if (more > s.SkillFree) { Say("Не хватает свободных умений: нужно " + more + ", свободно " + Math.Max(0, s.SkillFree)); return; }
+                if (more > s.SkillFree) { Say(Lang.F("Не хватает свободных умений: нужно {0}, свободно {1}", more, Math.Max(0, s.SkillFree))); return; }
             }
             Apply(p => p.SetMastery(id, want));
         }
@@ -712,7 +712,7 @@ namespace NewAgeQoL
             if (old == id) { Refresh(); return; }
             var skill = Get(id);
             var clash = skill != null ? Clash(s, skill) : null;
-            if (clash != null && clash.Id != old) { Say("«" + skill.Name + "» нельзя вместе с «" + clash.Name + "»"); return; }
+            if (clash != null && clash.Id != old) { Say(Lang.F("«{0}» нельзя вместе с «{1}»", Lang.Game(skill.Name), Lang.Game(clash.Name))); return; }
             int need = old > 0 ? Forced(s, old) : 0;
             int start = Start(s.RaceId);
             Apply(p =>
@@ -774,7 +774,7 @@ namespace NewAgeQoL
             }
             if (probe.Spent > WardrobeState.Points(probe.Level))
             {
-                Say("Не хватает очков характеристик на требования умения: нужно ещё " + (probe.Spent - WardrobeState.Points(probe.Level)));
+                Say(Lang.F("Не хватает очков характеристик на требования умения: нужно ещё {0}", probe.Spent - WardrobeState.Points(probe.Level)));
                 return;
             }
             for (int id = 0; id < Size; id++) s.Mast[id] = probe.Mast[id];

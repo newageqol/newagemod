@@ -13,7 +13,7 @@ namespace NewAgeQoL
 
         internal static void Ask(string title, string start, Action<string> done)
         {
-            Build(title, start, "Сохранить", true);
+            Build(title, start, Lang.T("Сохранить"), true);
             _done = done;
         }
 
@@ -64,7 +64,7 @@ namespace NewAgeQoL
 
             if (typed)
             {
-                _input = OnlineWindow.MakeInput(box, 400f, "Название точки");
+                _input = OnlineWindow.MakeInput(box, 400f, Lang.T("Название точки"));
                 var irt = (RectTransform)_input.transform;
                 irt.anchorMin = irt.anchorMax = new Vector2(0.5f, 0f);
                 irt.pivot = new Vector2(0.5f, 0f);
@@ -78,7 +78,7 @@ namespace NewAgeQoL
             }
 
             Button(box, yesText, -110f, Accept);
-            Button(box, "Отмена", 110f, Close);
+            Button(box, Lang.T("Отмена"), 110f, Close);
         }
 
         private static void Button(RectTransform box, string text, float x, Action click)
@@ -105,7 +105,7 @@ namespace NewAgeQoL
             string name = (_input.text ?? "").Trim();
             if (name.Length == 0)
             {
-                Notice.Show("Впиши название точки", 3f);
+                Notice.Show(Lang.T("Впиши название точки"), 3f);
                 _input.ActivateInputField();
                 return;
             }

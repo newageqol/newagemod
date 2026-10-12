@@ -19,7 +19,7 @@ namespace NewAgeQoL
                 if (btn == null || btn.ObjectType != EObjectType.Link || btn.text == null) return;
                 string label = btn.text.text;
                 if (string.IsNullOrEmpty(label)) return;
-                __result = "   Перейти: " + label.Trim();
+                __result = Lang.F("   Перейти: {0}", label.Trim());
             }
             catch { }
         }

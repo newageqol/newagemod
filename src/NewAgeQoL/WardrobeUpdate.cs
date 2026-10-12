@@ -91,15 +91,15 @@ namespace NewAgeQoL
         internal static void Start()
         {
             if (Busy) return;
-            if (Plugin.Instance == null) { Status = "мод ещё не готов"; return; }
+            if (Plugin.Instance == null) { Status = Lang.T("мод ещё не готов"); return; }
             Busy = true;
-            Status = "Обновляю вещи…";
+            Status = Lang.T("Обновляю вещи…");
             Plugin.Instance.StartCoroutine(Work());
         }
 
         private static IEnumerator Work()
         {
-            Status = "Качаю базу вещей";
+            Status = Lang.T("Качаю базу вещей");
             var db = new Reply();
             yield return Get(BaseUrl + "?t=" + DateTime.UtcNow.Ticks, db, false);
             string baseText = db.Code == 200 && string.IsNullOrEmpty(db.Error) && db.Body.IndexOf("\nI\t", StringComparison.Ordinal) >= 0 ? db.Body : null;
@@ -119,13 +119,13 @@ namespace NewAgeQoL
             string siteError = null;
             var first = new Reply();
             yield return Get(Site + "/veteran/things/helmets", first, true);
-            if (first.Body.Length == 0) siteError = "nura.biz не ответил: " + Why(first);
+            if (first.Body.Length == 0) siteError = Lang.F("nura.biz не ответил: {0}", Why(first));
             else
             {
                 Take(first);
                 for (int c = 0; c < Categories.Length && siteError == null; c++)
                 {
-                    Status = "Сверяю с nura.biz: раздел " + (c + 1) + " из " + Categories.Length;
+                    Status = Lang.F("Сверяю с nura.biz: раздел {0} из {1}", c + 1, Categories.Length);
                     var form = new StringBuilder();
                     form.Append("typeId=").Append(TypeIds[c]).Append("&minlevel=0&maxlevel=30");
                     foreach (int r in WardrobeData.RarityOrder) form.Append("&selectedItems=").Append(r);
@@ -135,14 +135,14 @@ namespace NewAgeQoL
                     Take(answer);
                     if (answer.Code < 200 || answer.Code >= 300 || answer.Body.Trim().Length > 0)
                     {
-                        siteError = "фильтр nura.biz не принял запрос: " + (answer.Body.Trim().Length > 0 ? Short(answer.Body) : Why(answer));
+                        siteError = Lang.F("фильтр nura.biz не принял запрос: {0}", answer.Body.Trim().Length > 0 ? Short(answer.Body) : Why(answer));
                         break;
                     }
                     var page = new Reply();
                     yield return Get(Site + "/ajax/things/load", page, true);
                     if (page.Body.IndexOf("thingdiv", StringComparison.Ordinal) < 0)
                     {
-                        siteError = "nura.biz отдал пустой раздел «" + Categories[c] + "»: " + Why(page);
+                        siteError = Lang.F("nura.biz отдал пустой раздел «{0}»: {1}", Categories[c], Why(page));
                         break;
                     }
                     pages.Add(new KeyValuePair<string, string>(Categories[c], page.Body));
@@ -155,11 +155,11 @@ namespace NewAgeQoL
             }
             if (baseText == null && pages.Count == 0)
             {
-                Fail("ни база, ни nura.biz не ответили (" + (siteError ?? Why(db)) + ")");
+                Fail(Lang.F("ни база, ни nura.biz не ответили ({0})", siteError ?? Why(db)));
                 yield break;
             }
 
-            Status = "Разбираю вещи…";
+            Status = Lang.T("Разбираю вещи…");
             var job = new Job();
             string rules = WardrobeData.Rules();
             ThreadPool.QueueUserWorkItem(ignored =>
@@ -169,13 +169,13 @@ namespace NewAgeQoL
                 finally { job.Done = true; }
             });
             while (!job.Done) yield return null;
-            if (job.Error != null) { Fail("вещи не разобрались: " + job.Error); yield break; }
+            if (job.Error != null) { Fail(Lang.F("вещи не разобрались: {0}", job.Error)); yield break; }
 
             int was = WardrobeData.Things.Count;
             string when = DateTime.Now.ToString("dd.MM.yyyy");
-            if (!WardrobeData.Apply(job.Text, (kept ? "прежняя база" : baseText != null ? "база" : "без базы, только nura.biz") + ", " + when))
+            if (!WardrobeData.Apply(job.Text, (kept ? Lang.T("прежняя база") : baseText != null ? Lang.T("база") : Lang.T("без базы, только nura.biz")) + ", " + when))
             {
-                Fail("вещей пришло слишком мало, оставил прежние");
+                Fail(Lang.T("вещей пришло слишком мало, оставил прежние"));
                 yield break;
             }
             if (baseText != null) try
@@ -190,14 +190,14 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Warn("[wardrobe] item cache not written: " + e.Message); }
 
             int now = WardrobeData.Things.Count;
-            var status = new StringBuilder("Вещей ").Append(now);
-            if (was > 0 && now > was) status.Append(", новых ").Append(now - was);
-            else if (was > 0 && now == was) status.Append(", новых нет");
-            if (kept) status.Append(". Базу скачать не вышло, оставлена прежняя");
-            else if (baseText == null) status.Append(". Базу скачать не вышло, вещи только с сайта игры до перезапуска, потом попробую снова");
-            if (job.Added > 0) status.Append(". С сайта игры добавлено ").Append(job.Added);
-            if (job.Skipped > 0) status.Append(", без слота ").Append(job.Skipped);
-            if (siteError != null) status.Append(". С сайтом игры сверить не вышло");
+            var status = new StringBuilder(Lang.T("Вещей ")).Append(now);
+            if (was > 0 && now > was) status.Append(Lang.T(", новых ")).Append(now - was);
+            else if (was > 0 && now == was) status.Append(Lang.T(", новых нет"));
+            if (kept) status.Append(Lang.T(". Базу скачать не вышло, оставлена прежняя"));
+            else if (baseText == null) status.Append(Lang.T(". Базу скачать не вышло, вещи только с сайта игры до перезапуска, потом попробую снова"));
+            if (job.Added > 0) status.Append(Lang.T(". С сайта игры добавлено ")).Append(job.Added);
+            if (job.Skipped > 0) status.Append(Lang.T(", без слота ")).Append(job.Skipped);
+            if (siteError != null) status.Append(Lang.T(". С сайтом игры сверить не вышло"));
             Status = status.ToString();
             Plugin.Trace("[wardrobe] " + Status);
             Busy = false;
@@ -206,13 +206,13 @@ namespace NewAgeQoL
 
         private static void Fail(string text)
         {
-            Status = "Не обновилось: " + text;
+            Status = Lang.F("Не обновилось: {0}", text);
             Plugin.Warn("[wardrobe] " + Status);
             Busy = false;
             Wardrobe.Reloaded();
         }
 
-        private static string Why(Reply reply) => reply.Error.Length > 0 ? reply.Error : "код " + reply.Code;
+        private static string Why(Reply reply) => reply.Error.Length > 0 ? reply.Error : Lang.F("код {0}", reply.Code);
 
         private static string Short(string text)
         {
@@ -312,7 +312,7 @@ namespace NewAgeQoL
                 known.Add("~" + cell[8].ToLowerInvariant() + "|" + cell[5] + "|" + cell[3]);
             }
             job.Base = lines.Count;
-            if (meta.Length == 0) throw new InvalidOperationException("нет правил игры");
+            if (meta.Length == 0) throw new InvalidOperationException(Lang.T("нет правил игры"));
 
             var items = new List<Parsed>();
             foreach (var page in pages) Parse(page.Key, page.Value, items);

@@ -53,7 +53,7 @@ namespace NewAgeQoL
                 var list = new List<SceneObjectInfo>(infos);
                 list.Insert(list.IndexOf(pattern) + 1,
                     new SceneObjectInfo(TeamFights.Room, pattern.SceneObjectName, pattern.InteractionType, EObjectType.Link,
-                        TeamFights.Button, pattern.AtlasType, pattern.SpriteName) { HintId = pattern.HintId });
+                        Lang.T(TeamFights.Button), pattern.AtlasType, pattern.SpriteName) { HintId = pattern.HintId });
                 field.SetValue(list);
                 Plugin.Trace("[team fights] arena button added for location " + TeamFights.Room);
             }
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 if (ud == null || ud.MapId != TeamFights.Room) return;
                 if (ResourceStrings.IsKeyPresent("location.caption." + TeamFights.Room)) return;
                 var view = Traverse.Create(__instance).Property("EnterfightView").GetValue<BaseEnterfightView>();
-                if (view != null) view.SetCaption(TeamFights.Caption);
+                if (view != null) view.SetCaption(Lang.T(TeamFights.Caption));
             }
             catch (Exception e) { Plugin.Trace("[team fights] title: " + e.Message); }
         }

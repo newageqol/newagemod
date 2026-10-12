@@ -183,7 +183,7 @@ namespace NewAgeQoL
             int count = 0;
             foreach (var thing in _pack.Things)
             {
-                if (thing.Art || thing.Name == null || !string.Equals(thing.Name.Trim(), want, StringComparison.OrdinalIgnoreCase)) continue;
+                if (thing.Art || thing.Name == null || !Same(thing.Name.Trim(), want)) continue;
                 if (level > 0 && thing.ItemLevel != level && thing.Level != level) continue;
                 if (thing.Rarity == rarity) return thing;
                 loose = thing;
@@ -291,8 +291,14 @@ namespace NewAgeQoL
         internal static WardrobeThing Named(string name, string image, int level)
         {
             foreach (var thing in _pack.Things)
-                if (thing.Name == name && thing.Image == image && thing.ItemLevel == level) return thing;
+                if (thing.Image == image && thing.ItemLevel == level && thing.Name != null && (thing.Name == name || Lang.Game(thing.Name) == name)) return thing;
             return null;
+        }
+
+        private static bool Same(string ours, string want)
+        {
+            return string.Equals(ours, want, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Lang.Game(ours), want, StringComparison.OrdinalIgnoreCase);
         }
 
         internal static WardrobeThing Look(string image, int? level, int rarity)
@@ -388,20 +394,20 @@ namespace NewAgeQoL
         {
             switch (slot)
             {
-                case 1: return "Шлем";
-                case 2: return "Амулет";
-                case 3: return "Доспех";
-                case 4: return "Перчатки";
-                case 5: return "Наручи";
-                case 6: return "Пояс";
-                case 7: case 8: case 9: case 10: return "Кольцо";
-                case 11: return "Левая рука";
-                case 12: return "Правая рука";
-                case 13: return "Поножи";
-                case 14: return "Сапоги";
-                case 15: case 16: case 17: case 18: return "Реликвия";
-                case 25: case 26: return "Серьга";
-                default: return "Слот " + slot;
+                case 1: return Lang.T("Шлем");
+                case 2: return Lang.T("Амулет");
+                case 3: return Lang.T("Доспех");
+                case 4: return Lang.T("Перчатки");
+                case 5: return Lang.T("Наручи");
+                case 6: return Lang.T("Пояс");
+                case 7: case 8: case 9: case 10: return Lang.T("Кольцо");
+                case 11: return Lang.T("Левая рука");
+                case 12: return Lang.T("Правая рука");
+                case 13: return Lang.T("Поножи");
+                case 14: return Lang.T("Сапоги");
+                case 15: case 16: case 17: case 18: return Lang.T("Реликвия");
+                case 25: case 26: return Lang.T("Серьга");
+                default: return Lang.F("Слот {0}", slot);
             }
         }
 
@@ -409,14 +415,14 @@ namespace NewAgeQoL
         {
             switch (rarity)
             {
-                case 1: return "обычная";
-                case 2: return "крафтовая";
-                case 3: return "раритетная";
-                case 4: return "артефакт";
-                case 5: return "награда";
-                case 6: return "эпическая";
-                case 7: return "ратника";
-                case 8: return "мифическая";
+                case 1: return Lang.T("обычная");
+                case 2: return Lang.T("крафтовая");
+                case 3: return Lang.T("раритетная");
+                case 4: return Lang.T("артефакт");
+                case 5: return Lang.T("награда");
+                case 6: return Lang.T("эпическая");
+                case 7: return Lang.T("ратника");
+                case 8: return Lang.T("мифическая");
                 default: return "";
             }
         }
@@ -425,14 +431,14 @@ namespace NewAgeQoL
         {
             switch (rarity)
             {
-                case 1: return "Обычные";
-                case 2: return "Крафтовые";
-                case 3: return "Раритетные";
-                case 4: return "Артефакты";
-                case 5: return "Награды";
-                case 6: return "Эпические";
-                case 7: return "Ратника";
-                case 8: return "Мифические";
+                case 1: return Lang.T("Обычные");
+                case 2: return Lang.T("Крафтовые");
+                case 3: return Lang.T("Раритетные");
+                case 4: return Lang.T("Артефакты");
+                case 5: return Lang.T("Награды");
+                case 6: return Lang.T("Эпические");
+                case 7: return Lang.T("Ратника");
+                case 8: return Lang.T("Мифические");
                 default: return "";
             }
         }
@@ -462,7 +468,7 @@ namespace NewAgeQoL
                 {
                     string text = File.ReadAllText(CacheFile, Encoding.UTF8);
                     string when = File.GetLastWriteTime(CacheFile).ToString("dd.MM.yyyy");
-                    if (Apply(text, "обновлены с сайта " + when)) return;
+                    if (Apply(text, Lang.F("обновлены с сайта {0}", when))) return;
                     Plugin.Warn("[wardrobe] item cache is broken, items will be downloaded again");
                 }
             }
@@ -470,16 +476,16 @@ namespace NewAgeQoL
             try
             {
                 string rules = Rules();
-                if (rules == null) { _error = "в сборке нет правил игры"; return; }
+                if (rules == null) { _error = Lang.T("в сборке нет правил игры"); return; }
                 var pack = Read(rules);
-                if (pack.Races.Count == 0 || pack.Classes.Count == 0 || pack.Ranks.Count == 0) { _error = "правила игры пустые"; return; }
+                if (pack.Races.Count == 0 || pack.Classes.Count == 0 || pack.Ranks.Count == 0) { _error = Lang.T("правила игры пустые"); return; }
                 _pack = pack;
                 _error = null;
-                Source = "вещей пока нет";
+                Source = Lang.T("вещей пока нет");
             }
             catch (Exception e)
             {
-                _error = "правила игры не прочитаны: " + e.Message;
+                _error = Lang.F("правила игры не прочитаны: {0}", e.Message);
                 Plugin.Fault("[wardrobe] " + _error);
             }
         }

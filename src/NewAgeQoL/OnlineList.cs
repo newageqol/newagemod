@@ -257,16 +257,16 @@ namespace NewAgeQoL
             {
                 if (_busy) return;
                 _busy = true;
-                _status = "обновляю…";
+                _status = Lang.T("обновляю…");
                 _version++;
             }
-            if (Plugin.Instance == null) { Failed("мод ещё не готов"); return; }
+            if (Plugin.Instance == null) { Failed(Lang.T("мод ещё не готов")); return; }
             Plugin.Instance.StartCoroutine(Fetch());
         }
 
         private static void Failed(string why)
         {
-            lock (Gate) { _status = "Ошибка: " + why; _busy = false; _version++; }
+            lock (Gate) { _status = Lang.F("Ошибка: {0}", why); _busy = false; _version++; }
             Plugin.Warn("[online] " + why);
         }
 
@@ -293,7 +293,7 @@ namespace NewAgeQoL
             var records = Records(code, body);
             if (records == null) return null;
             string m50 = records.Find(r => r.StartsWith("50\u001f", StringComparison.Ordinal));
-            if (m50 == null) { Failed("список не пришёл"); return null; }
+            if (m50 == null) { Failed(Lang.T("список не пришёл")); return null; }
             gen = Field(records, "gen");
             long fresh = Field(records, "fresh");
             lock (Gate)
@@ -308,7 +308,7 @@ namespace NewAgeQoL
             lock (Gate)
             {
                 _players = list;
-                _status = "В игре: " + list.Count;
+                _status = Lang.F("В игре: {0}", list.Count);
                 _busy = false;
                 _version++;
             }
@@ -360,7 +360,7 @@ namespace NewAgeQoL
         {
             string trouble = null;
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
-                trouble = code == 0 ? "сервер наблюдателей недоступен" : "сервер наблюдателей ответил " + code;
+                trouble = code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code);
             string rest = trouble == null && body.Length > Mark.Length ? body.Substring(Mark.Length + 1) : "";
             if (trouble == null && rest.StartsWith("!\t", StringComparison.Ordinal)) trouble = rest.Substring(2).Trim();
             if (trouble == null) return new List<string>(rest.Split('\0'));

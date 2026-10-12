@@ -388,10 +388,10 @@ namespace NewAgeQoL
 
         private static string Title(QuestBoard.Card card, int id)
         {
-            if (card == null) return "Задание " + id;
+            if (card == null) return Lang.F("Задание {0}", id);
             if (!string.IsNullOrEmpty(card.Name)) return card.Name;
             if (!string.IsNullOrEmpty(card.Npc)) return card.Npc;
-            return "Задание " + id;
+            return Lang.F("Задание {0}", id);
         }
 
         private static Color Tint(QuestBoard.Card card)
@@ -412,9 +412,9 @@ namespace NewAgeQoL
             if (card == null) return lines;
             switch ((EQuestStatus)card.Status)
             {
-                case EQuestStatus.QUEST_SUCCESS: lines.Add("выполнено — можно сдавать"); break;
-                case EQuestStatus.QUEST_FAILED: lines.Add("провалено"); break;
-                case EQuestStatus.QUEST_NOT_FOUND: lines.Add("ещё не взято"); break;
+                case EQuestStatus.QUEST_SUCCESS: lines.Add(Lang.T("выполнено — можно сдавать")); break;
+                case EQuestStatus.QUEST_FAILED: lines.Add(Lang.T("провалено")); break;
+                case EQuestStatus.QUEST_NOT_FOUND: lines.Add(Lang.T("ещё не взято")); break;
             }
             if (card.Counters != null && card.Counters.Count > 0)
             {
@@ -423,7 +423,7 @@ namespace NewAgeQoL
             else if (card.Status == (int)EQuestStatus.QUEST_ACTIVE)
             {
                 if (!string.IsNullOrEmpty(card.Goal)) lines.Add(Clip(card.Goal.Trim(), 140));
-                else if (!card.Known) lines.Add("читаю…");
+                else if (!card.Known) lines.Add(Lang.T("читаю…"));
             }
             return lines;
         }

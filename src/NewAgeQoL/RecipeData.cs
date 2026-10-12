@@ -103,6 +103,14 @@ namespace NewAgeQoL
             return _pack.Drops.Contains(id);
         }
 
+        private static void Seek(StringBuilder find, string name)
+        {
+            if (find.Length > 0) find.Append('\n');
+            find.Append(name);
+            string shown = Lang.Game(name);
+            if (shown != name) find.Append('\n').Append(shown);
+        }
+
         internal static string ThingName(int id)
         {
             var thing = Thing(id);
@@ -234,8 +242,9 @@ namespace NewAgeQoL
                 list.Add(recipe);
                 if (!pack.Crafts.Contains(recipe.Profession)) pack.Crafts.Add(recipe.Profession);
                 var find = new StringBuilder();
-                find.Append(NameIn(pack, recipe.Result, recipe.Name)).Append('\n').Append(recipe.Name);
-                foreach (var part in recipe.Parts) find.Append('\n').Append(NameIn(pack, part.Id, ""));
+                Seek(find, NameIn(pack, recipe.Result, recipe.Name));
+                Seek(find, recipe.Name);
+                foreach (var part in recipe.Parts) Seek(find, NameIn(pack, part.Id, ""));
                 recipe.Find = find.ToString().ToLowerInvariant();
             }
             pack.Crafts.Sort();

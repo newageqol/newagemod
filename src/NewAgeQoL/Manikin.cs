@@ -49,23 +49,23 @@ namespace NewAgeQoL
         {
             switch (slot)
             {
-                case 1: return "шлем";
-                case 2: return "амулет";
-                case 3: return "доспех";
-                case 4: return "перчатки";
-                case 5: return "наручи";
-                case 6: return "пояс";
-                case 7: case 8: case 9: case 10: return "кольцо";
-                case 11: return "левая рука";
-                case 12: return "правая рука";
-                case 13: return "поножи";
-                case 14: return "сапоги";
-                case 15: case 16: case 17: case 18: return "реликвия";
-                case 19: return "запас: левая рука";
-                case 20: return "запас: правая рука";
-                case 21: case 22: case 23: case 24: return "запас: реликвия";
-                case 25: case 26: return "серьга";
-                default: return "слот " + slot;
+                case 1: return Lang.T("шлем");
+                case 2: return Lang.T("амулет");
+                case 3: return Lang.T("доспех");
+                case 4: return Lang.T("перчатки");
+                case 5: return Lang.T("наручи");
+                case 6: return Lang.T("пояс");
+                case 7: case 8: case 9: case 10: return Lang.T("кольцо");
+                case 11: return Lang.T("левая рука");
+                case 12: return Lang.T("правая рука");
+                case 13: return Lang.T("поножи");
+                case 14: return Lang.T("сапоги");
+                case 15: case 16: case 17: case 18: return Lang.T("реликвия");
+                case 19: return Lang.T("запас: левая рука");
+                case 20: return Lang.T("запас: правая рука");
+                case 21: case 22: case 23: case 24: return Lang.T("запас: реликвия");
+                case 25: case 26: return Lang.T("серьга");
+                default: return Lang.F("слот {0}", slot);
             }
         }
 
@@ -105,6 +105,52 @@ namespace NewAgeQoL
                 }
                 for (int i = 0; i < things.Count; i++) map[group[i]] = things[i];
             }
+            Hands(map, 11, 12);
+            Hands(map, 19, 20);
+        }
+
+        private static readonly int[][] HandPairs = { new[] { 11, 12 }, new[] { 19, 20 } };
+
+        private static bool TwoHand(int thing)
+        {
+            if (thing <= 0) return false;
+            int sub = Flasks.SubTypeOf(thing);
+            if (sub <= 0) return false;
+            try { return ThingsHelper.GetHandType((EThingSubType)sub) == EHandType.TWO_HAND_WEAPON; }
+            catch { return false; }
+        }
+
+        private static void Hands(Dictionary<int, int> map, int left, int right)
+        {
+            int l, r;
+            map.TryGetValue(left, out l);
+            map.TryGetValue(right, out r);
+            if (TwoHand(r))
+            {
+                if (l > 0) Plugin.Trace("[kit] " + SlotName(left) + " dropped: " + SlotName(right) + " holds a two-handed weapon");
+                map.Remove(left);
+                return;
+            }
+            if (!TwoHand(l)) return;
+            if (r > 0) Plugin.Trace("[kit] " + SlotName(right) + " dropped: two-handed weapon moved there from " + SlotName(left));
+            map.Remove(left);
+            map[right] = l;
+        }
+
+        private static void Pick(int slot, int thing)
+        {
+            foreach (var pair in HandPairs)
+            {
+                if (slot != pair[0] && slot != pair[1]) continue;
+                if (TwoHand(thing))
+                {
+                    Wear.Remove(pair[0]);
+                    Wear[pair[1]] = thing;
+                    return;
+                }
+                if (slot == pair[0] && Wear.TryGetValue(pair[1], out int right) && TwoHand(right)) Wear.Remove(pair[1]);
+            }
+            Wear[slot] = thing;
         }
 
         internal static int Used(int thingId, int exceptSlot)
@@ -217,9 +263,9 @@ namespace NewAgeQoL
         private static string Note(bool near)
         {
             string source = near
-                ? "Нажми на слот и выбери вещь: сумка, хранилище, надетое."
-                : "Нажми на слот и выбери вещь: сумка и надетое. За вещами из хранилища зайди в него.";
-            return source + System.Environment.NewLine + "Наденется само после сдачи вещей, снимется при возврате.";
+                ? Lang.T("Нажми на слот и выбери вещь: сумка, хранилище, надетое.")
+                : Lang.T("Нажми на слот и выбери вещь: сумка и надетое. За вещами из хранилища зайди в него.");
+            return source + System.Environment.NewLine + Lang.T("Наденется само после сдачи вещей, снимется при возврате.");
         }
 
         private static void Hook()
@@ -447,7 +493,7 @@ namespace NewAgeQoL
         {
             ManikinPicker.Open(slot, thing =>
             {
-                if (thing > 0) Wear[slot] = thing;
+                if (thing > 0) Pick(slot, thing);
                 else Wear.Remove(slot);
                 Pack(Wear);
                 Keep();
@@ -503,13 +549,13 @@ namespace NewAgeQoL
             outline.effectColor = WardrobeLook.Edge;
             outline.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(_panelGo.transform, "Запасной набор", 20, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Запасной набор"), 20, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(18f, -46f), new Vector2(-70f, -10f));
             title.alignment = TextAnchor.MiddleLeft;
 
             OnlineWindow.MakeCloseButton(_panelGo.transform, Close);
 
-            var wipe = OnlineWindow.MakeGameButton(_panelGo.transform, "Очистить", 150f, 36f, Wipe);
+            var wipe = OnlineWindow.MakeGameButton(_panelGo.transform, Lang.T("Очистить"), 150f, 36f, Wipe);
             OnlineWindow.Place((RectTransform)wipe.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
                 new Vector2(-75f, -58f - 3.5f * Cell - 3f * Gap - 18f), new Vector2(75f, -58f - 3.5f * Cell - 3f * Gap + 18f));
 

@@ -485,7 +485,7 @@ namespace NewAgeQoL
             mark.color = WardrobeLook.Accent;
             mark.raycastTarget = false;
 
-            Word(row.transform, picked ? "Копировать" : "Копировать сообщение", WardrobeLook.Bright, TextAlignmentOptions.MidlineLeft, new Vector2(18f, 0f), new Vector2(-10f, 0f), 14f);
+            Word(row.transform, picked ? Lang.T("Копировать") : Lang.T("Копировать сообщение"), WardrobeLook.Bright, TextAlignmentOptions.MidlineLeft, new Vector2(18f, 0f), new Vector2(-10f, 0f), 14f);
             if (picked) Word(row.transform, "Ctrl+C", WardrobeLook.Faint, TextAlignmentOptions.MidlineRight, new Vector2(18f, 0f), new Vector2(-10f, 0f), 12f);
         }
 

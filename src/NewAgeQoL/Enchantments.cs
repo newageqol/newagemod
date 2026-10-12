@@ -223,7 +223,7 @@ namespace NewAgeQoL
             {
                 int id = bare[key];
                 string name = ResourceStrings.GetGlobalEnchantmentActionName(id);
-                if (name == "enchantment.action." + id) name = "действие " + id;
+                if (name == "enchantment.action." + id) name = Lang.F("действие {0}", id);
                 if (body.Length > 0) body.Append('\n');
                 body.Append("<color=#d6dae0>· ").Append(name).Append("</color>");
                 char kind = key[key.Length - 1];
@@ -385,29 +385,29 @@ namespace NewAgeQoL
         private static string Title(int id)
         {
             string name = ResourceStrings.GetGlobalEnchantmentGroupName(id);
-            return name == "enchantment.group." + id ? "состояние " + id : name;
+            return name == "enchantment.group." + id ? Lang.F("состояние {0}", id) : name;
         }
 
         private static string Brief(long sec)
         {
-            if (sec <= 0) return "<1м";
+            if (sec <= 0) return Lang.T("<1м");
             long d = sec / 86400;
-            if (d > 0) return d + "д";
+            if (d > 0) return Lang.F("{0}д", d);
             long h = sec / 3600;
-            if (h > 0) return h + "ч";
+            if (h > 0) return Lang.F("{0}ч", h);
             long m = sec / 60;
-            return m > 0 ? m + "м" : "<1м";
+            return m > 0 ? Lang.F("{0}м", m) : Lang.T("<1м");
         }
 
         private static string Full(long sec)
         {
-            if (sec <= 0) return "меньше минуты";
+            if (sec <= 0) return Lang.T("меньше минуты");
             long d = sec / 86400;
             long h = sec % 86400 / 3600;
             long m = sec % 3600 / 60;
-            if (d > 0) return d + " д " + h + " ч";
-            if (h > 0) return h + " ч " + m + " мин";
-            return m + " мин";
+            if (d > 0) return Lang.F("{0} д {1} ч", d, h);
+            if (h > 0) return Lang.F("{0} ч {1} мин", h, m);
+            return Lang.F("{0} мин", m);
         }
 
         private static Color32 Paint(long sec)
@@ -573,16 +573,16 @@ namespace NewAgeQoL
             bool have = Times.TryGetValue(_tipFor, out known);
             var text = new StringBuilder();
             text.Append("<size=12><b><color=#eceef1>").Append(Title(_tipFor)).Append("</color></b></size>");
-            if (!have) { text.Append("\n<color=#acb3bd>спрашиваю сервер…</color>"); Wake(_tipFor); }
+            if (!have) { text.Append(Lang.T("\n<color=#acb3bd>спрашиваю сервер…</color>")); Wake(_tipFor); }
             else if (!_tipAsked && RealTime.Now - known.At >= 2d) { _tipAsked = true; Wake(_tipFor); }
             else
             {
                 int spans = Mathf.Min(known.Spans.Count, 4);
                 for (int i = 0; i < spans; i++)
-                    text.Append("\n<color=#8fd8ff>осталось ").Append(Full(Rest(known, i))).Append("</color>");
+                    text.Append(Lang.T("\n<color=#8fd8ff>осталось ")).Append(Full(Rest(known, i))).Append("</color>");
                 if (known.Spans.Count > spans)
-                    text.Append("\n<color=#8fd8ff>и ещё ").Append(known.Spans.Count - spans).Append("</color>");
-                if (known.Spans.Count == 0) text.Append("\n<color=#acb3bd>без срока</color>");
+                    text.Append(Lang.T("\n<color=#8fd8ff>и ещё ")).Append(known.Spans.Count - spans).Append("</color>");
+                if (known.Spans.Count == 0) text.Append(Lang.T("\n<color=#acb3bd>без срока</color>"));
                 if (!string.IsNullOrEmpty(known.Body)) text.Append('\n').Append(known.Body);
             }
             string line = text.ToString();

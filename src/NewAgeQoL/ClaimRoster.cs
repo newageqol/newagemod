@@ -198,7 +198,7 @@ namespace NewAgeQoL
         {
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
             {
-                Done(id, null, code == 0 ? "сервер наблюдателей недоступен" : "сервер наблюдателей ответил " + code);
+                Done(id, null, code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code));
                 return;
             }
             var people = new List<Fighter>();
@@ -246,7 +246,7 @@ namespace NewAgeQoL
             if (bad != null && bad.Id != id) bad = null;
 
             var people = good != null ? good.People : null;
-            bool changed = Words(_title, (fight ? "Игроки боя" : "Состав заявки") + (people != null && people.Count > 0 ? "  <color=#acb3bd>" + people.Count + "</color>" : ""));
+            bool changed = Words(_title, (fight ? Lang.T("Игроки боя") : Lang.T("Состав заявки")) + (people != null && people.Count > 0 ? "  <color=#acb3bd>" + people.Count + "</color>" : ""));
             changed |= Words(_note, Note(fight, good, bad));
             changed |= Rows(people);
 
@@ -275,12 +275,12 @@ namespace NewAgeQoL
 
         private static string Note(bool fight, Answer good, Answer bad)
         {
-            if (!Reachable()) return "<color=#acb3bd>при наведении состав виден только в Иллениуме:\nхаотические, турнирные и командные бои</color>";
-            if (good == null) return "<color=#acb3bd>" + (bad != null ? Plain(bad.Error) : "узнаю состав…") + "</color>";
+            if (!Reachable()) return "<color=#acb3bd>" + Lang.T("при наведении состав виден только в Иллениуме:\nхаотические, турнирные и командные бои") + "</color>";
+            if (good == null) return "<color=#acb3bd>" + (bad != null ? Plain(bad.Error) : Lang.T("узнаю состав…")) + "</color>";
             if (bad != null) return "<color=#f07a6e>" + Plain(bad.Error) + "</color>";
-            if (good.People.Count == 0) return "<color=#acb3bd>" + (fight ? "сервер не назвал игроков" : "в заявке никого") + "</color>";
+            if (good.People.Count == 0) return "<color=#acb3bd>" + (fight ? Lang.T("сервер не назвал игроков") : Lang.T("в заявке никого")) + "</color>";
             long age = (long)(DateTime.UtcNow - good.At).TotalSeconds;
-            return age >= 3 ? "<color=#747b85>обновлено " + age + " с назад</color>" : "";
+            return age >= 3 ? "<color=#747b85>" + Lang.F("обновлено {0} с назад", age) + "</color>" : "";
         }
 
         private static bool Words(Text label, string text)

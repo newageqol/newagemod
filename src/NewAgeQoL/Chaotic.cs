@@ -503,7 +503,7 @@ namespace NewAgeQoL
             headRow.childForceExpandHeight = true;
             Cell(head.transform, "", MedalW, 13, WardrobeLook.Label);
             var titles = _view is ChaoticEnterfightView ? Titles : Names;
-            for (int i = 0; i < titles.Length; i++) Cell(head.transform, titles[i], Columns[i], 13, WardrobeLook.Label);
+            for (int i = 0; i < titles.Length; i++) Cell(head.transform, Lang.T(titles[i]), Columns[i], 13, WardrobeLook.Label);
 
             var scrollGo = new GameObject("scroll", typeof(RectTransform), typeof(ScrollRect), typeof(RectMask2D));
             scrollGo.transform.SetParent(_panel.transform, false);

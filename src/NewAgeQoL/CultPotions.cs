@@ -102,7 +102,7 @@ namespace NewAgeQoL
                 var cult = Where();
                 if (cult != _here)
                 {
-                    if (Running) Stop("ушёл с алтаря — остановлено");
+                    if (Running) Stop(Lang.T("ушёл с алтаря — остановлено"));
                     _here = cult;
                     _said = "";
                     _favorKnown = false;
@@ -111,7 +111,7 @@ namespace NewAgeQoL
                 bool show = _here != null && SideButtons.InWorld() && !SideButtons.InCombat() && ChatDock.Active;
                 if (!show)
                 {
-                    if (Running) Stop("начался бой — остановлено");
+                    if (Running) Stop(Lang.T("начался бой — остановлено"));
                     if (_canvasGo != null && _canvasGo.activeSelf) _canvasGo.SetActive(false);
                     return;
                 }
@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 Paint();
                 Clamp();
             }
-            catch (Exception e) { Plugin.Trace("[cult] " + e.Message); Stop("ошибка: " + e.Message); }
+            catch (Exception e) { Plugin.Trace("[cult] " + e.Message); Stop(Lang.F("ошибка: {0}", e.Message)); }
         }
 
         private static Cult Where()
@@ -237,7 +237,7 @@ namespace NewAgeQoL
 
         private static int PriceHere => _here != null && Prices.TryGetValue(PriceKey, out int p) ? p : 0;
 
-        private static string KindName => _kind == 1 ? "благословения" : "проклятия";
+        private static string KindName => _kind == 1 ? Lang.T("благословения") : Lang.T("проклятия");
 
         private static bool Ours => _favorKnown && _here != null && _mine == _here.Ability;
 
@@ -253,35 +253,35 @@ namespace NewAgeQoL
             if (Running || !Ours) return;
             int want;
             string text = _count != null ? _count.text.Trim() : "";
-            if (!int.TryParse(text, out want) || want <= 0) { _said = "впиши, сколько зелий взять"; return; }
+            if (!int.TryParse(text, out want) || want <= 0) { _said = Lang.T("впиши, сколько зелий взять"); return; }
             int most = Affordable();
             if (most >= 0 && want > most) want = most;
-            if (want <= 0) { _said = "не хватает благосклонности"; return; }
+            if (want <= 0) { _said = Lang.T("не хватает благосклонности"); return; }
             int price = PriceHere;
-            string cost = price > 0 ? " за " + want * price + " благосклонности" : "";
-            Ask("Забрать " + want + " " + Potions(want) + " " + KindName + " культа " + _here.Name + cost + "?", () => Start(want, false));
+            string cost = price > 0 ? Lang.F(" за {0} благосклонности", want * price) : "";
+            Ask(Lang.F("Забрать {0} {1} {2} культа {3}{4}?", want, Potions(want), KindName, Lang.T(_here.Name), cost), () => Start(want, false));
         }
 
         private static void TakeAll()
         {
-            if (Running) { Stop("остановлено"); return; }
+            if (Running) { Stop(Lang.T("остановлено")); return; }
             if (!Ours) return;
             int most = Affordable();
             int price = PriceHere;
-            string what = most > 0 ? most + " " + Potions(most) + " за " + most * price + " благосклонности" : "зелья на всю благосклонность (" + Num(_favor) + ")";
-            Ask("Забрать все зелья " + KindName + " культа " + _here.Name + ": " + what + "?", () => Start(0, true));
+            string what = most > 0 ? Lang.F("{0} {1} за {2} благосклонности", most, Potions(most), most * price) : Lang.F("зелья на всю благосклонность ({0})", Num(_favor));
+            Ask(Lang.F("Забрать все зелья {0} культа {1}: {2}?", KindName, Lang.T(_here.Name), what), () => Start(0, true));
         }
 
         private static string Potions(int n)
         {
             int tail = n % 100;
-            if (tail >= 11 && tail <= 14) return "зелий";
+            if (tail >= 11 && tail <= 14) return Lang.T("зелий");
             switch (n % 10)
             {
-                case 1: return "зелье";
-                case 2: case 3: case 4: return "зелья";
+                case 1: return Lang.T("зелье");
+                case 2: case 3: case 4: return Lang.T("зелья");
             }
-            return "зелий";
+            return Lang.T("зелий");
         }
 
         private static ConfirmMessageBox _confirm;
@@ -325,7 +325,7 @@ namespace NewAgeQoL
             _nextAt = 0f;
             Close();
             Send(0, 1, 0);
-            _said = "говорю со служителем…";
+            _said = Lang.T("говорю со служителем…");
             Plugin.Trace("[cult] starting: cult " + _here.Name + ", wanted " + (_all ? "all" : want.ToString()) + ", favor " + _favor);
         }
 
@@ -333,7 +333,7 @@ namespace NewAgeQoL
         {
             if (_step == Step.Idle) return;
             _step = Step.Idle;
-            _said = (_got > 0 ? "забрано зелий: " + _got + " · " : "") + why;
+            _said = (_got > 0 ? Lang.F("забрано зелий: {0} · ", _got) : "") + why;
             Plugin.Trace("[cult] " + _said);
             AskFavor();
         }
@@ -341,7 +341,7 @@ namespace NewAgeQoL
         private static void Finish(string why)
         {
             _step = Step.Idle;
-            _said = "забрано зелий: " + _got + (string.IsNullOrEmpty(why) ? "" : " · " + why);
+            _said = Lang.F("забрано зелий: {0}", _got) + (string.IsNullOrEmpty(why) ? "" : " · " + why);
             Plugin.Trace("[cult] " + _said);
         }
 
@@ -362,7 +362,7 @@ namespace NewAgeQoL
                 case Step.Talk:
                     if (!_replyFresh)
                     {
-                        if (Time.unscaledTime > _deadline) Stop("служитель не отвечает");
+                        if (Time.unscaledTime > _deadline) Stop(Lang.T("служитель не отвечает"));
                         return;
                     }
                     _replyFresh = false;
@@ -379,22 +379,22 @@ namespace NewAgeQoL
                 case Step.Favor:
                     if (!_favorFresh)
                     {
-                        if (Time.unscaledTime > _deadline) Stop("не узнать благосклонность после покупки");
+                        if (Time.unscaledTime > _deadline) Stop(Lang.T("не узнать благосклонность после покупки"));
                         return;
                     }
                     _favorFresh = false;
                     int price = PriceHere;
                     if (_favor > _before - Math.Max(1, price) + 1e-6)
                     {
-                        Stop("служитель зелье не выдал");
+                        Stop(Lang.T("служитель зелье не выдал"));
                         return;
                     }
                     _got++;
                     int spent = (int)Math.Round(_before - _favor);
                     if (spent > 0) Prices[PriceKey] = spent;
-                    _said = "забрано " + _got + (_all ? "" : " из " + _want) + "…";
+                    _said = _all ? Lang.F("забрано {0}…", _got) : Lang.F("забрано {0} из {1}…", _got, _want);
                     if (_got >= _want) { Finish(""); return; }
-                    if (price > 0 && _favor + 1e-6 < price) { Finish("благосклонность кончилась"); return; }
+                    if (price > 0 && _favor + 1e-6 < price) { Finish(Lang.T("благосклонность кончилась")); return; }
                     _nextAt = Time.unscaledTime + Pause;
                     _hops = 0;
                     _rescue = 0;
@@ -406,7 +406,7 @@ namespace NewAgeQoL
 
         private static void Walk(QuestDialogResponseMessage reply)
         {
-            if (++_hops > 10) { Tell(reply); Stop("диалог пошёл не туда"); return; }
+            if (++_hops > 10) { Tell(reply); Stop(Lang.T("диалог пошёл не туда")); return; }
             if (_reopen && reply != null && reply.NpcPhrase == null)
             {
                 _reopen = false;
@@ -415,7 +415,7 @@ namespace NewAgeQoL
             }
             if (reply == null || reply.NpcPhrase == null || reply.Forwards == null || reply.Forwards.Count == 0)
             {
-                Stop("служитель закрыл разговор");
+                Stop(Lang.T("служитель закрыл разговор"));
                 return;
             }
             int offer = _kind == 1 ? BlessFid : CurseFid;
@@ -436,7 +436,7 @@ namespace NewAgeQoL
                 if (price > 0 && !Prices.ContainsKey(PriceKey)) Prices[PriceKey] = price;
                 if (yes == null || lacking || (price > 0 && _favor + 1e-6 < price))
                 {
-                    Finish(_got == 0 ? "не хватает благосклонности" + (price > 0 ? ": нужно " + price : "") : "благосклонность кончилась");
+                    Finish(_got == 0 ? Lang.T("не хватает благосклонности") + (price > 0 ? Lang.F(": нужно {0}", price) : "") : Lang.T("благосклонность кончилась"));
                     return;
                 }
                 _before = _favor;
@@ -451,7 +451,7 @@ namespace NewAgeQoL
             if (ById(reply, MenuMark) != null)
             {
                 Missing[_kind].Add(_here.Ability);
-                string none = "у культа " + _here.Name + " нет " + (_kind == 1 ? "благословения" : "проклятия");
+                string none = Lang.F("у культа {0} нет {1}", Lang.T(_here.Name), _kind == 1 ? Lang.T("благословения") : Lang.T("проклятия"));
                 if (!Missing[1 - _kind].Contains(_here.Ability)) _kind = 1 - _kind;
                 Stop(none);
                 return;
@@ -475,7 +475,7 @@ namespace NewAgeQoL
                         Send(f.ForwardId, f.ForwardType, reply.QuestId);
                         return;
                     }
-            Stop("служитель на незнакомой странице — варианты записаны в журнал");
+            Stop(Lang.T("служитель на незнакомой странице — варианты записаны в журнал"));
         }
 
         private static QuestForward ById(QuestDialogResponseMessage reply, int id)
@@ -567,8 +567,8 @@ namespace NewAgeQoL
             kh.childControlHeight = true;
             kh.childForceExpandWidth = true;
             kh.childForceExpandHeight = true;
-            Kinds[0] = OnlineWindow.MakeGameButton(kinds.transform, "Проклятие", 100f, RowHigh, () => Pick(0));
-            Kinds[1] = OnlineWindow.MakeGameButton(kinds.transform, "Благословение", 100f, RowHigh, () => Pick(1));
+            Kinds[0] = OnlineWindow.MakeGameButton(kinds.transform, Lang.T("Проклятие"), 100f, RowHigh, () => Pick(0));
+            Kinds[1] = OnlineWindow.MakeGameButton(kinds.transform, Lang.T("Благословение"), 100f, RowHigh, () => Pick(1));
             foreach (var k in Kinds)
             {
                 Small(k);
@@ -603,12 +603,12 @@ namespace NewAgeQoL
                 OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(4f, 0f), new Vector2(-4f, 0f));
             }
             Small(OnlineWindow.MakeGameButton(row.transform, "+", RowHigh, RowHigh, () => Bump(1)));
-            _take = OnlineWindow.MakeGameButton(row.transform, "Забрать", 90f, RowHigh, TakeSome);
+            _take = OnlineWindow.MakeGameButton(row.transform, Lang.T("Забрать"), 90f, RowHigh, TakeSome);
             Small(_take);
             var takeSize = _take != null ? _take.GetComponent<LayoutElement>() : null;
             if (takeSize != null) takeSize.flexibleWidth = 1f;
 
-            _every = OnlineWindow.MakeGameButton(_root, "Забрать все", Wide - 20f, RowHigh + 2f, TakeAll);
+            _every = OnlineWindow.MakeGameButton(_root, Lang.T("Забрать все"), Wide - 20f, RowHigh + 2f, TakeAll);
             Small(_every);
             _takeLabel = _every != null ? _every.GetComponentInChildren<Text>() : null;
 
@@ -697,23 +697,23 @@ namespace NewAgeQoL
                 if (label != null && label.color != ink) label.color = ink;
                 k.interactable = !Running;
             }
-            Set(_title, "Зелья культа " + _here.Name);
+            Set(_title, Lang.F("Зелья культа {0}", Lang.T(_here.Name)));
             string state;
             bool can = false;
             if (!_favorKnown)
             {
-                state = "узнаю благосклонность…";
+                state = Lang.T("узнаю благосклонность…");
                 if (Time.unscaledTime - _favorAskedAt > Wait) AskFavor();
             }
-            else if (_mine == 0) state = "Ты не состоишь ни в одном культе — здесь зелья не выдадут.";
+            else if (_mine == 0) state = Lang.T("Ты не состоишь ни в одном культе — здесь зелья не выдадут.");
             else if (_mine != _here.Ability)
-                state = "Ты последователь культа " + NameOf(_mine) + " (благосклонность " + Num(_favor) + "). Здесь зелья не выдадут — нужен алтарь культа " + NameOf(_mine) + ".";
+                state = Lang.F("Ты последователь культа {0} (благосклонность {1}). Здесь зелья не выдадут — нужен алтарь культа {0}.", Lang.T(NameOf(_mine)), Num(_favor));
             else
             {
                 int price = PriceHere;
-                state = "Благосклонность: " + Num(_favor);
-                if (price > 0) state += " · зелье стоит " + price + " · хватит на " + Affordable();
-                else state += " · цену назовёт служитель";
+                state = Lang.F("Благосклонность: {0}", Num(_favor));
+                if (price > 0) state += Lang.F(" · зелье стоит {0} · хватит на {1}", price, Affordable());
+                else state += Lang.T(" · цену назовёт служитель");
                 can = price <= 0 || _favor + 1e-6 >= price;
             }
             Set(_state, state);
@@ -721,7 +721,7 @@ namespace NewAgeQoL
             if (_take != null) _take.interactable = !Running && can;
             if (_every != null) _every.interactable = Running || can;
             if (_count != null) _count.interactable = !Running;
-            if (_takeLabel != null) Set(_takeLabel, Running ? "Стоп" : "Забрать все");
+            if (_takeLabel != null) Set(_takeLabel, Running ? Lang.T("Стоп") : Lang.T("Забрать все"));
             if (_progress != null && _progress.gameObject.activeSelf != (_said.Length > 0)) _progress.gameObject.SetActive(_said.Length > 0);
         }
 

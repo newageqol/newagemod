@@ -312,7 +312,7 @@ namespace NewAgeQoL
             button.colors = colors;
             button.onClick.AddListener(() => { Hide(); Travel.AddHere(); });
 
-            var label = OnlineWindow.Label(rt, "+ Добавить точку, где стою", 16, FontStyle.Normal, WardrobeLook.Accent);
+            var label = OnlineWindow.Label(rt, Lang.T("+ Добавить точку, где стою"), 16, FontStyle.Normal, WardrobeLook.Accent);
             if (font != null) label.font = font;
             OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(8f, 0f), new Vector2(-8f, 0f));
             label.alignment = TextAnchor.MiddleLeft;

@@ -238,7 +238,7 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<QuestController>();
                 if (ctrl == null)
                 {
-                    Notice.Show("Здесь задание не открыть — вернись в обычную локацию", 5f);
+                    Notice.Show(Lang.T("Здесь задание не открыть — вернись в обычную локацию"), 5f);
                     return;
                 }
                 AccessTools.Method(typeof(QuestController), "OnDetailInfoResponse")?.Invoke(ctrl, new[] { msg });
@@ -489,7 +489,7 @@ namespace NewAgeQoL
                 {
                     detail.Counters = new List<string>();
                     foreach (var c in msg.Counters)
-                        if (c != null) detail.Counters.Add((c.Name ?? "цель") + ": " + c.Counter + " / " + c.Max);
+                        if (c != null) detail.Counters.Add((c.Name ?? Lang.T("цель")) + ": " + c.Counter + " / " + c.Max);
                 }
                 Told[msg.QuestId] = detail;
                 Fresh.Add(msg.QuestId);

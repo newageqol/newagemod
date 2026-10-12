@@ -115,7 +115,7 @@ namespace NewAgeQoL
                 _at = -1f;
                 Drop(_byId ? _id : 0, _byId ? null : _login);
                 Plugin.Trace("[card] server sent no card of " + _login);
-                Notice.Show("Сервер не прислал карточку игрока " + _login, 5f);
+                Notice.Show(Lang.F("Сервер не прислал карточку игрока {0}", _login), 5f);
             }
             catch (Exception e)
             {

@@ -94,11 +94,11 @@ namespace NewAgeQoL
 
         private static string Caption(bool locked)
         {
-            if (MoveMode.Sending) return "Скорость: " + MoveMode.Name(MoveMode.Wanted) + " — перехожу…";
-            if (locked) return "Скорость: " + MoveMode.Name(MoveMode.Current) + " — " + MoveMode.Clock(MoveMode.Left);
+            if (MoveMode.Sending) return Lang.F("Скорость: {0} — перехожу…", MoveMode.Name(MoveMode.Wanted));
+            if (locked) return Lang.F("Скорость: {0} — {1}", MoveMode.Name(MoveMode.Current), MoveMode.Clock(MoveMode.Left));
             string said = MoveMode.Status;
             if (said.Length > 0 && Time.unscaledTime - MoveMode.StatusAt < 3f) return said;
-            return "Скорость: " + MoveMode.Name(MoveMode.Current);
+            return Lang.F("Скорость: {0}", MoveMode.Name(MoveMode.Current));
         }
 
         private static void Toggle()

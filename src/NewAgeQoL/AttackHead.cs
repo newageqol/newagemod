@@ -181,11 +181,11 @@ namespace NewAgeQoL
         {
             switch (part)
             {
-                case TargetBody.Head: return "Голова";
-                case TargetBody.Body: return "Корпус";
-                case TargetBody.LeftHand: return "Левая рука";
-                case TargetBody.RightHand: return "Правая рука";
-                default: return "Ноги";
+                case TargetBody.Head: return Lang.T("Голова");
+                case TargetBody.Body: return Lang.T("Корпус");
+                case TargetBody.LeftHand: return Lang.T("Левая рука");
+                case TargetBody.RightHand: return Lang.T("Правая рука");
+                default: return Lang.T("Ноги");
             }
         }
 
@@ -193,8 +193,8 @@ namespace NewAgeQoL
         {
             string caption;
             try { caption = ResourceStrings.GetString("combat.gui.attack.dialog.caption"); }
-            catch { caption = "Атака"; }
-            if (string.IsNullOrEmpty(caption)) caption = "Атака";
+            catch { caption = Lang.T("Атака"); }
+            if (string.IsNullOrEmpty(caption)) caption = Lang.T("Атака");
             return _login.Length > 0 ? caption + " — " + _login : caption;
         }
     }

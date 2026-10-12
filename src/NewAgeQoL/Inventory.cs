@@ -697,7 +697,7 @@ namespace NewAgeQoL
         private static bool Prefix(int tabId, ref string __result)
         {
             if (tabId != Contracts.TabId) return true;
-            __result = "Контракты";
+            __result = Lang.T("Контракты");
             return false;
         }
     }

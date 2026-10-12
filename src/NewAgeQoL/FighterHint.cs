@@ -403,13 +403,13 @@ namespace NewAgeQoL
         {
             bool me = cd.MyCharacter != null && cd.MyCharacter.UserId == ch.UserId;
             bool friend = me || (!ch.IsBot && cd.MyCharacter != null && ch.Team == cd.MyCharacter.Team);
-            _title.text = (ch.Login ?? "?") + (me ? "  (ты)" : "");
+            _title.text = (ch.Login ?? "?") + (me ? Lang.T("  (ты)") : "");
             _range.text = Steps(ch, cd, me);
             _range.gameObject.SetActive(_range.text.Length > 0);
             var meta = Meta;
             meta.Length = 0;
-            if (ch.Level > 0) meta.Append("Уровень: ").Append(ch.Level);
-            if (ch.Rank > 0) meta.Append(meta.Length > 0 ? "      " : "").Append("Рейтинг: ").Append(ch.Rank);
+            if (ch.Level > 0) meta.Append(Lang.T("Уровень: ")).Append(ch.Level);
+            if (ch.Rank > 0) meta.Append(meta.Length > 0 ? "      " : "").Append(Lang.T("Рейтинг: ")).Append(ch.Rank);
             _meta.text = meta.ToString();
             _meta.gameObject.SetActive(meta.Length > 0);
             _branch.text = ch.UserId > 0 && !me ? Branches.Text(ch.UserId) : "";
@@ -483,23 +483,23 @@ namespace NewAgeQoL
 
         internal static string Steps(AbstractCharacter ch, ICombatData cd, bool me)
         {
-            if (me) return "это ты";
+            if (me) return Lang.T("это ты");
             int far = Far(ch, cd);
             if (far < 0) return "";
-            return "До цели: " + far + " " + Cells(far);
+            return Lang.F("До цели: {0} {1}", far, Cells(far));
         }
 
         private static string Cells(int count)
         {
             int tail = count % 100;
-            if (tail >= 11 && tail <= 14) return "клеток";
+            if (tail >= 11 && tail <= 14) return Lang.T("клеток");
             switch (count % 10)
             {
-                case 1: return "клетка";
+                case 1: return Lang.T("клетка");
                 case 2:
                 case 3:
-                case 4: return "клетки";
-                default: return "клеток";
+                case 4: return Lang.T("клетки");
+                default: return Lang.T("клеток");
             }
         }
 
@@ -519,13 +519,13 @@ namespace NewAgeQoL
                 {
                     string name = StateName(it);
                     int power = Power(it);
-                    string dur = it.Duration > 1000 ? "до конца боя" : it.Duration > 0 ? it.Duration + " " + Turns(it.Duration) : "";
+                    string dur = it.Duration > 1000 ? Lang.T("до конца боя") : it.Duration > 0 ? it.Duration + " " + Turns(it.Duration) : "";
                     body.Add(new[] { name, Sources(it, cd, ch.UserId), power != 0 ? power.ToString() : "", dur });
                     paint.Add(it.Highlighting == (int)EHighlightingType.Positive ? WardrobeLook.Good
                             : it.Highlighting == (int)EHighlightingType.Negative ? WardrobeLook.Bad
                             : WardrobeLook.Body);
                 }
-                var cap = new[] { "Название", "Источник", "Эффект", "Длительность" };
+                var cap = new[] { Lang.T("Название"), Lang.T("Источник"), Lang.T("Эффект"), Lang.T("Длительность") };
                 bool extra = false;
                 for (int c = 1; c < 4; c++)
                 {
@@ -577,8 +577,8 @@ namespace NewAgeQoL
 
         internal static string Status(AbstractCharacter ch, ICombatData cd, bool known)
         {
-            if (known) return "нет эффектов";
-            return Silent(ch.UserId) ? "нет эффектов" : "загружаю…";
+            if (known) return Lang.T("нет эффектов");
+            return Silent(ch.UserId) ? Lang.T("нет эффектов") : Lang.T("загружаю…");
         }
 
         private static void AddRow(string[] cells, float[] wide, Color32 color, bool head)
@@ -662,10 +662,10 @@ namespace NewAgeQoL
         internal static string Turns(int n)
         {
             int a = n % 10, b = n % 100;
-            if (b >= 11 && b <= 14) return "ходов";
-            if (a == 1) return "ход";
-            if (a >= 2 && a <= 4) return "хода";
-            return "ходов";
+            if (b >= 11 && b <= 14) return Lang.T("ходов");
+            if (a == 1) return Lang.T("ход");
+            if (a >= 2 && a <= 4) return Lang.T("хода");
+            return Lang.T("ходов");
         }
 
         internal static bool Effects(int userId, out List<UserEnchantmentsResponseItem> items)
@@ -694,7 +694,7 @@ namespace NewAgeQoL
                 name = ResourceStrings.GetString(skill);
                 if (name != skill) return name;
             }
-            return "состояние " + it.StateType + "/" + it.StateId;
+            return Lang.F("состояние {0}/{1}", it.StateType, it.StateId);
         }
 
         internal static int Power(UserEnchantmentsResponseItem it)
@@ -712,7 +712,7 @@ namespace NewAgeQoL
             foreach (var s in it.Sources)
             {
                 string n;
-                if (myId > 0 && s.SourceUserId == myId) n = "я";
+                if (myId > 0 && s.SourceUserId == myId) n = Lang.T("я");
                 else
                 {
                     var c = cd.GetCharacter(s.SourceUserId);

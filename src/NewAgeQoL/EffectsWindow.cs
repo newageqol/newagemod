@@ -133,7 +133,7 @@ namespace NewAgeQoL
             var ch = Target(cd);
             if (ch == null)
             {
-                if (_title != null) _title.text = "Эффекты";
+                if (_title != null) _title.text = Lang.T("Эффекты");
                 _headFresh = false;
                 return;
             }
@@ -158,7 +158,7 @@ namespace NewAgeQoL
                 _headId = ch.UserId;
                 _headMe = me;
                 _headLevel = ch.Level;
-                _title.text = "Эффекты: " + (ch.Login ?? "?") + (me ? " (ты)" : "") + (ch.Level > 0 ? "   " + ch.Level + " ур." : "");
+                _title.text = Lang.T("Эффекты: ") + (ch.Login ?? "?") + (me ? Lang.T(" (ты)") : "") + (ch.Level > 0 ? "   " + Lang.F("{0} ур.", ch.Level) : "");
             }
             var ind = ch.Indicators;
             bool bars = ind != null;
@@ -218,13 +218,13 @@ namespace NewAgeQoL
             for (int i = _rows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
             _rowIndex = 0;
             if (!known) { AddRow(FighterHint.Status(ch, cd, false), "", "", "", WardrobeLook.Body); return; }
-            if (items.Count == 0) { AddRow("нет эффектов", "", "", "", WardrobeLook.Body); return; }
+            if (items.Count == 0) { AddRow(Lang.T("нет эффектов"), "", "", "", WardrobeLook.Body); return; }
             foreach (var it in items)
             {
                 string name = FighterHint.StateName(it);
                 string src = FighterHint.Sources(it, cd, ch.UserId);
                 int power = FighterHint.Power(it);
-                string dur = it.Duration > 1000 ? "до конца боя" : it.Duration > 0 ? it.Duration + " " + FighterHint.Turns(it.Duration) : "";
+                string dur = it.Duration > 1000 ? Lang.T("до конца боя") : it.Duration > 0 ? it.Duration + " " + FighterHint.Turns(it.Duration) : "";
                 Color32 col = it.Highlighting == (int)EHighlightingType.Positive ? WardrobeLook.Good
                             : it.Highlighting == (int)EHighlightingType.Negative ? WardrobeLook.Bad
                             : WardrobeLook.Body;
@@ -262,7 +262,7 @@ namespace NewAgeQoL
             mover.Canvas = canvas;
             mover.OnDone = SavePos;
 
-            _title = Label(_panelGo.transform, "Эффекты", 15, FontStyle.Bold, WardrobeLook.Bright);
+            _title = Label(_panelGo.transform, Lang.T("Эффекты"), 15, FontStyle.Bold, WardrobeLook.Bright);
             Place(_title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(12f, -34f), new Vector2(-52f, -6f));
             _title.alignment = TextAnchor.MiddleLeft;
             _title.raycastTarget = false;
@@ -281,7 +281,7 @@ namespace NewAgeQoL
             var headGo = new GameObject("head", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             headGo.transform.SetParent(_panelGo.transform, false);
             Place((RectTransform)headGo.transform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(12f, -94f), new Vector2(-26f, -76f));
-            FillRow(headGo, "Название", "Источник", "Эффект", "Длительность", WardrobeLook.Label, FontStyle.Bold);
+            FillRow(headGo, Lang.T("Название"), Lang.T("Источник"), Lang.T("Эффект"), Lang.T("Длительность"), WardrobeLook.Label, FontStyle.Bold);
             var ruleGo = new GameObject("rule", typeof(RectTransform), typeof(Image));
             ruleGo.transform.SetParent(_panelGo.transform, false);
             Place((RectTransform)ruleGo.transform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(12f, -96f), new Vector2(-26f, -95f));

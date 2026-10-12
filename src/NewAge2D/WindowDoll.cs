@@ -47,24 +47,6 @@ internal static class WindowDoll
         catch (Exception ex) { Plugin.Log.LogError("[doll] " + ex); }
     }
 
-    internal static void Set(bool on)
-    {
-        foreach (var panel in UnityEngine.Object.FindObjectsOfType<UserMenuSlotsPanel3DCharacter>())
-        {
-            if (on)
-            {
-                try { Refresh(panel); }
-                catch (Exception ex) { Plugin.Log.LogError("[doll] " + ex); }
-                continue;
-            }
-            var character = CharacterField.GetValue(panel) as PlayerCharacter;
-            var container = character != null ? ContainerField.GetValue(character) as GameObject : null;
-            var doll = container != null ? Find(container) : null;
-            if (doll != null) doll.SetActive(false);
-        }
-        if (!on) Restore();
-    }
-
     private static void Refresh(UserMenuSlotsPanel3DCharacter panel)
     {
         if (!Plugin.FlashLook) return;

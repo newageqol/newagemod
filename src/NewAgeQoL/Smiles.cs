@@ -384,7 +384,7 @@ namespace NewAgeQoL
             }
             at = end;
             if (known) return face.Tag;
-            return joint ? "" : Unknown;
+            return joint ? "" : Lang.T(Unknown);
         }
 
         private static int Point(string text, int at, out int step)
@@ -482,7 +482,7 @@ namespace NewAgeQoL
             back.type = Image.Type.Sliced;
             WardrobeLook.Frame(_panel, WardrobeLook.Edge);
 
-            _title = OnlineWindow.Label(_panel.transform, Caption, 12, FontStyle.Bold, WardrobeLook.Label);
+            _title = OnlineWindow.Label(_panel.transform, Lang.T(Caption), 12, FontStyle.Bold, WardrobeLook.Label);
             var title = _title;
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(PanelPad, -(TitleHigh + 2f)), new Vector2(-PanelPad, -2f));
@@ -523,7 +523,7 @@ namespace NewAgeQoL
             hover.OnExit = () =>
             {
                 if (back != null) back.color = new Color(1f, 1f, 1f, 0f);
-                if (_title != null) _title.text = Caption;
+                if (_title != null) _title.text = Lang.T(Caption);
             };
             var chosen = face;
             go.GetComponent<Button>().onClick.AddListener(() => Pick(chosen));

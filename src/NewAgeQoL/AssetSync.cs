@@ -16,7 +16,9 @@ namespace NewAgeQoL
     internal static class AssetSync
     {
         private const string Base = "https://github.com/newageqol/newagemod/releases/download/assets/";
+        private const string LangBase = "https://github.com/newageqol/newagemod/releases/download/lang/";
         private const string ManifestName = "manifest.txt";
+        private const string LangDir = "Lang";
         private static readonly string[] Legacy = { "NightTown", "MagicTower" };
 
         private class Entry
@@ -25,6 +27,7 @@ namespace NewAgeQoL
             public long Size;
             public string Sha;
             public string Asset;
+            public string Home = Base;
         }
 
         private class Group
@@ -41,6 +44,37 @@ namespace NewAgeQoL
 
         private static long _gotBytes, _totalBytes;
         private static List<Entry> _need;
+        private static int _groups;
+
+        private static readonly Dictionary<string, string> Titles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["NightTown"] = "ночной Иллениум",
+            ["MagicTower"] = "башня магии",
+            ["BankHall"] = "зал банка",
+            ["BankSafe"] = "казна",
+            ["BankKassa"] = "касса банка",
+            ["Market"] = "рынок",
+        };
+
+        private static string Top(string path)
+        {
+            int slash = path.IndexOf('/');
+            return slash > 0 ? path.Substring(0, slash) : path;
+        }
+
+        private static List<string> NeedGroups() =>
+            _need == null ? new List<string>() : _need.Select(e => Top(e.Path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        internal static string Places
+        {
+            get
+            {
+                var names = NeedGroups().Select(g => Titles.TryGetValue(g, out var t) ? Lang.T(t) : Lang.T("новая локация")).Distinct().ToList();
+                return string.Join(", ", names.ToArray());
+            }
+        }
+
+        internal static bool Some => NeedGroups().Count < _groups;
         private static int _answer;
         private static bool _running;
         private static bool _done;
@@ -58,7 +92,7 @@ namespace NewAgeQoL
 
         internal static float Progress => _totalBytes > 0 ? Mathf.Clamp01(_gotBytes / (float)_totalBytes) : 0f;
 
-        internal static string Done => Mb(_gotBytes) + " из " + Mb(_totalBytes) + " МБ";
+        internal static string Done => Lang.F("{0} из {1} МБ", Mb(_gotBytes), Mb(_totalBytes));
 
         internal static string Mb(long bytes) => Math.Max(1L, (bytes + 512L * 1024L) / (1024L * 1024L)).ToString();
 
@@ -96,7 +130,7 @@ namespace NewAgeQoL
             AssetGate.Close();
             try { Settings.Close(); }
             catch (Exception e) { Plugin.Trace("[assets] closing settings: " + e.Message); }
-            Notice.Show("Новые версии старых локаций скачаны. Они появятся при следующем входе в локацию.", 6f);
+            Notice.Show(Lang.T("Локации мода скачаны. Они появятся при следующем входе в локацию."), 6f);
         }
 
         private static IEnumerator Get(Action<bool> done)
@@ -193,7 +227,11 @@ namespace NewAgeQoL
         private static IEnumerable<string> Staged()
         {
             if (!Directory.Exists(Stage)) yield break;
-            foreach (var d in Directory.GetDirectories(Stage)) yield return Path.GetFileName(d);
+            foreach (var d in Directory.GetDirectories(Stage))
+            {
+                var name = Path.GetFileName(d);
+                if (!name.Equals(LangDir, StringComparison.OrdinalIgnoreCase)) yield return name;
+            }
         }
 
         private static IEnumerator Run()
@@ -218,11 +256,13 @@ namespace NewAgeQoL
                 }
                 var entries = Parse(Encoding.UTF8.GetString(manifest));
                 Plugin.Log.LogInfo("[assets] manifest: " + entries.Count + " files");
+                _groups = entries.Where(e => !e.Path.StartsWith(LangDir + "/", StringComparison.OrdinalIgnoreCase)).Select(e => Top(e.Path)).Distinct(StringComparer.OrdinalIgnoreCase).Count();
                 LoadState();
 
                 var need = new List<Entry>();
                 foreach (var e in entries)
                 {
+                    if (e.Path.StartsWith(LangDir + "/", StringComparison.OrdinalIgnoreCase)) continue;
                     string have = null;
                     yield return Hash(Path.Combine(Root, e.Path), e.Path, h => have = h);
                     if (have == e.Sha) continue;
@@ -240,6 +280,7 @@ namespace NewAgeQoL
                 _gotBytes = 0;
                 _answer = 0;
                 _need = need;
+                while ((!Lang.Decided || LangGate.Open) && !SideButtons.InWorld()) yield return null;
                 while (SideButtons.InCombat()) yield return new WaitForSecondsRealtime(1f);
                 AssetGate.Ask(need.Count, total);
                 while (_answer == 0) yield return null;
@@ -266,11 +307,79 @@ namespace NewAgeQoL
             }
         }
 
-        private static IEnumerator Download(string name, Action<byte[], string, long> done)
+        internal const int Current = 0, Updated = 1, Missed = 2;
+
+        internal static IEnumerator Refresh(string path, Action<long, long> progress, Action<int> done)
         {
-            var request = UnityWebRequest.Get(Base + name + "?t=" + DateTime.UtcNow.Ticks);
+            byte[] manifest = null, signature = null;
+            string error = null;
+            long code = 0;
+            yield return Download(ManifestName, (d, e, c) => { manifest = d; error = e; code = c; }, 10, LangBase);
+            if (manifest == null || manifest.Length == 0)
+            {
+                Plugin.Log.LogInfo("[lang] manifest unavailable: code " + code + ", " + (error ?? "empty"));
+                done(Missed);
+                yield break;
+            }
+            yield return Download(ManifestName + ".sig", (d, e, c) => { signature = d; error = e; code = c; }, 10, LangBase);
+            if (!Sign.Valid(manifest, signature))
+            {
+                Plugin.Warn("[lang] manifest rejected: " + (signature == null ? "signature unavailable, code " + code + ", " + (error ?? "empty") : "signature does not match"));
+                done(Missed);
+                yield break;
+            }
+            Entry entry = null;
+            foreach (var e in Parse(Encoding.UTF8.GetString(manifest)))
+                if (string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase)) { entry = e; break; }
+            if (entry == null)
+            {
+                Plugin.Log.LogInfo("[lang] " + path + " is not in the manifest");
+                done(Missed);
+                yield break;
+            }
+            entry.Home = LangBase;
+            if (_known == null) LoadState();
+            string have = null;
+            yield return Hash(Path.Combine(Root, path), path, h => have = h);
+            if (have == entry.Sha)
+            {
+                SaveState();
+                done(Current);
+                yield break;
+            }
+            Plugin.Log.LogInfo("[lang] downloading " + path + ", " + entry.Size + " bytes");
+            progress(0, entry.Size);
+            bool ok = false;
+            yield return Fetch(entry, r => ok = r, b => progress(b, entry.Size));
+            if (!ok)
+            {
+                done(Missed);
+                yield break;
+            }
+            try
+            {
+                var from = Path.Combine(Stage, path);
+                var to = Path.Combine(Root, path);
+                Directory.CreateDirectory(Path.GetDirectoryName(to));
+                if (File.Exists(to)) File.Delete(to);
+                File.Move(from, to);
+                Remember(path, to);
+                SaveState();
+            }
+            catch (Exception e)
+            {
+                Plugin.Warn("[lang] installing " + path + ": " + e.Message);
+                done(Missed);
+                yield break;
+            }
+            done(Updated);
+        }
+
+        private static IEnumerator Download(string name, Action<byte[], string, long> done, int timeout = 30, string home = Base)
+        {
+            var request = UnityWebRequest.Get(home + name + "?t=" + DateTime.UtcNow.Ticks);
             request.SetRequestHeader("User-Agent", "NewAgeQoL");
-            request.timeout = 30;
+            request.timeout = timeout;
             yield return request.SendWebRequest();
             string error = request.error;
             byte[] data = string.IsNullOrEmpty(error) ? request.downloadHandler.data : null;
@@ -335,7 +444,7 @@ namespace NewAgeQoL
                 }
                 while (SideButtons.InCombat()) yield return new WaitForSecondsRealtime(2f);
 
-                var request = new UnityWebRequest(Base + e.Asset, UnityWebRequest.kHttpVerbGET);
+                var request = new UnityWebRequest(e.Home + e.Asset, UnityWebRequest.kHttpVerbGET);
                 request.downloadHandler = new DownloadHandlerFile(part, have > 0) { removeFileOnAbort = false };
                 request.SetRequestHeader("User-Agent", "NewAgeQoL");
                 if (have > 0) request.SetRequestHeader("Range", "bytes=" + have + "-");
@@ -489,15 +598,15 @@ namespace NewAgeQoL
             _buttons = new GameObject("buttons", typeof(RectTransform));
             _buttons.transform.SetParent(box.transform, false);
             Fill((RectTransform)_buttons.transform);
-            var yes = OnlineWindow.MakeGameButton(_buttons.transform, "Скачать", 220f, 46f, () => AssetSync.Answer(true));
-            var no = OnlineWindow.MakeGameButton(_buttons.transform, "Не сейчас", 220f, 46f, () => AssetSync.Answer(false));
+            var yes = OnlineWindow.MakeGameButton(_buttons.transform, Lang.T("Скачать"), 220f, 46f, () => AssetSync.Answer(true));
+            var no = OnlineWindow.MakeGameButton(_buttons.transform, Lang.T("Не сейчас"), 220f, 46f, () => AssetSync.Answer(false));
             Place(yes.transform as RectTransform, -120f);
             Place(no.transform as RectTransform, 120f);
 
             _fail = new GameObject("fail", typeof(RectTransform));
             _fail.transform.SetParent(box.transform, false);
             Fill((RectTransform)_fail.transform);
-            var go = OnlineWindow.MakeGameButton(_fail.transform, "Продолжить", 260f, 46f, Close);
+            var go = OnlineWindow.MakeGameButton(_fail.transform, Lang.T("Продолжить"), 260f, 46f, Close);
             Place(go.transform as RectTransform, 0f);
 
             _barBox = new GameObject("bar", typeof(RectTransform), typeof(Image));
@@ -549,7 +658,9 @@ namespace NewAgeQoL
             {
                 Build();
                 _downloading = false;
-                _text.text = "Новые версии старых локаций: " + AssetSync.Mb(bytes) + " МБ.\nСкачать сейчас? Войти в игру можно будет после загрузки.\nБез них будут обычные карты игры.\nСкачать можно и позже, в настройках мода.";
+                _text.text = Lang.F("Нужно скачать локации мода: {0}.", AssetSync.Places)
+                    + (AssetSync.Some ? Lang.T(" Остальные уже на месте.") : "")
+                    + Lang.F("\nЭто {0} МБ. Скачать сейчас? Войти в игру можно будет после загрузки.\nБез них на их месте будут обычные карты игры. Скачать можно и позже, в настройках мода.", AssetSync.Mb(bytes));
                 Mode(true, false, false);
             }
             catch (Exception e) { Plugin.Warn("[assets] dialog: " + e.Message); AssetSync.Answer(false); }
@@ -573,7 +684,7 @@ namespace NewAgeQoL
         {
             if (_root == null) return;
             _downloading = false;
-            _text.text = "Не удалось скачать новые версии старых локаций.\nПока будут обычные карты игры.\nДокачать можно в настройках мода или при следующем запуске.";
+            _text.text = Lang.F("Не удалось скачать локации мода: {0}.\nПока на их месте будут обычные карты игры.\nДокачать можно в настройках мода или при следующем запуске.", AssetSync.Places);
             Mode(false, false, true);
         }
 
@@ -592,7 +703,7 @@ namespace NewAgeQoL
                 if (canvas.enabled == fight) canvas.enabled = !fight;
             }
             if (!_downloading || _text == null) return;
-            _text.text = "Загружаю новые версии старых локаций…\n" + AssetSync.Done + (SideButtons.InWorld() ? "\nОкно закроется само, когда загрузка закончится." : "\nВойти в игру можно будет после загрузки.");
+            _text.text = Lang.F("Загружаю локации мода: {0}…\n{1}", AssetSync.Places, AssetSync.Done) + (SideButtons.InWorld() ? Lang.T("\nОкно закроется само, когда загрузка закончится.") : Lang.T("\nВойти в игру можно будет после загрузки."));
             _bar.anchorMax = new Vector2(AssetSync.Progress, 1f);
         }
     }

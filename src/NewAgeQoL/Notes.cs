@@ -148,7 +148,7 @@ namespace NewAgeQoL
                 if (font != null) text.font = font;
                 OnlineWindow.Place(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 2f), new Vector2(-10f, -2f));
 
-                var hint = OnlineWindow.Label(box.transform, "Заметка: чей мульт, кто это", size, FontStyle.Italic, new Color(1f, 1f, 1f, 0.45f));
+                var hint = OnlineWindow.Label(box.transform, Lang.T("Заметка: чей мульт, кто это"), size, FontStyle.Italic, new Color(1f, 1f, 1f, 0.45f));
                 hint.alignment = TextAnchor.MiddleLeft;
                 hint.verticalOverflow = VerticalWrapMode.Overflow;
                 if (font != null) hint.font = font;

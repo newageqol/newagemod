@@ -24,27 +24,27 @@ namespace NewAgeQoL
             Busy = true;
             try
             {
-                if (!Travel.Connected()) { Travel.Say("Нет соединения — телепорт недоступен."); yield break; }
+                if (!Travel.Connected()) { Travel.Say(Lang.T("Нет соединения — телепорт недоступен.")); yield break; }
 
                 if (!Travel.InTown())
                 {
-                    Travel.Say(Onward ? "Возвращаюсь в город…" : "Телепорт в город…");
+                    Travel.Say(Onward ? Lang.T("Возвращаюсь в город…") : Lang.T("Телепорт в город…"));
                     int load = Travel.LoadStamp;
                     if (!Send(new ReturnToIlleniumRequest(true))) yield break;
                     yield return Wait(() => Travel.LoadStamp != load && Travel.InTown(), 90f);
-                    if (!_ok) { Travel.Say("Не дождался города."); yield break; }
+                    if (!_ok) { Travel.Say(Lang.T("Не дождался города.")); yield break; }
                     yield return Settle();
                 }
 
                 if (!Onward) yield break;
 
-                yield return Hop("арену", Plugin.CfgTownArenaId, Plugin.CfgTownArenaWords);
+                yield return Hop(Lang.T("арену"), Plugin.CfgTownArenaId, Plugin.CfgTownArenaWords);
                 if (!_ok) yield break;
 
-                yield return Hop("турниры", Plugin.CfgTownTournamentId, Plugin.CfgTownTournamentWords);
+                yield return Hop(Lang.T("турниры"), Plugin.CfgTownTournamentId, Plugin.CfgTownTournamentWords);
                 if (!_ok) yield break;
 
-                Travel.Say("На месте — турниры.");
+                Travel.Say(Lang.T("На месте — турниры."));
             }
             finally { Busy = false; }
         }
@@ -54,19 +54,20 @@ namespace NewAgeQoL
         private static IEnumerator Hop(string what, BepInEx.Configuration.ConfigEntry<int> byId,
                                        BepInEx.Configuration.ConfigEntry<string> byWords)
         {
+            what = Lang.T(what);
             int door = byId != null && byId.Value > 0 ? byId.Value : Door(byWords);
             if (door <= 0)
             {
-                Travel.Say("Не нашёл вход в " + what + " — список дверей в логе.");
+                Travel.Say(Lang.F("Не нашёл вход в {0} — список дверей в логе.", what));
                 _ok = false;
                 yield break;
             }
 
-            Travel.Say("Иду в " + what + "…");
+            Travel.Say(Lang.F("Иду в {0}…", what));
             int load = Travel.LoadStamp;
             if (!Send(new ChangeMapRequest(door))) { _ok = false; yield break; }
             yield return Wait(() => Travel.LoadStamp != load, 60f);
-            if (!_ok) { Travel.Say("Не дождался перехода в " + what + "."); yield break; }
+            if (!_ok) { Travel.Say(Lang.F("Не дождался перехода в {0}.", what)); yield break; }
             yield return Settle();
             _ok = true;
         }
@@ -118,14 +119,14 @@ namespace NewAgeQoL
             try
             {
                 var conn = NetworkConnection.Instance;
-                if (conn == null || !conn.IsConnected()) { Travel.Say("Нет соединения."); return false; }
+                if (conn == null || !conn.IsConnected()) { Travel.Say(Lang.T("Нет соединения.")); return false; }
                 conn.SendRequest(request);
                 return true;
             }
             catch (Exception e)
             {
                 Plugin.Fault("[town] send: " + e.Message);
-                Travel.Say("Ошибка отправки: " + e.Message);
+                Travel.Say(Lang.F("Ошибка отправки: {0}", e.Message));
                 return false;
             }
         }

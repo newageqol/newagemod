@@ -43,6 +43,43 @@ namespace NewAgeQoL
         }
 
         private static bool _warmed, _warming;
+        private const float HoldLongest = 8f;
+        private static int _showing;
+        private static bool _closeLater;
+        private static float _holdUntil;
+
+        internal static bool HoldCurtain()
+        {
+            if (_showing <= 0 || Time.unscaledTime > _holdUntil) return false;
+            _closeLater = true;
+            return true;
+        }
+
+        internal static void Tick()
+        {
+            if (_closeLater) Uncover();
+        }
+
+        private static void Uncover()
+        {
+            if (!_closeLater || (_showing > 0 && Time.unscaledTime <= _holdUntil)) return;
+            _closeLater = false;
+            if (_showing > 0) Plugin.Trace("[places] location still loading after " + HoldLongest + " s, loading screen closed anyway");
+            try { Preloader.Close(); }
+            catch (Exception e) { Plugin.Trace("[places] closing loading screen: " + e.Message); }
+        }
+
+        private static IEnumerator Held(IEnumerator run)
+        {
+            _showing++;
+            _holdUntil = Time.unscaledTime + HoldLongest;
+            try { yield return run; }
+            finally
+            {
+                _showing = Math.Max(0, _showing - 1);
+                Uncover();
+            }
+        }
 
         internal static void Warm()
         {
@@ -194,9 +231,10 @@ namespace NewAgeQoL
                     var old = FindOld(d.Prefab);
                     if (old == null || old.GetComponentInChildren<PlaceMark>(true) != null) continue;
                     AssetSync.Settle(d.Name);
-                    if (d.Kind == "scene" ? !string.IsNullOrEmpty(d.Bundle) && File.Exists(PathOf(d, d.Bundle)) : File.Exists(PathOf(d, "bank_base.png"))) HideOld(old);
-                    if (d.Kind == "scene") Plugin.Instance.StartCoroutine(RunScene(d, old));
-                    else Plugin.Instance.StartCoroutine(RunPrerender(d, old));
+                    bool hidden = d.Kind == "scene" ? !string.IsNullOrEmpty(d.Bundle) && File.Exists(PathOf(d, d.Bundle)) : File.Exists(PathOf(d, "bank_base.png"));
+                    if (hidden) HideOld(old);
+                    var run = d.Kind == "scene" ? RunScene(d, old) : RunPrerender(d, old);
+                    Plugin.Instance.StartCoroutine(hidden ? Held(run) : run);
                 }
                 catch (Exception e) { Plugin.Fault("[places] " + d.Name + ": " + e); }
             }
@@ -461,6 +499,13 @@ namespace NewAgeQoL
     internal class PlaceMark : MonoBehaviour
     {
         public string Folder;
+    }
+
+    [HarmonyPatch(typeof(Preloader), "Close")]
+    internal static class LocationsCurtainPatch
+    {
+        [HarmonyPriority(Priority.First)]
+        private static bool Prefix() => !Locations.HoldCurtain();
     }
 
     [HarmonyPatch(typeof(StaticLocationLoadController), "AssetDataLoaded")]

@@ -79,16 +79,16 @@ namespace NewAgeQoL
         internal static void Show(Text text, Kind kind)
         {
             if (text == null || kind == null) return;
-            text.text = Now(kind).Length > 0 ? "Пример" : "Как в игре";
+            text.text = Now(kind).Length > 0 ? Lang.T("Пример") : Lang.T("Как в игре");
             text.color = Of(kind);
         }
 
         private static string Sample(Kind kind)
         {
             string hex = Now(kind);
-            if (kind == All[All.Length - 1]) return "[13:47] Создан хаотический бой с 17 уровня";
-            if (hex.Length > 0) return "[13:48] Ник: так выглядит строка";
-            return "<color=#FFFFFF>[13:48]</color> <color=#88B8FF>Ник</color>: так выглядит строка";
+            if (kind == All[All.Length - 1]) return Lang.T("[13:47] Создан хаотический бой с 17 уровня");
+            if (hex.Length > 0) return Lang.T("[13:48] Ник: так выглядит строка");
+            return Lang.T("<color=#FFFFFF>[13:48]</color> <color=#88B8FF>Ник</color>: так выглядит строка");
         }
 
         private static Color Paint(string hex)
@@ -184,7 +184,7 @@ namespace NewAgeQoL
                 back.type = Image.Type.Sliced;
                 WardrobeLook.Frame(box, WardrobeLook.Edge);
 
-                var title = OnlineWindow.Label(box.transform, "Цвет: " + kind.Title, 16, FontStyle.Bold, WardrobeLook.Bright);
+                var title = OnlineWindow.Label(box.transform, Lang.F("Цвет: {0}", Lang.T(kind.Title)), 16, FontStyle.Bold, WardrobeLook.Bright);
                 title.alignment = TextAnchor.MiddleLeft;
                 title.raycastTarget = false;
                 Top(title.rectTransform, Pad, 16f, Wide - Pad * 2f, 22f);
@@ -257,10 +257,10 @@ namespace NewAgeQoL
                     else field.SetTextWithoutNotify(Now(kind));
                 });
 
-                var reset = OnlineWindow.MakeGameButton(box.transform, "По умолчанию", ResetW, 34f, () => choose(""));
+                var reset = OnlineWindow.MakeGameButton(box.transform, Lang.T("По умолчанию"), ResetW, 34f, () => choose(""));
                 Top((RectTransform)reset.transform, Pad + FieldW + Space, row, ResetW, 34f);
 
-                var ready = OnlineWindow.MakeGameButton(box.transform, "Готово", ReadyW, 34f, Close);
+                var ready = OnlineWindow.MakeGameButton(box.transform, Lang.T("Готово"), ReadyW, 34f, Close);
                 Top((RectTransform)ready.transform, Wide - Pad - ReadyW, row, ReadyW, 34f);
                 var readyFace = ready.GetComponent<Image>();
                 if (readyFace != null) readyFace.color = WardrobeLook.Accent;

@@ -37,9 +37,9 @@ namespace NewAgeQoL
             try
             {
                 string got = ResourceStrings.GetString("messages.userinfo.tabs.friends");
-                return string.IsNullOrEmpty(got) ? "Друзья" : got;
+                return string.IsNullOrEmpty(got) ? Lang.T("Друзья") : got;
             }
-            catch { return "Друзья"; }
+            catch { return Lang.T("Друзья"); }
         }
     }
 

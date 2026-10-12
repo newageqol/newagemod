@@ -45,7 +45,7 @@ namespace NewAgeQoL
         internal static string Name(int mode)
         {
             string got = Line("move.mode.name." + (mode + 3));
-            return got.Length > 0 ? got : "режим " + mode;
+            return got.Length > 0 ? got : Lang.F("режим {0}", mode);
         }
 
         private static string Line(string key)
@@ -61,10 +61,10 @@ namespace NewAgeQoL
         internal static string Clock(float seconds)
         {
             int whole = Mathf.CeilToInt(seconds);
-            if (whole < 60) return whole + "с";
+            if (whole < 60) return Lang.F("{0}с", whole);
             int minutes = whole / 60;
             int rest = whole % 60;
-            return rest == 0 ? minutes + "м" : minutes + "м " + rest + "с";
+            return rest == 0 ? Lang.F("{0}м", minutes) : Lang.F("{0}м {1}с", minutes, rest);
         }
 
         internal static void Say(string text)
@@ -78,17 +78,17 @@ namespace NewAgeQoL
         {
             try
             {
-                if (mode == _current) { Say("Скорость уже " + Name(mode)); return; }
-                if (Cooling) { Say("Смена скорости на перезарядке: ещё " + Clock(Left)); return; }
+                if (mode == _current) { Say(Lang.F("Скорость уже {0}", Name(mode))); return; }
+                if (Cooling) { Say(Lang.F("Смена скорости на перезарядке: ещё {0}", Clock(Left))); return; }
                 var nc = NetworkConnection.Instance;
-                if (nc == null || !nc.IsConnected()) { Say("Нет соединения"); return; }
+                if (nc == null || !nc.IsConnected()) { Say(Lang.T("Нет соединения")); return; }
                 nc.SendRequest(new ChangeMoveModeRequest(mode));
                 _wanted = mode;
                 _sentAt = Time.unscaledTime;
                 Status = "";
                 Plugin.Trace("[speed] requesting " + Name(mode) + ", number " + mode);
             }
-            catch (Exception e) { Plugin.Fault("[speed] " + e); Say("Ошибка: " + e.Message); }
+            catch (Exception e) { Plugin.Fault("[speed] " + e); Say(Lang.F("Ошибка: {0}", e.Message)); }
         }
 
         internal static void Note(int mode, int leftMs)
@@ -102,7 +102,7 @@ namespace NewAgeQoL
             {
                 _sentAt = -100f;
                 if (other) Status = "";
-                else Say("Скорость осталась прежней: " + Name(mode));
+                else Say(Lang.F("Скорость осталась прежней: {0}", Name(mode)));
             }
             Plugin.Trace("[speed] server: " + Name(mode)
                          + (leftMs > 0 ? ", cooldown " + Clock(leftMs / 1000f) : ""));

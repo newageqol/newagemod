@@ -128,7 +128,7 @@ namespace NewAgeQoL
                 fight.Max = max;
                 Origins[info.Id] = new Fight { Id = info.Id, Kind = kind, Max = max, Seen = Time.unscaledTime };
             }
-            fight.Desc = string.IsNullOrEmpty(info.Desc) ? "бой идёт" : info.Desc;
+            fight.Desc = string.IsNullOrEmpty(info.Desc) ? Lang.T("бой идёт") : info.Desc;
             fight.MinLevel = info.MinLevel ?? 0;
             fight.MaxLevel = info.MaxLevel ?? 0;
             fight.Count = info.FighterCount ?? 0;

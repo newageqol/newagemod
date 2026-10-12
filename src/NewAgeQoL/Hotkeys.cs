@@ -199,7 +199,7 @@ namespace NewAgeQoL
                 Bound.Remove(key);
             }
             Save();
-            try { Notice.Show("Снято клавиш у умений и заклинаний: " + clash.Count + ". Эти клавиши заняты общими для аккаунта, назначь им другие", 7f); }
+            try { Notice.Show(Lang.F("Снято клавиш у умений и заклинаний: {0}. Эти клавиши заняты общими для аккаунта, назначь им другие", clash.Count), 7f); }
             catch (Exception e) { Plugin.Trace("[hotkeys] busy keys notice: " + e.Message); }
         }
 
@@ -396,12 +396,12 @@ namespace NewAgeQoL
             switch (key)
             {
                 case KeyCode.LeftControl: return "Ctrl";
-                case KeyCode.RightControl: return "Ctrl (правый)";
+                case KeyCode.RightControl: return Lang.T("Ctrl (правый)");
                 case KeyCode.LeftShift: return "Shift";
-                case KeyCode.RightShift: return "Shift (правый)";
+                case KeyCode.RightShift: return Lang.T("Shift (правый)");
                 case KeyCode.LeftAlt: return "Alt";
-                case KeyCode.RightAlt: return "Alt (правый)";
-                case KeyCode.Space: return "Пробел";
+                case KeyCode.RightAlt: return Lang.T("Alt (правый)");
+                case KeyCode.Space: return Lang.T("Пробел");
                 case KeyCode.Return: return "Enter";
                 default: return text;
             }
@@ -525,7 +525,7 @@ namespace NewAgeQoL
             if (_capText != null)
             {
                 _capHome = _capText.color;
-                _capText.text = "жми клавишу…";
+                _capText.text = Lang.T("жми клавишу…");
             }
         }
 
@@ -549,7 +549,7 @@ namespace NewAgeQoL
                 if (_capText != null)
                 {
                     _capText.color = new Color32(255, 120, 100, 255);
-                    _capText.text = "занято: " + busy;
+                    _capText.text = Lang.F("занято: {0}", busy);
                 }
                 _capMsgUntil = Time.unscaledTime + 2f;
                 return;
@@ -863,29 +863,29 @@ namespace NewAgeQoL
         {
             return new List<Act>
             {
-                new Act { Key = "win:inventory", Group = "Окна", Title = "Инвентарь", Fallback = "I",
+                new Act { Key = "win:inventory", Group = "Окна", Title = Lang.T("Инвентарь"), Fallback = "I",
                     Do = () => Spells.Menu(UserMenuController.ETabs.Inventory) },
-                new Act { Key = "win:spells", Group = "Окна", Title = "Книга магии", Do = Spells.Open },
-                new Act { Key = "win:daily", Group = "Окна", Title = "Задания дня",
+                new Act { Key = "win:spells", Group = "Окна", Title = Lang.T("Книга магии"), Do = Spells.Open },
+                new Act { Key = "win:daily", Group = "Окна", Title = Lang.T("Задания дня"),
                     Do = () => DependencyContainer.GetContainer()?.Resolve<DailyTasksWindowController>()?.OpenByButton() },
-                new Act { Key = "win:quests", Group = "Окна", Title = "Задания списком", Do = QuestWindow.Toggle },
-                new Act { Key = "win:online", Group = "Окна", Title = "Кто в игре", Fallback = "F9", Do = OnlineWindow.Toggle },
-                new Act { Key = "win:set", Group = "Окна", Title = "Запасной набор", Do = Manikin.Toggle },
+                new Act { Key = "win:quests", Group = "Окна", Title = Lang.T("Задания списком"), Do = QuestWindow.Toggle },
+                new Act { Key = "win:online", Group = "Окна", Title = Lang.T("Кто в игре"), Fallback = "F9", Do = OnlineWindow.Toggle },
+                new Act { Key = "win:set", Group = "Окна", Title = Lang.T("Запасной набор"), Do = Manikin.Toggle },
 
-                new Act { Key = "world:town", Group = "Мир", Title = "Вернуться в город", Do = SideButtons.GoHome },
-                new Act { Key = "world:stash", Group = "Мир", Title = "Хранилище: сдать или забрать вещи",
+                new Act { Key = "world:town", Group = "Мир", Title = Lang.T("Вернуться в город"), Do = SideButtons.GoHome },
+                new Act { Key = "world:stash", Group = "Мир", Title = Lang.T("Хранилище: сдать или забрать вещи"),
                     Do = () => { if (Artifacts.HasStash) Artifacts.Restore(); else Artifacts.Stash(); } },
 
-                new Act { Key = "fight:phase", Group = "Бой", Title = "Завершить фазу", Fallback = "Tab", Do = Phase },
-                new Act { Key = "fight:strike", Group = "Бой", Title = "Удар", Fallback = "Space", Do = Strike.Key },
-                new Act { Key = "fight:next", Group = "Бой", Title = "Следующий враг", Do = Targets.Next },
-                new Act { Key = "fight:nextally", Group = "Бой", Title = "Следующий союзник", Do = Targets.NextAlly },
-                new Act { Key = WalkKeys.GoKey, Group = "Бой", Title = "Шаг на клетку, выбранную стрелками", Fallback = "Return", Do = WalkKeys.Go },
+                new Act { Key = "fight:phase", Group = "Бой", Title = Lang.T("Завершить фазу"), Fallback = "Tab", Do = Phase },
+                new Act { Key = "fight:strike", Group = "Бой", Title = Lang.T("Удар"), Fallback = "Space", Do = Strike.Key },
+                new Act { Key = "fight:next", Group = "Бой", Title = Lang.T("Следующий враг"), Do = Targets.Next },
+                new Act { Key = "fight:nextally", Group = "Бой", Title = Lang.T("Следующий союзник"), Do = Targets.NextAlly },
+                new Act { Key = WalkKeys.GoKey, Group = "Бой", Title = Lang.T("Шаг на клетку, выбранную стрелками"), Fallback = "Return", Do = WalkKeys.Go },
 
-                new Act { Key = "flask:0", Group = "Банки", Title = "Банка жизни", Do = () => Flasks.Use(0) },
-                new Act { Key = "flask:1", Group = "Банки", Title = "Банка маны", Do = () => Flasks.Use(1) },
-                new Act { Key = "flask:2", Group = "Банки", Title = "Банка энергии", Do = () => Flasks.Use(2) },
-                new Act { Key = "flask:3", Group = "Банки", Title = "Грибы", Do = () => Flasks.Use(3) },
+                new Act { Key = "flask:0", Group = "Банки", Title = Lang.T("Банка жизни"), Do = () => Flasks.Use(0) },
+                new Act { Key = "flask:1", Group = "Банки", Title = Lang.T("Банка маны"), Do = () => Flasks.Use(1) },
+                new Act { Key = "flask:2", Group = "Банки", Title = Lang.T("Банка энергии"), Do = () => Flasks.Use(2) },
+                new Act { Key = "flask:3", Group = "Банки", Title = Lang.T("Грибы"), Do = () => Flasks.Use(3) },
             };
         }
 

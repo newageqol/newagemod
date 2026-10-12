@@ -193,7 +193,7 @@ namespace NewAgeQoL
             int size = Mathf.Clamp(Mathf.RoundToInt(r * 0.5f), 13, 17);
 
             float y = Pad;
-            var loginCaption = Label(root, "Логин", size, FontStyle.Normal, ink, font);
+            var loginCaption = Label(root, Lang.T("Логин"), size, FontStyle.Normal, ink, font);
             float captionW = loginCaption.preferredWidth + 12f;
             At(loginCaption.rectTransform, Pad, y, captionW, r * 1.3f);
             var loginValue = Label(root, m.Login ?? "", size + 4, FontStyle.Bold, ink, font);
@@ -218,27 +218,27 @@ namespace NewAgeQoL
             mirror.Add(Part<Image>(panel, "AvatarImage"), faceImage);
 
             int id = m.UserId;
-            var site = Wardrobe.GameButton(root, "Информация на сайте", () => Application.OpenURL(Site + id), false);
+            var site = Wardrobe.GameButton(root, Lang.T("Информация на сайте"), () => Application.OpenURL(Site + id), false);
             At(site, Pad, y + faceH + 10f, left, buttonH);
             string target = m.Login ?? "";
-            var gold = Wardrobe.GameButton(root, "Перевести золото", () => GoldTransfer.Open(root, target, font), false);
+            var gold = Wardrobe.GameButton(root, Lang.T("Перевести золото"), () => GoldTransfer.Open(root, target, font), false);
             At(gold, Pad, y + faceH + 18f + buttonH, left, buttonH);
 
             var wait = new Waiting { UserId = m.UserId, Root = go };
-            string race = RaceName(m.Race);
-            string klass = ClassName(m.ClassId);
+            string race = Lang.Game(RaceName(m.Race));
+            string klass = Lang.Game(ClassName(m.ClassId));
             string relation = Relation(m.ClanRelation);
 
-            string[] names = { "Уровень", "Раса", "Характер", "Подкласс", "Клан", "Дата создания", "Победы", "Турнирный рейтинг", "Рейтинг", "Ранг" };
+            string[] names = { Lang.T("Уровень"), Lang.T("Раса"), Lang.T("Характер"), Lang.T("Подкласс"), Lang.T("Клан"), Lang.T("Дата создания"), Lang.T("Победы"), Lang.T("Турнирный рейтинг"), Lang.T("Рейтинг"), Lang.T("Ранг") };
             float lw = Mathf.Min(Measure(root, names, size, font) + 14f, wide * 0.55f);
             int row = 0;
-            Row(root, x, y + r * row++, wide, lw, r, "Уровень", m.Level.ToString(), size, ink, font);
-            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, "Раса", race ?? "…", size, ink, font), p => race ?? Field(p, "Раса"));
-            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, "Характер", "…", size, ink, font), p => Field(p, "Характер"));
-            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, "Подкласс", "…", size, ink, font), p => Field(p, "Подкласс") ?? Field(p, "Класс") ?? klass);
+            Row(root, x, y + r * row++, wide, lw, r, Lang.T("Уровень"), m.Level.ToString(), size, ink, font);
+            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, Lang.T("Раса"), race ?? "…", size, ink, font), p => race ?? Lang.Game(Field(p, "Раса")));
+            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, Lang.T("Характер"), "…", size, ink, font), p => Field(p, "Характер"));
+            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, Lang.T("Подкласс"), "…", size, ink, font), p => Lang.Game(Field(p, "Подкласс") ?? Field(p, "Класс")) ?? klass);
             bool icon = !string.IsNullOrEmpty(m.ClanName) && Part<Image>(panel, "ClanIconImage") != null && Part<Image>(panel, "ClanIconImage").sprite != null;
-            var clan = Row(root, x, y + r * row++, wide, lw, r, "Клан",
-                string.IsNullOrEmpty(m.ClanName) ? "нет клана" : m.ClanName + (relation != null ? " · " + relation : ""), size, ink, font);
+            var clan = Row(root, x, y + r * row++, wide, lw, r, Lang.T("Клан"),
+                string.IsNullOrEmpty(m.ClanName) ? Lang.T("нет клана") : m.ClanName + (relation != null ? " · " + relation : ""), size, ink, font);
             if (icon)
             {
                 var box = (RectTransform)clan.transform.parent;
@@ -255,22 +255,22 @@ namespace NewAgeQoL
                 image.raycastTarget = false;
                 mirror.Add(Part<Image>(panel, "ClanIconImage"), image);
             }
-            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, "Дата создания", "…", size, ink, font), p => Date(Field(p, "Дата регистрации")));
-            Row(root, x, y + r * row++, wide, lw, r, "Победы", m.Wins.ToString(), size, ink, font);
-            Row(root, x, y + r * row++, wide, lw, r, "Турнирный рейтинг", m.TournamentRank.ToString(), size, ink, font);
-            Row(root, x, y + r * row++, wide, lw, r, "Рейтинг", m.Rank.ToString(), size, ink, font);
-            if (!string.IsNullOrEmpty(m.Karma)) Row(root, x, y + r * row++, wide, lw, r, "Ранг", m.Karma, size, ink, font);
-            else Pending(wait, Row(root, x, y + r * row++, wide, lw, r, "Ранг", "…", size, ink, font), p => Field(p, "Ранг"));
+            Pending(wait, Row(root, x, y + r * row++, wide, lw, r, Lang.T("Дата создания"), "…", size, ink, font), p => Date(Field(p, "Дата регистрации")));
+            Row(root, x, y + r * row++, wide, lw, r, Lang.T("Победы"), m.Wins.ToString(), size, ink, font);
+            Row(root, x, y + r * row++, wide, lw, r, Lang.T("Турнирный рейтинг"), m.TournamentRank.ToString(), size, ink, font);
+            Row(root, x, y + r * row++, wide, lw, r, Lang.T("Рейтинг"), m.Rank.ToString(), size, ink, font);
+            if (!string.IsNullOrEmpty(m.Karma)) Row(root, x, y + r * row++, wide, lw, r, Lang.T("Ранг"), m.Karma, size, ink, font);
+            else Pending(wait, Row(root, x, y + r * row++, wide, lw, r, Lang.T("Ранг"), "…", size, ink, font), p => Field(p, "Ранг"));
 
             float ya = y + r * 10.3f;
             float half = (wide - 20f) / 2f;
             float xm = x + half + 20f;
-            var armorHead = Label(root, "Броня", size + 1, FontStyle.Bold, ink, font);
+            var armorHead = Label(root, Lang.T("Броня"), size + 1, FontStyle.Bold, ink, font);
             At(armorHead.rectTransform, x, ya, half, r);
-            var magicHead = Label(root, "Защита от магии", size + 1, FontStyle.Bold, ink, font);
+            var magicHead = Label(root, Lang.T("Защита от магии"), size + 1, FontStyle.Bold, ink, font);
             At(magicHead.rectTransform, xm, ya, half, r);
-            string[] zones = { "Голова", "Туловище", "Правая рука", "Левая рука", "Ноги" };
-            string[] schools = { "Рассвет", "Полнолуние", "Астрал" };
+            string[] zones = { Lang.T("Голова"), Lang.T("Туловище"), Lang.T("Правая рука"), Lang.T("Левая рука"), Lang.T("Ноги") };
+            string[] schools = { Lang.T("Рассвет"), Lang.T("Полнолуние"), Lang.T("Астрал") };
             float zw = Mathf.Min(Measure(root, zones, size, font) + 12f, half - 40f);
             float mw = Mathf.Min(Measure(root, schools, size, font) + 12f, half - 40f);
             int[] armor = { m.HeadArmor, m.BodyArmor, m.RightHandArmor, m.LeftHandArmor, m.LagsArmor };
@@ -278,7 +278,7 @@ namespace NewAgeQoL
                 for (int i = 0; i < 5; i++)
                     Row(root, x, ya + r * (i + 1), half, zw, r, zones[i], armor[i].ToString(), size, ink, font);
             else
-                Row(root, x, ya + r, half, zw, r, "Средняя", ((armor[0] + armor[1] + armor[2] + armor[3] + armor[4]) / 5).ToString(), size, ink, font);
+                Row(root, x, ya + r, half, zw, r, Lang.T("Средняя"), ((armor[0] + armor[1] + armor[2] + armor[3] + armor[4]) / 5).ToString(), size, ink, font);
             int[] magic = { m.WhiteMagicProtection, m.BlackMagicProtection, m.AstralMagicProtection };
             for (int i = 0; i < 3; i++)
                 Row(root, xm, ya + r * (i + 1), half, mw, r, schools[i], magic[i].ToString(), size, ink, font);

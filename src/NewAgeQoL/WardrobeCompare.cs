@@ -67,31 +67,31 @@ namespace NewAgeQoL
             foreach (var m in WardrobeStore.All)
                 if (m.Key == _otherKey && (mine == null || m.Key != mine.Key)) other = m;
 
-            var title = Write(rt, "Сравнение манекенов", 18, FontStyle.Bold, Gold);
+            var title = Write(rt, Lang.T("Сравнение манекенов"), 18, FontStyle.Bold, Gold);
             Wardrobe.At(title.rectTransform, 16f, 10f, _w - 260f, 30f);
             var close = Wardrobe.Arrow(rt, "×", Close);
             Wardrobe.At((RectTransform)close.transform, _w - 44f, 10f, 34f, 30f);
             if (other == null) { Choose(rt, mine); return; }
-            var again = Wardrobe.Arrow(rt, "Другой манекен", () => { _otherKey = null; Paint(); });
+            var again = Wardrobe.Arrow(rt, Lang.T("Другой манекен"), () => { _otherKey = null; Paint(); });
             Wardrobe.At((RectTransform)again.transform, _w - 44f - 8f - 170f, 10f, 170f, 30f);
 
             var b = new WardrobeState();
             b.Unpack(other.Body);
-            string nameA = mine != null ? mine.Title : "открытый";
+            string nameA = mine != null ? mine.Title : Lang.T("открытый");
             string nameB = other.Title;
             Numbers(rt, Wardrobe.S, b, nameA, nameB, 16f, 52f, _w - 32f, _h - 62f);
         }
 
         private static void Choose(RectTransform rt, WardrobeManikin mine)
         {
-            var ask = Write(rt, "С каким манекеном сравнить «" + (mine != null ? mine.Title : "открытый") + "»?", 15, FontStyle.Normal, Ink);
+            var ask = Write(rt, Lang.F("С каким манекеном сравнить «{0}»?", mine != null ? mine.Title : Lang.T("открытый")), 15, FontStyle.Normal, Ink);
             Wardrobe.At(ask.rectTransform, 16f, 52f, _w - 32f, 28f);
             var list = new List<WardrobeManikin>();
             foreach (var m in WardrobeStore.All) if (!m.Received && (mine == null || m.Key != mine.Key)) list.Add(m);
             foreach (var m in WardrobeStore.All) if (m.Received && (mine == null || m.Key != mine.Key)) list.Add(m);
             if (list.Count == 0)
             {
-                var none = Write(rt, "Других манекенов нет — создай ещё один кнопкой «+ Новый».", 14, FontStyle.Italic, Dim);
+                var none = Write(rt, Lang.T("Других манекенов нет — создай ещё один кнопкой «+ Новый»."), 14, FontStyle.Italic, Dim);
                 Wardrobe.At(none.rectTransform, 16f, 90f, _w - 32f, 28f);
                 return;
             }
@@ -101,7 +101,7 @@ namespace NewAgeQoL
             {
                 var m = list[i];
                 string key = m.Key;
-                string label = m.Title + (m.Received && !string.IsNullOrEmpty(m.From) ? " (от " + m.From + ")" : "");
+                string label = m.Title + (m.Received && !string.IsNullOrEmpty(m.From) ? Lang.F(" (от {0})", m.From) : "");
                 var button = Wardrobe.Arrow(rt, label, () => { _otherKey = key; Paint(); });
                 Wardrobe.At((RectTransform)button.transform, 16f + (i % PerRow) * (bw + 10f), 90f + (i / PerRow) * 48f, bw, 40f);
                 if (m.Received) button.GetComponent<Image>().color = WardrobeLook.TabReceived;
@@ -130,49 +130,49 @@ namespace NewAgeQoL
             float deltaW = w - nameW - colW * 2f;
             Column(rt, nameA, x + nameW, y, colW, r, size);
             Column(rt, nameB, x + nameW + colW, y, colW, r, size);
-            var diff = Write(rt, "разница", size - 1, FontStyle.Italic, Dim);
+            var diff = Write(rt, Lang.T("разница"), size - 1, FontStyle.Italic, Dim);
             Wardrobe.At(diff.rectTransform, deltaX, y, deltaW, r);
             diff.alignment = TextAnchor.MiddleRight;
             float at = y + r;
             int n = 0;
 
-            Line(rt, "Раса", RaceOf(a), RaceOf(b), x, ref at, w, nameW, colW, r, size, ref n);
-            Line(rt, "Уровень", a.Level.ToString(), b.Level.ToString(), x, ref at, w, nameW, colW, r, size, ref n);
-            Line(rt, "Класс", ClassOf(a), ClassOf(b), x, ref at, w, nameW, colW, r, size, ref n);
-            Line(rt, "Крепость", a.RankInfo != null ? a.RankInfo.Name : "нет", b.RankInfo != null ? b.RankInfo.Name : "нет", x, ref at, w, nameW, colW, r, size, ref n);
+            Line(rt, Lang.T("Раса"), RaceOf(a), RaceOf(b), x, ref at, w, nameW, colW, r, size, ref n);
+            Line(rt, Lang.T("Уровень"), a.Level.ToString(), b.Level.ToString(), x, ref at, w, nameW, colW, r, size, ref n);
+            Line(rt, Lang.T("Класс"), ClassOf(a), ClassOf(b), x, ref at, w, nameW, colW, r, size, ref n);
+            Line(rt, Lang.T("Крепость"), a.RankInfo != null ? Lang.Game(a.RankInfo.Name) : Lang.T("нет"), b.RankInfo != null ? Lang.Game(b.RankInfo.Name) : Lang.T("нет"), x, ref at, w, nameW, colW, r, size, ref n);
 
-            Section(rt, "Итог", x, ref at, w, r, size);
-            Value(rt, "Рейтинг", a.Rating, b.Rating, x, ref at, w, nameW, colW, r, size, ref n);
-            Value(rt, "Жизнь", a.Life, b.Life, x, ref at, w, nameW, colW, r, size, ref n);
-            Value(rt, "Мана", a.Mana, b.Mana, x, ref at, w, nameW, colW, r, size, ref n);
-            Value(rt, "Энергия", a.Energy, b.Energy, x, ref at, w, nameW, colW, r, size, ref n);
+            Section(rt, Lang.T("Итог"), x, ref at, w, r, size);
+            Value(rt, Lang.T("Рейтинг"), a.Rating, b.Rating, x, ref at, w, nameW, colW, r, size, ref n);
+            Value(rt, Lang.T("Жизнь"), a.Life, b.Life, x, ref at, w, nameW, colW, r, size, ref n);
+            Value(rt, Lang.T("Мана"), a.Mana, b.Mana, x, ref at, w, nameW, colW, r, size, ref n);
+            Value(rt, Lang.T("Энергия"), a.Energy, b.Energy, x, ref at, w, nameW, colW, r, size, ref n);
             if (price)
-                Value(rt, "Артефакты, кристаллы", priceA, priceB, x, ref at, w, nameW, colW, r, size, ref n, true);
+                Value(rt, Lang.T("Артефакты, кристаллы"), priceA, priceB, x, ref at, w, nameW, colW, r, size, ref n, true);
 
-            Section(rt, "Характеристики", x, ref at, w, r, size);
+            Section(rt, Lang.T("Характеристики"), x, ref at, w, r, size);
             foreach (int i in WardrobeData.StatOrder)
-                Value(rt, WardrobeData.StatNames[i], a.Total(i), b.Total(i), x, ref at, w, nameW, colW, r, size, ref n);
+                Value(rt, Lang.T(WardrobeData.StatNames[i]), a.Total(i), b.Total(i), x, ref at, w, nameW, colW, r, size, ref n);
 
-            Section(rt, "Броня", x, ref at, w, r, size);
+            Section(rt, Lang.T("Броня"), x, ref at, w, r, size);
             for (int p = 0; p < 5; p++)
-                Value(rt, WardrobeData.ArmorNames[p], a.Armor(p), b.Armor(p), x, ref at, w, nameW, colW, r, size, ref n);
+                Value(rt, Lang.T(WardrobeData.ArmorNames[p]), a.Armor(p), b.Armor(p), x, ref at, w, nameW, colW, r, size, ref n);
 
-            Section(rt, "Защита от магии", x, ref at, w, r, size);
+            Section(rt, Lang.T("Защита от магии"), x, ref at, w, r, size);
             for (int m = 0; m < 3; m++)
-                Value(rt, WardrobeData.MagicNames[m], a.Magic(m), b.Magic(m), x, ref at, w, nameW, colW, r, size, ref n);
+                Value(rt, Lang.T(WardrobeData.MagicNames[m]), a.Magic(m), b.Magic(m), x, ref at, w, nameW, colW, r, size, ref n);
         }
 
         private static string RaceOf(WardrobeState s)
         {
             var race = s.Race;
-            return race != null ? race.Name : "?";
+            return race != null ? Lang.Game(race.Name) : "?";
         }
 
         private static string ClassOf(WardrobeState s)
         {
             var klass = s.Klass;
             var sub = s.Sub;
-            return (klass != null ? klass.Name : "?") + (sub != null ? " / " + sub.Name : "");
+            return (klass != null ? Lang.Game(klass.Name) : "?") + (sub != null ? " / " + Lang.Game(sub.Name) : "");
         }
 
         private static void Column(RectTransform rt, string name, float x, float y, float w, float r, int size)

@@ -86,7 +86,7 @@ namespace NewAgeQoL
         {
             if (_busy)
             {
-                try { Notice.Show("Отчёт ещё уходит, подожди пару секунд.", 5f); } catch { }
+                try { Notice.Show(Lang.T("Отчёт ещё уходит, подожди пару секунд."), 5f); } catch { }
                 return;
             }
             if (_panelGo != null) { Close(); return; }
@@ -102,7 +102,7 @@ namespace NewAgeQoL
             try
             {
                 Build();
-                Say("Опиши, что случилось. Журналы мода лягут в отчёт сами.");
+                Say(Lang.T("Опиши, что случилось. Журналы мода лягут в отчёт сами."));
             }
             catch (Exception e) { Plugin.Warn("[report] window: " + e.Message); Close(); }
         }
@@ -153,7 +153,7 @@ namespace NewAgeQoL
             try
             {
                 var got = Clipboard.Take();
-                if (got == null || got.Count == 0) { Say("В буфере нет ни картинки, ни файла."); return; }
+                if (got == null || got.Count == 0) { Say(Lang.T("В буфере нет ни картинки, ни файла.")); return; }
                 foreach (var one in got)
                 {
                     if (one.Data != null) Add(one.Name, one.Data);
@@ -161,7 +161,7 @@ namespace NewAgeQoL
                 }
                 Marks();
             }
-            catch (Exception e) { Plugin.Warn("[report] clipboard: " + e.Message); Say("Из буфера взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] clipboard: " + e.Message); Say(Lang.F("Из буфера взять не вышло: {0}", e.Message)); }
         }
 
         internal static void Choose()
@@ -174,7 +174,7 @@ namespace NewAgeQoL
                 foreach (var path in paths) AddFile(path);
                 Marks();
             }
-            catch (Exception e) { Plugin.Warn("[report] file pick: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] file pick: " + e.Message); Say(Lang.F("Файл взять не вышло: {0}", e.Message)); }
             Focus();
         }
 
@@ -198,16 +198,16 @@ namespace NewAgeQoL
             {
                 if (string.IsNullOrEmpty(path)) return;
                 string name = Path.GetFileName(path);
-                if (Files.Count >= MostFiles) { Say("Больше " + MostFiles + " вложений не кладу."); return; }
-                if (Secret(name)) { Say("Такое не прикладываю, там могут быть учётные данные: " + name); return; }
+                if (Files.Count >= MostFiles) { Say(Lang.F("Больше {0} вложений не кладу.", MostFiles)); return; }
+                if (Secret(name)) { Say(Lang.F("Такое не прикладываю, там могут быть учётные данные: {0}", name)); return; }
                 var about = new FileInfo(path);
-                if (!about.Exists) { Say("Файла нет: " + name); return; }
-                if (about.Length > OneFileMost) { Say("Файл больше " + (OneFileMost / 1024 / 1024) + " МБ не кладу: " + name); return; }
+                if (!about.Exists) { Say(Lang.F("Файла нет: {0}", name)); return; }
+                if (about.Length > OneFileMost) { Say(Lang.F("Файл больше {0} МБ не кладу: {1}", OneFileMost / 1024 / 1024, name)); return; }
                 var data = Read(path, OneFileMost);
-                if (data == null) { Say("Прочитать не вышло: " + name); return; }
+                if (data == null) { Say(Lang.F("Прочитать не вышло: {0}", name)); return; }
                 Add(name, data);
             }
-            catch (Exception e) { Plugin.Warn("[report] attachment: " + e.Message); Say("Файл взять не вышло: " + e.Message); }
+            catch (Exception e) { Plugin.Warn("[report] attachment: " + e.Message); Say(Lang.F("Файл взять не вышло: {0}", e.Message)); }
         }
 
         private static byte[] Read(string path, int cap)
@@ -236,16 +236,16 @@ namespace NewAgeQoL
 
         private static void Add(string name, byte[] data)
         {
-            if (data == null || data.Length == 0) { Say("Пустой файл не прикладываю."); return; }
-            if (Files.Count >= MostFiles) { Say("Больше " + MostFiles + " вложений не кладу."); return; }
-            if (Secret(name)) { Say("Такое не прикладываю, там могут быть учётные данные: " + name); return; }
-            if (data.Length > OneFileMost) { Say("Файл больше " + (OneFileMost / 1024 / 1024) + " МБ не кладу: " + name); return; }
+            if (data == null || data.Length == 0) { Say(Lang.T("Пустой файл не прикладываю.")); return; }
+            if (Files.Count >= MostFiles) { Say(Lang.F("Больше {0} вложений не кладу.", MostFiles)); return; }
+            if (Secret(name)) { Say(Lang.F("Такое не прикладываю, там могут быть учётные данные: {0}", name)); return; }
+            if (data.Length > OneFileMost) { Say(Lang.F("Файл больше {0} МБ не кладу: {1}", OneFileMost / 1024 / 1024, name)); return; }
             string plain = Plain(name);
             int same = 1;
             string want = plain;
             while (Has(want)) { same++; want = same + "-" + plain; }
             Files.Add(new Item { Name = want, Data = data });
-            Say("Приложил: " + want + " (" + Size(data.Length) + ")");
+            Say(Lang.F("Приложил: {0} ({1})", want, Size(data.Length)));
         }
 
         private static bool Has(string name)
@@ -287,12 +287,12 @@ namespace NewAgeQoL
                 string told = _told != null ? _told.text.Trim() : "";
                 if (told.Length < Least)
                 {
-                    Say("Напиши хотя бы пару слов, что случилось. Щёлкни по полю и набери текст.");
+                    Say(Lang.T("Напиши хотя бы пару слов, что случилось. Щёлкни по полю и набери текст."));
                     Focus();
                     yield break;
                 }
 
-                Say("Собираю отчёт…");
+                Say(Lang.T("Собираю отчёт…"));
                 yield return null;
                 if (era != _era) yield break;
                 var head = Encoding.UTF8.GetBytes(told + "\r\n\r\n" + Facts());
@@ -310,7 +310,7 @@ namespace NewAgeQoL
                 if (era != _era) yield break;
                 if (box == null || box.Zip == null)
                 {
-                    Say("Отчёт собрать не вышло: " + (box?.Trouble ?? "неизвестно почему"));
+                    Say(Lang.F("Отчёт собрать не вышло: {0}", box?.Trouble ?? Lang.T("неизвестно почему")));
                     yield break;
                 }
                 Plugin.Log?.LogInfo("[report] built " + (box.File ?? "no file") + ", " + (box.Zip.Length / 1024)
@@ -321,18 +321,18 @@ namespace NewAgeQoL
                 string key = _key != null && _key.Value != null ? _key.Value.Trim() : "";
                 if (url.Length == 0 || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
-                    Keep(box, "Отправлять некуда: приёмник не настроен. Отчёт лежит в папке, пришли файл сам.");
+                    Keep(box, Lang.T("Отправлять некуда: приёмник не настроен. Отчёт лежит в папке, пришли файл сам."));
                     yield break;
                 }
                 if (box.Zip.Length > Room)
                 {
-                    Keep(box, "Отчёт вышел большой (" + Size(box.Zip.Length) + "), сам он не уйдёт. Пришли файл из папки.");
+                    Keep(box, Lang.F("Отчёт вышел большой ({0}), сам он не уйдёт. Пришли файл из папки.", Size(box.Zip.Length)));
                     yield break;
                 }
 
-                Say("Отправляю " + Size(box.Zip.Length) + "…");
+                Say(Lang.F("Отправляю {0}…", Size(box.Zip.Length)));
                 var web = Ready(url, key, told, box);
-                if (web == null) { Keep(box, "Отправку начать не вышло. Отчёт лежит в папке, пришли файл сам."); yield break; }
+                if (web == null) { Keep(box, Lang.T("Отправку начать не вышло. Отчёт лежит в папке, пришли файл сам.")); yield break; }
                 using (web)
                 {
                     yield return web.SendWebRequest();
@@ -341,7 +341,7 @@ namespace NewAgeQoL
                     if (taken)
                     {
                         Plugin.Log?.LogInfo("[report] sent, response " + web.responseCode);
-                        Say("Отчёт ушёл. Спасибо!");
+                        Say(Lang.T("Отчёт ушёл. Спасибо!"));
                         Thanks();
                         Mail.Wake();
                         yield return new WaitForSecondsRealtime(1.2f);
@@ -354,9 +354,9 @@ namespace NewAgeQoL
                     Plugin.Warn("[report] not sent: code " + web.responseCode + ", " + (web.error ?? "")
                                 + (where.Length > 0 ? ", redirect to " + (where.Length > 80 ? where.Substring(0, 80) : where) : "")
                                 + (answer.Length > 0 ? ", response " + (answer.Length > 120 ? answer.Substring(0, 120) : answer).Replace((char)10, ' ') : ""));
-                    string why = web.responseCode >= 300 && web.responseCode < 400 ? "приёмник закрыт переадресацией"
-                        : web.responseCode >= 200 && web.responseCode < 300 ? "приёмник ответил не то" : web.responseCode.ToString();
-                    Keep(box, "Отправить не вышло (" + why + "). Отчёт лежит в папке, пришли файл сам.");
+                    string why = web.responseCode >= 300 && web.responseCode < 400 ? Lang.T("приёмник закрыт переадресацией")
+                        : web.responseCode >= 200 && web.responseCode < 300 ? Lang.T("приёмник ответил не то") : web.responseCode.ToString();
+                    Keep(box, Lang.F("Отправить не вышло ({0}). Отчёт лежит в папке, пришли файл сам.", why));
                 }
             }
             finally { _busy = false; }
@@ -364,7 +364,7 @@ namespace NewAgeQoL
 
         private static void Thanks()
         {
-            try { Notice.Show("Отчёт отправлен. Спасибо!", 6f); } catch { }
+            try { Notice.Show(Lang.T("Отчёт отправлен. Спасибо!"), 6f); } catch { }
             if (_told != null) _told.text = "";
         }
 
@@ -398,7 +398,7 @@ namespace NewAgeQoL
         {
             if (!box.Saved)
             {
-                Say("Отчёт на диск не записался: " + (box.Trouble ?? "неизвестно почему"));
+                Say(Lang.F("Отчёт на диск не записался: {0}", box.Trouble ?? Lang.T("неизвестно почему")));
                 return;
             }
             Say(text);
@@ -633,7 +633,7 @@ namespace NewAgeQoL
 
             if (Files.Count == 0)
             {
-                var none = OnlineWindow.Label(_listRt, "вложений нет — картинку можно вставить по Ctrl+V", 12, FontStyle.Normal,
+                var none = OnlineWindow.Label(_listRt, Lang.T("вложений нет — картинку можно вставить по Ctrl+V"), 12, FontStyle.Normal,
                     WardrobeLook.Faint);
                 OnlineWindow.Place(none.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                     new Vector2(0f, -LineH), Vector2.zero);
@@ -679,7 +679,7 @@ namespace NewAgeQoL
                 if (_busy) return;
                 Files.Remove(item);
                 Marks();
-                Say("Убрал: " + item.Name);
+                Say(Lang.F("Убрал: {0}", item.Name));
                 Focus();
             });
 
@@ -746,7 +746,7 @@ namespace NewAgeQoL
             mover.Target = _panel;
             mover.Canvas = canvas;
 
-            var title = OnlineWindow.Label(_panelGo.transform, "Сообщить об ошибке мода", 17, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Сообщить об ошибке мода"), 17, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(14f, -32f), new Vector2(-52f, -8f));
             title.alignment = TextAnchor.MiddleLeft;
@@ -755,7 +755,7 @@ namespace NewAgeQoL
             OnlineWindow.MakeCloseButton(_panelGo.transform, Close);
 
             var hint = OnlineWindow.Label(_panelGo.transform,
-                "Опиши, что случилось и что делал перед этим. Журналы мода и боёв уйдут вместе с отчётом. Картинку можно вставить прямо из буфера по Ctrl+V или добавить файлом. Настройки и пароли в отчёт не попадают.",
+                Lang.T("Опиши, что случилось и что делал перед этим. Журналы мода и боёв уйдут вместе с отчётом. Картинку можно вставить прямо из буфера по Ctrl+V или добавить файлом. Настройки и пароли в отчёт не попадают."),
                 13, FontStyle.Normal, WardrobeLook.Label);
             OnlineWindow.Place(hint.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(14f, -94f), new Vector2(-72f, -38f));
@@ -779,9 +779,9 @@ namespace NewAgeQoL
             row.childControlHeight = true;
             row.childForceExpandWidth = false;
             row.childForceExpandHeight = false;
-            if (Mail.Any) Fixed(Wardrobe.GameButton(rowGo.transform, "Переписка", Mail.Open, false));
-            Fixed(Wardrobe.GameButton(rowGo.transform, "Выбрать файлы", Choose, false));
-            var send = Wardrobe.GameButton(rowGo.transform, "Отправить", Go, false);
+            if (Mail.Any) Fixed(Wardrobe.GameButton(rowGo.transform, Lang.T("Переписка"), Mail.Open, false));
+            Fixed(Wardrobe.GameButton(rowGo.transform, Lang.T("Выбрать файлы"), Choose, false));
+            var send = Wardrobe.GameButton(rowGo.transform, Lang.T("Отправить"), Go, false);
             Fixed(send);
             send.GetComponent<Image>().color = WardrobeLook.Accent;
             var sendText = send.GetComponentInChildren<Text>();
@@ -823,7 +823,7 @@ namespace NewAgeQoL
             text.verticalOverflow = VerticalWrapMode.Truncate;
             OnlineWindow.Place(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 8f), new Vector2(-10f, -8f));
 
-            var ph = OnlineWindow.Label(go.transform, "Что случилось, что делал перед этим, повторяется ли", 15, FontStyle.Normal, WardrobeLook.Faint);
+            var ph = OnlineWindow.Label(go.transform, Lang.T("Что случилось, что делал перед этим, повторяется ли"), 15, FontStyle.Normal, WardrobeLook.Faint);
             ph.alignment = TextAnchor.UpperLeft;
             ph.horizontalOverflow = HorizontalWrapMode.Wrap;
             OnlineWindow.Place(ph.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 8f), new Vector2(-10f, -8f));
@@ -986,12 +986,12 @@ namespace NewAgeQoL
                 var dialog = new Dialog
                 {
                     Owner = GetActiveWindow(),
-                    Filter = "Картинки и журналы\0*.png;*.jpg;*.jpeg;*.gif;*.log;*.txt\0Все файлы\0*.*\0\0",
+                    Filter = Lang.T("Картинки и журналы") + "\0*.png;*.jpg;*.jpeg;*.gif;*.log;*.txt\0" + Lang.T("Все файлы") + "\0*.*\0\0",
                     File = room,
                     FileRoom = Chars,
                     FileTitle = new string('\0', 256),
                     FileTitleRoom = 256,
-                    Title = "Что приложить к отчёту",
+                    Title = Lang.T("Что приложить к отчёту"),
                     Flags = 0x00081A0C,
                 };
                 dialog.Size = Marshal.SizeOf(dialog);

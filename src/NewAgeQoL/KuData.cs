@@ -111,7 +111,7 @@ namespace NewAgeQoL
 
         internal static int Cost(int level) => level * (level + 1) / 2;
 
-        internal static string Step(int level) => level >= 1 && level <= Top ? Steps[level - 1] : "не изучено";
+        internal static string Step(int level) => level >= 1 && level <= Top ? Lang.T(Steps[level - 1]) : Lang.T("не изучено");
 
         internal static void Fetch()
         {

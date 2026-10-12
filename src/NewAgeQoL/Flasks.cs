@@ -106,7 +106,7 @@ namespace NewAgeQoL
 
         internal static ConfigEntry<string> NameEntry(int row) => row >= 0 && row < Rows ? CfgName(row) : null;
 
-        internal static string Title(int row) => row >= 0 && row < Titles.Length ? Titles[row] : "";
+        internal static string Title(int row) => row >= 0 && row < Titles.Length ? Lang.T(Titles[row]) : "";
 
         internal static bool Suits(int thingId, int row)
         {
@@ -173,15 +173,15 @@ namespace NewAgeQoL
         internal static string Hint(int row)
         {
             if (!Shown(row)) return "";
-            if (RowBusy[row]) return Titles[row] + ": " + (RowMsg[row] ?? "…");
+            if (RowBusy[row]) return Lang.T(Titles[row]) + ": " + (RowMsg[row] ?? "…");
 
             int id = Thing(row);
-            if (id <= 0) return Titles[row] + ": «" + Wish(row) + "» в сумке не найдено";
+            if (id <= 0) return Lang.F("{0}: «{1}» в сумке не найдено", Lang.T(Titles[row]), Wish(row));
 
             string name = NameOf(id);
-            string head = !string.IsNullOrEmpty(name) ? name : Titles[row];
+            string head = !string.IsNullOrEmpty(name) ? name : Lang.T(Titles[row]);
             bool wantFill = Plugin.CfgFlaskFillToMax == null || Plugin.CfgFlaskFillToMax.Value;
-            return head + " — " + (wantFill ? "до полного" : "не до полного") + Hotkeys.Tail("flask:" + row);
+            return head + " — " + (wantFill ? Lang.T("до полного") : Lang.T("не до полного")) + Hotkeys.Tail("flask:" + row);
         }
 
         internal static Sprite Icon(int row) => IconFor(Thing(row));
@@ -699,7 +699,7 @@ namespace NewAgeQoL
             if (thingId <= 0 && Wish(row).Length == 0) { done?.Invoke(0, false); yield break; }
             for (int i = 0; i < Rows; i++)
                 if (i != row && RowBusy[i] && thingId > 0 && RowThing[i] == thingId)
-                { Say(row, title + ": этот предмет уже использует соседняя кнопка"); done?.Invoke(0, false); yield break; }
+                { Say(row, Lang.F("{0}: этот предмет уже использует соседняя кнопка", Lang.T(title))); done?.Invoke(0, false); yield break; }
 
             RowBusy[row] = true;
             RowSince[row] = RealTime.Now;
@@ -709,8 +709,8 @@ namespace NewAgeQoL
             bool counted = false;
             try
             {
-                if (SideButtons.InCombat()) { Say(row, title + ": в бою эти банки не пьются"); yield break; }
-                if (!Connected()) { Say(row, title + ": нет соединения"); yield break; }
+                if (SideButtons.InCombat()) { Say(row, Lang.F("{0}: в бою эти банки не пьются", Lang.T(title))); yield break; }
+                if (!Connected()) { Say(row, Lang.F("{0}: нет соединения", Lang.T(title))); yield break; }
 
                 Step(row, "…");
                 bool cached = RealTime.Now - _scanAt <= CacheAge;
@@ -724,14 +724,14 @@ namespace NewAgeQoL
                     thingId = Thing(row);
                     RowThing[row] = thingId;
                     if (thingId <= 0)
-                    { Say(row, title + ": «" + Wish(row) + "» в сумке не найдено"); ranOut = true; yield break; }
+                    { Say(row, Lang.F("{0}: «{1}» в сумке не найдено", Lang.T(title), Wish(row))); ranOut = true; yield break; }
                 }
                 var stacks = Stacks(thingId);
 
                 if (stacks.Count == 0 && cached)
                 {
                     cached = false;
-                    Step(row, "смотрю сумку");
+                    Step(row, Lang.T("смотрю сумку"));
                     yield return Plugin.Instance.StartCoroutine(EnsureScan(0f));
                     stacks = Stacks(thingId);
                     UpdateCounts();
@@ -739,8 +739,8 @@ namespace NewAgeQoL
                 if (stacks.Count == 0)
                 {
                     Say(row, _seen == 0 && !_scanFull
-                        ? title + ": сумка ещё не пришла, попробуй через пару секунд"
-                        : title + ": предмета id " + thingId + " в сумке нет");
+                        ? Lang.F("{0}: сумка ещё не пришла, попробуй через пару секунд", Lang.T(title))
+                        : Lang.F("{0}: предмета id {1} в сумке нет", Lang.T(title), thingId));
                     ranOut = _seen != 0 || _scanFull;
                     yield break;
                 }
@@ -752,7 +752,7 @@ namespace NewAgeQoL
                 bool known = Gauge(row, out cur, out max);
                 bool fill = wantFill && known;
                 int count = !wantFill ? Mathf.Max(1, want) : fill ? FillLimit : Batch;
-                if (known && cur >= max) { Say(row, title + ": уже полное — " + cur + " / " + max); yield break; }
+                if (known && cur >= max) { Say(row, Lang.F("{0}: уже полное — {1} / {2}", Lang.T(title), cur, max)); yield break; }
 
                 int si = 0, q = 0;
                 bool stopped = false, rescanned = false;
@@ -767,7 +767,7 @@ namespace NewAgeQoL
                         if (rescanned || (fill && cur >= max)) break;
                         rescanned = true;
                         cached = false;
-                        Step(row, "смотрю сумку");
+                        Step(row, Lang.T("смотрю сумку"));
                         yield return Plugin.Instance.StartCoroutine(EnsureScan(0f));
                         stacks = Stacks(thingId);
                         UpdateCounts();
@@ -781,7 +781,7 @@ namespace NewAgeQoL
 
                     Await(st.Inv, thingId);
                     if (!Send(new ContextActionRequest(st.Inv, BtnUse, WinInventory, st.Tab, 1)))
-                    { Say(row, title + ": нет соединения"); yield break; }
+                    { Say(row, Lang.F("{0}: нет соединения", Lang.T(title))); yield break; }
 
                     bool ok = false, got = false;
                     string err = null;
@@ -807,7 +807,7 @@ namespace NewAgeQoL
                         if (Gauge(row, out cur, out max) && cur >= max)
                         {
                             clock.Silent();
-                            Say(row, title + ": до полного — " + used + " шт. (" + cur + " / " + max + ")");
+                            Say(row, Lang.F("{0}: до полного — {1} шт. ({2} / {3})", Lang.T(title), used, cur, max));
                             yield break;
                         }
                     }
@@ -818,22 +818,22 @@ namespace NewAgeQoL
                         {
                             rescanned = true;
                             cached = false;
-                            Step(row, "смотрю сумку");
+                            Step(row, Lang.T("смотрю сумку"));
                             yield return Plugin.Instance.StartCoroutine(EnsureScan(0f));
                             stacks = Stacks(thingId);
                             UpdateCounts();
                             si = 0; q = 0;
                             if (fill && Gauge(row, out cur, out max) && cur >= max)
                             {
-                                Say(row, title + ": до полного — " + used + " шт. (" + cur + " / " + max + ")");
+                                Say(row, Lang.F("{0}: до полного — {1} шт. ({2} / {3})", Lang.T(title), used, cur, max));
                                 yield break;
                             }
                             continue;
                         }
                         stopped = true;
-                        string why = !got ? "сервер не ответил"
-                                   : string.IsNullOrEmpty(err) ? "дальше сервер не даёт, похоже уже полное" : err;
-                        Say(row, title + ": использовано " + used + ", " + why);
+                        string why = !got ? Lang.T("сервер не ответил")
+                                   : string.IsNullOrEmpty(err) ? Lang.T("дальше сервер не даёт, похоже уже полное") : err;
+                        Say(row, Lang.F("{0}: использовано {1}, {2}", Lang.T(title), used, why));
                         Plugin.Log?.LogInfo("[flasks] " + title + ": drunk " + used + ", stop - " + why
                             + (got ? "" : " (waited " + spent.ToString("0.0") + " s, of which with open queue " + (wait - budget).ToString("0.0") + ")")
                             + ", entry " + st.Inv + ", item " + thingId + ", was " + startCur + " / " + max);
@@ -862,7 +862,7 @@ namespace NewAgeQoL
                         cur = c2; max = m2;
                         if (cur >= max)
                         {
-                            Say(row, title + ": до полного — " + used + " шт. (" + cur + " / " + max + ")");
+                            Say(row, Lang.F("{0}: до полного — {1} шт. ({2} / {3})", Lang.T(title), used, cur, max));
                             yield break;
                         }
                     }
@@ -874,8 +874,8 @@ namespace NewAgeQoL
                 {
                     ranOut = used < count;
                     Say(row, fill
-                        ? title + ": использовано " + used + " шт., предметы кончились (" + cur + " / " + max + ")"
-                        : title + ": использовано " + used + " шт." + (used < count ? ", предметы кончились" : ""));
+                        ? Lang.F("{0}: использовано {1} шт., предметы кончились ({2} / {3})", Lang.T(title), used, cur, max)
+                        : Lang.F("{0}: использовано {1} шт.", Lang.T(title), used) + (used < count ? Lang.T(", предметы кончились") : ""));
                     if (fill && cur < max)
                         Plugin.Log?.LogInfo("[flasks] " + title + ": drunk " + used + ", not enough to fill - none left in bag, was "
                             + startCur + ", now " + cur + " / " + max + ", item " + thingId);
@@ -1372,7 +1372,7 @@ namespace NewAgeQoL
         private static void Step(int row, string text)
         {
             RowMsg[row] = text;
-            Status = Titles[row] + ": " + text;
+            Status = Lang.T(Titles[row]) + ": " + text;
             StatusAt = Time.unscaledTime;
             StatusRow = row;
         }

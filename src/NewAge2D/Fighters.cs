@@ -539,6 +539,7 @@ internal static class Fighters
         FlashTeleport.Tick();
         FlashNumbers.Tick();
         SpellMarks.Tick();
+        StunStars.Tick();
         SummonWarm.Tick();
         SortModels();
         WatchClash();
@@ -644,23 +645,6 @@ internal static class Fighters
         foreach (var player in Veils.Keys.ToList()) Unveil(player);
         Unsort();
         FrameCache.Clear();
-    }
-
-    internal static void Set(bool on)
-    {
-        if (!on)
-        {
-            ClearAll();
-            return;
-        }
-        var combat = Combat();
-        if (combat == null) return;
-        foreach (var character in combat.Characters.Values.ToArray())
-        {
-            if (character == null || !character.Initialized || !Dollable(character)) continue;
-            try { Attach(character); }
-            catch (Exception ex) { Plugin.Log.LogError("[combat] " + ex); }
-        }
     }
 
     internal static GameObject Model(AbstractCharacter character) => ModelField.GetValue(character) as GameObject;

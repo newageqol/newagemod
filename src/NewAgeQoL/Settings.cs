@@ -48,52 +48,49 @@ namespace NewAgeQoL
 
             var rows = new List<RowDef>
             {
-                new Header { Title = "Мод" },
+                new Header { Title = Lang.T("Мод") },
                 new ActionRow { Title = UpdateTitle(), ButtonText = UpdateButton(), Do = Changelog.Toggle, TitleNow = UpdateTitle, ButtonNow = UpdateButton },
-                A("Выключить мод и вернуть обычный клиент (после перезапуска игры)", "Выключить", ModSwitch.AskOff),
+                A(Lang.T("Выключить мод и вернуть обычный клиент (после перезапуска игры)"), Lang.T("Выключить"), ModSwitch.AskOff),
                 AssetSync.Pending
-                    ? A("Новые версии старых локаций: " + AssetSync.PendingSize + " МБ", "Скачать", AssetSync.Retry)
+                    ? A(Lang.F("Не скачаны локации мода: {0} — {1} МБ", AssetSync.Places, AssetSync.PendingSize), Lang.T("Скачать"), AssetSync.Retry)
                     : null,
-                B("Новые локации и экран загрузки мода", Plugin.CfgNewPlaces),
-                new Header { Title = "Кнопки" },
-                B("Возврат в Иллениум ведёт на арену, к турнирам", Plugin.CfgTownTournament),
-                B("Кнопка запасного набора", Plugin.CfgArtifactButtons),
+                B(Lang.T("Новые локации и экран загрузки мода"), Plugin.CfgNewPlaces),
+                new Header { Title = Lang.T("Кнопки") },
+                B(Lang.T("Возврат в Иллениум ведёт на арену, к турнирам"), Plugin.CfgTownTournament),
+                B(Lang.T("Кнопка запасного набора"), Plugin.CfgArtifactButtons),
                 Artifacts.Pending > 0
-                    ? A("Ждут возврата: " + Artifacts.Pending, "Забыть", Artifacts.ForgetStash)
+                    ? A(Lang.F("Ждут возврата: {0}", Artifacts.Pending), Lang.T("Забыть"), Artifacts.ForgetStash)
                     : null,
 
-                new Header { Title = "Банки" },
-                B("Пить до полного", Plugin.CfgFlaskFillToMax),
-                Pick("Жизнь", Plugin.CfgFlaskHpName, Plugin.CfgFlaskHpId),
-                Pick("Мана", Plugin.CfgFlaskManaName, Plugin.CfgFlaskManaId),
-                Pick("Энергия", Plugin.CfgFlaskEnergyName, Plugin.CfgFlaskEnergyId),
-                Pick("Грибы", Plugin.CfgFlaskMushroomName, Plugin.CfgFlaskMushroomId),
+                new Header { Title = Lang.T("Банки") },
+                B(Lang.T("Пить до полного"), Plugin.CfgFlaskFillToMax),
+                Pick(Lang.T("Жизнь"), Plugin.CfgFlaskHpName, Plugin.CfgFlaskHpId),
+                Pick(Lang.T("Мана"), Plugin.CfgFlaskManaName, Plugin.CfgFlaskManaId),
+                Pick(Lang.T("Энергия"), Plugin.CfgFlaskEnergyName, Plugin.CfgFlaskEnergyId),
+                Pick(Lang.T("Грибы"), Plugin.CfgFlaskMushroomName, Plugin.CfgFlaskMushroomId),
 
-                new Header { Title = "Бой" },
-                B("Контрприём на себя в первой фазе", Plugin.CfgCounterAuto),
+                new Header { Title = Lang.T("Бой") },
+                B(Lang.T("Контрприём на себя в первой фазе"), Plugin.CfgCounterAuto),
 
-                new Header { Title = "Кто в игре" },
-                S("Логин запасного аккаунта", Plugin.CfgOnlineLogin),
-                S("Пароль запасного аккаунта", Plugin.CfgOnlinePassword, secret: true),
+                new Header { Title = Lang.T("Запасной аккаунт") },
+                S(Lang.T("Логин запасного аккаунта"), Plugin.CfgOnlineLogin),
+                S(Lang.T("Пароль запасного аккаунта"), Plugin.CfgOnlinePassword, secret: true),
 
 
-                new Header { Title = "Звуки" },
-                Sl("Громкость звуков мода", Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
+                new Header { Title = Lang.T("Звуки") },
+                Sl(Lang.T("Громкость звуков мода"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
 
                 new Header { Title = "" },
             };
-            var flash = FlashLook.Entry("General", "Enabled");
-            if (flash != null)
+            if (FlashLook.Fight)
             {
                 rows.InsertRange(rows.Count - 1, new List<RowDef>
                 {
-                    new Header { Title = "Внешний вид" },
-                    A(flash.Value ? "Бой и персонажи как во Flash" : "Бой и персонажи в 3D",
-                        flash.Value ? "Вернуть 3D" : "Как во Flash", FlashLook.AskSwitch),
-                    A("Кэш вещей Flash, как у нового игрока", "Сбросить", () => Notice.Show(FlashLook.ResetCache() ?? "Кэш вещей Flash сбросить не удалось", 6f)),
+                    new Header { Title = Lang.T("Внешний вид") },
+                    A(Lang.T("Кэш вещей Flash, как у нового игрока"), Lang.T("Сбросить"), () => Notice.Show(FlashLook.ResetCache() ?? Lang.T("Кэш вещей Flash сбросить не удалось"), 6f)),
                 });
             }
-            int sounds = rows.FindIndex(r => r is Header && r.Title == "Звуки");
+            int sounds = rows.FindIndex(r => r is Header && r.Title == Lang.T("Звуки"));
             rows.InsertRange(sounds >= 0 ? sounds : rows.Count - 1, Tints());
             rows.RemoveAll(r => r == null);
             return rows;
@@ -101,9 +98,9 @@ namespace NewAgeQoL
 
         private static List<RowDef> Tints()
         {
-            var rows = new List<RowDef> { new Header { Title = "Цвета чата" } };
+            var rows = new List<RowDef> { new Header { Title = Lang.T("Цвета чата") } };
             foreach (var kind in ChatColors.All)
-                if (kind.Cfg != null) rows.Add(new ColorRow { Title = kind.Title, Kind = kind });
+                if (kind.Cfg != null) rows.Add(new ColorRow { Title = Lang.T(kind.Title), Kind = kind });
             return rows;
         }
 
@@ -116,7 +113,7 @@ namespace NewAgeQoL
                 if (act.Group != group)
                 {
                     group = act.Group;
-                    rows.Add(new Header { Title = group });
+                    rows.Add(new Header { Title = Lang.T(group) });
                 }
                 rows.Add(new HotRow { Title = act.Title, Key = act.Key });
             }
@@ -136,7 +133,7 @@ namespace NewAgeQoL
                 {
                     if (!string.IsNullOrEmpty(byName.Value)) return byName.Value;
                     if (byId.Value > 0) { var n = Flasks.DisplayName(byId.Value); return n ?? byId.Value.ToString(); }
-                    return "— выбрать —";
+                    return Lang.T("— выбрать —");
                 },
             };
         }
@@ -161,7 +158,7 @@ namespace NewAgeQoL
         private static string UpdateTitle()
         {
             if (Updater.State == Updater.Stage.Done) return Updater.Message;
-            string head = "Версия мода " + Plugin.Version;
+            string head = Lang.F("Версия мода {0}", Plugin.Version);
             return Updater.State == Updater.Stage.Idle ? head : head + " · " + Updater.Message;
         }
 
@@ -169,10 +166,10 @@ namespace NewAgeQoL
         {
             switch (Updater.State)
             {
-                case Updater.Stage.Checking: return "Проверяю…";
-                case Updater.Stage.Downloading: return "Качаю…";
-                case Updater.Stage.Done: return "Готово";
-                default: return Updater.CanUpdate ? "Обновить" : "Что нового";
+                case Updater.Stage.Checking: return Lang.T("Проверяю…");
+                case Updater.Stage.Downloading: return Lang.T("Качаю…");
+                case Updater.Stage.Done: return Lang.T("Готово");
+                default: return Updater.CanUpdate ? Lang.T("Обновить") : Lang.T("Что нового");
             }
         }
 
@@ -291,7 +288,7 @@ namespace NewAgeQoL
             for (int i = container.childCount - 1; i >= 0; i--)
                 UnityEngine.Object.Destroy(container.GetChild(i).gameObject);
 
-            if (caption != null) caption.text = _keysMode ? "Горячие клавиши" : "Настройки мода";
+            if (caption != null) caption.text = _keysMode ? Lang.T("Горячие клавиши") : Lang.T("Настройки мода");
 
             Widen(dlg, 380f);
             Sketch();
@@ -375,6 +372,59 @@ namespace NewAgeQoL
                 Plugin.Trace("[settings] buttons widened to " + widest.ToString("0") + ": " + fixedCount);
             }
             catch (Exception e) { Plugin.Fault("[settings] button width: " + e.Message); }
+        }
+
+        private static void SpellIcon(Text label, string key)
+        {
+            if (label == null || key == null) return;
+            int at = key.IndexOf(':');
+            if (at <= 0) return;
+            string kind = key.Substring(0, at);
+            EQuickButtonType type;
+            if (kind == "spell") type = EQuickButtonType.SPELL;
+            else if (kind == "trick") type = EQuickButtonType.DODGE;
+            else if (kind == "skill") type = EQuickButtonType.SKILL;
+            else return;
+            int id;
+            if (!int.TryParse(key.Substring(at + 1), out id)) return;
+            Sprite sprite = null;
+            try { sprite = AtlasUtils.GetQuickButtonSprite(type, id, 0); }
+            catch (System.Exception e) { Plugin.Trace("[settings] icon for " + key + ": " + e.Message); }
+            if (sprite == null) return;
+            const float size = 30f;
+            var go = new GameObject("QoLSpellIcon", typeof(RectTransform), typeof(Image));
+            var rt = (RectTransform)go.transform;
+            var row = label.transform.parent;
+            if (row != null && row.GetComponent<HorizontalLayoutGroup>() != null)
+            {
+                const float gap = 8f;
+                float tall = Mathf.Max(size, ((RectTransform)row).rect.height);
+                var holder = new GameObject("QoLSpellIconSlot", typeof(RectTransform));
+                holder.transform.SetParent(row, false);
+                holder.transform.SetSiblingIndex(label.transform.GetSiblingIndex());
+                ((RectTransform)holder.transform).sizeDelta = new Vector2(size + gap, tall);
+                var le = holder.AddComponent<LayoutElement>();
+                le.minWidth = le.preferredWidth = size + gap;
+                le.minHeight = le.preferredHeight = tall;
+                le.flexibleWidth = 0f;
+                le.flexibleHeight = 1f;
+                go.transform.SetParent(holder.transform, false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+                rt.pivot = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(0f, -4f);
+            }
+            else
+            {
+                go.transform.SetParent(label.transform, false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+                rt.pivot = new Vector2(1f, 0.5f);
+                rt.anchoredPosition = new Vector2(-3f, 0f);
+            }
+            rt.sizeDelta = new Vector2(size, size);
+            var image = go.GetComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
         }
 
         private static void Squeeze(Text label, float by)
@@ -708,6 +758,7 @@ namespace NewAgeQoL
 
             if (def is HotRow hot)
             {
+                SpellIcon(label, hot.Key);
                 if (background == null || value == null) return;
                 value.text = Hotkeys.Text(Hotkeys.Of(hot.Key));
                 value.resizeTextForBestFit = true;
@@ -866,7 +917,7 @@ namespace NewAgeQoL
         private static string KeyName(string spec)
         {
             spec = (spec ?? "").Trim();
-            return spec.Length > 0 ? spec : "нет";
+            return spec.Length > 0 ? spec : Lang.T("нет");
         }
 
         private static void StartCapture(ConfigEntry<string> cfg, Image bg, Text text, Button btn)
@@ -877,7 +928,7 @@ namespace NewAgeQoL
             _capMsgUntil = 0f;
             bg.color = Color.black;
             text.color = new Color32(255, 216, 134, 255);
-            text.text = "нажмите клавишу";
+            text.text = Lang.T("нажмите клавишу");
             if (btn != null) btn.interactable = false;
         }
 
@@ -929,7 +980,7 @@ namespace NewAgeQoL
                     if (_capText != null)
                     {
                         _capText.color = new Color32(255, 120, 100, 255);
-                        _capText.text = "занято: " + busy;
+                        _capText.text = Lang.F("занято: {0}", busy);
                     }
                     _capMsgUntil = Time.unscaledTime + 2f;
                     return;
@@ -977,7 +1028,7 @@ namespace NewAgeQoL
         private static void SetSwitch(Text value, bool on)
         {
             if (value == null) return;
-            value.text = on ? "ВКЛ" : "ВЫКЛ";
+            value.text = on ? Lang.T("ВКЛ") : Lang.T("ВЫКЛ");
             value.color = on ? new Color(0.05f, 0.42f, 0.08f) : new Color(0.62f, 0.08f, 0.06f);
         }
 
@@ -1045,7 +1096,7 @@ namespace NewAgeQoL
                 rt.localScale = src.localScale;
                 rt.anchoredPosition = src.anchoredPosition;
 
-                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = "Настройки мода";
+                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = Lang.T("Настройки мода");
 
                 var btn = go.GetComponent<Button>();
                 btn.onClick.RemoveAllListeners();
@@ -1078,7 +1129,7 @@ namespace NewAgeQoL
                 rt.offsetMax = Vector2.zero;
                 rt.localScale = Vector3.one;
 
-                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = "Сообщить об ошибке мода";
+                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = Lang.T("Сообщить об ошибке мода");
                 caption.enabled = false;
 
                 var press = go.GetComponent<Button>();

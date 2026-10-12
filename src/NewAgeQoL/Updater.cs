@@ -58,7 +58,7 @@ namespace NewAgeQoL
             if (_told || !CanUpdate) return;
             if (!SideButtons.InWorld() || SideButtons.InCombat()) return;
             _told = true;
-            Notice.Show("Вышла версия мода " + LatestVersion + ". Обновить можно в настройках мода, раздел «Мод».", 15f);
+            Notice.Show(Lang.F("Вышла версия мода {0}. Обновить можно в настройках мода, раздел «Мод».", LatestVersion), 15f);
         }
 
         internal static void Check()
@@ -66,7 +66,7 @@ namespace NewAgeQoL
             if (State == Stage.Checking || State == Stage.Downloading) return;
             if (Plugin.Instance == null) return;
             State = Stage.Checking;
-            Message = "проверяю…";
+            Message = Lang.T("проверяю…");
             Plugin.Instance.StartCoroutine(CheckRoutine());
         }
 
@@ -74,7 +74,7 @@ namespace NewAgeQoL
         {
             if (!CanUpdate || Plugin.Instance == null) return;
             State = Stage.Downloading;
-            Message = "качаю " + LatestVersion + "…";
+            Message = Lang.F("качаю {0}…", LatestVersion);
             Plugin.Instance.StartCoroutine(UpdateRoutine());
         }
 
@@ -93,7 +93,7 @@ namespace NewAgeQoL
             if (json.Length == 0)
             {
                 State = Stage.Failed;
-                Message = "не удалось проверить: " + (error ?? "нет ответа");
+                Message = Lang.F("не удалось проверить: {0}", error ?? Lang.T("нет ответа"));
                 Plugin.Trace("[update] " + Message);
                 yield break;
             }
@@ -134,7 +134,7 @@ namespace NewAgeQoL
             if (string.IsNullOrEmpty(tag))
             {
                 State = Stage.Failed;
-                Message = "не удалось разобрать ответ сервера";
+                Message = Lang.T("не удалось разобрать ответ сервера");
                 yield break;
             }
 
@@ -144,17 +144,17 @@ namespace NewAgeQoL
             if (cmp <= 0)
             {
                 State = Stage.Fresh;
-                Message = "у тебя последняя версия";
+                Message = Lang.T("у тебя последняя версия");
             }
             else if (_dllUrl.Length == 0 && _zipUrl.Length == 0)
             {
                 State = Stage.Failed;
-                Message = "вышла " + LatestVersion + ", но " + (noSignature ? "у файла мода в релизе нет подписи" : DllName + " в релизе нет");
+                Message = Lang.F("вышла {0}, но {1}", LatestVersion, noSignature ? Lang.T("у файла мода в релизе нет подписи") : Lang.F("{0} в релизе нет", DllName));
             }
             else
             {
                 State = Stage.Newer;
-                Message = "вышла версия " + LatestVersion;
+                Message = Lang.F("вышла версия {0}", LatestVersion);
             }
             Plugin.Trace("[update] installed " + Plugin.Version + ", on server " + LatestVersion);
         }
@@ -208,7 +208,7 @@ namespace NewAgeQoL
             if (data == null || data.Length == 0)
             {
                 State = Stage.Failed;
-                Message = "не скачалось: " + (error ?? "пустой файл");
+                Message = Lang.F("не скачалось: {0}", error ?? Lang.T("пустой файл"));
                 yield break;
             }
 
@@ -217,7 +217,7 @@ namespace NewAgeQoL
             if (!Sign.Valid(data, signature))
             {
                 State = Stage.Failed;
-                Message = signature == null ? "не скачалась подпись: " + (error ?? "пустой файл") : "подпись файла не сошлась, обновление не поставлено";
+                Message = signature == null ? Lang.F("не скачалась подпись: {0}", error ?? Lang.T("пустой файл")) : Lang.T("подпись файла не сошлась, обновление не поставлено");
                 Plugin.Warn("[update] " + file + ": " + Message);
                 yield break;
             }
@@ -227,12 +227,12 @@ namespace NewAgeQoL
                 if (zip) InstallZip(data);
                 else Install(data);
                 State = Stage.Done;
-                Message = "готово. Закрой клиент полностью и запусти заново, тогда встанет версия " + LatestVersion;
+                Message = Lang.F("готово. Закрой клиент полностью и запусти заново, тогда встанет версия {0}", LatestVersion);
             }
             catch (Exception e)
             {
                 State = Stage.Failed;
-                Message = "не удалось заменить файл: " + e.Message;
+                Message = Lang.F("не удалось заменить файл: {0}", e.Message);
                 Plugin.Warn("[update] " + e);
             }
         }
@@ -270,7 +270,7 @@ namespace NewAgeQoL
                     else flash.Add(new KeyValuePair<string, byte[]>(inside, bytes));
                 }
             }
-            if (main == null) throw new Exception("в архиве нет " + DllName);
+            if (main == null) throw new Exception(Lang.F("в архиве нет {0}", DllName));
 
             string root = BepInEx.Paths.PluginPath;
             var files = new List<KeyValuePair<string, byte[]>> { new KeyValuePair<string, byte[]>(Main(main), main) };
@@ -321,8 +321,8 @@ namespace NewAgeQoL
                 }
                 catch (Exception e) { Plugin.Trace("[update] file lookup: " + e.Message); }
             }
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception("не нашёл файл мода на диске");
-            if (data.Length < 20000) throw new Exception("файл подозрительно маленький");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception(Lang.T("не нашёл файл мода на диске"));
+            if (data.Length < 20000) throw new Exception(Lang.T("файл подозрительно маленький"));
             return path;
         }
 

@@ -132,7 +132,7 @@ namespace NewAgeQoL
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
 
-            _fold = new SideFold(_canvasGo.transform, "list", "Персонажи", Plugin.CfgRosterFolded);
+            _fold = new SideFold(_canvasGo.transform, "list", Lang.T("Персонажи"), Plugin.CfgRosterFolded);
             _panel = _fold.Body;
             _panel.sizeDelta = new Vector2(RowW, RowH);
 
@@ -315,7 +315,7 @@ namespace NewAgeQoL
         {
             try
             {
-                string text = (current ? "Перезайти персонажем " : "Войти персонажем ") + (one.Login ?? "?") + " [" + one.Level + "]?";
+                string text = current ? Lang.F("Перезайти персонажем {0} [{1}]?", one.Login ?? "?", one.Level) : Lang.F("Войти персонажем {0} [{1}]?", one.Login ?? "?", one.Level);
                 _confirm = DialogFactory.ShowConfirmMessageBox("initialize_game.messages.confirms.changecharacter.caption", null, result =>
                 {
                     _confirm = null;

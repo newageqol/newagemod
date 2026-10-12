@@ -186,13 +186,13 @@ namespace NewAgeQoL
                 Flasks.NoteUse(item.ThingId, 0);
                 if (!Fits(slot, item.Subtype)) continue;
                 if (!seen.Add(item.ThingId)) continue;
-                Offer(list, slot, item.ThingId, "надето");
+                Offer(list, slot, item.ThingId, Lang.T("надето"));
             }
             foreach (var thing in Flasks.BagThings())
             {
                 if (!Suits(slot, thing)) continue;
                 if (!seen.Add(thing)) continue;
-                Offer(list, slot, thing, "сумка");
+                Offer(list, slot, thing, Lang.T("сумка"));
             }
             if (Artifacts.NearStorage())
                 foreach (var thing in Storage.Things())
@@ -200,7 +200,7 @@ namespace NewAgeQoL
                     if (!Flasks.Known(thing.Key)) { Flasks.AskName(thing.Key); continue; }
                     if (!Suits(slot, thing.Key)) continue;
                     if (!seen.Add(thing.Key)) continue;
-                    Offer(list, slot, thing.Key, "хранилище");
+                    Offer(list, slot, thing.Key, Lang.T("хранилище"));
                 }
             return list;
         }
@@ -220,9 +220,9 @@ namespace NewAgeQoL
             for (int i = _grid.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_grid.GetChild(i).gameObject);
             Cards.Clear();
 
-            Make(0, "пусто", "убрать из слота", 0);
+            Make(0, Lang.T("пусто"), Lang.T("убрать из слота"), 0);
             foreach (var choice in list)
-                Make(choice.ThingId, Flasks.DisplayName(choice.ThingId) ?? "вещь " + choice.ThingId, Where(choice), choice.Have);
+                Make(choice.ThingId, Flasks.DisplayName(choice.ThingId) ?? Lang.F("вещь {0}", choice.ThingId), Where(choice), choice.Have);
 
             _built = true;
             _sign = Sign(list);
@@ -288,7 +288,7 @@ namespace NewAgeQoL
 
             if (have > 1)
             {
-                var count = OnlineWindow.Label(go.transform, have + " шт.", 12, FontStyle.Bold, WardrobeLook.Bright);
+                var count = OnlineWindow.Label(go.transform, Lang.F("{0} шт.", have), 12, FontStyle.Bold, WardrobeLook.Bright);
                 count.alignment = TextAnchor.UpperRight;
                 count.raycastTarget = false;
                 count.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
@@ -365,13 +365,13 @@ namespace NewAgeQoL
             outline.effectColor = WardrobeLook.Edge;
             outline.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(panelGo.transform, Manikin.SlotName(_slot) + ": выбери вещь", 20, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(panelGo.transform, Lang.F("{0}: выбери вещь", Manikin.SlotName(_slot)), 20, FontStyle.Bold, WardrobeLook.Bright);
             OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(18f, -46f), new Vector2(-70f, -10f));
             title.alignment = TextAnchor.MiddleLeft;
 
             OnlineWindow.MakeCloseButton(panelGo.transform, Close);
 
-            _wait = OnlineWindow.Label(panelGo.transform, "Загружаю вещи…", 18, FontStyle.Normal, WardrobeLook.Label);
+            _wait = OnlineWindow.Label(panelGo.transform, Lang.T("Загружаю вещи…"), 18, FontStyle.Normal, WardrobeLook.Label);
             OnlineWindow.Place(_wait.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(12f, 12f), new Vector2(-12f, -52f));
             _wait.alignment = TextAnchor.MiddleCenter;
 

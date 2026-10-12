@@ -225,7 +225,7 @@ namespace NewAgeQoL
             if (_name == null)
             {
                 string found = null;
-                try { found = ResourceStrings.GetString(AbilityKey); }
+                try { found = Lang.Original(AbilityKey); }
                 catch (Exception e) { Plugin.Trace("[prediction] ability name: " + e.Message); }
                 if (string.IsNullOrEmpty(found) || found == AbilityKey) return false;
                 _name = Norm(found);

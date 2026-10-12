@@ -167,12 +167,12 @@ namespace NewAgeQoL
         {
             for (int n = 1; n <= MaxOwn + 1; n++)
             {
-                string title = "Манекен " + n;
+                string title = Lang.F("Манекен {0}", n);
                 bool taken = false;
                 foreach (var m in All) if (!m.Received && m.Title == title) taken = true;
                 if (!taken) return title;
             }
-            return "Манекен";
+            return Lang.T("Манекен");
         }
     }
 }

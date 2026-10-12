@@ -51,7 +51,7 @@ namespace NewAgeQoL
             edge.effectColor = WardrobeLook.Edge;
             edge.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(box, "Эликсиры", 20, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(box, Lang.T("Эликсиры"), 20, FontStyle.Bold, WardrobeLook.Bright);
             Wardrobe.At(title.rectTransform, 18f, 12f, W - 90f, 32f);
             title.alignment = TextAnchor.MiddleLeft;
             var close = Wardrobe.Arrow(box, "×", Cancel);
@@ -68,7 +68,7 @@ namespace NewAgeQoL
                 int i = WardrobeData.StatOrder[n];
                 int stat = i;
                 var row = Wardrobe.Box(box, "elix" + i, 16f, y, RowW, 34f, WardrobeLook.Stripe(n), 6);
-                var name = OnlineWindow.Label(row, Names[i], 15, FontStyle.Normal, WardrobeLook.Label);
+                var name = OnlineWindow.Label(row, Lang.T(Names[i]), 15, FontStyle.Normal, WardrobeLook.Label);
                 Wardrobe.At(name.rectTransform, 10f, 0f, 220f, 34f);
                 name.alignment = TextAnchor.MiddleLeft;
                 var plus = Wardrobe.Arrow(row, "+", () => Set(stat, Wardrobe.S.Elix[stat] + 1));
@@ -89,12 +89,12 @@ namespace NewAgeQoL
 
             y += 14f;
             float bw = (W - 32f - 12f) / 2f;
-            var done = Wardrobe.GameButton(box, "Готово", Close, false);
+            var done = Wardrobe.GameButton(box, Lang.T("Готово"), Close, false);
             Wardrobe.At(done, 16f, y, bw, 40f);
             done.GetComponent<Image>().color = Green;
             var label = done.GetComponentInChildren<Text>();
             if (label != null) label.color = Color.white;
-            var reset = Wardrobe.GameButton(box, "Сбросить эликсиры", () => Brew(p => p.Sober()), true);
+            var reset = Wardrobe.GameButton(box, Lang.T("Сбросить эликсиры"), () => Brew(p => p.Sober()), true);
             Wardrobe.At(reset, 16f + bw + 12f, y, bw, 40f);
 
             Refresh();
@@ -131,14 +131,14 @@ namespace NewAgeQoL
         internal static string Caption()
         {
             int drunk = Wardrobe.S.Drunk;
-            return drunk > 0 ? "Эликсиры +" + drunk : "Эликсиры";
+            return drunk > 0 ? Lang.F("Эликсиры +{0}", drunk) : Lang.T("Эликсиры");
         }
 
         internal static void Refresh()
         {
             if (_go == null) return;
             var s = Wardrobe.S;
-            if (_info != null) _info.text = "Выпито " + s.Drunk + " из " + s.Cap + " на " + s.Level + " уровне, осталось " + s.Sips;
+            if (_info != null) _info.text = Lang.F("Выпито {0} из {1} на {2} уровне, осталось {3}", s.Drunk, s.Cap, s.Level, s.Sips);
             for (int i = 0; i < 7; i++)
             {
                 if (Inputs[i] == null || Inputs[i].isFocused) continue;
@@ -154,7 +154,7 @@ namespace NewAgeQoL
             int top = s.Elix[i] + s.Sips;
             if (want > top)
             {
-                Notice.Show("Эликсиров не хватает: на " + s.Level + " уровне можно " + s.Cap + ", свободно ещё " + s.Sips, 4f);
+                Notice.Show(Lang.F("Эликсиров не хватает: на {0} уровне можно {1}, свободно ещё {2}", s.Level, s.Cap, s.Sips), 4f);
                 want = top;
             }
             if (want == s.Elix[i]) { Refresh(); return; }
@@ -176,7 +176,7 @@ namespace NewAgeQoL
             }
             if (probe.Spent > WardrobeState.Points(probe.Level))
             {
-                Notice.Show("Не хватает свободных очков на требования подкласса: нужно ещё " + extra, 5f);
+                Notice.Show(Lang.F("Не хватает свободных очков на требования подкласса: нужно ещё {0}", extra), 5f);
                 Refresh();
                 return;
             }
@@ -184,7 +184,7 @@ namespace NewAgeQoL
             {
                 var thing = pair.Value;
                 if (thing == null || !s.Fits(thing) || probe.Fits(thing)) continue;
-                Notice.Show("Так «" + thing.Name + "» перестанет действовать — сначала сними её или добавь статов", 5f);
+                Notice.Show(Lang.F("Так «{0}» перестанет действовать — сначала сними её или добавь статов", Lang.Game(thing.Name)), 5f);
                 Refresh();
                 return;
             }

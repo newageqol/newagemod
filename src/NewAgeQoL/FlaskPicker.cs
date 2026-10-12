@@ -213,7 +213,7 @@ namespace NewAgeQoL
             outline.effectDistance = new Vector2(1f, -1f);
 
             float head = _near ? NearHead : 76f;
-            var titleT = Line(panelGo.transform, _near ? (title ?? "") : (title ?? "") + " — выбери банку", _near ? 17 : 22, FontStyle.Bold, WardrobeLook.Bright);
+            var titleT = Line(panelGo.transform, _near ? (title ?? "") : (title ?? "") + Lang.T(" — выбери банку"), _near ? 17 : 22, FontStyle.Bold, WardrobeLook.Bright);
             var trt = (RectTransform)titleT.transform;
             trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f); trt.pivot = new Vector2(0.5f, 1f);
             trt.offsetMin = new Vector2(12f, _near ? -32f : -46f); trt.offsetMax = new Vector2(_near ? -40f : -12f, _near ? -6f : -8f);
@@ -345,8 +345,8 @@ namespace NewAgeQoL
             }
             string dots = new string('.', 1 + (int)(Time.unscaledTime * 2f) % 3);
             string text = scan
-                ? "Смотрю сумку, банки сейчас появятся" + dots
-                : "Подгружаю ещё " + left + ", подожди" + dots;
+                ? Lang.T("Смотрю сумку, банки сейчас появятся") + dots
+                : Lang.F("Подгружаю ещё {0}, подожди", left) + dots;
             if (_note.text != text) _note.text = text;
             Blank();
         }
@@ -360,10 +360,10 @@ namespace NewAgeQoL
 
         private static string Nothing()
         {
-            if (Flasks.Scanning || _waiting > 0) return "Список ещё грузится — банки появятся тут";
-            if (SideButtons.InCombat()) return "В бою сумку не смотрю — выбери банку вне боя";
-            if (_row >= 0) return Flasks.Title(_row) + ": подходящих предметов в сумке нет";
-            return "Банок в сумке не нашлось";
+            if (Flasks.Scanning || _waiting > 0) return Lang.T("Список ещё грузится — банки появятся тут");
+            if (SideButtons.InCombat()) return Lang.T("В бою сумку не смотрю — выбери банку вне боя");
+            if (_row >= 0) return Lang.F("{0}: подходящих предметов в сумке нет", Flasks.Title(_row));
+            return Lang.T("Банок в сумке не нашлось");
         }
 
         private static void Apply(List<int> things)

@@ -89,7 +89,7 @@ namespace NewAgeQoL
                 Rarity = Rarity,
                 Level = level,
                 ItemLevel = level,
-                Name = "Артефакт: " + (kind != null ? kind.Name.ToLowerInvariant() : "?") + ", " + level + " ур.",
+                Name = Lang.F("Артефакт: {0}, {1} ур.", kind != null ? Lang.Game(kind.Name).ToLowerInvariant() : "?", level),
                 Image = kind != null ? kind.Image : "",
                 Energy = values[Energy]
             };
@@ -418,7 +418,7 @@ namespace NewAgeQoL
             int left = rule.Points - Spent(Values);
             if (left != 0)
             {
-                Notice.Show("Распредели все очки артефакта: осталось " + left, 5f);
+                Notice.Show(Lang.F("Распредели все очки артефакта: осталось {0}", left), 5f);
                 return;
             }
             var values = new int[Count];
@@ -442,7 +442,7 @@ namespace NewAgeQoL
             back.sprite = OnlineWindow.Rounded(10);
             back.type = Image.Type.Sliced;
 
-            var title = OnlineWindow.Label(rt, "Артефакт: " + WardrobeData.SlotName(_slot).ToLowerInvariant(), 18, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(rt, Lang.F("Артефакт: {0}", WardrobeData.SlotName(_slot).ToLowerInvariant()), 18, FontStyle.Bold, WardrobeLook.Bright);
             Wardrobe.At(title.rectTransform, 14f, 10f, width - 70f, 30f);
             title.alignment = TextAnchor.MiddleLeft;
             var close = Wardrobe.Arrow(rt, "×", Close);
@@ -455,10 +455,10 @@ namespace NewAgeQoL
             float y = 48f;
             if (_kinds.Count > 1)
             {
-                _type = Cycle(rt, "Тип", y, width, StepKind);
+                _type = Cycle(rt, Lang.T("Тип"), y, width, StepKind);
                 y += 38f;
             }
-            _levelText = Cycle(rt, "Уровень", y, width, StepLevel);
+            _levelText = Cycle(rt, Lang.T("Уровень"), y, width, StepLevel);
             y += 42f;
 
             _points = OnlineWindow.Label(rt, "", 14, FontStyle.Bold, WardrobeLook.Accent);
@@ -509,27 +509,27 @@ namespace NewAgeQoL
             scroll.viewport = _scroll;
 
             float rowW = width - 24f;
-            Section(content, rowW, "Характеристики", true);
+            Section(content, rowW, Lang.T("Характеристики"), true);
             foreach (int i in WardrobeData.StatOrder) MakeRow(content, rowW, i, WardrobeData.StatNames[i]);
-            MakeRow(content, rowW, Energy, "Энергия");
-            Section(content, rowW, "Броня", false);
+            MakeRow(content, rowW, Energy, Lang.T("Энергия"));
+            Section(content, rowW, Lang.T("Броня"), false);
             for (int p = 0; p < 5; p++) MakeRow(content, rowW, 7 + p, WardrobeData.ArmorNames[p]);
-            Section(content, rowW, "Защита от магии", false);
+            Section(content, rowW, Lang.T("Защита от магии"), false);
             for (int m = 0; m < 3; m++) MakeRow(content, rowW, 12 + m, WardrobeData.MagicNames[m]);
 
             float by = height - Bottom + 10f;
-            _reset = Wardrobe.GameButton(rt, "Обнулить", () =>
+            _reset = Wardrobe.GameButton(rt, Lang.T("Обнулить"), () =>
             {
                 for (int k = 0; k < Count; k++) Values[k] = 0;
                 Paint();
             }, true).GetComponent<Button>();
             Wardrobe.At((RectTransform)_reset.transform, 14f, by, 130f, 42f);
-            _wear = Green(Wardrobe.GameButton(rt, "Надеть", () => Wear(false), false)).GetComponent<Button>();
+            _wear = Green(Wardrobe.GameButton(rt, Lang.T("Надеть"), () => Wear(false), false)).GetComponent<Button>();
             Wardrobe.At((RectTransform)_wear.transform, width - 14f - 130f, by, 130f, 42f);
             var group = WardrobeData.Group(Target);
             if (group != null)
             {
-                _wearAll = Green(Wardrobe.GameButton(rt, "Надеть " + group.Length, () => Wear(true), false)).GetComponent<Button>();
+                _wearAll = Green(Wardrobe.GameButton(rt, Lang.F("Надеть {0}", group.Length), () => Wear(true), false)).GetComponent<Button>();
                 Wardrobe.At((RectTransform)_wearAll.transform, width - 14f - 130f - 8f - 130f, by, 130f, 42f);
             }
         }
@@ -591,7 +591,7 @@ namespace NewAgeQoL
             edge.effectColor = WardrobeLook.Edge;
             edge.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(rt, "Артефакт: " + WardrobeData.SlotName(_slot).ToLowerInvariant(), 18, FontStyle.Bold, WardrobeLook.Bright);
+            var title = OnlineWindow.Label(rt, Lang.F("Артефакт: {0}", WardrobeData.SlotName(_slot).ToLowerInvariant()), 18, FontStyle.Bold, WardrobeLook.Bright);
             Wardrobe.At(title.rectTransform, 14f, 8f, Width - 70f, 30f);
             title.alignment = TextAnchor.MiddleLeft;
             var close = Wardrobe.Arrow(rt, "×", Close);
@@ -604,10 +604,10 @@ namespace NewAgeQoL
             float y = 46f;
             if (_kinds.Count > 1)
             {
-                _type = Cycle(rt, "Тип", y, Width, StepKind);
+                _type = Cycle(rt, Lang.T("Тип"), y, Width, StepKind);
                 y += 38f;
             }
-            _levelText = Cycle(rt, "Уровень", y, Width, StepLevel);
+            _levelText = Cycle(rt, Lang.T("Уровень"), y, Width, StepLevel);
             y += 42f;
             _points = OnlineWindow.Label(rt, "", 14, FontStyle.Bold, WardrobeLook.Accent);
             Wardrobe.At(_points.rectTransform, 14f, y, Width - 140f, 24f);
@@ -631,28 +631,28 @@ namespace NewAgeQoL
             float colW = (Width - 20f - 10f) / 2f;
             var leftCol = Column(_scroll, 0f, colW, listH);
             var rightCol = Column(_scroll, colW + 10f, colW, listH);
-            Section(leftCol, colW, "Характеристики", true);
+            Section(leftCol, colW, Lang.T("Характеристики"), true);
             foreach (int i in WardrobeData.StatOrder) MakeRow(leftCol, colW, i, WardrobeData.StatNames[i], true);
-            MakeRow(leftCol, colW, Energy, "Энергия", true);
-            Section(rightCol, colW, "Броня", true);
+            MakeRow(leftCol, colW, Energy, Lang.T("Энергия"), true);
+            Section(rightCol, colW, Lang.T("Броня"), true);
             for (int p = 0; p < 5; p++) MakeRow(rightCol, colW, 7 + p, WardrobeData.ArmorNames[p], true);
-            Section(rightCol, colW, "Защита от магии", false);
+            Section(rightCol, colW, Lang.T("Защита от магии"), false);
             for (int m = 0; m < 3; m++) MakeRow(rightCol, colW, 12 + m, WardrobeData.MagicNames[m], true);
             y += listH + 12f;
 
             float bw = (Width - 28f - 3f * 8f) / 4f;
             int slot = _slot;
-            _wear = Green(Wardrobe.GameButton(rt, "Сохранить", () => Wear(false), false)).GetComponent<Button>();
+            _wear = Green(Wardrobe.GameButton(rt, Lang.T("Сохранить"), () => Wear(false), false)).GetComponent<Button>();
             Wardrobe.At((RectTransform)_wear.transform, 14f, y, bw, 42f);
-            _reset = Wardrobe.GameButton(rt, "Обнулить", () =>
+            _reset = Wardrobe.GameButton(rt, Lang.T("Обнулить"), () =>
             {
                 for (int k = 0; k < Count; k++) Values[k] = 0;
                 Paint();
             }, false).GetComponent<Button>();
             Wardrobe.At((RectTransform)_reset.transform, 14f + (bw + 8f), y, bw, 42f);
-            var other = Wardrobe.GameButton(rt, "Заменить", () => { Close(); Wardrobe.Replace(slot); }, false);
+            var other = Wardrobe.GameButton(rt, Lang.T("Заменить"), () => { Close(); Wardrobe.Replace(slot); }, false);
             Wardrobe.At(other, 14f + (bw + 8f) * 2f, y, bw, 42f);
-            var off = Wardrobe.GameButton(rt, "Снять", () => Wardrobe.Pick(slot, null, false), true);
+            var off = Wardrobe.GameButton(rt, Lang.T("Снять"), () => Wardrobe.Pick(slot, null, false), true);
             Wardrobe.At(off, 14f + (bw + 8f) * 3f, y, bw, 42f);
         }
 
@@ -694,7 +694,7 @@ namespace NewAgeQoL
             label.resizeTextMaxSize = 14;
             if (!compact)
             {
-                var cost = OnlineWindow.Label(rt, Cost(k) + " оч.", 11, FontStyle.Normal, WardrobeLook.Faint);
+                var cost = OnlineWindow.Label(rt, Lang.F("{0} оч.", Cost(k)), 11, FontStyle.Normal, WardrobeLook.Faint);
                 Wardrobe.At(cost.rectTransform, costX, 2f, 58f, 26f);
                 cost.alignment = TextAnchor.MiddleRight;
             }
@@ -742,14 +742,14 @@ namespace NewAgeQoL
             var rule = Rule;
             var levels = Levels();
             bool ready = rule != null && levels.Contains(_level);
-            if (_type != null) _type.text = kind != null ? kind.Name : "?";
-            if (_levelText != null) _levelText.text = ready ? _level + " ур." : "—";
+            if (_type != null) _type.text = kind != null ? Lang.Game(kind.Name) : "?";
+            if (_levelText != null) _levelText.text = ready ? Lang.F("{0} ур.", _level) : "—";
             if (_scroll != null) _scroll.gameObject.SetActive(ready);
             if (_reset != null) _reset.gameObject.SetActive(ready);
             if (!ready)
             {
                 var all = WardrobeData.ArtLevels(Sub);
-                _points.text = all.Count > 0 ? "Такой артефакт надевается с " + all[0] + " уровня" : "Для этого типа правил нет";
+                _points.text = all.Count > 0 ? Lang.F("Такой артефакт надевается с {0} уровня", all[0]) : Lang.T("Для этого типа правил нет");
                 _points.color = WardrobeLook.Bad;
                 _gain.text = "";
                 _limits.text = "";
@@ -759,7 +759,7 @@ namespace NewAgeQoL
             }
 
             int left = rule.Points - Spent(Values);
-            _points.text = left > 0 ? "Очки распределения: " + left + ", надеть можно, когда потрачены все" : "Очки распределения: 0";
+            _points.text = left > 0 ? Lang.F("Очки распределения: {0}, надеть можно, когда потрачены все", left) : Lang.T("Очки распределения: 0");
             _points.color = left > 0 ? WardrobeLook.Accent : WardrobeLook.Good;
 
             var probe = Wardrobe.S.Clone();
@@ -767,10 +767,10 @@ namespace NewAgeQoL
             Array.Copy(Values, values, Count);
             probe.Wear(Target, Make(Sub, _level, values));
             int delta = probe.Rating - Wardrobe.S.Rating;
-            _gain.text = "рейтинг " + (delta > 0 ? "+" + delta : delta.ToString());
+            _gain.text = Lang.F("рейтинг {0}", delta > 0 ? "+" + delta : delta.ToString());
             _gain.color = delta > 0 ? WardrobeLook.Good : delta < 0 ? WardrobeLook.Bad : WardrobeLook.Label;
 
-            _limits.text = "Цена: " + rule.Price + " " + Wardrobe.Plural(rule.Price, "кристалл", "кристалла", "кристаллов");
+            _limits.text = Lang.F("Цена: {0} {1}", rule.Price, Wardrobe.Plural(rule.Price, Lang.T("кристалл"), Lang.T("кристалла"), Lang.T("кристаллов")));
 
             foreach (var row in Rows)
             {

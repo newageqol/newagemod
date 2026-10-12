@@ -76,7 +76,7 @@ namespace NewAgeQoL
             {
                 if (!KuData.Ready)
                 {
-                    Notice.Show("Калькулятор КУ: в сборке нет данных об умениях", 6f);
+                    Notice.Show(Lang.T("Калькулятор КУ: в сборке нет данных об умениях"), 6f);
                     return;
                 }
                 Plans.Clear();
@@ -308,7 +308,7 @@ namespace NewAgeQoL
                 var drop = new List<int>();
                 foreach (var pair in Plan) if (klass == null || klass.EliteSide(pair.Key) < 0) drop.Add(pair.Key);
                 foreach (int id in drop) Plan.Remove(id);
-                Notice.Show("Калькулятор КУ: на этом подклассе очков меньше — дерево сброшено", 4f);
+                Notice.Show(Lang.T("Калькулятор КУ: на этом подклассе очков меньше — дерево сброшено"), 4f);
             }
             var cut = Klass;
             if (cut != null)
@@ -364,7 +364,7 @@ namespace NewAgeQoL
             WardrobeLook.Frame(_panelGo, WardrobeLook.Edge);
             var panel = _panelGo.transform;
 
-            var title = Say(panel, "Калькулятор КУ", 22, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleLeft);
+            var title = Say(panel, Lang.T("Калькулятор КУ"), 22, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleLeft);
             Wardrobe.At(title.rectTransform, 20f, 12f, 260f, 36f);
             OnlineWindow.MakeCloseButton(panel, Close);
 
@@ -373,13 +373,13 @@ namespace NewAgeQoL
             foreach (var klass in KuData.Classes)
             {
                 int id = klass.Id;
-                var tab = Wardrobe.GameButton(panel, klass.Name, () => Pick(id), false);
+                var tab = Wardrobe.GameButton(panel, Lang.Game(klass.Name), () => Pick(id), false);
                 Wardrobe.At(tab, x, 60f, TabW, 44f);
                 Tabs.Add(tab);
                 x += TabW + 8f;
             }
 
-            var subLabel = Say(panel, "Подкласс", 15, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            var subLabel = Say(panel, Lang.T("Подкласс"), 15, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(subLabel.rectTransform, 18f, 116f, 96f, 40f);
             Wardrobe.At((RectTransform)Wardrobe.Arrow(panel, "‹", () => Step(-1)).transform, 112f, 118f, 36f, 36f);
             var field = Box(panel, "sub", 152f, 118f, 400f, 36f, WardrobeLook.Field, 8);
@@ -392,14 +392,14 @@ namespace NewAgeQoL
             _points = Say(panel, "", 17, FontStyle.Normal, WardrobeLook.Bright, TextAnchor.MiddleLeft);
             _points.supportRichText = true;
             Wardrobe.At(_points.rectTransform, 616f, 116f, 390f, 40f);
-            Wardrobe.At(Wardrobe.GameButton(panel, "Сбросить", Reset, true), PanelW - 216f, 118f, 200f, 38f);
+            Wardrobe.At(Wardrobe.GameButton(panel, Lang.T("Сбросить"), Reset, true), PanelW - 216f, 118f, 200f, 38f);
 
             _tree = Box(panel, "tree", 16f, BodyY, TreeW, BodyH, WardrobeLook.Card, 12);
             BuildDesk(Box(panel, "desk", 16f + TreeW + 12f, BodyY, DeskW, BodyH, WardrobeLook.Card, 12));
 
-            var left = Say(panel, "ЛКМ — поднять ступень", 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
+            var left = Say(panel, Lang.T("ЛКМ — поднять ступень"), 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
             Wardrobe.At(left.rectTransform, 20f, PanelH - 46f, PanelW - 40f, 20f);
-            var right = Say(panel, "ПКМ — опустить ступень", 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
+            var right = Say(panel, Lang.T("ПКМ — опустить ступень"), 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
             Wardrobe.At(right.rectTransform, 20f, PanelH - 26f, PanelW - 40f, 20f);
         }
 
@@ -466,13 +466,13 @@ namespace NewAgeQoL
             var klass = Klass;
             if (klass == null) return;
 
-            _leftTitle = Say(_tree, klass.LeftName, 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperLeft);
+            _leftTitle = Say(_tree, Lang.Game(klass.LeftName), 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperLeft);
             Wardrobe.At(_leftTitle.rectTransform, 16f, 14f, Col * 3f - 40f, 38f);
             _leftTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
             _leftTitle.resizeTextForBestFit = true;
             _leftTitle.resizeTextMinSize = 10;
             _leftTitle.resizeTextMaxSize = 15;
-            _rightTitle = Say(_tree, klass.RightName, 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperRight);
+            _rightTitle = Say(_tree, Lang.Game(klass.RightName), 15, FontStyle.Bold, WardrobeLook.Label, TextAnchor.UpperRight);
             Wardrobe.At(_rightTitle.rectTransform, Col * 4f + 24f, 14f, Col * 3f - 40f, 38f);
             _rightTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
             _rightTitle.resizeTextForBestFit = true;
@@ -558,7 +558,7 @@ namespace NewAgeQoL
                 node.Pips[i].raycastTarget = false;
             }
 
-            node.Name = Say(box, skill != null ? skill.Name : "?", 12, FontStyle.Normal, WardrobeLook.Label, TextAnchor.UpperCenter);
+            node.Name = Say(box, skill != null ? Lang.Game(skill.Name) : "?", 12, FontStyle.Normal, WardrobeLook.Label, TextAnchor.UpperCenter);
             Wardrobe.At(node.Name.rectTransform, 4f, 8f + Icon + 16f, NodeW - 8f, NodeH - Icon - 26f);
             node.Name.horizontalOverflow = HorizontalWrapMode.Wrap;
             node.Name.verticalOverflow = VerticalWrapMode.Truncate;
@@ -580,9 +580,9 @@ namespace NewAgeQoL
             PaintTabs();
             var sub = klass.Sub(Subs);
             if (_subText != null)
-                _subText.text = Subs + " · " + (sub != null ? sub.Name + " · с " + sub.Level + " ур." : "подкласс");
+                _subText.text = Subs + " · " + (sub != null ? Lang.F("{0} · с {1} ур.", Lang.Game(sub.Name), sub.Level) : Lang.T("подкласс"));
             if (_points != null)
-                _points.text = "Очков: <color=#e2b85c><b>" + Math.Max(0, Total - Spent) + "</b></color>      Трофеев: <color=#e2b85c><b>" + Trophies + "</b></color>";
+                _points.text = Lang.F("Очков: <color=#e2b85c><b>{0}</b></color>      Трофеев: <color=#e2b85c><b>{1}</b></color>", Math.Max(0, Total - Spent), Trophies);
             int branch = Branch(klass);
             if (_leftTitle != null) _leftTitle.color = branch == 1 ? WardrobeLook.Accent : branch == 2 ? WardrobeLook.Faint : WardrobeLook.Label;
             if (_rightTitle != null) _rightTitle.color = branch == 2 ? WardrobeLook.Accent : branch == 1 ? WardrobeLook.Faint : WardrobeLook.Label;
@@ -666,20 +666,20 @@ namespace NewAgeQoL
             var sprite = IconOf(id);
             _deskIcon.sprite = sprite;
             _deskIcon.enabled = sprite != null;
-            _deskName.text = skill.Name;
+            _deskName.text = Lang.Game(skill.Name);
             int elite = klass.EliteSide(id);
             if (elite > 0)
             {
                 var root = KuData.Skill(klass.EliteRoot(elite));
-                _deskKind.text = skill.Kind + " · элитное · ветка «" + (root != null ? root.Name : "?") + "»";
+                _deskKind.text = Lang.F("{0} · элитное · ветка «{1}»", Lang.Game(skill.Kind), root != null ? Lang.Game(root.Name) : "?");
             }
             else
             {
                 int side = klass.Side(id);
-                _deskKind.text = skill.Kind + " · " + (side == 0 ? "корень обеих веток" : "ветка «" + (side == 1 ? klass.LeftName : klass.RightName) + "»");
+                _deskKind.text = Lang.Game(skill.Kind) + " · " + (side == 0 ? Lang.T("корень обеих веток") : Lang.F("ветка «{0}»", Lang.Game(side == 1 ? klass.LeftName : klass.RightName)));
             }
             int level = Level(id);
-            _deskNow.text = level > 0 ? "Изучено: " + KuData.Step(level) + " (" + level + " из " + KuData.Top + ")" : "Не изучено";
+            _deskNow.text = level > 0 ? Lang.F("Изучено: {0} ({1} из {2})", Lang.Game(KuData.Step(level)), level, KuData.Top) : Lang.T("Не изучено");
             _deskNow.color = level > 0 ? WardrobeLook.Accent : WardrobeLook.Faint;
 
             for (int i = _deskRows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_deskRows.GetChild(i).gameObject);
@@ -707,7 +707,7 @@ namespace NewAgeQoL
             vlg.childForceExpandHeight = false;
 
             var head = new StringBuilder();
-            head.Append("<b>").Append(step).Append(". ").Append(KuData.Step(step)).Append("</b>");
+            head.Append("<b>").Append(step).Append(". ").Append(Lang.Game(KuData.Step(step))).Append("</b>");
             var title = Say(go.transform, head.ToString(), 15, FontStyle.Normal, have ? WardrobeLook.Accent : next ? WardrobeLook.Bright : WardrobeLook.Label, TextAnchor.UpperLeft);
             title.supportRichText = true;
             title.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -722,11 +722,11 @@ namespace NewAgeQoL
             int charges = cost != null && cost.Length >= 4 ? cost[3] : 0;
             bool dim = !have && !next;
             var stats = new List<string>();
-            if (energy > 0) stats.Add(Stat("Энергия", energy.ToString(), dim));
-            if (charges > 0) stats.Add(Stat("Заряды", charges.ToString(), dim));
-            if (lasts != null) stats.Add(Stat("Длительность", lasts, dim));
-            if (reload != null) stats.Add(Stat("Перезарядка", reload, dim));
-            else if (HasReload(skill)) stats.Add(Stat("Перезарядка", "нет", dim));
+            if (energy > 0) stats.Add(Stat(Lang.T("Энергия"), energy.ToString(), dim));
+            if (charges > 0) stats.Add(Stat(Lang.T("Заряды"), charges.ToString(), dim));
+            if (lasts != null) stats.Add(Stat(Lang.T("Длительность"), lasts, dim));
+            if (reload != null) stats.Add(Stat(Lang.T("Перезарядка"), reload, dim));
+            else if (HasReload(skill)) stats.Add(Stat(Lang.T("Перезарядка"), Lang.T("нет"), dim));
             if (stats.Count > 0)
             {
                 var lines = Say(go.transform, string.Join("\n", stats.ToArray()), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.UpperLeft);
@@ -752,7 +752,7 @@ namespace NewAgeQoL
             return digits.Success && int.TryParse(digits.Value, out n) ? Rounds(n) : value;
         }
 
-        private static string Rounds(int n) => n + " " + Wardrobe.Plural(n, "раунд", "раунда", "раундов");
+        private static string Rounds(int n) => n + " " + Wardrobe.Plural(n, Lang.T("раунд"), Lang.T("раунда"), Lang.T("раундов"));
 
         private static string Stat(string name, string value, bool dim)
         {

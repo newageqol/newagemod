@@ -180,9 +180,9 @@ namespace NewAgeQoL
                 _ate = Time.frameCount;
                 var cd = FighterHint.Cd();
                 if (cd == null || cd.RoundType != RoundType.WALK_ROUND) { Drop(); return; }
-                if (!Walkable(cd, hex)) { Notice.Show("До этой клетки не дойти", 3f); Drop(); return; }
+                if (!Walkable(cd, hex)) { Notice.Show(Lang.T("До этой клетки не дойти"), 3f); Drop(); return; }
                 var units = cd.TimeUnitsManager;
-                if (units != null && units.MovementTimeUnits <= 0) { Notice.Show("Ходов не осталось", 3f); return; }
+                if (units != null && units.MovementTimeUnits <= 0) { Notice.Show(Lang.T("Ходов не осталось"), 3f); return; }
                 Drop();
                 Ring(hex);
             }

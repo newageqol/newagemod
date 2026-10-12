@@ -248,17 +248,17 @@ namespace NewAgeQoL
             BranchRec r;
             if (!Known.TryGetValue(userId, out r)) r = null;
             var sb = new StringBuilder();
-            sb.Append("КУ: ").Append(r != null && r.Reg >= 0 ? BranchNames[r.Cls * 4 + r.Reg * 2] : Soon(userId));
-            sb.Append("      ЭКУ: ").Append(r != null && r.Elite >= 0 ? BranchNames[r.Cls * 4 + r.Elite * 2 + 1] : Soon(userId));
+            sb.Append(Lang.T("КУ: ")).Append(r != null && r.Reg >= 0 ? Lang.T(BranchNames[r.Cls * 4 + r.Reg * 2]) : Soon(userId));
+            sb.Append(Lang.T("      ЭКУ: ")).Append(r != null && r.Elite >= 0 ? Lang.T(BranchNames[r.Cls * 4 + r.Elite * 2 + 1]) : Soon(userId));
             return sb.ToString();
         }
 
         private static string Soon(int userId)
         {
-            if (_hunting == userId || Waiting.Contains(userId)) return "ищу…";
-            if (Pending.Contains(userId) && (Served() || Room())) return "ищу…";
+            if (_hunting == userId || Waiting.Contains(userId)) return Lang.T("ищу…");
+            if (Pending.Contains(userId) && (Served() || Room())) return Lang.T("ищу…");
             BranchRec r;
-            return Known.TryGetValue(userId, out r) && r.Hour > 0 ? "не найдено" : "?";
+            return Known.TryGetValue(userId, out r) && r.Hour > 0 ? Lang.T("не найдено") : "?";
         }
 
         private static long Hours()

@@ -643,7 +643,7 @@ namespace NewAgeQoL
                 {
                     var item = from.Cell.Data;
                     if (target == null || item == null || item.InventoryId <= 0) return;
-                    if (!Accepts((int)item.SubType, slot)) { Notice.Show("Эту вещь сюда не надеть", 3f); return; }
+                    if (!Accepts((int)item.SubType, slot)) { Notice.Show(Lang.T("Эту вещь сюда не надеть"), 3f); return; }
                     Plugin.Trace("[items] dragged item " + item.InventoryId + " to slot " + slot);
                     Run(Dress(item.InventoryId, (int)item.SubType, slot));
                     return;
@@ -656,19 +656,19 @@ namespace NewAgeQoL
                     return;
                 }
                 if (slot == from.Slot) return;
-                if (!Accepts(KindOf(from.Slot), slot)) { Notice.Show("Эту вещь сюда не надеть", 3f); return; }
+                if (!Accepts(KindOf(from.Slot), slot)) { Notice.Show(Lang.T("Эту вещь сюда не надеть"), 3f); return; }
                 if (ESlots.IsAdditionalSlot(slot) == ESlots.IsAdditionalSlot(from.Slot))
                 {
                     int other = KindOf(slot);
                     if (other <= 0)
                     {
-                        Notice.Show("В пустой слот этого ряда не переставить: сервер кладёт вещь в первый свободный", 4f);
+                        Notice.Show(Lang.T("В пустой слот этого ряда не переставить: сервер кладёт вещь в первый свободный"), 4f);
                         return;
                     }
-                    if (!Accepts(other, from.Slot)) { Notice.Show("Эти вещи местами не поменять", 3f); return; }
+                    if (!Accepts(other, from.Slot)) { Notice.Show(Lang.T("Эти вещи местами не поменять"), 3f); return; }
                     if (FreeBeside(KindOf(from.Slot), from.Slot, slot) || FreeBeside(other, from.Slot, slot))
                     {
-                        Notice.Show("Сначала займи свободный слот этого ряда: сервер кладёт вещь в первый свободный", 4f);
+                        Notice.Show(Lang.T("Сначала займи свободный слот этого ряда: сервер кладёт вещь в первый свободный"), 4f);
                         return;
                     }
                     Plugin.Trace("[items] swapping items between slots " + from.Slot + " and " + slot);

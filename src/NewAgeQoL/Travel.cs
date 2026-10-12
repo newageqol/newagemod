@@ -103,21 +103,21 @@ namespace NewAgeQoL
             int vertex = Here();
             if (area <= 0 || vertex < 0)
             {
-                Notice.Show("Точку можно добавить только на карте мира — встань на нужную точку", 4f);
+                Notice.Show(Lang.T("Точку можно добавить только на карте мира — встань на нужную точку"), 4f);
                 return;
             }
             foreach (var spot in Spots())
                 if (spot.Area == area && spot.Target == vertex)
                 {
-                    Notice.Show("Эта точка уже есть в списке: «" + spot.Name + "»", 4f);
+                    Notice.Show(Lang.F("Эта точка уже есть в списке: «{0}»", spot.Name), 4f);
                     return;
                 }
-            TravelEdit.Ask("Новая точка: участок " + area + ", точка v" + vertex + ".\nКак её назвать?", "", name =>
+            TravelEdit.Ask(Lang.F("Новая точка: участок {0}, точка v{1}.\nКак её назвать?", area, vertex), "", name =>
             {
                 var list = new List<Spot>(Spots());
                 list.Add(new Spot { Name = name, Area = area, Path = new[] { vertex } });
                 Save(list);
-                Say("Точка «" + name + "» добавлена в список похода.");
+                Say(Lang.F("Точка «{0}» добавлена в список похода.", name));
                 Plugin.Trace("[travel] added point '" + name + "' " + area + ":" + vertex);
             });
         }
@@ -125,7 +125,7 @@ namespace NewAgeQoL
         internal static void Rename(Spot spot)
         {
             if (spot == null) return;
-            TravelEdit.Ask("Новое название для «" + spot.Name + "»", spot.Name, name =>
+            TravelEdit.Ask(Lang.F("Новое название для «{0}»", spot.Name), spot.Name, name =>
             {
                 var list = new List<Spot>(Spots());
                 int at = list.IndexOf(spot);
@@ -139,15 +139,15 @@ namespace NewAgeQoL
         internal static void Remove(Spot spot)
         {
             if (spot == null) return;
-            TravelEdit.Confirm("Удалить точку «" + spot.Name + "» из списка похода?", "Удалить", () =>
+            TravelEdit.Confirm(Lang.F("Удалить точку «{0}» из списка похода?", spot.Name), Lang.T("Удалить"), () =>
             {
                 var list = new List<Spot>(Spots());
                 int at = list.FindIndex(one => ReferenceEquals(one, spot) || (one.Name == spot.Name && one.Area == spot.Area && SamePath(one, spot)));
                 if (at < 0) return;
-                if (IsRunning(list[at])) Cancel("точка удалена из списка");
+                if (IsRunning(list[at])) Cancel(Lang.T("точка удалена из списка"));
                 list.RemoveAt(at);
                 Save(list);
-                Notice.Show("Точка «" + spot.Name + "» убрана из списка", 3f);
+                Notice.Show(Lang.F("Точка «{0}» убрана из списка", spot.Name), 3f);
                 Plugin.Trace("[travel] removed point '" + spot.Name + "'");
             });
         }
@@ -259,8 +259,8 @@ namespace NewAgeQoL
         internal static void Click(Spot spot)
         {
             if (spot == null || Plugin.Instance == null) return;
-            if (Artifacts.Busy) { Say("Сейчас идёт работа с хранилищем — поход подождёт."); return; }
-            if (TownWalk.Busy) { Say("Сейчас идёт возврат в город — поход подождёт."); return; }
+            if (Artifacts.Busy) { Say(Lang.T("Сейчас идёт работа с хранилищем — поход подождёт.")); return; }
+            if (TownWalk.Busy) { Say(Lang.T("Сейчас идёт возврат в город — поход подождёт.")); return; }
             if (SideButtons.ClaimLocked()) { Plugin.Trace("[travel] travel is not allowed from a fight claim"); return; }
             _wanted = spot;
             Plugin.Instance.StartCoroutine(Switch(spot));
@@ -284,7 +284,7 @@ namespace NewAgeQoL
             Plugin.Trace("[travel] '" + spot.Name + "' started; " + Where());
             try
             {
-                if (!Connected()) { Fail("нет соединения"); yield break; }
+                if (!Connected()) { Fail(Lang.T("нет соединения")); yield break; }
 
                 if (spot.Area > 0)
                 {
@@ -299,7 +299,7 @@ namespace NewAgeQoL
                             {
                                 Plugin.Trace("[travel] no road from area " + Area + " to " + spot.Area);
                                 RouteLog.Note("нет дороги " + Area + ">" + spot.Area, "travel knows no road from area " + Area + " to " + spot.Area + " ('" + spot.Name + "')");
-                                Fail("не знаю дороги туда");
+                                Fail(Lang.T("не знаю дороги туда"));
                                 yield break;
                             }
                             int gate = MapReady() ? -1 : Exit(spot.Area);
@@ -312,7 +312,7 @@ namespace NewAgeQoL
                         yield return Step(spot, road[0].Vertex, true);
                         if (!_ok) yield break;
                     }
-                    if (Area != spot.Area) { Fail("не добрался до места"); yield break; }
+                    if (Area != spot.Area) { Fail(Lang.T("не добрался до места")); yield break; }
 
                     yield return Step(spot, spot.Target, false);
                     if (!_ok) yield break;
@@ -331,7 +331,7 @@ namespace NewAgeQoL
                     }
                 }
 
-                Say("«" + spot.Name + "»: на месте.");
+                Say(Lang.F("«{0}»: на месте.", spot.Name));
                 Plugin.Trace("[travel] '" + spot.Name + "' reached; " + Where());
             }
             finally { _running = null; AutoConfirm = false; }
@@ -341,14 +341,14 @@ namespace NewAgeQoL
         {
             if (Locked(vertex))
             {
-                Say("«" + spot.Name + "»: точка ещё не открыта.");
+                Say(Lang.F("«{0}»: точка ещё не открыта.", spot.Name));
                 Plugin.Trace("[travel] v" + vertex + " closed");
                 RouteLog.Note("закрыта " + Area + ":" + vertex, "point v" + vertex + " in area " + Area + " is closed");
                 _ok = false;
                 yield break;
             }
 
-            Say("«" + spot.Name + "»: " + (enter ? "иду к переходу…" : "иду…"));
+            Say("«" + spot.Name + "»: " + (enter ? Lang.T("иду к переходу…") : Lang.T("иду…")));
             Plugin.Trace("[travel] '" + spot.Name + "' → v" + vertex + (enter ? " (gate)" : ""));
             AutoConfirm = enter;
             int arrived = ArrivedStamp, refused = RefusedStamp, load = LoadStamp;
@@ -356,7 +356,7 @@ namespace NewAgeQoL
 
             yield return WaitFor(() => ArrivedStamp != arrived || RefusedStamp != refused, 30f,
                                  () => LoadStamp != load);
-            if (!_ok) { Stop("сервер не ответил на ход"); yield break; }
+            if (!_ok) { Stop(Lang.T("сервер не ответил на ход")); yield break; }
 
             if (RefusedStamp != refused)
             {
@@ -364,7 +364,7 @@ namespace NewAgeQoL
                 {
                     _ok = false;
                     Plugin.Trace("[travel] server does not lead to v" + vertex + ", standing at v" + RefusedAt);
-                    if (Locked(vertex)) Say("«" + spot.Name + "»: точка ещё не открыта.");
+                    if (Locked(vertex)) Say(Lang.F("«{0}»: точка ещё не открыта.", spot.Name));
                     else Stop(Blocked());
                     yield break;
                 }
@@ -373,9 +373,9 @@ namespace NewAgeQoL
 
             if (!enter) { _ok = true; yield break; }
 
-            Say("«" + spot.Name + "»: перехожу дальше…");
+            Say(Lang.F("«{0}»: перехожу дальше…", spot.Name));
             yield return WaitFor(() => LoadStamp != load && MapReady(), 120f);
-            if (!_ok) { Stop("переход не открылся"); yield break; }
+            if (!_ok) { Stop(Lang.T("переход не открылся")); yield break; }
             AutoConfirm = false;
             yield return Settle();
             _ok = true;
@@ -415,14 +415,14 @@ namespace NewAgeQoL
 
         private static IEnumerator Leave(Spot spot, int area)
         {
-            Say("«" + spot.Name + "»: выхожу на участок " + area + "…");
+            Say(Lang.F("«{0}»: выхожу на участок {1}…", spot.Name, area));
             int leave = LoadStamp;
             if (!Send(new LeaveTownRequest(area))) { _ok = false; yield break; }
             yield return WaitFor(() => LoadStamp != leave && MapReady(), 90f);
             if (!_ok)
             {
                 RouteLog.Note("не выпустили " + Loc + ">" + area, "could not exit location " + Loc + " to area " + area);
-                Stop("не вышел на участок " + area);
+                Stop(Lang.F("не вышел на участок {0}", area));
                 yield break;
             }
             yield return Settle();
@@ -433,19 +433,19 @@ namespace NewAgeQoL
         {
             if (!InTown())
             {
-                Say("«" + spot.Name + "»: телепорт в город…");
+                Say(Lang.F("«{0}»: телепорт в город…", spot.Name));
                 int load = LoadStamp;
                 if (!Send(new ReturnToIlleniumRequest(true))) { _ok = false; yield break; }
                 yield return WaitFor(() => LoadStamp != load && InTown(), 90f);
-                if (!_ok) { Stop("не дождался города"); yield break; }
+                if (!_ok) { Stop(Lang.T("не дождался города")); yield break; }
                 yield return Settle();
             }
 
-            Say("«" + spot.Name + "»: выхожу из города…");
+            Say(Lang.F("«{0}»: выхожу из города…", spot.Name));
             int leave = LoadStamp;
             if (!Send(new LeaveTownRequest(Outer))) { _ok = false; yield break; }
             yield return WaitFor(() => LoadStamp != leave && MapReady(), 90f);
-            if (!_ok) { Stop("не дождался внешнего мира"); yield break; }
+            if (!_ok) { Stop(Lang.T("не дождался внешнего мира")); yield break; }
             yield return Settle();
             _ok = true;
         }
@@ -466,12 +466,12 @@ namespace NewAgeQoL
             {
                 if (done()) { _ok = true; yield break; }
                 if (giveUp != null && giveUp()) { _why = Moved; yield break; }
-                if (_abort) { _why = "остановлен вручную"; yield break; }
-                if (InCombat()) { _why = "начался бой"; yield break; }
-                if (!Connected()) { _why = "нет соединения"; yield break; }
+                if (_abort) { _why = Lang.T("остановлен вручную"); yield break; }
+                if (InCombat()) { _why = Lang.T("начался бой"); yield break; }
+                if (!Connected()) { _why = Lang.T("нет соединения"); yield break; }
                 yield return null;
                 t += Time.unscaledDeltaTime;
-                if (t >= timeout) { _why = "таймаут " + Mathf.RoundToInt(timeout) + "с"; yield break; }
+                if (t >= timeout) { _why = Lang.F("таймаут {0}с", Mathf.RoundToInt(timeout)); yield break; }
             }
         }
 
@@ -522,15 +522,15 @@ namespace NewAgeQoL
         private static string Blocked()
         {
             var shut = Shut();
-            if (shut.Count == 0) return "сервер не пускает дальше";
+            if (shut.Count == 0) return Lang.T("сервер не пускает дальше");
             var list = new System.Text.StringBuilder();
             for (int i = 0; i < shut.Count && i < 5; i++)
             {
                 if (list.Length > 0) list.Append(", ");
                 list.Append(shut[i]);
             }
-            if (shut.Count > 5) list.Append(" и ещё ").Append(shut.Count - 5);
-            return "дорога закрыта: по пути не открыты точки " + list;
+            if (shut.Count > 5) list.Append(Lang.T(" и ещё ")).Append(shut.Count - 5);
+            return Lang.F("дорога закрыта: по пути не открыты точки {0}", list);
         }
 
         private static List<int> Shut()
@@ -567,14 +567,14 @@ namespace NewAgeQoL
             try
             {
                 var conn = NetworkConnection.Instance;
-                if (conn == null || !conn.IsConnected()) { Fail("нет соединения"); return false; }
+                if (conn == null || !conn.IsConnected()) { Fail(Lang.T("нет соединения")); return false; }
                 conn.SendRequest(request);
                 return true;
             }
             catch (Exception e)
             {
                 Plugin.Fault("[travel] send: " + e.Message);
-                Fail("ошибка отправки: " + e.Message);
+                Fail(Lang.F("ошибка отправки: {0}", e.Message));
                 return false;
             }
         }
@@ -590,7 +590,7 @@ namespace NewAgeQoL
             if (_abort) return;
             if (_why == Moved)
             {
-                Say("«" + (_running != null ? _running.Name : "поход") + "»: отменил — ты сменил локацию.");
+                Say(Lang.F("«{0}»: отменил — ты сменил локацию.", _running != null ? _running.Name : Lang.T("поход")));
                 return;
             }
             Fail(what);
@@ -598,8 +598,8 @@ namespace NewAgeQoL
 
         private static void Fail(string what)
         {
-            string full = "«" + (_running != null ? _running.Name : "поход") + "» прерван: " + what
-                        + (_why != null ? " (" + _why + ")" : "");
+            string full = Lang.F("«{0}» прерван: {1}", _running != null ? _running.Name : Lang.T("поход"), what)
+                        + (_why != null ? " (" + Lang.T(_why) + ")" : "");
             Plugin.Warn("[travel] " + full + "; " + Where());
             Say(full);
         }
@@ -693,7 +693,7 @@ namespace NewAgeQoL
 
         internal static void NotifyRefused(int vertex) { RefusedAt = vertex; RefusedStamp++; }
 
-        internal static void NotifyManualMove() => Cancel("идёшь по своему клику");
+        internal static void NotifyManualMove() => Cancel(Lang.T("идёшь по своему клику"));
 
         internal static void Cancel(string why)
         {
@@ -701,7 +701,7 @@ namespace NewAgeQoL
             string name = _running.Name;
             _abort = true;
             _wanted = null;
-            Say("«" + name + "»: отменил — " + why + ".");
+            Say(Lang.F("«{0}»: отменил — {1}.", name, Lang.T(why)));
         }
     }
 

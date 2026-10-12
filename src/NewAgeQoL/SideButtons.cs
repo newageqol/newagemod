@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 Art = () => "btn_bag",
                 Col = 3,
                 Fight = true,
-                Hint = () => "Инвентарь" + Hotkeys.Tail("win:inventory"),
+                Hint = () => Lang.T("Инвентарь") + Hotkeys.Tail("win:inventory"),
                 Sprite = () => LeftColumn.MenuSprite("InventoryMenuButton") ?? MenuIcon(UserMenuController.ETabs.Inventory),
                 Click = () =>
                 {
@@ -57,7 +57,7 @@ namespace NewAgeQoL
                 Col = 3,
                 Fight = true,
                 Order = 120,
-                Hint = () => Spectate.Peeking ? "Выйти из просмотра боя" : "Выйти из боя",
+                Hint = () => Spectate.Peeking ? Lang.T("Выйти из просмотра боя") : Lang.T("Выйти из боя"),
                 Enabled = () => Spectate.Peeking || Spectate.Rotted,
                 Sprite = () => Pick("backward", 4),
                 Click = () =>
@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 Art = () => "btn_spells",
                 Col = 3,
                 Fight = true,
-                Hint = () => "Книга магии" + Hotkeys.Tail("win:spells"),
+                Hint = () => Lang.T("Книга магии") + Hotkeys.Tail("win:spells"),
                 Sprite = () => MenuIcon(UserMenuController.ETabs.SpellBook),
                 Click = Spells.Open,
             },
@@ -83,7 +83,7 @@ namespace NewAgeQoL
                 Col = 3,
                 Fight = true,
                 Order = 90,
-                Hint = () => "Кто в игре" + OnlineWindow.KeyHint(),
+                Hint = () => Lang.T("Кто в игре") + OnlineWindow.KeyHint(),
                 Sprite = () => Pick(1, "assassin_list", "friends", "clan"),
                 Badge = () => OnlineList.Busy ? "…" : "",
                 Click = OnlineWindow.Toggle,
@@ -95,7 +95,7 @@ namespace NewAgeQoL
                 Col = 3,
                 Fight = true,
                 FightSeat = 1,
-                Hint = () => "Ежедневные задания" + Hotkeys.Tail("win:daily"),
+                Hint = () => Lang.T("Ежедневные задания") + Hotkeys.Tail("win:daily"),
                 Sprite = () => LeftColumn.MenuSprite("DailyQuestsButton"),
                 Click = () =>
                 {
@@ -108,7 +108,7 @@ namespace NewAgeQoL
                 Name = "QoLQuestButton",
                 Art = () => "btn_quests",
                 Col = 3,
-                Hint = () => "Задания" + Hotkeys.Tail("win:quests"),
+                Hint = () => Lang.T("Задания") + Hotkeys.Tail("win:quests"),
                 Sprite = QuestBoard.Icon,
                 Badge = () => QuestBoard.All.Count > 0 ? QuestBoard.All.Count.ToString() : "",
                 Click = QuestWindow.Toggle,
@@ -120,7 +120,7 @@ namespace NewAgeQoL
                 Col = 3,
                 Fight = true,
                 Order = 99,
-                Hint = () => "Настройки игры",
+                Hint = () => Lang.T("Настройки игры"),
                 Sprite = () => LeftColumn.MenuSprite("SetupMenuButton"),
                 Click = () =>
                 {
@@ -134,11 +134,11 @@ namespace NewAgeQoL
                 Art = () => "btn_town",
                 Right = true,
                 Col = 0,
-                Hint = () => Artifacts.Busy ? "Идёт работа с хранилищем"
-                           : TownWalk.Busy ? "Уже иду"
+                Hint = () => Artifacts.Busy ? Lang.T("Идёт работа с хранилищем")
+                           : TownWalk.Busy ? Lang.T("Уже иду")
                            : Plugin.CfgTownTournament != null && Plugin.CfgTownTournament.Value
-                             ? "В город, потом на арену и к турнирам"
-                             : "Вернуться в Иллениум",
+                             ? Lang.T("В город, потом на арену и к турнирам")
+                             : Lang.T("Вернуться в Иллениум"),
                 Enabled = () => !ClaimLocked(),
                 Usable = () => !Artifacts.Busy && !TownWalk.Busy,
                 Sprite = () => Pick("toTheCity", 4),
@@ -151,14 +151,14 @@ namespace NewAgeQoL
                 Right = true,
                 Col = 0,
                 Hint = () => Artifacts.HasStash
-                    ? "Вернуть основной набор"
-                    : "Надеть запасной набор",
+                    ? Lang.T("Вернуть основной набор")
+                    : Lang.T("Надеть запасной набор"),
                 Enabled = () => (Plugin.CfgArtifactButtons == null || Plugin.CfgArtifactButtons.Value) && !ClaimLocked(),
                 Sprite = () => Artifacts.HasStash ? Pick("storage_get", 13) : Pick("storage_put", 14),
                 Click = () =>
                 {
                     if (Artifacts.Busy) return;
-                    Travel.Cancel("занялся вещами");
+                    Travel.Cancel(Lang.T("занялся вещами"));
                     if (Artifacts.HasStash) Artifacts.Restore();
                     else Artifacts.Stash();
                 },
@@ -169,7 +169,7 @@ namespace NewAgeQoL
                 Art = () => "btn_workshop",
                 Col = 3,
                 Order = 4,
-                Hint = () => "Мастерская артефактов",
+                Hint = () => Lang.T("Мастерская артефактов"),
                 Enabled = () => !Workshop.Here(),
                 Usable = () => !Workshop.Busy,
                 Sprite = () => { var art = Pick("art_create", 13); return art != null ? art : Icons.Spark(); },
@@ -182,7 +182,7 @@ namespace NewAgeQoL
                 Right = true,
                 Order = 9,
                 Col = 2,
-                Hint = () => Travel.Busy ? "Идёт поход — можно выбрать другую точку" : "Куда идти: список точек",
+                Hint = () => Travel.Busy ? Lang.T("Идёт поход — можно выбрать другую точку") : Lang.T("Куда идти: список точек"),
                 Enabled = () => Travel.Enabled && !ClaimLocked(),
                 Sprite = () => Pick(1, "move5", "move3", "mines_attack", "assassinate"),
                 Badge = () => Travel.Busy ? "▶" : "",
@@ -908,7 +908,7 @@ namespace NewAgeQoL
                 }
                 else if (!string.IsNullOrEmpty(Artifacts.Status))
                 {
-                    line = "Вещи: " + Artifacts.Status;
+                    line = Lang.F("Вещи: {0}", Artifacts.Status);
                     owner = Named("QoLArtifactButton");
                 }
                 else if (!string.IsNullOrEmpty(Flasks.Status))
@@ -1453,7 +1453,7 @@ namespace NewAgeQoL
             {
                 if (InCombat()) { Plugin.Trace("[buttons] return to town from combat is not allowed"); return; }
                 if (ClaimLocked()) { Plugin.Trace("[buttons] return to town from a fight claim is not allowed"); return; }
-                Travel.Cancel("ты вернулся в город");
+                Travel.Cancel(Lang.T("ты вернулся в город"));
                 TownWalk.Go();
             }
             catch (System.Exception e) { Plugin.Fault("[buttons] " + e.Message); }

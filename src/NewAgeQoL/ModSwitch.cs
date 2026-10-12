@@ -11,7 +11,6 @@ namespace NewAgeQoL
         private const string Caption = "dialogs.artworkshop.confirm.caption";
 
         internal static ConfigEntry<bool> Enabled;
-        private static ConfigEntry<bool> _flashWas;
 
         internal static bool On => Enabled == null || Enabled.Value;
 
@@ -19,8 +18,6 @@ namespace NewAgeQoL
         {
             Enabled = home.Bind("Mod", "Enabled", true,
                 "Мод включён. Выключенный мод со следующего запуска игры ничего не меняет в клиенте, остаётся только кнопка «Включить мод» в настройках игры. Выключается в окне «Настройки мода».");
-            _flashWas = home.Bind("Mod", "FlashLookWasOn", false,
-                "Служебное: был ли включён вид как во Flash, когда мод выключали. При включении мода вид возвращается. Заполняется само.");
         }
 
         internal static void AskOff()
@@ -30,7 +27,7 @@ namespace NewAgeQoL
                 DialogFactory.ShowConfirmMessageBox(Caption, result =>
                 {
                     if (result == EMessageBoxResult.MB_OK) TurnOff();
-                }, "Выключить мод? Это действует только после перезапуска игры: клиент сейчас закроется, запусти его снова — он будет обычным, без изменений мода и вида как во Flash. Включить обратно: настройки игры, кнопка «Включить мод».");
+                }, Lang.T("Выключить мод? Это действует только после перезапуска игры: клиент сейчас закроется, запусти его снова — он будет обычным, без изменений мода и вида как во Flash. Включить обратно: настройки игры, кнопка «Включить мод»."));
             }
             catch (Exception e) { Plugin.Log?.LogWarning("[mod] disable dialog: " + e.Message); }
         }
@@ -42,7 +39,7 @@ namespace NewAgeQoL
                 DialogFactory.ShowConfirmMessageBox(Caption, result =>
                 {
                     if (result == EMessageBoxResult.MB_OK) TurnOn();
-                }, "Включить мод? Он заработает только после перезапуска игры: клиент сейчас закроется, запусти его снова.");
+                }, Lang.T("Включить мод? Он заработает только после перезапуска игры: клиент сейчас закроется, запусти его снова."));
             }
             catch (Exception e) { Plugin.Log?.LogWarning("[mod] enable dialog: " + e.Message); }
         }
@@ -50,12 +47,8 @@ namespace NewAgeQoL
         private static void TurnOff()
         {
             if (Enabled == null) return;
-            var flash = FlashLook.Entry("General", "Enabled");
-            bool look = flash != null && flash.Value;
-            if (_flashWas != null) _flashWas.Value = look;
-            if (look) flash.Value = false;
             Enabled.Value = false;
-            Plugin.Log?.LogInfo("[mod] disabled from the next game start" + (look ? ", Flash look disabled too" : "") + ", closing the client");
+            Plugin.Log?.LogInfo("[mod] disabled from the next game start, Flash look too, closing the client");
             FlashLook.Quit();
         }
 
@@ -63,11 +56,7 @@ namespace NewAgeQoL
         {
             if (Enabled == null) return;
             Enabled.Value = true;
-            var flash = FlashLook.Entry("General", "Enabled");
-            bool look = _flashWas != null && _flashWas.Value;
-            if (look && flash != null) flash.Value = true;
-            if (_flashWas != null) _flashWas.Value = false;
-            Plugin.Log?.LogInfo("[mod] enabled from the next game start" + (look && flash != null ? ", Flash look restored" : "") + ", closing the client");
+            Plugin.Log?.LogInfo("[mod] enabled from the next game start, closing the client");
             FlashLook.Quit();
         }
     }
@@ -95,7 +84,7 @@ namespace NewAgeQoL
                 rt.localScale = src.localScale;
                 rt.anchoredPosition = src.anchoredPosition - new Vector2(0f, src.rect.height + 10f);
 
-                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = "Включить мод";
+                foreach (var t in go.GetComponentsInChildren<Text>(true)) t.text = Lang.T("Включить мод");
 
                 var btn = go.GetComponent<Button>();
                 btn.onClick.RemoveAllListeners();
