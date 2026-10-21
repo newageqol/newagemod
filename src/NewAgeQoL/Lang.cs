@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -267,7 +268,7 @@ namespace NewAgeQoL
                 _texts = texts;
                 _mod = mod;
                 _items = items;
-                try { FightLang.Take(phrases, names, races); }
+                try { FightLang.Take(phrases, names, races, keys.Values.Concat(texts.Values).Concat(mod.Values)); }
                 catch (Exception e) { Plugin.Warn("[lang] combat log data: " + e.Message); }
                 _keys = keys;
                 Plugin.Log?.LogInfo("[lang] Ukrainian loaded: " + keys.Count + " strings, " + texts.Count + " game texts, " + items.Count + " items, " + mod.Count + " mod texts, combat log " + phrases.Count + " phrases, " + names.Count + " names, " + races.Count + " creatures");

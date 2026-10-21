@@ -41,6 +41,9 @@ namespace NewAgeQoL
         private static readonly System.Reflection.FieldInfo AnnounceField = AccessTools.Field(typeof(BaseEnterfightWidget), "_announce");
         private static readonly Dictionary<int, Text> _clocks = new Dictionary<int, Text>();
         private static readonly Dictionary<int, Text> _sources = new Dictionary<int, Text>();
+        private static readonly Dictionary<int, KeyValuePair<Text, BaseEnterfightWidget>> _counts = new Dictionary<int, KeyValuePair<Text, BaseEnterfightWidget>>();
+
+        internal static bool Showing => _panel != null && _panel.activeInHierarchy;
 
 
         internal static void Keep()
@@ -461,6 +464,7 @@ namespace NewAgeQoL
             _shape = "";
             _clocks.Clear();
             _sources.Clear();
+            _counts.Clear();
         }
 
         private static void Build()
@@ -473,6 +477,7 @@ namespace NewAgeQoL
             _swept = false;
             _clocks.Clear();
             _sources.Clear();
+            _counts.Clear();
 
             _panel = new GameObject("QoLFightList", typeof(RectTransform), typeof(Image), typeof(Outline));
             _panel.transform.SetParent(canvas.transform, false);
@@ -585,7 +590,9 @@ namespace NewAgeQoL
             {
                 if (widget == null) continue;
                 bool started = Started(widget);
-                Stamp.Append(widget.Id).Append(started ? 's' : 'o').Append(',');
+                Stamp.Append(widget.Id).Append(started ? 's' : 'o');
+                if (started) Stamp.Append(Words(widget, "PlayersText"));
+                Stamp.Append(',');
                 if (started) Going.Add(widget);
                 else Waiting.Add(widget);
             }
@@ -596,6 +603,7 @@ namespace NewAgeQoL
                 UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
             _clocks.Clear();
             _sources.Clear();
+            _counts.Clear();
 
             foreach (var widget in Waiting) Row(widget, false);
             if (Waiting.Count > 0 && Going.Count > 0) Divider();
@@ -724,7 +732,8 @@ namespace NewAgeQoL
             Cell(go.transform, Words(widget, "HeaderText"), Columns[0], 14, started ? WardrobeLook.Bad : elite ? WardrobeLook.Accent : WardrobeLook.Bright);
             Cell(go.transform, Words(widget, "LevelsText"), Columns[1], 14, white);
             Cell(go.transform, Words(widget, "PhaseText"), Columns[2], 14, white);
-            Cell(go.transform, Words(widget, "PlayersText"), Columns[3], 14, white);
+            var players = Cell(go.transform, started ? Words(widget, "PlayersText") : Players(widget), Columns[3], 14, white);
+            if (!started) _counts[widget.Id] = new KeyValuePair<Text, BaseEnterfightWidget>(players, widget);
 
             var clock = Cell(go.transform, "", Columns[4], 14, WardrobeLook.Accent);
             var timer = widget.GetComponent<CountdownTimer>();
@@ -776,6 +785,20 @@ namespace NewAgeQoL
                 string text = _sources.TryGetValue(pair.Key, out source) && source != null ? source.text : "";
                 if (text.Length > 0 && label.text != text) label.text = text;
             }
+            foreach (var pair in _counts)
+            {
+                var label = pair.Value.Key;
+                if (label == null || pair.Value.Value == null) continue;
+                string text = Players(pair.Value.Value);
+                if (label.text != text) label.text = text;
+            }
+        }
+
+        private static string Players(BaseEnterfightWidget widget)
+        {
+            int players, max;
+            if (FightBoard.Claim(Room, widget.Id, out players, out max)) return Lang.F("{0} из {1}", players, max);
+            return Words(widget, "PlayersText");
         }
 
         private static string Words(BaseEnterfightWidget widget, string field)

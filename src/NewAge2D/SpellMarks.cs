@@ -170,6 +170,7 @@ internal static class SpellMarks
 
     private static Material FloorSkin()
     {
+        if (Arena3D.Any) return null;
         if (_floorSkin != null) return _floorSkin;
         if (_noFloor) return null;
         var shader = Shader.Find("Custom/Transparent2Sides");

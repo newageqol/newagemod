@@ -33,6 +33,7 @@ namespace NewAgeQoL
             internal GameObject Row;
             internal RectTransform Mark;
             internal CanvasGroup Veil;
+            internal Text Players;
         }
 
         private static readonly Dictionary<int, Fight> Live = new Dictionary<int, Fight>();
@@ -439,7 +440,11 @@ namespace NewAgeQoL
                 Slot slot;
                 bool here = pair.Value.Room == 0 || pair.Value.Room == room;
                 if (!here) { if (Rows.TryGetValue(pair.Key, out slot)) Drop(pair.Key); continue; }
-                if (Rows.TryGetValue(pair.Key, out slot) && slot != null && slot.Row != null) continue;
+                if (Rows.TryGetValue(pair.Key, out slot) && slot != null && slot.Row != null)
+                {
+                    Count(slot, pair.Value);
+                    continue;
+                }
                 var made = Make(view, pair.Value);
                 if (made == null) continue;
                 Rows[pair.Key] = made;
@@ -466,7 +471,7 @@ namespace NewAgeQoL
             {
                 Id = fight.Id,
                 Type = 1,
-                MaxCount = fight.Count,
+                MaxCount = People(fight),
                 LeaderLogin = fight.Desc,
                 MinLevel = fight.MinLevel,
                 MaxLevel = fight.MaxLevel,
@@ -481,6 +486,8 @@ namespace NewAgeQoL
             if (timer != null) timer.enabled = false;
 
             var slot = Mark(row);
+            var widget = row.GetComponent<BaseEnterfightWidget>();
+            slot.Players = widget != null ? AccessTools.Field(widget.GetType(), "PlayersText")?.GetValue(widget) as Text : null;
 
             var button = Unity3DHelper.FindInChild(row, "EnterButton");
             var enter = button != null ? button.GetComponent<Button>() : null;
@@ -492,6 +499,20 @@ namespace NewAgeQoL
             }
             Plugin.Trace("[fights] row of ongoing fight " + fight.Id + " added to the claims list");
             return slot;
+        }
+
+        private static int People(Fight fight)
+        {
+            int players;
+            if (FightBoard.Players(fight.Id, out players)) return players;
+            return fight.Max > 0 ? Math.Min(fight.Count, fight.Max) : fight.Count;
+        }
+
+        private static void Count(Slot slot, Fight fight)
+        {
+            if (slot.Players == null) return;
+            string text = People(fight).ToString();
+            if (slot.Players.text != text) slot.Players.text = text;
         }
 
         private static RectTransform Card(GameObject row)

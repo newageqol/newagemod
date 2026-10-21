@@ -25,7 +25,12 @@ namespace NewAgeQoL
                     }
                     if (kept == null) kept = new List<CharacterIndicatorsMessage>(newIndicators.GetRange(0, i));
                     Plugin.Trace("[combat] body " + one.UserId + " decayed - removing from the field");
-                    try { __instance.RemoveCharacter(one.UserId); }
+                    try
+                    {
+                        AbstractCharacter body;
+                        if (__instance.Characters != null && __instance.Characters.TryGetValue(one.UserId, out body)) ChatDock.Fallen(__instance, body);
+                        __instance.RemoveCharacter(one.UserId);
+                    }
                     catch (Exception e) { Plugin.Trace("[combat] body " + one.UserId + " not removed: " + e); }
                 }
                 if (kept != null) newIndicators = kept;

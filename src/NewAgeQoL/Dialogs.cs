@@ -168,6 +168,11 @@ namespace NewAgeQoL
         private const float Sink = 0.08f;
 
         private RectTransform _button;
+        private TabPanel _tabs;
+        private Vector2 _base;
+        private float _rise;
+        private float _next;
+        private bool _seated;
 
         internal static void Attach(RectTransform window)
         {
@@ -206,12 +211,63 @@ namespace NewAgeQoL
             return top - Sink * tall - foot;
         }
 
+        private float Slide(RectTransform caption)
+        {
+            var row = _tabs != null ? _tabs.transform as RectTransform : null;
+            var frame = row != null ? row.parent : null;
+            if (frame == null || caption == null || !row.gameObject.activeInHierarchy) return 0f;
+            var corners = new Vector3[4];
+            float left = float.MaxValue, right = float.MinValue, low = float.MaxValue, high = float.MinValue;
+            for (int i = 0; i < row.childCount; i++)
+            {
+                var tab = row.GetChild(i) as RectTransform;
+                if (tab == null || !tab.gameObject.activeSelf) continue;
+                tab.GetWorldCorners(corners);
+                var a = frame.InverseTransformPoint(corners[0]);
+                var b = frame.InverseTransformPoint(corners[2]);
+                left = Mathf.Min(left, a.x);
+                right = Mathf.Max(right, b.x);
+                low = Mathf.Min(low, a.y);
+                high = Mathf.Max(high, b.y);
+            }
+            if (left > right) return 0f;
+            _button.GetWorldCorners(corners);
+            var c = frame.InverseTransformPoint(corners[0]);
+            var d = frame.InverseTransformPoint(corners[2]);
+            if (d.x <= left || c.x >= right || d.y <= low || c.y >= high) return 0f;
+            caption.GetWorldCorners(corners);
+            float edge = frame.InverseTransformPoint(corners[0]).x + 0.1f * (d.x - c.x);
+            return edge - left;
+        }
+
+        private TabPanel Tabs()
+        {
+            var top = transform;
+            while (top.parent != null && top.parent.parent != null) top = top.parent;
+            var all = top.GetComponentsInChildren<TabPanel>(true);
+            foreach (var one in all)
+                if (one != null && one.gameObject.activeInHierarchy) return one;
+            return all.Length > 0 ? all[0] : null;
+        }
+
         private void LateUpdate()
         {
             try
             {
                 if (_button == null) { Destroy(this); return; }
                 if (transform.lossyScale.x < 0.01f) return;
+                if (_seated)
+                {
+                    if (Time.unscaledTime < _next) return;
+                    _next = Time.unscaledTime + 0.2f;
+                    var caption = transform.Find("DialogCaption") as RectTransform;
+                    float slide = Slide(caption);
+                    if (Mathf.Abs(slide) < 0.5f) return;
+                    var row = (RectTransform)_tabs.transform;
+                    row.anchoredPosition += new Vector2(slide, 0f);
+                    Plugin.Trace("[windows] " + transform.root.name + ": tabs moved " + slide.ToString("0.0") + " to the left edge, clear of the close button; tabs " + Edges(row) + ", button " + Edges(_button));
+                    return;
+                }
                 var host = _button.parent != null ? _button.parent.GetComponentInParent<Canvas>() : null;
                 if (host == null) return;
                 var own = _button.GetComponent<Canvas>();
@@ -223,11 +279,15 @@ namespace NewAgeQoL
                 own.overrideSorting = true;
                 own.sortingLayerID = host.sortingLayerID;
                 own.sortingOrder = host.sortingOrder + 1;
-                float rise = Seat(transform.Find("DialogCaption") as RectTransform);
-                _button.anchoredPosition += new Vector2(0f, rise);
+                _base = _button.anchoredPosition;
+                _rise = Seat(transform.Find("DialogCaption") as RectTransform);
+                _button.anchoredPosition = _base + new Vector2(0f, _rise);
+                _seated = true;
                 Plugin.Trace("[windows] " + transform.root.name + ": close button seated on the caption bar, order " + own.sortingOrder
-                    + ", raised " + rise.ToString("0.0") + "; button " + Edges(_button) + ", caption " + Edges(transform.Find("DialogCaption") as RectTransform) + ", window " + Edges(transform as RectTransform));
-                Destroy(this);
+                    + ", raised " + _rise.ToString("0.0") + "; button " + Edges(_button) + ", caption " + Edges(transform.Find("DialogCaption") as RectTransform) + ", window " + Edges(transform as RectTransform));
+                _tabs = Tabs();
+                Plugin.Trace("[windows] " + transform.root.name + ": tabs over the window " + (_tabs != null ? _tabs.name + " " + Edges(_tabs.transform as RectTransform) : "none"));
+                if (_tabs == null) Destroy(this);
             }
             catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); Destroy(this); }
         }

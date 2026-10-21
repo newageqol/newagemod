@@ -48,7 +48,7 @@ namespace NewAgeQoL
 
         private static readonly Dictionary<string, string> Titles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["NightTown"] = "ночной Иллениум",
+            ["NightTown"] = "некоторые локации Иллениума (далеко не все)",
             ["MagicTower"] = "башня магии",
             ["BankHall"] = "зал банка",
             ["BankSafe"] = "казна",
@@ -230,7 +230,7 @@ namespace NewAgeQoL
             foreach (var d in Directory.GetDirectories(Stage))
             {
                 var name = Path.GetFileName(d);
-                if (!name.Equals(LangDir, StringComparison.OrdinalIgnoreCase)) yield return name;
+                if (!name.Equals(LangDir, StringComparison.OrdinalIgnoreCase) && !name.Equals(MusicDir, StringComparison.OrdinalIgnoreCase)) yield return name;
             }
         }
 
@@ -256,13 +256,13 @@ namespace NewAgeQoL
                 }
                 var entries = Parse(Encoding.UTF8.GetString(manifest));
                 Plugin.Log.LogInfo("[assets] manifest: " + entries.Count + " files");
-                _groups = entries.Where(e => !e.Path.StartsWith(LangDir + "/", StringComparison.OrdinalIgnoreCase)).Select(e => Top(e.Path)).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                _groups = entries.Where(e => !Apart(e.Path)).Select(e => Top(e.Path)).Distinct(StringComparer.OrdinalIgnoreCase).Count();
                 LoadState();
 
                 var need = new List<Entry>();
                 foreach (var e in entries)
                 {
-                    if (e.Path.StartsWith(LangDir + "/", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (Apart(e.Path)) continue;
                     string have = null;
                     yield return Hash(Path.Combine(Root, e.Path), e.Path, h => have = h);
                     if (have == e.Sha) continue;
@@ -373,6 +373,165 @@ namespace NewAgeQoL
                 yield break;
             }
             done(Updated);
+        }
+
+        private const string MusicBase = "https://github.com/newageqol/newagemod/releases/download/music/";
+        internal const string MusicDir = "Music";
+
+        private static bool Apart(string path) =>
+            path.StartsWith(LangDir + "/", StringComparison.OrdinalIgnoreCase) || path.StartsWith(MusicDir + "/", StringComparison.OrdinalIgnoreCase);
+
+        internal static IEnumerator Tunes(Action<bool> done)
+        {
+            byte[] manifest = null, signature = null;
+            string error = null;
+            long code = 0;
+            yield return Download(ManifestName, (d, e, c) => { manifest = d; error = e; code = c; }, 10, MusicBase);
+            if (manifest == null || manifest.Length == 0)
+            {
+                Plugin.Log.LogInfo("[music] manifest unavailable: code " + code + ", " + (error ?? "empty"));
+                done(false);
+                yield break;
+            }
+            yield return Download(ManifestName + ".sig", (d, e, c) => { signature = d; error = e; code = c; }, 10, MusicBase);
+            if (!Sign.Valid(manifest, signature))
+            {
+                Plugin.Warn("[music] manifest rejected: " + (signature == null ? "signature unavailable, code " + code + ", " + (error ?? "empty") : "signature does not match"));
+                done(false);
+                yield break;
+            }
+            var entries = Parse(Encoding.UTF8.GetString(manifest)).Where(e => e.Path.StartsWith(MusicDir + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (_known == null) LoadState();
+            bool changed = false;
+            foreach (var entry in entries)
+            {
+                entry.Home = MusicBase;
+                string have = null;
+                yield return Hash(Path.Combine(Root, entry.Path), entry.Path, h => have = h);
+                if (have == entry.Sha) continue;
+                Plugin.Log.LogInfo("[music] downloading " + entry.Path + ", " + entry.Size + " bytes");
+                bool ok = false;
+                yield return Fetch(entry, r => ok = r, b => { });
+                if (!ok)
+                {
+                    Plugin.Warn("[music] " + entry.Path + " did not download");
+                    continue;
+                }
+                try
+                {
+                    var from = Path.Combine(Stage, entry.Path);
+                    var to = Path.Combine(Root, entry.Path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(to));
+                    if (File.Exists(to)) File.Delete(to);
+                    File.Move(from, to);
+                    Remember(entry.Path, to);
+                    changed = true;
+                }
+                catch (Exception e) { Plugin.Warn("[music] installing " + entry.Path + ": " + e.Message); }
+            }
+            try
+            {
+                var shelf = Path.Combine(Root, MusicDir);
+                if (entries.Count > 0 && Directory.Exists(shelf))
+                {
+                    var keep = new HashSet<string>(entries.Select(e => Path.GetFileName(e.Path)), StringComparer.OrdinalIgnoreCase);
+                    foreach (var file in Directory.GetFiles(shelf))
+                        if (!keep.Contains(Path.GetFileName(file)))
+                        {
+                            File.Delete(file);
+                            changed = true;
+                        }
+                }
+                SaveState();
+            }
+            catch (Exception e) { Plugin.Warn("[music] cleanup: " + e.Message); }
+            Plugin.Log.LogInfo("[music] files checked: " + entries.Count + (changed ? ", updated" : ", current"));
+            done(changed);
+        }
+
+        private const string ArenaBase = "https://github.com/newageqol/newagemod/releases/download/arenas/";
+        internal const string ArenaDir = "Arenas";
+        private static bool _arenaAsked;
+
+        internal static void ArenaTick()
+        {
+            if (_arenaAsked || Plugin.Instance == null || !Plugin.NewArenas) return;
+            if (!SideButtons.InWorld() || SideButtons.InCombat()) return;
+            _arenaAsked = true;
+            Plugin.Instance.StartCoroutine(Arenas());
+        }
+
+        private static bool ArenaWanted(string name, HashSet<string> all, bool lite)
+        {
+            if (name.EndsWith(".cam.json", StringComparison.OrdinalIgnoreCase) || name.Equals("arena_fx", StringComparison.OrdinalIgnoreCase)) return true;
+            if (name.EndsWith("lite", StringComparison.OrdinalIgnoreCase)) return lite;
+            return !lite || !all.Contains(name + "lite");
+        }
+
+        private static IEnumerator Arenas()
+        {
+            byte[] manifest = null, signature = null;
+            string error = null;
+            long code = 0;
+            yield return Download(ManifestName, (d, e, c) => { manifest = d; error = e; code = c; }, 10, ArenaBase);
+            if (manifest == null || manifest.Length == 0)
+            {
+                Plugin.Log.LogInfo("[arenas] manifest unavailable: code " + code + ", " + (error ?? "empty"));
+                yield break;
+            }
+            yield return Download(ManifestName + ".sig", (d, e, c) => { signature = d; error = e; code = c; }, 10, ArenaBase);
+            if (!Sign.Valid(manifest, signature))
+            {
+                Plugin.Warn("[arenas] manifest rejected: " + (signature == null ? "signature unavailable, code " + code + ", " + (error ?? "empty") : "signature does not match"));
+                yield break;
+            }
+            var entries = Parse(Encoding.UTF8.GetString(manifest)).Where(e => e.Path.StartsWith(ArenaDir + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (_known == null) LoadState();
+            bool lite = Plugin.ArenaLite;
+            var all = new HashSet<string>(entries.Select(e => Path.GetFileName(e.Path)), StringComparer.OrdinalIgnoreCase);
+            int got = 0, kept = 0, later = 0;
+            foreach (var entry in entries)
+            {
+                if (!ArenaWanted(Path.GetFileName(entry.Path), all, lite)) continue;
+                entry.Home = ArenaBase;
+                string have = null;
+                yield return Hash(Path.Combine(Root, entry.Path), entry.Path, h => have = h);
+                if (have == entry.Sha) { kept++; continue; }
+                Plugin.Log.LogInfo("[arenas] downloading " + entry.Path + ", " + entry.Size + " bytes");
+                bool ok = false;
+                yield return Fetch(entry, r => ok = r, b => { });
+                if (!ok)
+                {
+                    Plugin.Warn("[arenas] " + entry.Path + " did not download");
+                    continue;
+                }
+                try
+                {
+                    var from = Path.Combine(Stage, entry.Path);
+                    var to = Path.Combine(Root, entry.Path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(to));
+                    if (File.Exists(to)) File.Delete(to);
+                    File.Move(from, to);
+                    Remember(entry.Path, to);
+                    got++;
+                }
+                catch (Exception e)
+                {
+                    later++;
+                    Plugin.Log.LogInfo("[arenas] " + entry.Path + " is in use, it goes in on the next start: " + e.Message);
+                }
+            }
+            var shelf = Path.Combine(Root, ArenaDir);
+            if (entries.Count > 0 && Directory.Exists(shelf))
+                foreach (var file in Directory.GetFiles(shelf))
+                {
+                    if (all.Contains(Path.GetFileName(file))) continue;
+                    try { File.Delete(file); }
+                    catch (Exception e) { Plugin.Trace("[arenas] removing " + Path.GetFileName(file) + ": " + e.Message); }
+                }
+            try { SaveState(); }
+            catch (Exception e) { Plugin.Warn("[arenas] state: " + e.Message); }
+            Plugin.Log.LogInfo("[arenas] " + (lite ? "light" : "full") + " set: " + kept + " in place, " + got + " downloaded, " + later + " wait for the next start");
         }
 
         private static IEnumerator Download(string name, Action<byte[], string, long> done, int timeout = 30, string home = Base)

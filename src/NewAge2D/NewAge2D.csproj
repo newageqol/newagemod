@@ -75,6 +75,14 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.TerrainModule">
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
       <Private>false</Private>

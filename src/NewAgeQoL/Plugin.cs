@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.23.0";
+        public const string Version = "0.24.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -68,11 +68,36 @@ namespace NewAgeQoL
         internal static ConfigEntry<bool> CfgWalkKeys;
         internal static ConfigEntry<bool> CfgWalkGlow;
         internal static ConfigEntry<float> CfgSoundVolume;
+        internal static ConfigEntry<float> CfgMusicVolume;
         internal static ConfigEntry<float> CfgSmallScreen;
         internal static ConfigEntry<bool> CfgNewPlaces;
+        internal static ConfigEntry<bool> CfgNewArenas;
+        internal static ConfigEntry<int> CfgArenaQuality;
         internal static ConfigEntry<bool> CfgRosterFolded;
         internal static ConfigEntry<bool> CfgFightsFolded;
         internal static bool NewPlaces => CfgNewPlaces == null || CfgNewPlaces.Value;
+
+        public static bool NewArenas => CfgNewArenas == null || CfgNewArenas.Value;
+
+        internal static bool ArenaLiteAuto
+        {
+            get
+            {
+                string n = (UnityEngine.SystemInfo.graphicsDeviceName ?? "").ToLowerInvariant();
+                if (n.Contains("intel") && !n.Contains("arc")) return true;
+                if (n.Contains("radeon(tm) graphics") || n.Contains("radeon graphics") || n.Contains("vega")) return true;
+                return UnityEngine.SystemInfo.graphicsMemorySize > 0 && UnityEngine.SystemInfo.graphicsMemorySize < 2500;
+            }
+        }
+
+        public static bool ArenaLite
+        {
+            get
+            {
+                int q = CfgArenaQuality == null ? 0 : CfgArenaQuality.Value;
+                return q == 2 || (q != 1 && ArenaLiteAuto);
+            }
+        }
         internal static ConfigEntry<string> CfgEffectsWindow;
         internal static ConfigEntry<bool> CfgHelpFolded;
         internal static ConfigEntry<bool> CfgTravelButton;
@@ -248,8 +273,14 @@ namespace NewAgeQoL
                 "Столбец «Помощь» справа свёрнут. Меняется кнопкой со стрелкой над столбцом, состояние сохраняется между боями и входами в игру.", e => CfgHelpFolded = e);
             Chars.Own("Sounds", "FlashVolume", 1f,
                 "Громкость звуков из старого клиента, от 0 (тишина) до 1. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат в любом случае, пока включён звук мода.", e => CfgSoundVolume = e);
+            Chars.Own("Sounds", "CombatMusicVolume", 0.6f,
+                "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков и сама набирает напряжение; пять треков, каждый бой свой, в долгом бою трек сменяется раз в 4 минуты. Свои криты, увороты, блоки, заклинания и павшие враги звучат в ней акцентами. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
             CfgNewPlaces = Config.Bind("Interface", "NewLocations", true,
                 "Новые локации мода (ночной Иллениум, банк, рынок и другие) и экран загрузки мода. Выключено — игра показывает свои локации и свои картинки загрузки локаций и боёв. Меняется со следующего захода в локацию.");
+            CfgNewArenas = Config.Bind("Interface", "NewArenas", true,
+                "Объёмные 3D-арены мода вместо плоских картинок поля в боях на арене. Выключено — бой идёт на обычной картинке арены, как раньше. Выключайте, если 3D-арена тормозит. Меняется со следующего боя.");
+            CfgArenaQuality = Config.Bind("Interface", "ArenaQuality", 0,
+                "Качество 3D-арен: 0 — само по видеокарте (встроенная графика Intel/AMD или меньше 2,5 ГБ видеопамяти получает лёгкое), 1 — полное, 2 — лёгкое (облегчённые модели, без города за стенами, короткие грубые тени, до 4 огней). Меняется со следующего боя.");
             CfgRosterFolded = Config.Bind("Interface", "CharactersFolded", false,
                 "Список персонажей аккаунта справа свёрнут вправо. Меняется кнопкой «Персонажи» сбоку от списка, запоминается между заходами.");
             CfgFightsFolded = Config.Bind("Interface", "FightsFolded", false,
@@ -257,6 +288,7 @@ namespace NewAgeQoL
             CfgSmallScreen = Config.Bind("Interface", "SmallScreenScale", 1.2f,
                 "Во сколько раз крупнее делать интерфейс мода (чат, приёмы, подсказки, кнопки) на экранах ниже 1080 точек по высоте: 1 — как в игре, 1.2 — на пятую часть крупнее, до 1.5. Крупнее пиксель в пиксель не растёт, на 1080p и больше ничего не меняется.");
             CfgSoundVolume.Value = UnityEngine.Mathf.Clamp01(CfgSoundVolume.Value);
+            CfgMusicVolume.Value = UnityEngine.Mathf.Clamp01(CfgMusicVolume.Value);
             Chars.Own("Combat", "CameraPanExtra", 0.5f,
                 "Небольшой запас в единицах поля сверх того, что нужно, чтобы показать клетки под панелью чата: мод сам считает высоту панели в единицах поля и раздвигает границу камеры ровно на неё, а это число добавляется сверху (0 — ровно, до 20).", e => CfgCamPanExtra = e);
             CfgCamPanExtra.Value = UnityEngine.Mathf.Clamp(CfgCamPanExtra.Value, 0f, 20f);
@@ -551,6 +583,8 @@ namespace NewAgeQoL
                 new Part { Name = "Chaotic.Tick", Do = Chaotic.Tick },
                 new Part { Name = "ClaimRoster.Tick", Do = ClaimRoster.Tick },
                 new Part { Name = "Sounds.Tick", Do = Sounds.Tick },
+                new Part { Name = "CombatMusic.Tick", Do = CombatMusic.Tick },
+                new Part { Name = "AssetSync.ArenaTick", Do = AssetSync.ArenaTick },
                 new Part { Name = "Curtain.Tick", Do = Curtain.Tick },
             };
             return _parts;

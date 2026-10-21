@@ -24,13 +24,26 @@ internal static class FlashNumbers
     private const float Lifetime = 0.95f;
     private const float IconScale = 3f;
     private const int FontBase = 64;
+    private const float MineBoost = 1.2f;
+    private const float MineEdge = 3f;
+    private const float MineSpan = 1.0f;
+    private const float MineHold = 0.7f;
+    private const float MineLifetime = 1.4f;
+    private const float PushedLeft = 0.5f;
+    private const float LineStep = 20f;
+    private const float LiftSpeed = 10f;
 
     private sealed class Shown
     {
         public AbstractCharacter Target;
         public string Symbol;
         public bool Plus;
+        public bool Mine;
         public float Born;
+        public float FadeFrom;
+        public float End;
+        public float Lift;
+        public float LiftShown;
         public GameObject Root;
         public Image Icon;
         public Text Label;
@@ -54,12 +67,20 @@ internal static class FlashNumbers
     private static string NameOf(AbstractCharacter character) =>
         character == null ? "-" : !string.IsNullOrEmpty(character.Login) ? character.Login : character.UserId.ToString();
 
-    internal static void Show(AbstractCharacter target, string name, int value)
+    private static bool Mine(AbstractCharacter target, AbstractCharacter by)
+    {
+        var me = Fighters.Combat()?.MyCharacter;
+        if (me == null) return false;
+        return target.UserId == me.UserId || (by != null && by.UserId == me.UserId);
+    }
+
+    internal static void Show(AbstractCharacter target, AbstractCharacter by, string name, int value)
     {
         if (!Plugin.FlashFight || target == null) return;
         var location = CombatView.Get();
         if (location == null || location.CombatCamera == null) return;
         if (Trace.On) Trace.Write($"'{NameOf(target)}': {name} {(value > 0 ? "+" : "")}{value}, Flash number");
+        if (name == "change_life" && value < 0) ArenaFx.Current?.Hit(target, false);
 
         bool plus = value > 0;
         string symbol = name + (plus ? "_plus" : "_minus");
@@ -88,8 +109,24 @@ internal static class FlashNumbers
         label.text = plus ? "+" + value : value.ToString();
         label.rectTransform.pivot = Vector2.zero;
         label.rectTransform.sizeDelta = new Vector2(FontBase * 8f, FontBase * 1.4f);
+        bool mine = Mine(target, by);
+        if (mine)
+        {
+            var edge = labelObject.AddComponent<Outline>();
+            edge.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            edge.effectDistance = new Vector2(MineEdge, -MineEdge);
+        }
 
-        var shown = new Shown { Target = target, Symbol = symbol, Plus = plus, Born = Time.time, Root = root, Icon = icon, Label = label, Tint = TintOf(name, plus) };
+        float born = Time.time;
+        foreach (var older in Live)
+        {
+            if (older.Target != target) continue;
+            older.Lift += 1f;
+            older.End = Mathf.Min(older.End, born + PushedLeft);
+            older.FadeFrom = Mathf.Min(older.FadeFrom, born);
+        }
+        float end = born + (mine ? MineLifetime : Lifetime);
+        var shown = new Shown { Target = target, Symbol = symbol, Plus = plus, Mine = mine, Born = born, FadeFrom = mine ? born + MineHold : end, End = end, Root = root, Icon = icon, Label = label, Tint = TintOf(name, plus) };
         Live.Add(shown);
         Place(shown, location.CombatCamera, 0f);
     }
@@ -104,7 +141,7 @@ internal static class FlashNumbers
         {
             var shown = Live[i];
             float age = now - shown.Born;
-            if (shown.Root == null || eye == null || shown.Target == null || age >= Lifetime)
+            if (shown.Root == null || eye == null || shown.Target == null || now >= shown.End)
             {
                 if (shown.Root != null) UnityEngine.Object.Destroy(shown.Root);
                 Live.RemoveAt(i--);
@@ -126,16 +163,20 @@ internal static class FlashNumbers
         var canvas = shown.Root.GetComponentInParent<Canvas>();
         float factor = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
 
-        float share = Mathf.Clamp01(age / Span);
+        float share = Mathf.Clamp01(age / (shown.Mine ? MineSpan : Span));
         float x = shown.Plus ? Mathf.Lerp(-36.95f, -19.95f, share) : Mathf.Lerp(-14.75f, -27.05f, share);
         float y = shown.Plus ? Mathf.Lerp(-102.5f, -32.85f, share) : Mathf.Lerp(-17.35f, -79.3f, share);
         float s = shown.Plus ? Mathf.Lerp(2f, 1.053f, share) : Mathf.Lerp(1f, 1.947f, share);
-        float alpha = Mathf.Lerp(1f, 0.05f, share);
+        float now = shown.Born + age;
+        float alpha = (shown.Mine ? 1f : Mathf.Lerp(1f, 0.05f, share))
+            * (now < shown.FadeFrom ? 1f : Mathf.Lerp(1f, 0.05f, Mathf.Clamp01((now - shown.FadeFrom) / Mathf.Max(0.01f, shown.End - shown.FadeFrom))));
+        shown.LiftShown = Mathf.MoveTowards(shown.LiftShown, shown.Lift, Time.deltaTime * LiftSpeed);
+        float lift = shown.LiftShown * LineStep * pixel;
 
-        float glyph = FontPixels * s * pixel;
+        float glyph = FontPixels * s * pixel * (shown.Mine ? MineBoost : 1f);
         var labelRect = shown.Label.rectTransform;
         labelRect.localScale = Vector3.one * (glyph / (FontBase * factor));
-        labelRect.position = new Vector3(at.x + (x + 2f * s) * pixel, at.y - (y + 15.6f * s) * pixel - glyph * 0.21f, 0f);
+        labelRect.position = new Vector3(at.x + (x + 2f * s) * pixel, at.y - (y + 15.6f * s) * pixel - glyph * 0.21f + lift, 0f);
         var color = shown.Tint;
         color.a *= alpha;
         shown.Label.color = color;
@@ -151,7 +192,7 @@ internal static class FlashNumbers
         iconRect.pivot = new Vector2(sprite.pivot.x / sprite.rect.width, sprite.pivot.y / sprite.rect.height);
         iconRect.localScale = Vector3.one;
         iconRect.sizeDelta = new Vector2(sprite.rect.width, sprite.rect.height) * (pixel / (IconScale * factor));
-        iconRect.position = new Vector3(at.x, at.y, 0f);
+        iconRect.position = new Vector3(at.x, at.y + lift, 0f);
     }
 
     private static Color TintOf(string name, bool plus) => name switch

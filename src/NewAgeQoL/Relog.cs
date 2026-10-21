@@ -9,6 +9,8 @@ namespace NewAgeQoL
 {
     internal static class Relog
     {
+        internal static bool Shown => _barGo != null && _barGo.activeSelf;
+
         private const float Round = 56f;
         private const float Margin = 8f;
         private const float Confirm = 3f;
@@ -117,10 +119,10 @@ namespace NewAgeQoL
             _plate = new GameObject("caption", typeof(RectTransform), typeof(Image));
             _plate.transform.SetParent(_bar, false);
             var prt = (RectTransform)_plate.transform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0f, 0.5f);
-            prt.pivot = new Vector2(1f, 0.5f);
+            prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
+            prt.pivot = new Vector2(1f, 0f);
             prt.sizeDelta = new Vector2(230f, 30f);
-            prt.anchoredPosition = new Vector2(-8f, 0f);
+            prt.anchoredPosition = new Vector2(0f, 8f);
             var plate = _plate.GetComponent<Image>();
             plate.color = new Color(0.09f, 0.075f, 0.055f, 0.94f);
             plate.sprite = OnlineWindow.Rounded(8);

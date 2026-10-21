@@ -1301,6 +1301,7 @@ namespace NewAgeQoL
             float used;
             if (Used.TryGetValue(skill.Id, out used) && Time.unscaledTime - used < (_tricks ? 0f : _things ? 0.08f : 0.15f)) return Sending;
             var cd = FighterHint.Cd();
+            if (Fallen(cd)) return Lang.T("персонаж погиб");
             bool late = Late;
             if (Strike.Calculating) return Lang.T("идёт расчёт раунда");
             if (!late && cd != null && cd.RoundType != RoundType.WALK_ROUND && cd.RoundType != RoundType.COMBAT_ROUND) return Lang.T("идёт расчёт раунда");
@@ -1323,6 +1324,13 @@ namespace NewAgeQoL
             if (skill.ManaCost > ind.CurrentMana) return Lang.T("не хватает маны");
             if (skill.ExpowerCost > ind.CurrentExpower) return Poor;
             return null;
+        }
+
+        private static bool Fallen(ICombatData cd)
+        {
+            if (cd == null || !SideButtons.InCombat()) return false;
+            var me = cd.MyCharacter;
+            return me != null && me.Dead;
         }
 
         private static string Spent(IQuickButton skill, ICombatData cd)

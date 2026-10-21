@@ -679,7 +679,7 @@ namespace NewAgeQoL
                 _deskKind.text = Lang.Game(skill.Kind) + " · " + (side == 0 ? Lang.T("корень обеих веток") : Lang.F("ветка «{0}»", Lang.Game(side == 1 ? klass.LeftName : klass.RightName)));
             }
             int level = Level(id);
-            _deskNow.text = level > 0 ? Lang.F("Изучено: {0} ({1} из {2})", Lang.Game(KuData.Step(level)), level, KuData.Top) : Lang.T("Не изучено");
+            _deskNow.text = level > 0 ? Lang.F("Изучено: {0} ({1} из {2})", KuData.Step(level), level, KuData.Top) : Lang.T("Не изучено");
             _deskNow.color = level > 0 ? WardrobeLook.Accent : WardrobeLook.Faint;
 
             for (int i = _deskRows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_deskRows.GetChild(i).gameObject);
@@ -707,7 +707,7 @@ namespace NewAgeQoL
             vlg.childForceExpandHeight = false;
 
             var head = new StringBuilder();
-            head.Append("<b>").Append(step).Append(". ").Append(Lang.Game(KuData.Step(step))).Append("</b>");
+            head.Append("<b>").Append(step).Append(". ").Append(KuData.Step(step)).Append("</b>");
             var title = Say(go.transform, head.ToString(), 15, FontStyle.Normal, have ? WardrobeLook.Accent : next ? WardrobeLook.Bright : WardrobeLook.Label, TextAnchor.UpperLeft);
             title.supportRichText = true;
             title.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -733,7 +733,7 @@ namespace NewAgeQoL
                 lines.supportRichText = true;
                 lines.horizontalOverflow = HorizontalWrapMode.Wrap;
             }
-            var body = Say(go.transform, text, 14, FontStyle.Normal, have || next ? WardrobeLook.Body : WardrobeLook.Faint, TextAnchor.UpperLeft);
+            var body = Say(go.transform, Lang.Game(text), 14, FontStyle.Normal, have || next ? WardrobeLook.Body : WardrobeLook.Faint, TextAnchor.UpperLeft);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
         }
 
@@ -749,7 +749,7 @@ namespace NewAgeQoL
             string value = m.Groups[1].Value.Trim();
             int n;
             var digits = Regex.Match(value, @"^\d+");
-            return digits.Success && int.TryParse(digits.Value, out n) ? Rounds(n) : value;
+            return digits.Success && int.TryParse(digits.Value, out n) ? Rounds(n) : Lang.T(value);
         }
 
         private static string Rounds(int n) => n + " " + Wardrobe.Plural(n, Lang.T("раунд"), Lang.T("раунда"), Lang.T("раундов"));

@@ -1302,6 +1302,8 @@ internal sealed class FighterDoll : MonoBehaviour
 
     internal int SortingOrder => _view != null ? _view.sortingOrder : 0;
 
+    internal SpriteRenderer View => _view;
+
     internal Vector3 HeadShift(Camera eye)
     {
         if (eye == null || _view == null || _view.sprite == null || _viewLook == null) return Vector3.zero;
@@ -2231,6 +2233,21 @@ internal sealed class FighterDoll : MonoBehaviour
 
     private bool Facing(Camera eye)
     {
+        bool before = _facingRight;
+        bool facing = FacingKept(eye);
+        if (_facingAxis == Vector3.zero || facing != before) _facingAxis = eye.transform.right;
+        return facing;
+    }
+
+    private Vector3 _facingAxis;
+
+    private bool FacingKept(Camera eye)
+    {
+        if (_facingKnown && _facingAxis != Vector3.zero && Vector3.Dot(_facingAxis, eye.transform.right) < 0f)
+        {
+            _facingRight = !_facingRight;
+            _facingAxis = eye.transform.right;
+        }
         bool turned = Vector3.Dot(_container.transform.forward, eye.transform.right) > 0f;
         _lastTurned = turned;
         if (_turnPending || !_facingKnown)

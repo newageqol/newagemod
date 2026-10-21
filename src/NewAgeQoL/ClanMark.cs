@@ -59,6 +59,12 @@ namespace NewAgeQoL
             catch { return null; }
         }
 
+        internal static bool Left(int id)
+        {
+            bool had;
+            return id > 0 && Seen.TryGetValue(id, out had) && !had;
+        }
+
         internal static bool Has(int id, string login)
         {
             try
@@ -111,6 +117,7 @@ namespace NewAgeQoL
                 {
                     var drawn = icon.sprite;
                     if (drawn != null && drawn.name != "unknown") return;
+                    if (data != null && ClanMark.Left(data.UserId)) { icon.gameObject.SetActive(false); return; }
                     if (data != null && !string.IsNullOrEmpty(data.ClanIcon))
                     {
                         ClanPics.Fill(icon, data.ClanIcon, true);
@@ -128,6 +135,39 @@ namespace NewAgeQoL
                 icon.gameObject.SetActive(true);
             }
             catch (Exception e) { Plugin.Trace("[clan] icon: " + e.Message); }
+        }
+    }
+
+    [HarmonyPatch(typeof(UserRowWidget), "Data", MethodType.Setter)]
+    internal static class RowBadgePatch
+    {
+        private static readonly string[] Fields = { "PremiumImage", "DealerImage", "RightsImage" };
+        private static readonly HashSet<string> Told = new HashSet<string>();
+        private static FieldInfo[] _images;
+        private static FieldInfo _row;
+
+        private static void Postfix(UserRowWidget __instance)
+        {
+            try
+            {
+                if (__instance == null) return;
+                if (_images == null)
+                {
+                    _images = new FieldInfo[Fields.Length];
+                    for (int i = 0; i < Fields.Length; i++) _images[i] = AccessTools.Field(typeof(UserRowWidget), Fields[i]);
+                    _row = AccessTools.Field(typeof(UserRowWidget), "_data");
+                }
+                for (int i = 0; i < _images.Length; i++)
+                {
+                    var image = _images[i] != null ? _images[i].GetValue(__instance) as Image : null;
+                    if (image == null || !image.gameObject.activeSelf || !Quickslots.Faded(image.sprite)) continue;
+                    image.gameObject.SetActive(false);
+                    var data = _row != null ? _row.GetValue(__instance) as UserRowInfoMessage : null;
+                    string key = Fields[i] + ":" + (data != null ? data.RightsIcon : null);
+                    if (Told.Add(key)) Plugin.Trace("[row] no picture for " + Fields[i] + (data != null ? " of " + data.Login + ", rights icon \"" + data.RightsIcon + "\"" : ""));
+                }
+            }
+            catch (Exception e) { Plugin.Trace("[row] badges: " + e.Message); }
         }
     }
 }

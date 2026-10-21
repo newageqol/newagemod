@@ -29,10 +29,12 @@ namespace NewAgeQoL
             internal bool Fight;
             internal string Levels;
             internal int Players;
+            internal int Max;
             internal int Seconds;
             internal bool Timed;
             internal string Text;
             internal float At;
+            internal bool Counted;
         }
 
         private sealed class Line
@@ -57,6 +59,35 @@ namespace NewAgeQoL
 
         internal static float Bottom => _canvasGo != null && _canvasGo.activeInHierarchy && _fold != null ? _top + _fold.Height : 0f;
 
+        internal static bool Players(int fight, out int players)
+        {
+            players = 0;
+            var items = _items;
+            if (items == null) return false;
+            foreach (var item in items)
+            {
+                if (!item.Fight || item.Id != fight || !item.Counted || Time.unscaledTime - item.At > 60f) continue;
+                players = item.Players;
+                return players > 0;
+            }
+            return false;
+        }
+
+        internal static bool Claim(int room, int id, out int players, out int max)
+        {
+            players = max = 0;
+            var items = _items;
+            if (items == null) return false;
+            foreach (var item in items)
+            {
+                if (item.Fight || item.Id != id || item.Room != room || Time.unscaledTime - item.At > 60f) continue;
+                players = item.Players;
+                max = item.Max;
+                return players > 0 && max > 0;
+            }
+            return false;
+        }
+
         internal static bool Under() => _fold != null && _canvasGo != null && _canvasGo.activeInHierarchy && _fold.Under();
 
         internal static void Tick()
@@ -64,18 +95,14 @@ namespace NewAgeQoL
             try
             {
                 bool want = SideButtons.InWorld() && !SideButtons.InCombat() && ChatDock.Active;
-                if (!want) { Drop(); return; }
+                if (!want) { Drop(); if (Chaotic.Showing) Poll(); return; }
                 bool hide = Roster.Shopping();
                 if (_canvasGo == null) Build();
                 if (_canvasGo.activeSelf == hide) _canvasGo.SetActive(!hide);
                 if (hide) return;
 
                 float now = Time.unscaledTime;
-                if (!_busy && now >= _askAt && Plugin.Instance != null)
-                {
-                    _busy = true;
-                    Plugin.Instance.StartCoroutine(Fetch());
-                }
+                Poll();
                 Place();
                 if (now < _paintAt) return;
                 _paintAt = now + 0.25f;
@@ -83,6 +110,13 @@ namespace NewAgeQoL
                 Clocks();
             }
             catch (Exception e) { Plugin.Trace("[fights] " + e.Message); Drop(); }
+        }
+
+        private static void Poll()
+        {
+            if (_busy || Time.unscaledTime < _askAt || Plugin.Instance == null) return;
+            _busy = true;
+            Plugin.Instance.StartCoroutine(Fetch());
         }
 
         private static IEnumerator Fetch()
@@ -98,7 +132,7 @@ namespace NewAgeQoL
             try { Take(code, body); }
             catch (Exception e) { _error = Lang.T("ответ не разобран"); _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
             _busy = false;
-            _askAt = Time.unscaledTime + (_fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
+            _askAt = Time.unscaledTime + (Chaotic.Showing ? ClaimEvery : _fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
         }
 
         private static void Take(long code, string body)
@@ -124,7 +158,7 @@ namespace NewAgeQoL
                 if (bits.Length >= 10 && bits[0] == "c")
                     items.Add(new Item
                     {
-                        Room = Num(bits[1]), Id = Num(bits[2]), Levels = Levels(bits[3], bits[4]), Players = Num(bits[6]),
+                        Room = Num(bits[1]), Id = Num(bits[2]), Levels = Levels(bits[3], bits[4]), Players = Num(bits[6]), Max = Num(bits[7]),
                         Seconds = Num(bits[8]), Timed = bits[8].Length > 0, Text = bits[9], At = at,
                     });
                 else if (bits.Length >= 8 && bits[0] == "f")
@@ -132,6 +166,7 @@ namespace NewAgeQoL
                     {
                         Room = Num(bits[1]), Id = Num(bits[2]), Fight = true, Levels = Levels(bits[3], bits[4]), Players = Num(bits[5]),
                         Seconds = Num(bits[6]), Timed = bits[6].Length > 0, Text = bits[7], At = at,
+                        Counted = bits.Length >= 9 && bits[8] == "1",
                     });
             }
             items.Sort((a, b) => a.Fight != b.Fight ? (a.Fight ? 1 : -1) : a.Seconds.CompareTo(b.Seconds));

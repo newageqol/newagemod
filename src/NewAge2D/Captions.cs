@@ -112,11 +112,12 @@ internal static class Captions
             var collider = character.CharacterCollider;
             if (collider == null) return true;
             float lift = doll.FitHeight > 0f ? doll.FitHeight : (collider.direction == 1 ? collider.height / 2f : collider.radius) + collider.center.y;
-            var screen = location.CombatCamera.WorldToScreenPoint(doll.Feet + doll.HeadShift(location.CombatCamera) + new Vector3(0f, lift, 0f));
+            var rise = new Vector3(0f, lift, 0f);
+            var screen = Over(location.CombatCamera, doll.Feet + doll.HeadShift(location.CombatCamera), lift);
             if (Trace.On && (!Logged.TryGetValue(character.UserId, out string seen) || seen != doll.ViewLook))
             {
                 Logged[character.UserId] = doll.ViewLook;
-                var feet = location.CombatCamera.WorldToScreenPoint(doll.Feet + new Vector3(0f, lift, 0f));
+                var feet = location.CombatCamera.WorldToScreenPoint(doll.Feet + rise);
                 Trace.Write($"'{(character is PlayerCharacter player ? player.Login : character.UserId.ToString())}' nickname above head: look {Trace.Look(doll.ViewLook)}, head {FrameCache.HeadPixels(doll.ViewLook):0} frame px, offset from feet on screen {screen.x - feet.x:0} px, feet x {feet.x:0}");
             }
             float scale = Scale(__instance, character, doll.Feet, location.CombatCamera);
@@ -133,6 +134,14 @@ internal static class Captions
         {
             return true;
         }
+    }
+
+    internal static Vector3 Over(Camera eye, Vector3 at, float lift)
+    {
+        var top = eye.WorldToScreenPoint(at + new Vector3(0f, lift, 0f));
+        if (eye.orthographic) return top;
+        var foot = eye.WorldToScreenPoint(at);
+        return new Vector3(foot.x, top.y, top.z);
     }
 
     private static float Scale(LifeManaEnergyDisplay display, AbstractCharacter character, Vector3 feet, Camera eye)

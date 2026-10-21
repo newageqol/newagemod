@@ -418,7 +418,7 @@ namespace NewAgeQoL
                 Mark(badge.Count, Living(badge.Charm));
                 if (!Quickslots.Faded(badge.Image.sprite)) continue;
                 var sprite = Picture(badge.Id, badge.Picture);
-                if (sprite == null) continue;
+                if (sprite == null) { badge.Image.enabled = false; continue; }
                 badge.Image.sprite = sprite;
                 badge.Image.enabled = true;
             }

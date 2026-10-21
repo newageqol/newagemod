@@ -46,6 +46,7 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<float> CfgFieldOffsetX;
     internal static ConfigEntry<float> CfgFieldOffsetY;
     internal static ConfigEntry<int> CfgFieldZone;
+    internal static ConfigEntry<bool> CfgArena3D;
     internal static ConfigEntry<float> CfgSoundBefore;
 
     private void Awake()
@@ -96,6 +97,7 @@ public class Plugin : BaseUnityPlugin
         CfgFieldView = Config.Bind("Field", "ViewHeight", 0f, "Сколько пикселей Flash видно на экране по высоте; 0 — отдалить до краёв карты. Колесо мыши меняет и запоминает, дальше краёв карты не отдаляет");
         CfgFieldOffsetX = Config.Bind("Field", "OffsetX", 0f, "Сдвиг картинки поля вправо в пикселях Flash, если клетки разошлись с рисунком");
         CfgFieldOffsetY = Config.Bind("Field", "OffsetY", 0f, "Сдвиг картинки поля вниз в пикселях Flash");
+        CfgArena3D = Config.Bind("Field", "Arena3D", true, "Объёмная 3D-арена вместо плоской картинки поля на картах, для которых она собрана (arenaCombatMap1, 2, 3 и 4). Свет и огонь по игровому времени");
         CfgFieldZone = Config.Bind("Field", "ServerHours", 3, "Часовой пояс сервера относительно UTC: по нему карта берётся утренняя, дневная или ночная");
 
         CfgSoundBefore = Config.Bind("General", "GameSoundBeforeFlash", -1f,

@@ -514,6 +514,7 @@ internal static class FlashQueue
         var who = item.Source;
         if (Trace.On) Trace.Write($"'{NameOf(who)}' {(child ? "child " : "")}{Describe(item)} → {NameOf(item.Target)}, group #{model.Number}");
         ShowTexts(item);
+        ModMusic.Shown(item, source.Who);
         switch (play.Kind)
         {
             case 1:
@@ -529,7 +530,7 @@ internal static class FlashQueue
                 play.NeedStart = !child;
                 break;
             case 2:
-                Effect(model, play, now);
+                Effect(model, play, now, source.Who);
                 break;
         }
         return play;
@@ -653,7 +654,7 @@ internal static class FlashQueue
         indicators.CurrentMana += value;
     }
 
-    private static void Effect(Group model, Play play, float now)
+    private static void Effect(Group model, Play play, float now, AbstractCharacter by)
     {
         var item = play.Item;
         string name = item.AnimationName ?? "";
@@ -672,7 +673,7 @@ internal static class FlashQueue
         if (Counts(model)) Apply(model, item, who, name, value);
         else if (Trace.On) Trace.Write($"'{NameOf(who)}' {name} {value}: action from previous phase, value not added");
         if (item.IgnoreByPlayAnimation || !who.Initialized) return;
-        FlashNumbers.Show(who, name, value);
+        FlashNumbers.Show(who, by, name, value);
         play.Until = now + NumberSeconds;
     }
 

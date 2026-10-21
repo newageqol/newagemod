@@ -832,7 +832,7 @@ namespace NewAgeQoL
                         }
                         stopped = true;
                         string why = !got ? Lang.T("сервер не ответил")
-                                   : string.IsNullOrEmpty(err) ? Lang.T("дальше сервер не даёт, похоже уже полное") : err;
+                                   : string.IsNullOrEmpty(err) ? Lang.T("дальше сервер не даёт, похоже уже полное") : Lang.Game(err);
                         Say(row, Lang.F("{0}: использовано {1}, {2}", Lang.T(title), used, why));
                         Plugin.Log?.LogInfo("[flasks] " + title + ": drunk " + used + ", stop - " + why
                             + (got ? "" : " (waited " + spent.ToString("0.0") + " s, of which with open queue " + (wait - budget).ToString("0.0") + ")")

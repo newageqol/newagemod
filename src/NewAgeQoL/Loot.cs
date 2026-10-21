@@ -70,6 +70,7 @@ namespace NewAgeQoL
             if (message.WearWarningInventory != null)
                 foreach (var one in message.WearWarningInventory) if (one != null) result.Worn.Add(one);
             Waiting.Add(result);
+            CombatMusic.Over(result.Win);
             _leaveAt = Time.unscaledTime + Leave;
             Plugin.Trace("[loot] fight over: " + (result.Win ? "win" : "loss") + ", exp " + result.Exp + ", cash " + result.Cash
                 + ", items " + result.Items.Count + ", worn " + result.Worn.Count + "; result window skipped");
@@ -96,7 +97,7 @@ namespace NewAgeQoL
                     Waiting.Clear();
                 }
                 if (_canvasGo == null) return;
-                if (Plates.Count == 0) { if (_canvasGo.activeSelf) _canvasGo.SetActive(false); return; }
+                if (Plates.Count == 0 || Roster.Shopping()) { if (_canvasGo.activeSelf) _canvasGo.SetActive(false); return; }
                 if (!_canvasGo.activeSelf) _canvasGo.SetActive(true);
                 Place();
                 Age();

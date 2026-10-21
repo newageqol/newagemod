@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Xml;
 using HarmonyLib;
 using UnityEngine;
@@ -195,7 +195,7 @@ internal static class Field
         float screenW = Mathf.Max(1, Screen.width);
         float screenH = Mathf.Max(1, Screen.height);
         float wanted = Plugin.CfgFieldView.Value;
-        float view = wanted > 0f ? Mathf.Clamp(wanted, 300f, 4000f) : 0f;
+        float view = wanted > 0f ? Mathf.Clamp(wanted, 720f, 4000f) : 0f;
         int side = Beauty.MaxSide;
         long bytes = Beauty.MaxBytes;
         return (width, height) =>
@@ -409,10 +409,11 @@ internal static class Field
     }
 }
 
+[DefaultExecutionOrder(-10000)]
 internal sealed class FieldView : MonoBehaviour
 {
     private const float Distance = 60f;
-    private const float MinView = 300f;
+    private const float MinView = 720f;
     private const float MaxView = 4000f;
 
     private static readonly System.Reflection.FieldInfo ConstraintField = AccessTools.Field(typeof(CameraControl), "constraint");
@@ -436,6 +437,7 @@ internal sealed class FieldView : MonoBehaviour
     private float _wasNear;
     private float _wasFar;
     private bool _wasControl;
+    private readonly List<CameraControl> _stilled = new();
 
     private readonly List<Renderer> _hidden = new();
     private readonly List<Terrain> _terrains = new();
@@ -454,6 +456,9 @@ internal sealed class FieldView : MonoBehaviour
     private Vector3 _pressAt;
     private Vector3 _lastMouse;
     private bool _failed;
+    private Arena3D _arena;
+    private ArenaCam _arenaCam;
+    private float _wasFov;
 
     internal bool Applied { get; private set; }
 
@@ -506,6 +511,23 @@ internal sealed class FieldView : MonoBehaviour
         _zMax = bottom + backdrop.Top * height;
         _hasBounds = true;
         _pictureObject.SetActive(Applied);
+        var arenaBundle = Arena3D.For(_ground);
+        if (arenaBundle != null)
+        {
+            if (_arena != null && _arena.Shown) view.enabled = false;
+            if (_arena == null)
+            {
+                _arena = new Arena3D(arenaBundle);
+                StartCoroutine(_arena.Attach(_grid, _eye, () => this != null && Applied, () =>
+                {
+                    if (_pictureObject != null && _pictureObject.TryGetComponent<SpriteRenderer>(out var shown)) shown.enabled = false;
+                    _arenaCam = new ArenaCam(_arena.Cfg);
+                    _arenaCam.Focus(new Vector3(_focus.x, 0f, _focus.y));
+                    ArenaHome.Show(() => _arenaCam?.Home());
+                    if (_eye != null) _eye.transparencySortMode = TransparencySortMode.Perspective;
+                }));
+            }
+        }
 
         Plugin.Log.LogInfo($"[field] {backdrop.File} on field: corner ({x:0}, {y:0}) → grid ({origin.x:0.00}, {origin.z:0.00}), camera at {Field.Pitch:0.0}°, drawn part x {backdrop.Left:0.00}..{backdrop.Right:0.00}, y {backdrop.Bottom:0.00}..{backdrop.Top:0.00}");
     }
@@ -530,6 +552,7 @@ internal sealed class FieldView : MonoBehaviour
         _wasColor = _eye.backgroundColor;
         _wasNear = _eye.nearClipPlane;
         _wasFar = _eye.farClipPlane;
+        _wasFov = _eye.fieldOfView;
         _eye.clearFlags = CameraClearFlags.SolidColor;
         _eye.backgroundColor = Color.black;
         if (_control != null)
@@ -538,6 +561,14 @@ internal sealed class FieldView : MonoBehaviour
             _control.Active = false;
             _control.enabled = false;
         }
+        _stilled.Clear();
+        foreach (var other in FindObjectsOfType<CameraControl>())
+        {
+            if (other == null || other == _control || !other.enabled) continue;
+            other.enabled = false;
+            _stilled.Add(other);
+        }
+        if (_stilled.Count > 0) Plugin.Log.LogInfo($"[field] more Unity camera controls stopped: {_stilled.Count}");
         float wanted = Plugin.CfgFieldView.Value;
         _view = wanted <= 0f ? 0f : Mathf.Clamp(wanted, MinView, MaxView);
         var middle = Field.SceneToGrid(_ground.X + 962f, _ground.Y + 585f);
@@ -554,6 +585,11 @@ internal sealed class FieldView : MonoBehaviour
 
     internal void Restore()
     {
+        _arena?.Detach();
+        _arena = null;
+        _arenaCam = null;
+        if (_eye != null) _eye.ResetProjectionMatrix();
+        ArenaHome.Hide();
         if (!Applied) return;
         Applied = false;
         foreach (var renderer in _hidden)
@@ -577,6 +613,7 @@ internal sealed class FieldView : MonoBehaviour
             _eye.backgroundColor = _wasColor;
             _eye.nearClipPlane = _wasNear;
             _eye.farClipPlane = _wasFar;
+            _eye.fieldOfView = _wasFov;
         }
         if (_control != null)
         {
@@ -588,6 +625,9 @@ internal sealed class FieldView : MonoBehaviour
                 catch (Exception ex) { Plugin.Log.LogWarning("[field] Unity camera not restored: " + ex.GetType().Name + " " + ex.Message); }
             }
         }
+        foreach (var other in _stilled)
+            if (other != null) other.enabled = true;
+        _stilled.Clear();
         if (_pictureObject != null) _pictureObject.SetActive(false);
     }
 
@@ -637,9 +677,11 @@ internal sealed class FieldView : MonoBehaviour
             return;
         }
         if (_control != null && _control.enabled) _control.enabled = false;
+        foreach (var other in _stilled)
+            if (other != null && other.enabled) other.enabled = false;
         if (Time.unscaledTime >= _rescanAt)
         {
-            _rescanAt = Time.unscaledTime + 3f;
+            _rescanAt = Time.unscaledTime + (_arenaCam != null ? 0.1f : 3f);
             HideScenery();
         }
         if (!_warmLogged && Plugin.CfgVerbose.Value && Fighters.AllReady())
@@ -648,8 +690,27 @@ internal sealed class FieldView : MonoBehaviour
             Plugin.Log.LogInfo($"[field] all dolls and their animations ready {Time.unscaledTime - _appliedAt:0.00} s after map load");
         }
         Center();
+        if (_arenaCam != null && _earlyFrame == Time.frameCount) return;
         Steer();
         Aim();
+    }
+
+    private int _earlyFrame = -1;
+
+    private void Update()
+    {
+        if (_arenaCam == null || !Applied || _eye == null || _grid == null || _failed) return;
+        try
+        {
+            Steer();
+            Aim();
+            _earlyFrame = Time.frameCount;
+        }
+        catch (Exception ex)
+        {
+            _failed = true;
+            Plugin.Log.LogError("[field] arena camera: " + ex);
+        }
     }
 
     private void HideScenery()
@@ -719,7 +780,12 @@ internal sealed class FieldView : MonoBehaviour
 
     private void Steer()
     {
-        bool overUi = Unity3DHelper.IsOverInterface() || OverMod();
+        bool overUi = Unity3DHelper.IsOverInterface() || OverMod() || ArenaHome.Over();
+        if (_arenaCam != null)
+        {
+            _arenaCam.Steer(_eye, _grid, overUi);
+            return;
+        }
         float wheel = Input.mouseScrollDelta.y;
         if (!overUi && Mathf.Abs(wheel) > 0.01f)
         {
@@ -763,6 +829,11 @@ internal sealed class FieldView : MonoBehaviour
 
     private void Aim()
     {
+        if (_arenaCam != null)
+        {
+            _arenaCam.Aim(_eye, _grid);
+            return;
+        }
         float aspect = Mathf.Max(0.1f, _eye.aspect);
         float view = _view > 0f ? _view : MaxView;
         if (_hasBounds)

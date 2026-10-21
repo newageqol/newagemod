@@ -116,7 +116,7 @@ internal static class StunStars
         if (doll != null && doll.Placed)
         {
             float lift = doll.FitHeight > 0f ? doll.FitHeight : collider != null ? collider.height : 0f;
-            spot = doll.Feet + doll.HeadShift(eye) + new Vector3(0f, lift, 0f);
+            spot = eye == null ? doll.Feet + new Vector3(0f, lift, 0f) : eye.ScreenToWorldPoint(Captions.Over(eye, doll.Feet + doll.HeadShift(eye), lift));
             order = doll.SortingOrder + 1;
         }
         else

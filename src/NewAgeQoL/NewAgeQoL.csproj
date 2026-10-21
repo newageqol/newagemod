@@ -115,10 +115,15 @@
       <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+      <HintPath>$(GameDir)\NewAgeClient_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Sounds\*.wav" />
+    <EmbeddedResource Include="Music\*.ogg" />
     <EmbeddedResource Include="Art\*.png" />
     <EmbeddedResource Include="Art\*.txt" />
   </ItemGroup>

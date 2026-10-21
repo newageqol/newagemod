@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using Transport.Messages.Common.User;
+using Transport.Messages.Responses.User.Friends;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -30,6 +31,10 @@ namespace NewAgeQoL
         private static Button _refresh;
         private static InputField _filter;
         private static Text _modeText;
+        private static Button _mode;
+        private static Text _friendsText;
+        private static bool _friends;
+        private static int _seenFriends = -1;
         private static bool _byClan;
         private static string _query = "";
         private static int _seenVersion = -1;
@@ -120,6 +125,10 @@ namespace NewAgeQoL
             _refresh = null;
             _filter = null;
             _modeText = null;
+            _mode = null;
+            _friendsText = null;
+            Friends.Unwatch();
+            Friends.Drop();
             Pending.Clear();
             OnlineCharms.Forget();
         }
@@ -141,6 +150,7 @@ namespace NewAgeQoL
                 return;
             }
             if (_canvasGo == null) return;
+            Friends.Tick();
             OnlineCharms.Tick();
             if (Time.unscaledTime >= _iconAt)
             {
@@ -151,9 +161,10 @@ namespace NewAgeQoL
             if (Time.unscaledTime < _pollAt) return;
             _pollAt = Time.unscaledTime + 0.2f;
             int v = OnlineList.Version;
-            if (v != _seenVersion)
+            if (v != _seenVersion || (_friends && Friends.Version != _seenFriends))
             {
                 _seenVersion = v;
+                _seenFriends = Friends.Version;
                 _seenCharms = OnlineCharms.Version;
                 Rebuild();
                 return;
@@ -170,7 +181,7 @@ namespace NewAgeQoL
         {
             if (_refresh != null)
             {
-                bool can = !OnlineList.Busy && OnlineList.Wait == 0;
+                bool can = _friends || (!OnlineList.Busy && OnlineList.Wait == 0);
                 if (_refresh.interactable != can) _refresh.interactable = can;
             }
             if (_status == null) return;
@@ -201,6 +212,8 @@ namespace NewAgeQoL
                 st += Lang.F(" · обновлено {0} с назад · ", age) + (wait > 0 ? Lang.F("новый список через {0} с", wait) : Lang.T("можно обновить"));
             }
             if (OnlineCharms.Gathering && st.Length > 0) st += Lang.T(" · заклятия загружаются…");
+            if (_friends && !Friends.Loaded) st = Lang.T("список друзей загружается…") + (st.Length > 0 ? " · " + st : "");
+            else if (_friends && Friends.List.Count == 0) st = Lang.T("друзей пока нет") + (st.Length > 0 ? " · " + st : "");
             if (_query.Length > 0) st = Lang.F("найдено {0}", shown) + (st.Length > 0 ? " · " + st : "");
             return st;
         }
@@ -280,7 +293,7 @@ namespace NewAgeQoL
             Place(sideMark.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
             _title = Label(_panelGo.transform, Lang.T("Кто в игре"), 20, FontStyle.Bold, WardrobeLook.Bright);
-            Place(_title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -45f), new Vector2(184f, -13f));
+            Place(_title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -45f), new Vector2(150f, -13f));
             _title.raycastTarget = false;
             _title.alignment = TextAnchor.MiddleLeft;
             _title.verticalOverflow = VerticalWrapMode.Truncate;
@@ -288,11 +301,19 @@ namespace NewAgeQoL
             _title.resizeTextMinSize = 12;
             _title.resizeTextMaxSize = 20;
 
-            var mode = MakeGameButton(_panelGo.transform, "", 118f, BarH, SwitchMode);
-            Place((RectTransform)mode.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(192f, -50f), new Vector2(310f, -8f));
-            _modeText = mode.GetComponentInChildren<Text>(true);
+            var friends = MakeGameButton(_panelGo.transform, "", 108f, BarH, SwitchFriends);
+            Place((RectTransform)friends.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(156f, -50f), new Vector2(264f, -8f));
+            _friendsText = friends.GetComponentInChildren<Text>(true);
+            if (_friendsText != null) _friendsText.supportRichText = true;
+
+            _mode = MakeGameButton(_panelGo.transform, "", 108f, BarH, SwitchMode);
+            Place((RectTransform)_mode.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(270f, -50f), new Vector2(378f, -8f));
+            _modeText = _mode.GetComponentInChildren<Text>(true);
             if (_modeText != null) _modeText.supportRichText = true;
             PaintMode();
+
+            Friends.Watch();
+            if (_friends) Friends.Ask();
 
             MakeCloseButton(_panelGo.transform, Close);
 
@@ -310,7 +331,11 @@ namespace NewAgeQoL
             _filter = MakeInput(barGo.transform, 168f, Lang.T("поиск по нику"));
             _filter.text = _query;
             _filter.onValueChanged.AddListener(v => { _query = Norm(v); Rebuild(); });
-            _refresh = MakeGameButton(barGo.transform, Lang.T("Обновить"), 118f, BarH, () => { if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh(); });
+            _refresh = MakeGameButton(barGo.transform, Lang.T("Обновить"), 118f, BarH, () =>
+            {
+                if (_friends) Friends.Ask();
+                if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh();
+            });
             _status = Label(barGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
             _status.alignment = TextAnchor.MiddleLeft;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -449,19 +474,28 @@ namespace NewAgeQoL
 
             var shown = Shown;
             shown.Clear();
-            foreach (var p in players)
-                if (_query.Length == 0 || Key(p).IndexOf(_query, StringComparison.Ordinal) >= 0) shown.Add(p);
-
             var stack = _rows.GetComponent<VerticalLayoutGroup>();
-            if (stack != null) stack.spacing = _byClan ? 14f : 3f;
-            if (_byClan) ByClans(shown);
-            else foreach (var p in shown) Line(p, _rows);
+            if (_mode != null) _mode.gameObject.SetActive(!_friends);
+            if (_friends)
+            {
+                if (stack != null) stack.spacing = 14f;
+                int mates = Mates(shown);
+                if (_title != null) _title.text = Lang.T("Друзья") + (mates > 0 ? ": " + mates : "");
+            }
+            else
+            {
+                foreach (var p in players)
+                    if (_query.Length == 0 || Key(p).IndexOf(_query, StringComparison.Ordinal) >= 0) shown.Add(p);
+                if (stack != null) stack.spacing = _byClan ? 14f : 3f;
+                if (_byClan) ByClans(shown);
+                else foreach (var p in shown) Line(p, _rows);
+                if (_title != null) _title.text = Lang.T("Кто в игре") + (players.Count > 0 ? ": " + players.Count : "");
+            }
 
             bool busy = OnlineList.Busy;
-            if (_title != null) _title.text = Lang.T("Кто в игре") + (players.Count > 0 ? ": " + players.Count : "");
-            if (_rowsFade != null) _rowsFade.alpha = busy ? 0.4f : 1f;
+            if (_rowsFade != null) _rowsFade.alpha = busy && !_friends ? 0.4f : 1f;
             if (_status != null) _status.text = StatusText(shown.Count);
-            if (_refresh != null) _refresh.interactable = !busy && OnlineList.Wait == 0;
+            if (_refresh != null) _refresh.interactable = _friends || (!busy && OnlineList.Wait == 0);
             if (_scroll != null) _scroll.verticalNormalizedPosition = 1f;
         }
 
@@ -500,6 +534,43 @@ namespace NewAgeQoL
                 one.Sort(ByLevel);
                 var host = AddGroup(ClanTitle(key), one.Count, key.Length == 0);
                 foreach (var p in one) Line(p, host);
+            }
+        }
+
+        private static int Mates(List<OnlinePlayer> shown)
+        {
+            var asks = new List<KeyValuePair<FriendMessage, OnlinePlayer>>();
+            var live = new List<KeyValuePair<FriendMessage, OnlinePlayer>>();
+            var gone = new List<KeyValuePair<FriendMessage, OnlinePlayer>>();
+            int mates = 0;
+            foreach (var f in Friends.List)
+            {
+                if (!f.PromptId.HasValue) mates++;
+                var online = OnlineList.ById(f.UserId);
+                var p = online ?? new OnlinePlayer { Id = f.UserId, Login = f.Login ?? "", Level = f.Level };
+                if (_query.Length > 0 && Key(p).IndexOf(_query, StringComparison.Ordinal) < 0) continue;
+                var pair = new KeyValuePair<FriendMessage, OnlinePlayer>(f, p);
+                if (f.PromptId.HasValue) asks.Add(pair);
+                else if (online != null) live.Add(pair);
+                else gone.Add(pair);
+                shown.Add(p);
+            }
+            MateGroup(asks, Lang.T("Запросы в друзья"), false);
+            MateGroup(live, Lang.T("В игре"), false);
+            MateGroup(gone, Lang.T("Не в игре"), true);
+            return mates;
+        }
+
+        private static void MateGroup(List<KeyValuePair<FriendMessage, OnlinePlayer>> list, string name, bool loose)
+        {
+            if (list.Count == 0) return;
+            list.Sort((a, b) => ByLevel(a.Value, b.Value));
+            var host = AddGroup(name, list.Count, loose);
+            foreach (var pair in list)
+            {
+                bool online = OnlineList.ById(pair.Key.UserId) != null;
+                try { AddRow(pair.Value, host, pair.Key, online); }
+                catch (Exception e) { Plugin.Trace("[online] friend row " + pair.Value.Login + ": " + e.Message); }
             }
         }
 
@@ -569,10 +640,22 @@ namespace NewAgeQoL
 
         private static void PaintMode()
         {
-            if (_modeText == null) return;
-            _modeText.text = _byClan
-                ? Lang.T("Кланы: <color=#e2b85c>вкл</color>")
-                : Lang.T("Кланы: <color=#747b85>выкл</color>");
+            if (_modeText != null)
+                _modeText.text = _byClan
+                    ? Lang.T("Кланы: <color=#e2b85c>вкл</color>")
+                    : Lang.T("Кланы: <color=#747b85>выкл</color>");
+            if (_friendsText != null)
+                _friendsText.text = _friends
+                    ? Lang.T("Друзья: <color=#e2b85c>вкл</color>")
+                    : Lang.T("Друзья: <color=#747b85>выкл</color>");
+        }
+
+        private static void SwitchFriends()
+        {
+            _friends = !_friends;
+            if (_friends) Friends.Ask();
+            PaintMode();
+            Rebuild();
         }
 
         private static void SwitchMode()
@@ -583,7 +666,7 @@ namespace NewAgeQoL
             Rebuild();
         }
 
-        private static void AddRow(OnlinePlayer p, Transform host)
+        private static void AddRow(OnlinePlayer p, Transform host, FriendMessage friend = null, bool online = true)
         {
             var go = UnityEngine.Object.Instantiate(_rowPrefab, host, false);
             Clones.StripHotkeys(go, _rowPrefab);
@@ -599,15 +682,19 @@ namespace NewAgeQoL
             var msg = Row(p);
             bool drawn = !msg.ClanIconCode.HasValue || ClanArt(msg.ClanIconCode.Value) != null;
             w.Data = msg;
-            Flatten(w, p.Away);
-            MarkAway(w, p.Away);
-            OnlineCharms.Decorate(w, p, (RectTransform)_panelGo.transform);
-            Dressing.Add(new Dressed { Widget = w, Player = p, Shape = OnlineCharms.Shape(p) });
-            var resolver = _resolver;
+            Flatten(w, p.Away || !online);
+            MarkAway(w, p.Away || !online);
+            if (online)
+            {
+                OnlineCharms.Decorate(w, p, (RectTransform)_panelGo.transform);
+                Dressing.Add(new Dressed { Widget = w, Player = p, Shape = OnlineCharms.Shape(p) });
+            }
+            var resolver = friend != null ? Friends.Menu() ?? _resolver : _resolver;
+            object menu = friend != null ? (object)new UserContextMenuData(friend.UserId, friend.Login) { PromptId = friend.PromptId } : null;
             w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Trace("[online] click: " + e.Message); } };
             w.OnRightButtonClickDelegate = item =>
             {
-                try { ContextMenu.ShowContextMenu(go, resolver, item.Data, EContextMenuSide.Left); }
+                try { ContextMenu.ShowContextMenu(go, resolver, menu ?? item.Data, EContextMenuSide.Left); }
                 catch (Exception e) { Plugin.Trace("[online] menu: " + e.Message); }
             };
             if (!drawn) Pending.Add(new KeyValuePair<UserRowWidget, OnlinePlayer>(w, p));

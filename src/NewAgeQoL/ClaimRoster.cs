@@ -280,7 +280,10 @@ namespace NewAgeQoL
             if (bad != null) return "<color=#f07a6e>" + Plain(bad.Error) + "</color>";
             if (good.People.Count == 0) return "<color=#acb3bd>" + (fight ? Lang.T("сервер не назвал игроков") : Lang.T("в заявке никого")) + "</color>";
             long age = (long)(DateTime.UtcNow - good.At).TotalSeconds;
-            return age >= 3 ? "<color=#747b85>" + Lang.F("обновлено {0} с назад", age) + "</color>" : "";
+            bool asking;
+            lock (Gate) asking = _busy;
+            if (age >= 3 && (_fresh || asking)) return "<color=#747b85>" + Lang.T("обновляю…") + "</color>";
+            return age >= 3 ?"<color=#747b85>" + Lang.F("обновлено {0} с назад", age) + "</color>" : "";
         }
 
         private static bool Words(Text label, string text)

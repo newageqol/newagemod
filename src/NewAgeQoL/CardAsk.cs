@@ -12,6 +12,8 @@ namespace NewAgeQoL
     {
         private const short Answer = 433;
         private const float Patience = 3f;
+        private const float ListPatience = 3f;
+        private const int ListFresh = 60;
 
         private static readonly FieldInfo Table = AccessTools.Field(typeof(NetworkConnection), "_callbacksTable");
         private static readonly Dictionary<int, float> Sent = new Dictionary<int, float>();
@@ -54,6 +56,8 @@ namespace NewAgeQoL
                 _byId = false;
                 Plugin.Trace("[card] asking card of " + obj.Login + " by nick");
                 info.ShowUserInfoDialog(0, obj.Login);
+                int age = OnlineList.Age;
+                if (!OnlineList.Busy && (age < 0 || age > ListFresh)) OnlineList.Refresh();
                 return false;
             }
             catch (Exception e)
@@ -102,6 +106,8 @@ namespace NewAgeQoL
             {
                 Listen();
                 if (_at < 0f || Time.unscaledTime - _at < Patience) return;
+                if (OnlineList.Busy && Time.unscaledTime - _at < Patience + ListPatience) return;
+                bool offline = Offline();
                 var info = Controllers.Get<UserInfoWindowController>();
                 if (!_byId && _id > 0 && info != null)
                 {
@@ -114,6 +120,12 @@ namespace NewAgeQoL
                 }
                 _at = -1f;
                 Drop(_byId ? _id : 0, _byId ? null : _login);
+                if (offline)
+                {
+                    Plugin.Trace("[card] no card of " + _login + ", not in the online list");
+                    Notice.Show(Lang.F("Игрок {0} не в сети, карточку сервер не прислал", _login), 5f);
+                    return;
+                }
                 Plugin.Trace("[card] server sent no card of " + _login);
                 Notice.Show(Lang.F("Сервер не прислал карточку игрока {0}", _login), 5f);
             }
@@ -122,6 +134,13 @@ namespace NewAgeQoL
                 _at = -1f;
                 Plugin.Trace("[card] waiting for card: " + e.Message);
             }
+        }
+
+        private static bool Offline()
+        {
+            int age = OnlineList.Age;
+            if (age < 0 || age > ListFresh || OnlineList.Busy) return false;
+            return (_id <= 0 || OnlineList.ById(_id) == null) && OnlineList.ByLogin(_login) == null;
         }
 
         private static void Listen()

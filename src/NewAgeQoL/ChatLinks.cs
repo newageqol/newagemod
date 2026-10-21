@@ -11,11 +11,9 @@ namespace NewAgeQoL
 {
     internal static class ChatLinks
     {
-        private const string Paint = "#6FC3FF";
         private const int Keep = 3000;
 
         private static readonly Regex Urls = new Regex(@"(?<![\w/@.])(?:https?://|www\.)[^\s<>""']+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex Plain = new Regex(@"<link=(\d+)><u>([^<]*)</u></link>", RegexOptions.Compiled);
         private static readonly char[] Tail = { '.', ',', ';', ':', '!', '?', ')', ']', '}', '»' };
         private static readonly Dictionary<int, string> Known = new Dictionary<int, string>();
         private static readonly Queue<int> Order = new Queue<int>();
@@ -63,8 +61,7 @@ namespace NewAgeQoL
                 int id = (int)Counter.GetValue(null) + 1;
                 Counter.SetValue(null, id);
                 box.Append(text, from, m.Index - from);
-                box.Append("<link=").Append(id).Append("><u><color=").Append(Paint).Append('>')
-                    .Append(url).Append("</color></u></link>");
+                box.Append("<link=").Append(id).Append("><u>").Append(url).Append("</u></link>");
                 from = m.Index + url.Length;
                 content.GetLinks().Add(new Link(id, url));
                 Remember(id, url);
@@ -73,14 +70,6 @@ namespace NewAgeQoL
             if (made == 0) return;
             box.Append(text, from, text.Length - from);
             Body(content) = box.ToString();
-        }
-
-        internal static string Dress(string line)
-        {
-            if (Known.Count == 0 || string.IsNullOrEmpty(line) || line.IndexOf("<link=", StringComparison.Ordinal) < 0) return line;
-            return Plain.Replace(line, m => Has(m.Groups[1].Value)
-                ? "<link=" + m.Groups[1].Value + "><u><color=" + Paint + ">" + m.Groups[2].Value + "</color></u></link>"
-                : m.Value);
         }
 
         internal static void Open(string url)

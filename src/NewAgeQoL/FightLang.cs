@@ -15,25 +15,48 @@ namespace NewAgeQoL
         private static readonly Regex Token = new Regex(@"<span\s*class='(\w{1,2})'\s*(?:data-id='(-?\d+)')?>|</span>|<br>", RegexOptions.IgnoreCase);
         private static readonly Regex Bracket = new Regex(@"\[([^\[\]<>]+)\]");
         private static readonly Regex Bare = new Regex(@"(?<=: )([А-ЯЁC][А-ЯЁC \-]{2,}?)(?=[,.])");
-        private static readonly Regex Player = new Regex(@"<span\s*class='cu'\s*data-id='\d+'>.*?</span>|<[^>]+>", RegexOptions.IgnoreCase);
-        private static readonly Regex Russian = new Regex("[ЫыЭэЪъЁё]");
+        private static readonly Regex Strip = new Regex(@"<span\s*class='(?:cu|cd|ca|cs|cq|ce|ut)'[^>]*>.*?</span>|<[^>]+>|\[[^\]]*\]", RegexOptions.IgnoreCase);
+        private static readonly Regex Space = new Regex(@"\s+");
+        private static readonly Regex[] Nicks =
+        {
+            new Regex(@"^Гравець .+?(?=\. Початкові| завершив| не зміг| не встиг| поповнив| намагався|$)"),
+            new Regex(@"^.+? (?=перейшов у точку|перемістився в точку|переслідує гравця|був призваний|призвав|завдав|використав|вимовив|отримав|загинув)"),
+            new Regex(@"(?<=переслідує гравця ).+$"),
+            new Regex(@"(?<=був призваний ).+$"),
+            new Regex(@"(?<=Удар ).+?(?= пройшов)"),
+            new Regex(@"(?<=Напад здійснив ).+(?=!)"),
+            new Regex(@"(?<=НЕВДАЧА \().+?(?=, що перебуває)"),
+            new Regex(@"(?<=намагався вдарити ).+?(?=, що перебуває)"),
+            new Regex(@"(?<=над трупом ).+?(?=, але)"),
+            new Regex(@"(?<=\. Ціль ).+?(?=:)"),
+            new Regex(@"(?<=Ціль: ).+?(?=\.)"),
+            new Regex(@"(?<=речі ).+?(?= )"),
+            new Regex(@"(?<=\. ).+?(?=: )"),
+            new Regex(@"^.+?(?=: )"),
+        };
+        private static readonly Regex Word = new Regex("[А-Яа-яЁёІіЇїЄєҐґ']{3,}");
         private static readonly HashSet<string> Names = new HashSet<string> { "cd", "ca", "cs", "cq", "ce", "ut" };
         private static readonly Dictionary<string, string> Cache = new Dictionary<string, string>(StringComparer.Ordinal);
         private static readonly HashSet<string> Told = new HashSet<string>(StringComparer.Ordinal);
+        private static HashSet<string> _known = new HashSet<string>(StringComparer.Ordinal);
 
         private static KeyValuePair<string, string>[] _phrases;
         private static Dictionary<string, string> _names;
         private static Dictionary<string, string> _races;
         private static Regex _race;
 
-        internal static void Take(List<KeyValuePair<string, string>> phrases, Dictionary<string, string> names, Dictionary<string, string> races)
+        internal static void Take(List<KeyValuePair<string, string>> phrases, Dictionary<string, string> names, Dictionary<string, string> races, IEnumerable<string> more)
         {
             phrases.Sort((a, b) => b.Key.Length.CompareTo(a.Key.Length));
             Regex race = null;
             if (races.Count > 0)
                 race = new Regex(@"(?<!\w)(" + string.Join("|", races.Keys.OrderByDescending(k => k.Length).Select(Regex.Escape)) + @")(?!\w)");
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var text in phrases.Select(p => p.Value).Concat(names.Values).Concat(races.Values).Concat(more))
+                foreach (Match w in Word.Matches(text)) known.Add(w.Value.ToLowerInvariant());
             lock (Cache)
             {
+                _known = known;
                 _names = names;
                 _races = races;
                 _race = race;
@@ -116,9 +139,13 @@ namespace NewAgeQoL
         private static void Tell(string done)
         {
             if (Told.Count >= TellLimit) return;
-            string seen = Player.Replace(done, "");
-            if (!Russian.IsMatch(seen) || !Told.Add(seen)) return;
-            Plugin.Trace("[lang] combat line partly in Russian: " + seen);
+            string seen = Space.Replace(Strip.Replace(done, " "), " ").Trim();
+            foreach (var nick in Nicks) seen = nick.Replace(seen, " ");
+            var odd = new List<string>();
+            foreach (Match w in Word.Matches(seen))
+                if (!_known.Contains(w.Value.ToLowerInvariant())) odd.Add(w.Value);
+            if (odd.Count == 0 || !Told.Add(string.Join(" ", odd.ToArray()))) return;
+            Plugin.Trace("[lang] combat line has unknown words (" + string.Join(", ", odd.ToArray()) + "): " + Space.Replace(Strip.Replace(done, " "), " ").Trim());
         }
     }
 

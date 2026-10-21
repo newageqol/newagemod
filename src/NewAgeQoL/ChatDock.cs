@@ -810,7 +810,7 @@ namespace NewAgeQoL
                         : (m.Groups[2].Success ? Lang.T(" приватно ") : "")
                         + "<link=" + m.Groups[1].Value + ">[<u>" + m.Groups[3].Value + "</u>]</link>");
                 if (lost) line = FirstName.Replace(line, "</u></link> -> [] ", 1);
-                if (tint != null) line = ChatLinks.Dress("<color=" + tint + ">" + line + "</color>");
+                if (tint != null) line = "<color=" + tint + ">" + line + "</color>";
                 field.SetValue(item, line);
             }
             catch (Exception e) { Plugin.Trace("[dock] line color: " + e.Message); }
@@ -2528,17 +2528,47 @@ namespace NewAgeQoL
             try
             {
                 Remember();
+                var cd = FighterHint.Cd();
+                bool fallen = false;
                 foreach (var one in Seen.Values)
                 {
+                    if (!Standing(cd, one.UserId))
+                    {
+                        fallen = true;
+                        if (Offline(one.UserId)) continue;
+                    }
                     var row = new UserRowInfoMessage(one.UserId, one.Login, one.Level);
                     Cards.Dress(row);
                     OnlineWindow.Extras(row);
                     Watched.Add(row);
                 }
                 Watched.Sort((a, b) => string.Compare(a.Login, b.Login, StringComparison.CurrentCultureIgnoreCase));
+                if (fallen) Recheck();
             }
             catch (Exception e) { Plugin.Trace("[dock] fight roster: " + e.Message); }
             return Watched;
+        }
+
+        private const float OnlineEvery = 60f;
+        private static float _onlineAt = -OnlineEvery;
+
+        private static bool Standing(ICombatData cd, int id)
+        {
+            return cd != null && cd.Characters != null && cd.Characters.ContainsKey(id);
+        }
+
+        private static bool Offline(int id)
+        {
+            return OnlineList.Age >= 0 && OnlineList.ById(id) == null;
+        }
+
+        private static void Recheck()
+        {
+            int age = OnlineList.Age;
+            if (age >= 0 && age < OnlineEvery) return;
+            if (OnlineList.Busy || Time.unscaledTime - _onlineAt < OnlineEvery) return;
+            _onlineAt = Time.unscaledTime;
+            OnlineList.Refresh();
         }
 
         private static void Remember()
@@ -2555,6 +2585,13 @@ namespace NewAgeQoL
             }
         }
 
+        internal static void Fallen(CombatData cd, AbstractCharacter one)
+        {
+            if (cd == null || one == null || one.UserId <= 0 || string.IsNullOrEmpty(one.Login)) return;
+            if (!ReferenceEquals(cd, _seenFight)) { Seen.Clear(); _seenFight = cd; }
+            Seen[one.UserId] = one;
+        }
+
         private static void Watch()
         {
             try { Remember(); }
@@ -2563,11 +2600,9 @@ namespace NewAgeQoL
             int mark = 0;
             try
             {
-                var cd = FighterHint.Cd();
-                if (cd != null && cd.Characters != null)
-                    foreach (var pair in cd.Characters)
-                        if (pair.Value != null && pair.Value.UserId > 0) mark = mark * 31 + pair.Value.UserId;
+                foreach (var id in Seen.Keys) mark = mark * 31 + id;
                 mark = mark * 31 + Cards.Stamp;
+                mark = mark * 31 + OnlineList.Version;
             }
             catch { }
             if (mark == _castMark) return;

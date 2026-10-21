@@ -27,6 +27,8 @@ namespace NewAgeQoL
 
         private sealed class ActionRow : RowDef { internal string ButtonText; internal Action Do; internal Func<string> TitleNow; internal Func<string> ButtonNow; }
 
+        private sealed class CycleRow : RowDef { internal ConfigEntry<int> Cfg; internal Func<int, string> Name; internal int Count; }
+
         private static readonly List<(Text label, Text value, ActionRow row)> Lives = new List<(Text, Text, ActionRow)>();
 
         private sealed class PickRow : RowDef { internal ConfigEntry<string> ByName; internal ConfigEntry<int> ById; internal System.Func<string> Display; }
@@ -55,6 +57,14 @@ namespace NewAgeQoL
                     ? A(Lang.F("Не скачаны локации мода: {0} — {1} МБ", AssetSync.Places, AssetSync.PendingSize), Lang.T("Скачать"), AssetSync.Retry)
                     : null,
                 B(Lang.T("Новые локации и экран загрузки мода"), Plugin.CfgNewPlaces),
+                B(Lang.T("Новые 3D-арены в боях"), Plugin.CfgNewArenas),
+                Plugin.CfgArenaQuality == null ? null : new CycleRow
+                {
+                    Title = Lang.T("Качество 3D-арен"),
+                    Cfg = Plugin.CfgArenaQuality,
+                    Count = 3,
+                    Name = q => q == 1 ? Lang.T("Полное") : q == 2 ? Lang.T("Лёгкое") : Plugin.ArenaLiteAuto ? Lang.T("Авто: лёгкое") : Lang.T("Авто: полное"),
+                },
                 new Header { Title = Lang.T("Кнопки") },
                 B(Lang.T("Возврат в Иллениум ведёт на арену, к турнирам"), Plugin.CfgTownTournament),
                 B(Lang.T("Кнопка запасного набора"), Plugin.CfgArtifactButtons),
@@ -79,6 +89,8 @@ namespace NewAgeQoL
 
                 new Header { Title = Lang.T("Звуки") },
                 Sl(Lang.T("Громкость звуков мода"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
+                Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f, v => CombatMusic.Sample()),
+                A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя с OpenGameArt: Alexandr Zhelanov, pauliuw, ISAo, vandalorum, Tausdei. Лицензии CC0, CC-BY 3.0 и 4.0, OGA-BY 3.0."), 10f)),
 
                 new Header { Title = "" },
             };
@@ -716,6 +728,27 @@ namespace NewAgeQoL
                         if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
                             Plugin.Trace("[settings] " + def.Title + " = " + v.ToString("0.00", ci));
                         if (sl.OnChange != null) sl.OnChange(v);
+                    });
+                }
+                return;
+            }
+
+            if (def is CycleRow cyc)
+            {
+                Remember(cyc.Cfg);
+                if (value == null) return;
+                value.text = cyc.Name(cyc.Cfg.Value);
+                value.resizeTextForBestFit = true;
+                value.resizeTextMinSize = 8;
+                value.resizeTextMaxSize = value.fontSize;
+                if (button != null)
+                {
+                    button.onClick.RemoveAllListeners();
+                    var val = value;
+                    button.onClick.AddListener(() =>
+                    {
+                        cyc.Cfg.Value = ((cyc.Cfg.Value % cyc.Count) + 1) % cyc.Count;
+                        val.text = cyc.Name(cyc.Cfg.Value);
                     });
                 }
                 return;
