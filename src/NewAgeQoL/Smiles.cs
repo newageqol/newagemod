@@ -288,6 +288,8 @@ namespace NewAgeQoL
             }
             _asset.UpdateLookupTables();
             MaterialReferenceManager.AddSpriteAsset(_asset.hashCode, _asset);
+            int upper = TMP_TextUtilities.GetSimpleHashCode(Sheet.ToUpperInvariant());
+            if (upper != _asset.hashCode) MaterialReferenceManager.AddSpriteAsset(upper, _asset);
             TMP_SpriteAsset back;
             if (!MaterialReferenceManager.TryGetSpriteAsset(_asset.hashCode, out back) || !ReferenceEquals(back, _asset))
                 throw new Exception("smiles sheet was not registered in TextMeshPro");
