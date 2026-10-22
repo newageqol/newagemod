@@ -1,12 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -62,7 +60,6 @@ namespace NewAgeQoL
 
         private sealed class Job
         {
-            internal volatile bool Done;
             internal string Text;
             internal string Error;
             internal int Base;
@@ -94,14 +91,23 @@ namespace NewAgeQoL
             if (Plugin.Instance == null) { Status = Lang.T("мод ещё не готов"); return; }
             Busy = true;
             Status = Lang.T("Обновляю вещи…");
-            Plugin.Instance.StartCoroutine(Work());
+            _ = Run();
         }
 
-        private static IEnumerator Work()
+        private static async Awaitable Run()
+        {
+            try { await Work(); }
+            catch (Exception e)
+            {
+                await Awaitable.MainThreadAsync();
+                Fail(Lang.F("вещи не разобрались: {0}", e.Message));
+            }
+        }
+
+        private static async Awaitable Work()
         {
             Status = Lang.T("Качаю базу вещей");
-            var db = new Reply();
-            yield return Get(BaseUrl + "?t=" + DateTime.UtcNow.Ticks, db, false);
+            var db = await Get(BaseUrl + "?t=" + DateTime.UtcNow.Ticks, false);
             string baseText = db.Code == 200 && string.IsNullOrEmpty(db.Error) && db.Body.IndexOf("\nI\t", StringComparison.Ordinal) >= 0 ? db.Body : null;
             bool kept = false;
             if (baseText == null)
@@ -117,8 +123,7 @@ namespace NewAgeQoL
             _cookie = "";
             var pages = new List<KeyValuePair<string, string>>();
             string siteError = null;
-            var first = new Reply();
-            yield return Get(Site + "/veteran/things/helmets", first, true);
+            var first = await Get(Site + "/veteran/things/helmets", true);
             if (first.Body.Length == 0) siteError = Lang.F("nura.biz не ответил: {0}", Why(first));
             else
             {
@@ -130,16 +135,14 @@ namespace NewAgeQoL
                     form.Append("typeId=").Append(TypeIds[c]).Append("&minlevel=0&maxlevel=30");
                     foreach (int r in WardrobeData.RarityOrder) form.Append("&selectedItems=").Append(r);
                     form.Append("&_selectedItems=on&_preferableClasses=on");
-                    var answer = new Reply();
-                    yield return Post(Site + "/ajax/things/filter", form.ToString(), answer);
+                    var answer = await Post(Site + "/ajax/things/filter", form.ToString());
                     Take(answer);
                     if (answer.Code < 200 || answer.Code >= 300 || answer.Body.Trim().Length > 0)
                     {
                         siteError = Lang.F("фильтр nura.biz не принял запрос: {0}", answer.Body.Trim().Length > 0 ? Short(answer.Body) : Why(answer));
                         break;
                     }
-                    var page = new Reply();
-                    yield return Get(Site + "/ajax/things/load", page, true);
+                    var page = await Get(Site + "/ajax/things/load", true);
                     if (page.Body.IndexOf("thingdiv", StringComparison.Ordinal) < 0)
                     {
                         siteError = Lang.F("nura.biz отдал пустой раздел «{0}»: {1}", Categories[c], Why(page));
@@ -156,27 +159,24 @@ namespace NewAgeQoL
             if (baseText == null && pages.Count == 0)
             {
                 Fail(Lang.F("ни база, ни nura.biz не ответили ({0})", siteError ?? Why(db)));
-                yield break;
+                return;
             }
 
             Status = Lang.T("Разбираю вещи…");
             var job = new Job();
             string rules = WardrobeData.Rules();
-            ThreadPool.QueueUserWorkItem(ignored =>
-            {
-                try { Build(baseText, rules, pages, job); }
-                catch (Exception e) { job.Error = e.Message; }
-                finally { job.Done = true; }
-            });
-            while (!job.Done) yield return null;
-            if (job.Error != null) { Fail(Lang.F("вещи не разобрались: {0}", job.Error)); yield break; }
+            await Awaitable.BackgroundThreadAsync();
+            try { Build(baseText, rules, pages, job); }
+            catch (Exception e) { job.Error = e.Message; }
+            await Awaitable.MainThreadAsync();
+            if (job.Error != null) { Fail(Lang.F("вещи не разобрались: {0}", job.Error)); return; }
 
             int was = WardrobeData.Things.Count;
             string when = DateTime.Now.ToString("dd.MM.yyyy");
             if (!WardrobeData.Apply(job.Text, (kept ? Lang.T("прежняя база") : baseText != null ? Lang.T("база") : Lang.T("без базы, только nura.biz")) + ", " + when))
             {
                 Fail(Lang.T("вещей пришло слишком мало, оставил прежние"));
-                yield break;
+                return;
             }
             if (baseText != null) try
             {
@@ -228,25 +228,27 @@ namespace NewAgeQoL
             _cookie = j < 0 ? reply.Cookie.Substring(i) : reply.Cookie.Substring(i, j - i);
         }
 
-        private static IEnumerator Get(string url, Reply reply, bool session)
+        private static async Awaitable<Reply> Get(string url, bool session)
         {
-            var req = UnityWebRequest.Get(url);
-            Dress(req, session);
-            yield return req.SendWebRequest();
-            Grab(req, reply);
-            req.Dispose();
+            using (var req = UnityWebRequest.Get(url))
+            {
+                Dress(req, session);
+                await req.SendWebRequest();
+                return Grab(req);
+            }
         }
 
-        private static IEnumerator Post(string url, string body, Reply reply)
+        private static async Awaitable<Reply> Post(string url, string body)
         {
-            var req = new UnityWebRequest(url, "POST");
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            Dress(req, true);
-            Head(req, "Content-Type", "application/x-www-form-urlencoded");
-            yield return req.SendWebRequest();
-            Grab(req, reply);
-            req.Dispose();
+            using (var req = new UnityWebRequest(url, "POST"))
+            {
+                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                req.downloadHandler = new DownloadHandlerBuffer();
+                Dress(req, true);
+                Head(req, "Content-Type", "application/x-www-form-urlencoded");
+                await req.SendWebRequest();
+                return Grab(req);
+            }
         }
 
         private static void Dress(UnityWebRequest req, bool session)
@@ -263,14 +265,16 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[wardrobe] header " + name + ": " + e.Message); }
         }
 
-        private static void Grab(UnityWebRequest req, Reply reply)
+        private static Reply Grab(UnityWebRequest req)
         {
+            var reply = new Reply();
             string set = req.GetResponseHeader("Set-Cookie");
             if (!string.IsNullOrEmpty(set)) reply.Cookie = set;
             reply.Code = req.responseCode;
             reply.Error = req.error ?? "";
             var handler = req.downloadHandler;
             reply.Body = handler == null ? "" : Unpack(handler.data);
+            return reply;
         }
 
         private static string Unpack(byte[] data)

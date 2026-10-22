@@ -34,12 +34,13 @@ namespace NewAge2D
         };
 
         public static float ShadowStrength = 0.85f, NightBoost;
+        public static GameObject FireField, FireWall;
         public static float SunScale = 0.5f, AmbientScale = 0.62f, FireIntensity = 2.2f, FireRange = 15f, FireUp = 0.9f, NightSun = 1f, FogStart = 90f, FogEnd = 230f, NightFogStart = -1f, NightFogEnd = -1f;
         static Color? NightFog;
 
         public static void Use(ArenaCfg cfg)
         {
-            FireIntensity = cfg.fireIntensity;
+            FireIntensity = cfg.fireIntensity * 0.6f;
             FireRange = cfg.fireRange;
             FireUp = cfg.fireUp;
             Electric = cfg.electric;
@@ -149,7 +150,15 @@ namespace NewAge2D
         void MakeFire(Transform at, Material flame)
         {
             bool field = at.name.EndsWith("field");
-            if (at.childCount == 0 && !Electric) Particles(at, flame);
+            var pack = field ? FireField : FireWall;
+            bool cards = at.childCount > 0;
+            foreach (Transform c in at) if (c.name != "flame") cards = false;
+            if (!Electric && pack != null && (at.childCount == 0 || cards))
+            {
+                foreach (Transform c in at) c.gameObject.SetActive(false);
+                Spawn(at, pack, cards ? 1.5f : 1f, cards ? 0.08f : 0f);
+            }
+            else if (at.childCount == 0 && !Electric) Particles(at, flame);
             if (!field) return;
             var lg = new GameObject("fireLight");
             lg.transform.SetParent(at.parent, false);
@@ -163,6 +172,15 @@ namespace NewAge2D
             l.renderMode = LightRenderMode.ForcePixel;
             _fires.Add(l);
             _phase.Add(_fires.Count * 1.7f);
+        }
+
+        static void Spawn(Transform at, GameObject pack, float k, float drop)
+        {
+            var go = Instantiate(pack, at.parent, false);
+            go.name = "flame";
+            go.transform.localPosition = at.localPosition - new Vector3(0f, drop * at.localScale.x, 0f);
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one * (at.localScale.x * k);
         }
 
         static void Particles(Transform at, Material flame)

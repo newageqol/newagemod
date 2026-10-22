@@ -50,7 +50,7 @@ public static class TimelineParser
                     break;
 
                 case SwfTagCode.DoAction:
-                    current.HasStop |= HasTopLevelStop(file, tag);
+                    current.HasStop |= HasRootStop(file, tag);
                     current.Actions.Add(tag);
                     break;
 
@@ -66,7 +66,7 @@ public static class TimelineParser
         return new SwfTimeline { CharacterId = characterId, Frames = frames, Labels = labels };
     }
 
-    private static bool HasTopLevelStop(SwfFile file, in SwfTag tag)
+    private static bool HasRootStop(SwfFile file, in SwfTag tag)
     {
         var body = file.Body;
         int i = tag.BodyStart;

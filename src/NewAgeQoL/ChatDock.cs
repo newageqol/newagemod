@@ -66,11 +66,9 @@ namespace NewAgeQoL
         private static readonly List<ChatResponseMessage> Line = new List<ChatResponseMessage>();
         private static readonly List<ChatResponseMessage> Tail = new List<ChatResponseMessage>();
         private static readonly List<ChatResponseMessage> Fresh = new List<ChatResponseMessage>();
-        internal const int Keep = 1000;
+        internal const int Keep = 999;
         private const int Page = 150;
-        private static int _window = Page;
-        private static float _moreAt;
-        private static readonly List<ITextScrollerContent> Range = new List<ITextScrollerContent>();
+        private const int Letters = 5000;
         private static readonly StringBuilder Pen = new StringBuilder();
         private static bool _redo;
         private static int _mapId = -1;
@@ -222,7 +220,8 @@ namespace NewAgeQoL
                 }
                 Place(deep);
                 if (_listDue > 0 && Time.frameCount > _listDue) { _listDue = 0; Refill(); }
-                if (deep) { Watch(); Freshen(); Aim(SideButtons.InCombat(), false); ListAim(false); Paint(); More(); }
+                if (deep) { Watch(); Freshen(); Aim(SideButtons.InCombat(), false); ListAim(false); Paint(); }
+                ChatFeed.Watch(_view);
                 Bottom();
             }
             catch (Exception e) { Plugin.Fault("[dock] " + e.Message); Drop(); }
@@ -370,7 +369,6 @@ namespace NewAgeQoL
             });
             if (_view != null && _tab == 1)
             {
-                _window = Page;
                 _view.SetChatContent(Board());
                 _bottomAt = Time.unscaledTime + 0.3f;
             }
@@ -715,58 +713,42 @@ namespace NewAgeQoL
             return ReferenceEquals(holder, Talk) || ReferenceEquals(holder, Battle) || ReferenceEquals(holder, Found);
         }
 
-        internal static IList<ITextScrollerContent> Shown(ChatContentHolder holder)
-        {
-            var all = holder.Content;
-            if (!Roomy(holder) || all.Count <= _window) return all;
-            Range.Clear();
-            for (int i = all.Count - _window; i < all.Count; i++) Range.Add(all[i]);
-            return Range;
-        }
+        internal static IList<ITextScrollerContent> Shown(ChatContentHolder holder) => holder.Content;
+
+        internal static ChatPanelContent View => _view;
 
         internal static string Lines(ChatPanelContent panel)
         {
             var holder = ChatStay.Holder(panel);
-            if (holder == null || !Roomy(holder)) return null;
-            Pen.Length = 0;
-            foreach (var item in Shown(holder))
+            if (holder == null || !Roomy(holder)) { ChatFeed.Release(panel); return null; }
+            string text = ChatFeed.Text(panel, holder.Content);
+            if (text != null) return text;
+            ChatFeed.Release(panel);
+            var all = holder.Content;
+            int used = 0, start = all.Count;
+            while (start > 0 && all.Count - start < Page)
             {
-                if (item == null) continue;
-                Pen.Append(item.GetText());
+                var item = all[start - 1];
+                int size = item != null ? (item.GetText() ?? "").Length : 0;
+                if (used + size > Letters && start < all.Count) break;
+                used += size;
+                start--;
+            }
+            Pen.Length = 0;
+            for (int i = start; i < all.Count; i++)
+            {
+                if (all[i] == null) continue;
+                Pen.Append(all[i].GetText());
                 Pen.Append(Environment.NewLine);
             }
             return Pen.ToString();
         }
 
-        private static void More()
+        internal static void Redraw()
         {
-            if (_view == null || Time.unscaledTime < _moreAt) return;
-            var scroll = ChatStay.Of(_view);
-            var holder = ChatStay.Holder(_view);
-            if (scroll == null || holder == null || !Roomy(holder)) return;
-            if (_window > Page && ChatStay.AtBottom(scroll))
-            {
-                _window = Page;
-                Redraw();
-                return;
-            }
-            int count = holder.Content.Count;
-            if (count <= _window || !ChatStay.AtTop(scroll)) return;
-            _moreAt = Time.unscaledTime + 0.3f;
-            _window = Mathf.Min(count, _window + Page);
-            Redraw();
-            Plugin.Trace("[dock] loaded lines above: on screen " + _window + " of " + count);
-        }
-
-        private static void Redraw()
-        {
+            if (_view == null) return;
             try { ChatStay.Redraw(() => AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null)); }
             catch (Exception e) { Plugin.Trace("[dock] feed redraw: " + e.Message); }
-        }
-
-        internal static void Grow()
-        {
-            _window = Mathf.Min(Keep, _window + 1);
         }
 
         private static void Quiet(ChatContentHolder holder, Action fill)
@@ -870,7 +852,6 @@ namespace NewAgeQoL
             World.Clear();
             _redo = false;
             _tailUntil = 0f;
-            _window = Page;
         }
 
         private static void WipeBoard()
@@ -968,7 +949,6 @@ namespace NewAgeQoL
         private static void Show(int tab)
         {
             _tab = tab;
-            _window = Page;
             if (tab == 0) _unread = false;
             SeekShow(tab == 1);
             var holder = tab == 1 ? Board() : Talk;
@@ -1798,7 +1778,6 @@ namespace NewAgeQoL
             _root = null;
             _view = null;
             _ink = null;
-            _window = Page;
             _tabsRt = null;
             _viewRt = null;
             _rowsHost = null;

@@ -46,7 +46,7 @@ namespace NewAgeQoL
             return _holder == null ? null : _holder.GetValue(panel) as ChatContentHolder;
         }
 
-        private static TMP_Text Body(ChatPanelContent panel)
+        internal static TMP_Text Body(ChatPanelContent panel)
         {
             if (panel == null) return null;
             if (_body == null) _body = AccessTools.Field(typeof(ChatPanelContent), "Text");
@@ -85,7 +85,6 @@ namespace NewAgeQoL
             List<ITextScrollerContent> before;
             if (!Seen.TryGetValue(holder, out before) || before.Count == 0) return false;
             if (!holder.Content.Contains(before[before.Count - 1])) return false;
-            ChatDock.Grow();
             return true;
         }
 
@@ -230,6 +229,8 @@ namespace NewAgeQoL
             if (window == null) return 0f;
             return scroll.content.rect.height - window.rect.height;
         }
+
+        internal static float Top(ScrollRect scroll) => FromTop(scroll);
 
         private static float FromTop(ScrollRect scroll)
         {

@@ -19,11 +19,15 @@ internal sealed class Arena3D
     private static AssetBundle _fxBundle;
     private static Material _flame;
     private static Material _grade;
+    private static Material _post;
     private static bool _loading;
 
     private readonly string _bundle;
     private GameObject _root;
     private ArenaGrade _gradeOn;
+    private ArenaPost _postOn;
+    private Camera _eye;
+    private bool _eyeHdr;
     private readonly List<Light> _lights = new();
     private bool _saved;
     private AmbientMode _ambientMode;
@@ -131,6 +135,9 @@ internal sealed class Arena3D
                 {
                     _flame = _fxBundle.LoadAsset<Material>("flame");
                     _grade = _fxBundle.LoadAsset<Material>("grade");
+                    _post = _fxBundle.LoadAsset<Material>("post");
+                    ArenaLook.FireField = _fxBundle.LoadAsset<GameObject>("fire_field");
+                    ArenaLook.FireWall = _fxBundle.LoadAsset<GameObject>("fire_wall");
                 }
             }
             if (scene.Bundle != null)
@@ -192,7 +199,15 @@ internal sealed class Arena3D
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);
         if (eye != null) eye.backgroundColor = ArenaCfg.Hex(night ? Cfg.bgNight : Cfg.bgDay);
         if (eye != null) _root.AddComponent<ArenaOcclude>().Init(_root.transform, eye, Cfg);
-        if (eye != null && _grade != null)
+        if (eye != null && _post != null && !LiteGpu)
+        {
+            _eye = eye;
+            _eyeHdr = eye.allowHDR;
+            eye.allowHDR = true;
+            _postOn = eye.gameObject.AddComponent<ArenaPost>();
+            _postOn.Setup(_post, hour, look.NightGrade, Cfg.nightPost);
+        }
+        else if (eye != null && _grade != null)
         {
             _gradeOn = eye.gameObject.AddComponent<ArenaGrade>();
             _gradeOn.Mat = _grade;
@@ -200,7 +215,7 @@ internal sealed class Arena3D
         }
         Any = true;
         shown?.Invoke();
-        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, map lights dimmed {_lights.Count}");
+        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}");
     }
 
     private void DimMapLights()
@@ -250,6 +265,10 @@ internal sealed class Arena3D
         _root = null;
         if (_gradeOn != null) UnityEngine.Object.Destroy(_gradeOn);
         _gradeOn = null;
+        if (_postOn != null) UnityEngine.Object.Destroy(_postOn);
+        _postOn = null;
+        if (_eye != null) _eye.allowHDR = _eyeHdr;
+        _eye = null;
         foreach (var light in _lights)
             if (light != null) light.enabled = true;
         _lights.Clear();

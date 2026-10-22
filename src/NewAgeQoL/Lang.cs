@@ -19,7 +19,7 @@ namespace NewAgeQoL
     internal static class Lang
     {
         internal const string Asset = "Lang/uk.gz";
-        private const string Letters = "ІіЇїЄєҐґ";
+        private const string Letters = "ЁёІіЇїЄєҐґ";
         private const string SpareSource = "arial";
         private const float FontEvery = 5f;
         private const float TellEvery = 60f;
@@ -183,7 +183,7 @@ namespace NewAgeQoL
                 _told = _swapped;
                 Plugin.Trace("[lang] item texts swapped to Ukrainian: " + _told + ", left as sent (text differs from the catalog): " + _kept);
             }
-            if (!_on || now - _fontAt < FontEvery) return;
+            if (now - _fontAt < FontEvery) return;
             _fontAt = now;
             Fonts();
         }
@@ -442,7 +442,7 @@ namespace NewAgeQoL
                 if (asset.fallbackFontAssetTable == null) asset.fallbackFontAssetTable = new List<TMP_FontAsset>();
                 if (!asset.fallbackFontAssetTable.Contains(_spare)) asset.fallbackFontAssetTable.Add(_spare);
                 Seen.Add(id);
-                Plugin.Trace("[lang] font '" + asset.name + "' takes missing Ukrainian letters from " + SpareSource);
+                Plugin.Trace("[lang] font '" + asset.name + "' takes missing letters Ё and Ukrainian from " + SpareSource);
             }
         }
 
