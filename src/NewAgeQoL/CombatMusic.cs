@@ -17,6 +17,7 @@ namespace NewAgeQoL
         private const float LossFade = 2.5f;
         private const float WinFade = 1.5f;
         private const float Lead = 20f;
+        private const float LoadWait = 15f;
         private const float ButtonSide = CornerRow.Round;
         private const int IconSize = 128;
 
@@ -42,6 +43,8 @@ namespace NewAgeQoL
         private static AudioClip _next;
         private static int _nextSong = -1;
         private static bool _loading;
+        private static float _retryAt;
+        private static float _loadingAt;
         private static int _generation;
         private static bool _scanned;
 
@@ -95,8 +98,8 @@ namespace NewAgeQoL
                 {
                     if (volume <= 0.001f) return;
                     Scan();
-                    if (me == null || _finished || !Rivals(cd, me)) return;
-                    if (_next == null) { Load(); return; }
+                    if (_next == null) Load();
+                    if (me == null || _finished || !Rivals(cd, me) || _next == null) return;
                     Begin();
                     return;
                 }
@@ -414,12 +417,20 @@ namespace NewAgeQoL
 
         private static void Load()
         {
-            if (_loading || _next != null || Songs.Count == 0 || Plugin.Instance == null) return;
+            if (_loading && Time.unscaledTime - _loadingAt > LoadWait + 5f)
+            {
+                Plugin.Warn("[music] track load did not answer, trying again");
+                _loading = false;
+                _generation++;
+            }
+            if (_loading || _next != null || Songs.Count == 0 || Plugin.Instance == null || Time.unscaledTime < _retryAt) return;
             var free = new List<int>();
             for (int i = 0; i < Songs.Count; i++)
                 if (i != _last || Songs.Count == 1) free.Add(i);
             int song = free[Dice.Next(free.Count)];
             _loading = true;
+            _loadingAt = Time.unscaledTime;
+            Plugin.Trace("[music] loading " + Path.GetFileName(Songs[song]));
             Plugin.Instance.StartCoroutine(Fetch(song, _generation));
         }
 
@@ -429,9 +440,20 @@ namespace NewAgeQoL
             AudioClip clip = null;
             using (var request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, AudioType.OGGVORBIS))
             {
-                if (request.downloadHandler is DownloadHandlerAudioClip handler) handler.streamAudio = true;
-                yield return request.SendWebRequest();
-                if (request.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(request);
+                if (request.downloadHandler is DownloadHandlerAudioClip handler)
+                {
+                    handler.streamAudio = false;
+                    handler.compressed = true;
+                }
+                var sending = request.SendWebRequest();
+                float until = Time.unscaledTime + LoadWait;
+                while (!sending.isDone && Time.unscaledTime < until) yield return null;
+                if (!sending.isDone)
+                {
+                    request.Abort();
+                    Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load in " + LoadWait + " s");
+                }
+                else if (request.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(request);
                 else Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
             }
             if (generation != _generation)
@@ -440,7 +462,11 @@ namespace NewAgeQoL
                 yield break;
             }
             _loading = false;
-            if (clip == null) yield break;
+            if (clip == null)
+            {
+                _retryAt = Time.unscaledTime + 30f;
+                yield break;
+            }
             clip.name = "QoL_music_" + Path.GetFileNameWithoutExtension(path);
             _next = clip;
             _nextSong = song;
