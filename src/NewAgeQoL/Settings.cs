@@ -82,8 +82,8 @@ namespace NewAgeQoL
 
                 new Header { Title = Lang.T("Звуки") },
                 Sl(Lang.T("Громкость звуков мода"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
-                Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f, v => CombatMusic.Sample()),
-                A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя с OpenGameArt: Alexandr Zhelanov, pauliuw, ISAo, vandalorum, Tausdei. Лицензии CC0, CC-BY 3.0 и 4.0, OGA-BY 3.0."), 10f)),
+                Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f),
+                A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя: Machine Start, Gong of the Arena, Gong and Drum. Треки сделал автор мода в Suno."), 10f)),
 
                 new Header { Title = "" },
             };

@@ -581,11 +581,14 @@ internal static class Fighters
     }
 
     private static float _clashAt;
+    private static readonly HashSet<string> Clashes = new HashSet<string>();
+    private static readonly HashSet<string> ClashesNow = new HashSet<string>();
 
     private static void WatchClash()
     {
         if (!Trace.On || Alive.Count < 2 || Time.unscaledTime < _clashAt) return;
         _clashAt = Time.unscaledTime + 5f;
+        ClashesNow.Clear();
         for (int i = 0; i < Alive.Count; i++)
             for (int j = i + 1; j < Alive.Count; j++)
             {
@@ -597,13 +600,24 @@ internal static class Fighters
                 if (Mathf.Abs(first - second) >= 16) continue;
                 if (first == second)
                 {
-                    Trace.Write($"'{one.Owner?.Login}' and '{two.Owner?.Login}' share draw order {first} - Unity decides which is on top");
+                    int a = one.Owner?.UserId ?? 0, b = two.Owner?.UserId ?? 0;
+                    if (Seen($"{Math.Min(a, b)} {Math.Max(a, b)} ="))
+                        Trace.Write($"'{one.Owner?.Login}' and '{two.Owner?.Login}' share draw order {first} - Unity decides which is on top");
                     continue;
                 }
                 var top = first > second ? one : two;
                 var under = first > second ? two : one;
-                Trace.Write($"'{top.Owner?.Login}' over '{under.Owner?.Login}': same depth, order {first} and {second}");
+                if (Seen($"{top.Owner?.UserId} {under.Owner?.UserId} >"))
+                    Trace.Write($"'{top.Owner?.Login}' over '{under.Owner?.Login}': same depth, order {first} and {second}");
             }
+        Clashes.Clear();
+        Clashes.UnionWith(ClashesNow);
+    }
+
+    private static bool Seen(string key)
+    {
+        ClashesNow.Add(key);
+        return !Clashes.Contains(key);
     }
 
     internal static void TowardEye(Camera eye, Vector3 point, float weight, out Vector3 shift, out float near)
@@ -953,7 +967,15 @@ internal static class FrameCache
 
     private static float _spilledAt;
 
-    internal static string Stats() => $"urgent {Batches.Count}, later {Later.Count}, frames left {Remaining()}, sprites {Sprites.Count}, video memory {_bytes / 1048576.0:0} MB";
+    private static int _evicted;
+
+    internal static string Stats()
+    {
+        string line = $"urgent {Batches.Count}, later {Later.Count}, frames left {Remaining()}, sprites {Sprites.Count}, video memory {_bytes / 1048576.0:0} MB";
+        if (_evicted > 0) line += $", evicted over the limit of {Cap} frames: {_evicted}";
+        _evicted = 0;
+        return line;
+    }
 
     private static long Ms(long from, long to) => (to - from) * 1000 / System.Diagnostics.Stopwatch.Frequency;
 
@@ -1074,7 +1096,7 @@ internal static class FrameCache
         }
         long budget = Plugin.FrameMemory;
         if (_bytes > budget) Spill(budget);
-        if (evicted > 0 && Trace.On) Trace.Write($"cache limit {Cap}: frames evicted {evicted}");
+        _evicted += evicted;
         return sprite;
     }
 

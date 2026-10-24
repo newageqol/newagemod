@@ -584,6 +584,7 @@ namespace NewAgeQoL
         {
             try
             {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
                 var hook = AccessTools.Field(typeof(ChatContentHolder), "MessageAddedEvent");
                 object saved = hook?.GetValue(Talk);
                 if (hook != null) hook.SetValue(Talk, null);
@@ -594,18 +595,25 @@ namespace NewAgeQoL
                     Pour(Tail);
                 }
                 finally { if (hook != null) hook.SetValue(Talk, saved); }
+                long pourMs = clock.ElapsedMilliseconds, drawMs = -1, fitMs = -1;
 
                 if (_view != null && _tab == 0)
                 {
                     AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null);
+                    drawMs = clock.ElapsedMilliseconds;
                     if (_snapDown)
                     {
                         _snapDown = false;
                         Canvas.ForceUpdateCanvases();
                         ChatStay.ToBottom(ChatStay.Of(_view));
+                        fitMs = clock.ElapsedMilliseconds;
                     }
                     if (!ChatStay.Held) _bottomAt = Time.unscaledTime + 0.4f;
                 }
+                if (clock.ElapsedMilliseconds >= 30)
+                    Plugin.Log.LogInfo("[dock] feed rebuilt in " + clock.ElapsedMilliseconds + " ms: lines " + (Line.Count + Tail.Count)
+                        + ", pour " + pourMs + " ms" + (drawMs >= 0 ? ", text " + (drawMs - pourMs) + " ms" : "")
+                        + (fitMs >= 0 ? ", layout " + (fitMs - drawMs) + " ms" : ""));
             }
             catch (Exception e) { Plugin.Trace("[dock] feed rebuild: " + e.Message); }
         }

@@ -416,7 +416,7 @@ namespace NewAgeQoL
                     slots[key] = n;
                 }
                 lit.Renderer.lightmapIndex = n;
-                lit.Renderer.lightmapScaleOffset = lit.Offset;
+                if (!lit.Renderer.isPartOfStaticBatch) lit.Renderer.lightmapScaleOffset = lit.Offset;
             }
             LightmapSettings.lightmaps = maps.ToArray();
             Plugin.Trace("[night] baked light restored after the game's town: renderers " + _lit.Count + ", lightmaps added " + added + ", total " + maps.Count);

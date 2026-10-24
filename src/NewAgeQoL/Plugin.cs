@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.26.0";
+        public const string Version = "0.27.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -255,7 +255,7 @@ namespace NewAgeQoL
             Chars.Own("Sounds", "FlashVolume", 1f,
                 "Громкость звуков из старого клиента, от 0 (тишина) до 1. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат в любом случае, пока включён звук мода.", e => CfgSoundVolume = e);
             Chars.Own("Sounds", "CombatMusicVolume", 0.6f,
-                "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков и сама набирает напряжение; пять треков, каждый бой свой, в долгом бою трек сменяется раз в 4 минуты. Свои криты, увороты, блоки, заклинания и павшие враги звучат в ней акцентами. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
+                "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков: каждый бой свой трек, когда трек кончается, плавно начинается следующий. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
             CfgNewPlaces = Config.Bind("Interface", "NewLocations", true,
                 "Новые локации мода (ночной Иллениум, банк, рынок и другие) и экран загрузки мода. Выключено — игра показывает свои локации и свои картинки загрузки локаций и боёв. Меняется со следующего захода в локацию.");
             CfgNewArenas = Config.Bind("Interface", "NewArenas", true,
@@ -345,6 +345,9 @@ namespace NewAgeQoL
                 }
             }
             catch (System.Exception e) { Log.LogError("Harmony: " + e); }
+
+            try { BundleWatch.Hook(); }
+            catch (System.Exception e) { Log.LogError("BundleWatch: " + e.Message); }
 
             Log.LogInfo("New Age QoL " + Version + " loaded.");
         }

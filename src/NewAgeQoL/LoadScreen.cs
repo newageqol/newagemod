@@ -217,6 +217,8 @@ namespace NewAgeQoL
         private void Update()
         {
             if (_root == null) return;
+            if (_finish >= 0f && Time.unscaledDeltaTime > 0.1f)
+                Plugin.Log.LogInfo("[loading] slow frame " + (Time.unscaledDeltaTime * 1000f).ToString("0") + " ms while the screen fades, " + ((Time.unscaledTime - _finish) * 1000f).ToString("0") + " ms after close");
             float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
             float target = _gems != null ? _gems.fillAmount : 0f;
             _shown = target < _shown ? target : Mathf.MoveTowards(_shown, target, Mathf.Max(0.8f, (target - _shown) * 8f) * dt);

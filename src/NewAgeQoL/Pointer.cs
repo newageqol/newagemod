@@ -8,6 +8,7 @@ namespace NewAgeQoL
         private static readonly Vector2 Tip = new Vector2(1f, 1f);
 
         private static int _scale;
+        private static int _said;
 
         internal static bool Drawn => Icons.Flash("cursor32") != null;
 
@@ -26,6 +27,11 @@ namespace NewAgeQoL
             {
                 if (_scale == 0) _scale = Screen.height > 1500 ? 2 : 1;
                 var art = Icons.Flash(_scale == 2 ? "cursor64" : "cursor32");
+                if (_said != _scale)
+                {
+                    _said = _scale;
+                    Plugin.Trace("[pointer] " + (art != null ? "cursor " + art.texture.width + "x" + art.texture.height + ", screen height " + Screen.height : "no cursor picture, system cursor"));
+                }
                 if (art == null) { Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto); return; }
                 Cursor.SetCursor(art.texture, Tip * _scale, CursorMode.Auto);
             }

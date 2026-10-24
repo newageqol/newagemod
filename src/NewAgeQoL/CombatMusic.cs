@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using UnityEngine;
@@ -14,98 +13,47 @@ namespace NewAgeQoL
     internal static class CombatMusic
     {
         private const int MaxSongs = 24;
-        private const float SongSpan = 240f;
-        private const float SwapFade = 4f;
-        private const float Fade = 3f;
-        private const float StartFade = 2f;
+        private const float Fade = 2.5f;
         private const float LossFade = 2.5f;
-        private const float WinFade = 0.9f;
-        private const float Gap = 0.4f;
-        private const float Repeat = 1.5f;
-        private const float Hold = 0.3f;
-        private const float FellWait = 0.6f;
-        private const float LowOn = 0.25f;
-        private const float LowOff = 0.3f;
-        private const float Tense = 0.6f;
-        private const float CrowdTense = 0.4f;
-        private const float HurtShare = 0.15f;
-        private const int Crowd = 25;
-        private const int ManyFallen = 3;
-        private const float Muffled = 700f;
-        private const float Open = 22000f;
-        private const float CutoffSpeed = 2.3f;
-        private const float HeartSpeed = 0.7f;
+        private const float WinFade = 1.5f;
+        private const float Lead = 20f;
         private const float ButtonSide = CornerRow.Round;
+        private const int IconSize = 128;
 
         private static RectTransform _buttonRect;
 
         internal static bool ButtonShown => _buttonRect != null && _buttonRect.gameObject.activeInHierarchy;
-        private const int IconSize = 128;
-        private const float LongFrame = 0.05f;
-        private const float Watch = 5f;
 
-        private static readonly string[] Shared = { "heart", "crit", "dodge", "hurt", "fell", "fell_many", "win" };
-        private static readonly Dictionary<string, AudioClip> Clips = new Dictionary<string, AudioClip>();
-        private static readonly List<Song> Songs = new List<Song>();
-        private static readonly Dictionary<int, int> Struck = new Dictionary<int, int>();
-        private static readonly float[] Level = new float[3];
+        private static readonly List<string> Songs = new List<string>();
         private static readonly System.Random Dice = new System.Random();
-
-        private sealed class Song
-        {
-            public string Name;
-            public string[] Paths;
-            public AudioClip[] Clips;
-            public bool Loading;
-            public bool Layered => Paths.Length > 1;
-        }
 
         private sealed class Deck
         {
-            public AudioSource[] Layers;
-            public AudioLowPassFilter[] Filters;
-            public int Song = -1;
+            public AudioSource Source;
             public float Weight;
             public float Want;
+            public double At;
         }
 
         private static readonly Deck[] Decks = new Deck[2];
-        private static string _folder;
-        private static bool _preparing;
-        private static bool _prepared;
         private static GameObject _root;
-        private static AudioSource _heart;
-        private static AudioSource _accent;
         private static int _deck;
-        private static int _ready = -1;
         private static int _last = -1;
-        private static float _songAt;
+        private static AudioClip _next;
+        private static int _nextSong = -1;
+        private static bool _loading;
+        private static int _generation;
+        private static bool _scanned;
 
         private static bool _playing;
         private static bool _finished;
         private static bool _muted;
-        private static bool _engaged;
-        private static bool _low;
         private static bool _ending;
+        private static bool _over;
         private static float _endFade;
         private static float _endShare;
-        private static float _heartLevel;
-        private static float _cutoff = Open;
-        private static int _mostTheirs;
-
-        private static string _pending;
-        private static int _pendingRank;
-        private static float _pendingAt;
-        private static float _lastAt = -10f;
-        private static int _lastRank;
-        private static string _lastName;
-        private static int _fallen;
-        private static float _fallenAt;
-        private static float _sampleAt;
         private static bool _synced;
         private static bool _rescan;
-        private static string _event = "nothing";
-        private static float _eventAt = -100f;
 
         private static GameObject _buttonCanvas;
         private static Image _note;
@@ -120,17 +68,7 @@ namespace NewAgeQoL
         {
             try
             {
-                float now = Time.unscaledTime;
-                float frame = Time.unscaledDeltaTime;
-                if (frame > LongFrame && (_playing || now - _eventAt < Watch))
-                    Plugin.Trace("[music] long frame " + Mathf.RoundToInt(frame * 1000f) + " ms, " + (now - _eventAt).ToString("0.0") + " s after " + _event);
                 float volume = Volume;
-                float audible = Audible;
-                if (_accent != null)
-                {
-                    _accent.volume = audible;
-                    if (audible <= 0.001f && _accent.isPlaying) _accent.Stop();
-                }
                 bool fight = SideButtons.InCombat();
                 if (!fight)
                 {
@@ -156,8 +94,9 @@ namespace NewAgeQoL
                 if (!_playing)
                 {
                     if (volume <= 0.001f) return;
-                    Prepare();
+                    Scan();
                     if (me == null || _finished || !Rivals(cd, me)) return;
+                    if (_next == null) { Load(); return; }
                     Begin();
                     return;
                 }
@@ -171,74 +110,22 @@ namespace NewAgeQoL
                 if (_ending)
                 {
                     _endShare = Mathf.MoveTowards(_endShare, 0f, dt / _endFade);
-                    Apply(audible);
-                    if (_endShare <= 0f) Stop(true);
+                    Apply(Audible);
+                    if (_endShare <= 0f) Stop(_over);
                     return;
                 }
                 if (me == null)
                 {
-                    End(LossFade);
+                    End(LossFade, false);
                     return;
                 }
-                if (Soon(now)) Want(true);
-                if (Due(now)) Swap();
-                Steer(cd, me, dt);
-                Apply(audible);
-                Flush(now, audible);
+                var lead = Decks[_deck];
+                double left = lead.Source.clip != null ? lead.Source.clip.length - (AudioSettings.dspTime - lead.At) : 0d;
+                if (left <= Lead && _next == null) Load();
+                if (left <= Fade + 0.3f && _next != null) Swap();
+                Apply(Audible);
             }
             catch (Exception e) { Plugin.Trace("[music] " + e.Message); }
-        }
-
-        internal static void Shown(AnimationItem item, AbstractCharacter by)
-        {
-            try
-            {
-                if (!_playing || _ending || item == null) return;
-                var cd = FighterHint.Cd();
-                var me = Me(cd);
-                if (me == null) return;
-                string name = item.AnimationName ?? "";
-                var source = item.Source;
-                var target = item.Target;
-                var fx = item.VisualEffect;
-                bool toMe = Same(target, me);
-                if (name == AnimationItem.WOUND)
-                {
-                    if (fx != EAnimationVisualEffect.CRITICAL_HIT) return;
-                    if (toMe) Hit("hurt", 4);
-                    else if (Same(source, me)) Hit("crit", 5);
-                    return;
-                }
-                if (name == AnimationItem.EVADE)
-                {
-                    if (toMe && (fx == EAnimationVisualEffect.UVOROT || fx == EAnimationVisualEffect.EVADE || fx == EAnimationVisualEffect.DEFLECT_ARROWS)) Hit("dodge", 3);
-                    return;
-                }
-                if (name == AnimationItem.CHANGE_LIFE_ANIMATION)
-                {
-                    int value = item is ChangeLifeAnimationItem change ? change.life : item.Value;
-                    if (value >= 0) return;
-                    _engaged = true;
-                    if (toMe)
-                    {
-                        var indicators = me.Indicators;
-                        if (indicators != null && indicators.MaxLife > 0 && -value >= indicators.MaxLife * HurtShare) Hit("hurt", 4);
-                    }
-                    else if (Same(by, me) && target != null && target.Team != me.Team)
-                    {
-                        Struck[target.UserId] = cd.RoundNum;
-                    }
-                    return;
-                }
-                if (name == "die" && source != null && source.Team != me.Team
-                    && Struck.TryGetValue(source.UserId, out int round) && cd.RoundNum - round <= 2)
-                {
-                    Struck.Remove(source.UserId);
-                    _fallen++;
-                    _fallenAt = Time.unscaledTime;
-                }
-            }
-            catch (Exception e) { Plugin.Trace("[music] event: " + e.Message); }
         }
 
         internal static void Over(bool win)
@@ -247,20 +134,9 @@ namespace NewAgeQoL
             {
                 if (!_playing || _ending) return;
                 Plugin.Trace("[music] fight over: " + (win ? "win" : "loss"));
-                if (win) Fire("win", Audible);
-                End(win ? WinFade : LossFade);
+                End(win ? WinFade : LossFade, true);
             }
             catch (Exception e) { Plugin.Trace("[music] over: " + e.Message); }
-        }
-
-        internal static void Sample()
-        {
-            float now = Time.unscaledTime;
-            if (now < _sampleAt) return;
-            _sampleAt = now + 0.25f;
-            Prepare();
-            if (_playing) return;
-            Fire("crit", Volume);
         }
 
         private static PlayerCharacter Me(ICombatData cd)
@@ -277,134 +153,66 @@ namespace NewAgeQoL
             return false;
         }
 
-        private static bool Same(AbstractCharacter a, AbstractCharacter b) =>
-            a != null && b != null && a.UserId == b.UserId;
-
-        private static bool Dead(AbstractCharacter one) =>
-            one.Indicators != null && one.Indicators.IsDead;
-
         private static void Begin()
         {
-            if (!_prepared || _ready < 0 || Songs[_ready].Clips == null || !Build()) return;
+            if (!Build()) return;
             foreach (var deck in Decks) Silence(deck);
             _deck = 0;
-            for (int i = 0; i < 3; i++) Level[i] = 0f;
-            Play(Decks[0], _ready, 1f);
-            _heart.volume = 0f;
-            _heart.clip = Clips["heart"];
-            _heart.PlayScheduled(AudioSettings.dspTime + 0.2);
+            Play(Decks[0]);
             _playing = true;
             _ending = false;
-            _engaged = false;
-            _low = false;
-            _heartLevel = 0f;
-            _cutoff = Open;
-            _mostTheirs = 0;
-            _pending = null;
-            _fallen = 0;
-            _lastRank = 0;
-            _lastName = null;
-            Struck.Clear();
-            Plugin.Trace("[music] fight music started, track " + Songs[_last].Name);
-            Mark("start " + Songs[_last].Name);
-            Want(false);
+            Plugin.Trace("[music] fight music started, track " + Path.GetFileNameWithoutExtension(Songs[_last]));
         }
 
-        private static void Play(Deck deck, int song, float weight)
+        private static void Play(Deck deck)
         {
-            double at = AudioSettings.dspTime + 0.2;
-            var clips = Songs[song].Clips;
-            for (int i = 0; i < 3; i++)
-            {
-                var layer = deck.Layers[i];
-                layer.Stop();
-                layer.clip = i < clips.Length ? clips[i] : null;
-                layer.loop = true;
-                layer.volume = 0f;
-                deck.Filters[i].cutoffFrequency = _cutoff;
-                if (layer.clip != null) layer.PlayScheduled(at);
-            }
-            deck.Song = song;
-            deck.Weight = weight;
+            deck.Source.clip = _next;
+            deck.Source.volume = 0f;
+            deck.At = AudioSettings.dspTime + 0.1;
+            deck.Source.PlayScheduled(deck.At);
+            deck.Weight = 0f;
             deck.Want = 1f;
-            _last = song;
-            _ready = -1;
-            _songAt = Time.unscaledTime;
-        }
-
-        private static bool Soon(float now)
-        {
-            if (Songs.Count < 2 || (_ready >= 0 && (Songs[_ready].Clips != null || Songs[_ready].Loading))) return false;
-            var deck = Decks[_deck];
-            if (deck == null || deck.Song < 0 || deck.Want <= 0f) return false;
-            if (Songs[deck.Song].Layered) return now - _songAt >= SongSpan - 60f;
-            var lead = deck.Layers[0];
-            return lead.clip != null && lead.isPlaying && lead.clip.length - lead.time <= 60f;
-        }
-
-        private static bool Due(float now)
-        {
-            if (Songs.Count < 2) return false;
-            var deck = Decks[_deck];
-            if (deck == null || deck.Song < 0 || deck.Want <= 0f) return false;
-            if (Songs[deck.Song].Layered) return now - _songAt >= SongSpan;
-            var lead = deck.Layers[0];
-            return lead.clip != null && lead.isPlaying && lead.clip.length - lead.time <= SwapFade + 0.3f;
+            _last = _nextSong;
+            _next = null;
+            _nextSong = -1;
         }
 
         private static void Swap()
         {
-            if (_ready < 0 || Songs[_ready].Clips == null)
-            {
-                Want(true);
-                return;
-            }
             var old = Decks[_deck];
-            var next = Decks[1 - _deck];
-            Silence(next);
-            old.Want = 0f;
             _deck = 1 - _deck;
-            Play(next, _ready, 0f);
-            Plugin.Trace("[music] switching to track " + Songs[_last].Name);
-            Mark("switch to " + Songs[_last].Name);
-            Want(false);
+            var deck = Decks[_deck];
+            Silence(deck);
+            old.Want = 0f;
+            Play(deck);
+            Plugin.Trace("[music] switching to track " + Path.GetFileNameWithoutExtension(Songs[_last]));
         }
 
         private static void Blend(float dt)
         {
             foreach (var deck in Decks)
             {
-                if (deck == null || deck.Song < 0) continue;
-                deck.Weight = Mathf.MoveTowards(deck.Weight, deck.Want, dt / SwapFade);
+                if (deck == null || deck.Source.clip == null) continue;
+                deck.Weight = Mathf.MoveTowards(deck.Weight, deck.Want, dt / Fade);
                 if (deck.Want <= 0f && deck.Weight <= 0f) Silence(deck);
             }
         }
 
         private static void Silence(Deck deck)
         {
-            if (deck == null || deck.Layers == null) return;
-            int song = deck.Song;
-            foreach (var layer in deck.Layers)
-            {
-                layer.Stop();
-                layer.clip = null;
-            }
-            deck.Song = -1;
+            if (deck == null) return;
+            var clip = deck.Source.clip;
+            deck.Source.Stop();
+            deck.Source.clip = null;
             deck.Weight = 0f;
             deck.Want = 0f;
-            if (song >= 0 && song != _ready && !InUse(song)) Unload(song);
+            if (clip != null) UnityEngine.Object.Destroy(clip);
         }
 
-        private static bool InUse(int song)
-        {
-            foreach (var deck in Decks)
-                if (deck != null && deck.Song == song) return true;
-            return false;
-        }
-
-        private static void End(float fade)
+        private static void End(float fade, bool over)
         {
             _ending = true;
+            _over = over;
             _endFade = fade;
             _endShare = 1f;
         }
@@ -412,110 +220,17 @@ namespace NewAgeQoL
         private static void Stop(bool done)
         {
             foreach (var deck in Decks) Silence(deck);
-            if (_heart != null) _heart.Stop();
             _playing = false;
             _ending = false;
             _finished = done && SideButtons.InCombat();
             Plugin.Trace("[music] fight music stopped");
-            Mark("stop");
-        }
-
-        private static void Mark(string what)
-        {
-            _event = what;
-            _eventAt = Time.unscaledTime;
-        }
-
-        private static void Steer(ICombatData cd, PlayerCharacter me, float dt)
-        {
-            int mine = 0, theirs = 0, total = 0;
-            foreach (var one in cd.Characters.Values)
-            {
-                if (one == null || one.IsFitment()) continue;
-                total++;
-                if (Dead(one)) continue;
-                if (one.Team == me.Team) mine++;
-                else theirs++;
-            }
-            if (theirs > _mostTheirs) _mostTheirs = theirs;
-            var indicators = me.Indicators;
-            float share = indicators != null && indicators.MaxLife > 0 ? Mathf.Clamp01(indicators.CurrentLife / (float)indicators.MaxLife) : 1f;
-            bool dead = Dead(me);
-            if (share < LowOn) _low = true;
-            else if (share > LowOff) _low = false;
-            bool tense = total >= Crowd
-                ? share < CrowdTense
-                : share < Tense || theirs > mine || (theirs == 1 && _mostTheirs > 1);
-            float[] want = { 1f, _engaged && !dead ? 1f : 0f, tense && !dead ? 1f : 0f };
-            for (int i = 0; i < 3; i++)
-                Level[i] = Mathf.MoveTowards(Level[i], want[i], dt / (i == 0 ? StartFade : Fade));
-            bool muffle = _low || dead;
-            float cut = muffle ? Muffled : Open;
-            _cutoff = Mathf.Exp(Mathf.MoveTowards(Mathf.Log(_cutoff), Mathf.Log(cut), dt * CutoffSpeed));
-            _heartLevel = Mathf.MoveTowards(_heartLevel, _low && !dead ? 1f : 0f, dt * HeartSpeed);
         }
 
         private static void Apply(float volume)
         {
             float share = _ending ? _endShare : 1f;
             foreach (var deck in Decks)
-            {
-                if (deck == null || deck.Song < 0) continue;
-                bool layered = Songs[deck.Song].Layered;
-                for (int i = 0; i < 3; i++)
-                {
-                    float level = layered ? Level[i] : (i == 0 ? Mathf.Max(Level[0], 0f) : 0f);
-                    deck.Layers[i].volume = level * volume * share * deck.Weight;
-                    deck.Filters[i].cutoffFrequency = _cutoff;
-                }
-            }
-            _heart.volume = _heartLevel * volume * share;
-        }
-
-        private static void Hit(string name, int rank)
-        {
-            float now = Time.unscaledTime;
-            if (now - _lastAt < Gap && rank <= _lastRank) { Plugin.Trace("[music] accent " + name + " skipped: " + _lastName + " just played"); return; }
-            if (name == _lastName && now - _lastAt < Repeat) { Plugin.Trace("[music] accent " + name + " skipped: same sound less than " + Repeat + " s ago"); return; }
-            if (_pending != null && now - _pendingAt <= Hold && rank <= _pendingRank) { Plugin.Trace("[music] accent " + name + " skipped: " + _pending + " is waiting and matters more"); return; }
-            _pending = name;
-            _pendingRank = rank;
-            _pendingAt = now;
-            Flush(now, Audible);
-        }
-
-        private static void Flush(float now, float volume)
-        {
-            if (_fallen > 0 && now - _fallenAt >= FellWait)
-            {
-                string name = _fallen >= ManyFallen ? "fell_many" : "fell";
-                _fallen = 0;
-                Hit(name, 6);
-                return;
-            }
-            if (_pending == null) return;
-            if (now - _pendingAt > Hold)
-            {
-                Plugin.Trace("[music] accent " + _pending + " dropped: waited too long");
-                _pending = null;
-                return;
-            }
-            if (now - _lastAt < Gap) return;
-            Fire(_pending, volume);
-            _lastAt = now;
-            _lastRank = _pendingRank;
-            _lastName = _pending;
-            _pending = null;
-        }
-
-        private static void Fire(string name, float volume)
-        {
-            if (volume <= 0.001f) { Plugin.Trace("[music] accent " + name + " silent: volume 0 or muted"); return; }
-            if (!Clips.TryGetValue(name, out var clip) || clip == null) { Plugin.Trace("[music] accent " + name + " not played: sound not loaded"); return; }
-            if (!Build()) { Plugin.Trace("[music] accent " + name + " not played: no audio source"); return; }
-            _accent.volume = volume;
-            _accent.PlayOneShot(clip, 1f);
-            Plugin.Trace("[music] accent " + name + " played, volume " + volume.ToString("0.00"));
+                if (deck != null && deck.Source.clip != null) deck.Source.volume = volume * share * deck.Weight;
         }
 
         private static readonly Color Gold = new Color(0.83f, 0.65f, 0.29f, 1f);
@@ -599,17 +314,6 @@ namespace NewAgeQoL
             return (p - (a + ab * t)).magnitude - half;
         }
 
-        private static Color Disc(Vector2 p)
-        {
-            float r = p.magnitude;
-            float body = Cover(r - 0.94f);
-            float ring = Mathf.Min(Cover(r - 0.94f), Cover(0.84f - r));
-            var fill = new Color(0.08f, 0.07f, 0.06f, 0.82f);
-            var color = Color.Lerp(fill, new Color(Gold.r, Gold.g, Gold.b, 0.9f), ring);
-            color.a *= body;
-            return color;
-        }
-
         private static Color Note(Vector2 p)
         {
             var head = p - new Vector2(-0.13f, -0.30f);
@@ -655,229 +359,92 @@ namespace NewAgeQoL
         private static bool Build()
         {
             if (_root != null) return true;
-            if (!_prepared) return false;
             _root = new GameObject("QoLCombatMusic");
             UnityEngine.Object.DontDestroyOnLoad(_root);
             for (int d = 0; d < 2; d++)
             {
-                var deck = new Deck { Layers = new AudioSource[3], Filters = new AudioLowPassFilter[3] };
-                for (int i = 0; i < 3; i++)
-                {
-                    var go = new GameObject("Deck" + d + "Layer" + (i + 1), typeof(AudioSource), typeof(AudioLowPassFilter));
-                    go.transform.SetParent(_root.transform, false);
-                    deck.Layers[i] = Source(go, true);
-                    deck.Filters[i] = go.GetComponent<AudioLowPassFilter>();
-                    deck.Filters[i].cutoffFrequency = Open;
-                }
-                Decks[d] = deck;
+                var go = new GameObject("Deck" + d, typeof(AudioSource));
+                go.transform.SetParent(_root.transform, false);
+                var source = go.GetComponent<AudioSource>();
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+                source.bypassListenerEffects = true;
+                source.loop = false;
+                source.volume = 0f;
+                Decks[d] = new Deck { Source = source };
             }
-            var heart = new GameObject("Heart", typeof(AudioSource));
-            heart.transform.SetParent(_root.transform, false);
-            _heart = Source(heart, true);
-            var accent = new GameObject("Accent", typeof(AudioSource));
-            accent.transform.SetParent(_root.transform, false);
-            _accent = Source(accent, false);
-            _accent.volume = 1f;
             return true;
         }
 
-        private static AudioSource Source(GameObject go, bool loop)
+        private static void Scan()
         {
-            var source = go.GetComponent<AudioSource>();
-            source.playOnAwake = false;
-            source.spatialBlend = 0f;
-            source.bypassListenerEffects = true;
-            source.loop = loop;
-            source.volume = 0f;
-            return source;
-        }
-
-        private static void Prepare()
-        {
-            if (_rescan && _prepared && !_playing) Forget();
-            if (_prepared)
+            if (_rescan && !_playing)
             {
-                Want(SideButtons.InCombat());
-                return;
+                _rescan = false;
+                _scanned = false;
+                _generation++;
+                _loading = false;
+                if (_next != null) UnityEngine.Object.Destroy(_next);
+                _next = null;
+                _nextSong = -1;
+                _last = -1;
+                Plugin.Trace("[music] new music files, rereading the list");
             }
-            if (_preparing || Plugin.Instance == null) return;
-            _preparing = true;
-            Plugin.Instance.StartCoroutine(PrepareAll());
-        }
-
-        private static void Forget()
-        {
-            _rescan = false;
-            foreach (var deck in Decks) Silence(deck);
-            for (int i = 0; i < Songs.Count; i++) Unload(i);
+            if (_scanned) return;
+            _scanned = true;
             Songs.Clear();
-            if (_heart != null) _heart.clip = null;
-            foreach (var clip in Clips.Values) if (clip != null) UnityEngine.Object.Destroy(clip);
-            Clips.Clear();
-            _ready = -1;
-            _last = -1;
-            _prepared = false;
-            _preparing = false;
-            Plugin.Trace("[music] new music files, rereading the list");
-        }
-
-        private static IEnumerator PrepareAll()
-        {
-            _folder = Path.Combine(Path.Combine(Paths.CachePath, "NewAgeQoL"), "music");
-            var asm = Assembly.GetExecutingAssembly();
-            Songs.Clear();
-            bool whole = true;
-            var accents = new List<string>();
             try
             {
-                foreach (var name in Shared)
-                    if (Has(asm, name))
-                    {
-                        whole &= Unpack(asm, name);
-                        accents.Add(name);
-                    }
-                for (int k = 1; Songs.Count < MaxSongs && Has(asm, "t" + k + "_l1"); k++)
-                {
-                    var paths = new string[3];
-                    for (int l = 1; l <= 3; l++)
-                    {
-                        whole &= Unpack(asm, "t" + k + "_l" + l);
-                        paths[l - 1] = Path.Combine(_folder, "t" + k + "_l" + l + ".ogg");
-                    }
-                    Songs.Add(new Song { Name = "t" + k, Paths = paths });
-                }
+                string old = Path.Combine(Path.Combine(Paths.CachePath, "NewAgeQoL"), "music");
+                if (Directory.Exists(old)) Directory.Delete(old, true);
+            }
+            catch (Exception e) { Plugin.Trace("[music] old cache: " + e.Message); }
+            try
+            {
                 string shelf = Path.Combine(AssetSync.Root, AssetSync.MusicDir);
-                if (Directory.Exists(shelf))
-                {
-                    var files = Directory.GetFiles(shelf, "*.ogg");
-                    Array.Sort(files, StringComparer.OrdinalIgnoreCase);
-                    foreach (var file in files)
-                        if (Songs.Count < MaxSongs) Songs.Add(new Song { Name = Path.GetFileNameWithoutExtension(file), Paths = new[] { file } });
-                }
+                if (!Directory.Exists(shelf)) return;
+                var files = Directory.GetFiles(shelf, "*.ogg");
+                Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+                foreach (var file in files)
+                    if (Songs.Count < MaxSongs) Songs.Add(file);
+                Plugin.Trace("[music] tracks: " + Songs.Count);
             }
-            catch (Exception e)
-            {
-                whole = false;
-                Plugin.Warn("[music] unpack: " + e.Message);
-            }
-            if (!whole || Songs.Count == 0) yield break;
-            foreach (var name in accents)
-            {
-                AudioClip clip = null;
-                yield return Fetch(Path.Combine(_folder, name + ".ogg"), c => clip = c);
-                if (clip != null) Clips[name] = clip;
-            }
-            if (!Clips.ContainsKey("heart")) yield break;
-            _prepared = true;
-            var titles = new List<string>();
-            foreach (var song in Songs) titles.Add(song.Name);
-            Plugin.Trace("[music] accents loaded: " + Clips.Count + ", tracks " + string.Join(", ", titles.ToArray()));
-            Want(SideButtons.InCombat());
+            catch (Exception e) { Plugin.Warn("[music] tracks: " + e.Message); }
         }
 
-        private static void Want(bool load)
+        private static void Load()
         {
-            if (!_prepared || Plugin.Instance == null || Songs.Count == 0) return;
-            if (_ready < 0)
-            {
-                var free = new List<int>();
-                for (int i = 0; i < Songs.Count; i++)
-                    if (!InUse(i) && (i != _last || Songs.Count == 1)) free.Add(i);
-                if (free.Count == 0) return;
-                _ready = free[Dice.Next(free.Count)];
-            }
-            var ready = Songs[_ready];
-            if (load && ready.Clips == null && !ready.Loading) Plugin.Instance.StartCoroutine(LoadSong(_ready));
+            if (_loading || _next != null || Songs.Count == 0 || Plugin.Instance == null) return;
+            var free = new List<int>();
+            for (int i = 0; i < Songs.Count; i++)
+                if (i != _last || Songs.Count == 1) free.Add(i);
+            int song = free[Dice.Next(free.Count)];
+            _loading = true;
+            Plugin.Instance.StartCoroutine(Fetch(song, _generation));
         }
 
-        private static IEnumerator LoadSong(int index)
+        private static IEnumerator Fetch(int song, int generation)
         {
-            var song = Songs[index];
-            song.Loading = true;
-            Mark("load " + song.Name);
-            var clips = new AudioClip[song.Paths.Length];
-            for (int i = 0; i < clips.Length; i++)
-            {
-                int k = i;
-                yield return Fetch(song.Paths[i], c => clips[k] = c, !song.Layered);
-            }
-            song.Loading = false;
-            bool whole = true;
-            foreach (var clip in clips) whole &= clip != null;
-            if (!whole || (_ready != index && !InUse(index)))
-            {
-                foreach (var clip in clips) if (clip != null) UnityEngine.Object.Destroy(clip);
-                if (!whole)
-                {
-                    Plugin.Warn("[music] track " + song.Name + " did not load");
-                    if (_ready == index) _ready = -1;
-                }
-                yield break;
-            }
-            song.Clips = clips;
-            Plugin.Trace("[music] track " + song.Name + " ready");
-        }
-
-        private static void Unload(int index)
-        {
-            var song = Songs[index];
-            var clips = song.Clips;
-            song.Clips = null;
-            if (clips == null) return;
-            foreach (var clip in clips) if (clip != null) UnityEngine.Object.Destroy(clip);
-            Mark("unload " + song.Name);
-        }
-
-        private static IEnumerator Fetch(string path, Action<AudioClip> done, bool stream = false)
-        {
+            string path = Songs[song];
+            AudioClip clip = null;
             using (var request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, AudioType.OGGVORBIS))
             {
-                var handler = request.downloadHandler as DownloadHandlerAudioClip;
-                if (handler != null)
-                {
-                    handler.streamAudio = stream;
-                    handler.compressed = false;
-                }
+                if (request.downloadHandler is DownloadHandlerAudioClip handler) handler.streamAudio = true;
                 yield return request.SendWebRequest();
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
-                    yield break;
-                }
-                var watch = System.Diagnostics.Stopwatch.StartNew();
-                var clip = DownloadHandlerAudioClip.GetContent(request);
-                if (clip != null) clip.name = "QoL_music_" + Path.GetFileNameWithoutExtension(path);
-                if (stream || watch.ElapsedMilliseconds > 20) Plugin.Trace("[music] " + Path.GetFileName(path) + " decoded in " + watch.ElapsedMilliseconds + " ms" + (stream && clip != null ? ", streamed, length " + clip.length.ToString("0") + " s" : ""));
-                Mark("decode " + Path.GetFileName(path));
-                done(clip);
+                if (request.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(request);
+                else Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
             }
-        }
-
-        private static string Resource(Assembly asm, string name)
-        {
-            foreach (var r in asm.GetManifestResourceNames())
-                if (r.EndsWith(".Music." + name + ".ogg", StringComparison.OrdinalIgnoreCase)) return r;
-            return null;
-        }
-
-        private static bool Has(Assembly asm, string name) => Resource(asm, name) != null;
-
-        private static bool Unpack(Assembly asm, string name)
-        {
-            string resource = Resource(asm, name);
-            if (resource == null)
+            if (generation != _generation)
             {
-                Plugin.Warn("[music] resource " + name + " not found in dll");
-                return false;
+                if (clip != null) UnityEngine.Object.Destroy(clip);
+                yield break;
             }
-            Directory.CreateDirectory(_folder);
-            string path = Path.Combine(_folder, name + ".ogg");
-            using (var stream = asm.GetManifestResourceStream(resource))
-            {
-                if (File.Exists(path) && new FileInfo(path).Length == stream.Length) return true;
-                using (var file = File.Create(path)) stream.CopyTo(file);
-            }
-            return true;
+            _loading = false;
+            if (clip == null) yield break;
+            clip.name = "QoL_music_" + Path.GetFileNameWithoutExtension(path);
+            _next = clip;
+            _nextSong = song;
+            Plugin.Trace("[music] track " + clip.name + " ready, length " + clip.length.ToString("0") + " s");
         }
     }
 

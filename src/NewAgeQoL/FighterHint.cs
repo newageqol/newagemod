@@ -342,7 +342,8 @@ namespace NewAgeQoL
             bool same = Rough.TryGetValue(msg.UserId, out had) && had != null && had.Count == list.Count;
             Rough[msg.UserId] = list;
             FirstAsk.Remove(msg.UserId);
-            if (!same) Plugin.Trace("[fighter] state groups " + msg.UserId + ": " + list.Count);
+            if (!same && (!States.TryGetValue(msg.UserId, out var exact) || exact == null || exact.Count != list.Count))
+                Plugin.Trace("[fighter] state groups " + msg.UserId + ": " + list.Count);
         }
 
         private static void OnWho(object m)

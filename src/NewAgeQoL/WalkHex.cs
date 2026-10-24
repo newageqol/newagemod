@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
@@ -32,12 +33,17 @@ namespace NewAgeQoL
 
         private static string _why = "";
 
+        private static readonly HashSet<string> Usual = new HashSet<string>
+        {
+            "skill armed", "mouse over a window", "mouse over a fighter", "hex outside move zone"
+        };
+
         private static void Off(string why, OffsetCoord hex = null)
         {
             if (why != _why)
             {
                 _why = why;
-                if (why.Length > 0 && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
+                if (why.Length > 0 && !Usual.Contains(why) && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
                     Plugin.Trace("[walk] no outline: " + why
                         + (hex != null ? ", " + hex.clientX + ";" + hex.clientY : ""));
             }

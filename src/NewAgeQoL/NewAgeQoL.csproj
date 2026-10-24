@@ -123,7 +123,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Sounds\*.wav" />
-    <EmbeddedResource Include="Music\*.ogg" />
     <EmbeddedResource Include="Art\*.png" />
     <EmbeddedResource Include="Art\*.txt" />
   </ItemGroup>

@@ -736,9 +736,9 @@ namespace NewAgeQoL
                 System.Reflection.PropertyInfo prop;
                 if (!_schoolField.TryGetValue(type, out field))
                 {
-                    field = AccessTools.Field(type, "schoolMagic") ?? AccessTools.Field(type, "_schoolMagic");
+                    field = Quiet.Field(type, "schoolMagic") ?? Quiet.Field(type, "_schoolMagic");
                     _schoolField[type] = field;
-                    _schoolProp[type] = field == null ? (AccessTools.Property(type, "SchoolMagic") ?? AccessTools.Property(type, "School")) : null;
+                    _schoolProp[type] = field == null ? (Quiet.Property(type, "SchoolMagic") ?? Quiet.Property(type, "School")) : null;
                 }
                 if (field != null) return Convert.ToInt32(field.GetValue(spell));
                 if (_schoolProp.TryGetValue(type, out prop) && prop != null) return Convert.ToInt32(prop.GetValue(spell, null));

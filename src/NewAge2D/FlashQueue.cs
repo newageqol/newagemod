@@ -514,7 +514,6 @@ internal static class FlashQueue
         var who = item.Source;
         if (Trace.On) Trace.Write($"'{NameOf(who)}' {(child ? "child " : "")}{Describe(item)} → {NameOf(item.Target)}, group #{model.Number}");
         ShowTexts(item);
-        ModMusic.Shown(item, source.Who);
         switch (play.Kind)
         {
             case 1:

@@ -441,7 +441,7 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) { Waiting.Remove(questId); return true; }
                 nc.SendRequest(new DetailInfoFaceRequest(questId));
                 Sent[questId] = Time.unscaledTime;
-                Plugin.Trace("[quests] asking " + questId);
+                if (tries > 0) Plugin.Trace("[quests] asking " + questId + " again, try " + (tries + 1));
             }
             catch (Exception e)
             {
