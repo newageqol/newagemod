@@ -205,10 +205,13 @@ internal static class HexLook
         _root.transform.SetParent(grid, false);
         _root.transform.localPosition = new Vector3(0f, Lift, 0f);
         var shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
-        _spriteSkin = new Material(shader);
+        var top = Shader.Find("UI/Default") ?? shader;
+        _spriteSkin = OnTop(new Material(top));
         _faint = new Paint(_root.transform, "NewAge2D.HexFaint", shader, Low + 4);
-        _zone = new Paint(_root.transform, "NewAge2D.HexZone", shader, Low + 5);
-        _marks = new Paint(_root.transform, "NewAge2D.HexMarks", shader, Low + 6);
+        _zone = new Paint(_root.transform, "NewAge2D.HexZone", top, Low + 5);
+        _marks = new Paint(_root.transform, "NewAge2D.HexMarks", top, Low + 6);
+        OnTop(_zone.Skin);
+        OnTop(_marks.Skin);
         _zoneSign = 0;
         if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo("[hexes] own cell look on: game grid hidden, zone contour, cursor grid, rings, auras");
     }
@@ -690,6 +693,12 @@ internal static class HexLook
     private static Sprite FrontSprite => _front != null ? _front : _front = Disk(2);
 
     private static Sprite BeamSprite => _beam != null ? _beam : _beam = Column();
+
+    private static Material OnTop(Material skin)
+    {
+        if (skin.HasProperty("unity_GUIZTestMode")) skin.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+        return skin;
+    }
 
     private static SpriteRenderer Piece(string name, Sprite sprite, int order, out GameObject go)
     {

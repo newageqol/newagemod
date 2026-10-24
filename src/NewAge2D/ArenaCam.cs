@@ -10,13 +10,14 @@ internal sealed class ArenaCam
     private const float LiftMax = 1.45f;
     private readonly float PitchMax = 1.35f;
     private readonly float PitchMin;
+    private readonly float YawMax;
     private readonly float HomePitch = Mathf.Asin(Field.Lean);
     private readonly Vector3 HomeTarget;
     private readonly float StandsTop, CenterX, CenterZ, RadiusX, RadiusZ, CellX0, CellX1, CellZ0, CellZ1, PanX, PanZ, PanCX, PanCZ, ZMin;
     private readonly ArenaHeight _height;
     private readonly float[] _clear;
     private readonly ArenaHeight _ground;
-    private readonly float CamTop, WallGap, CamLow;
+    private readonly float CamTop, WallGap, CamLow, HomeWide;
 
     private float _yaw, _pitch, _dist;
     private float _wantYaw, _wantPitch, _wantDist;
@@ -39,6 +40,7 @@ internal sealed class ArenaCam
         RadiusX = cfg.radii[0]; RadiusZ = cfg.radii[1];
         ZMin = cfg.zMin;
         PitchMin = cfg.pitchMin > 0f ? cfg.pitchMin : 0.62f;
+        YawMax = cfg.yawMax > 0f ? cfg.yawMax : float.PositiveInfinity;
         PanX = cfg.pan != null && cfg.pan.Length > 1 ? cfg.pan[0] : RadiusX * 0.6f;
         PanZ = cfg.pan != null && cfg.pan.Length > 1 ? cfg.pan[1] : RadiusZ * 0.6f;
         PanCX = cfg.pan != null && cfg.pan.Length > 1 ? HomeTarget.x : CenterX;
@@ -47,6 +49,7 @@ internal sealed class ArenaCam
         _height = cfg.height != null && cfg.height.v != null && cfg.height.v.Length > 0 ? cfg.height : null;
         CamTop = cfg.camTop;
         WallGap = cfg.wallGap;
+        HomeWide = Mathf.Clamp(cfg.homeWide, 0f, 30f);
         CamLow = _height != null && cfg.camAbove > -900f ? _height.At(HomeTarget.x, HomeTarget.z) + cfg.camAbove : -999f;
         if (_height != null) _clear = Clearance(_height, HomeTarget, cfg.openRise, cfg.openDrop);
         if (_height != null) _ground = new ArenaHeight { x0 = _height.x0, z0 = _height.z0, step = _height.step, nx = _height.nx, nz = _height.nz, v = System.Array.ConvertAll(_height.v, h => h >= 400f ? -50f : h) };
@@ -105,7 +108,7 @@ internal sealed class ArenaCam
         _wantTarget = Clamp(home + fwd * (along + Mathf.Clamp(mid * len / down * 0.5f, -2f, 2f)));
         float free = Mathf.Max(0.3f, 1f - DockShare() - top);
         float need = Mathf.Max(Mathf.Max(hi, -lo) / free, wide / (Mathf.Max(0.5f, eye.aspect) * (1f - side)));
-        _wantFovExtra = Mathf.Clamp(Mathf.Atan(need) * 2f * Mathf.Rad2Deg - 30f, 0f, 24f);
+        _wantFovExtra = Mathf.Clamp(Mathf.Atan(need) * 2f * Mathf.Rad2Deg - 30f + HomeWide, 0f, 24f + HomeWide);
     }
 
     internal void Home()
@@ -302,8 +305,7 @@ internal sealed class ArenaCam
         _homeLock = false;
         if (_button == 1)
         {
-            _wantYaw = _fromYaw - delta.x * 0.004f;
-            _wantPitch = Mathf.Clamp(_fromPitch - delta.y * 0.004f, PitchMin, PitchMax);
+            _wantYaw = Mathf.Clamp(_fromYaw - delta.x * 0.004f, -YawMax, YawMax);
             return;
         }
         var right = new Vector3(Mathf.Cos(_yaw), 0f, -Mathf.Sin(_yaw));

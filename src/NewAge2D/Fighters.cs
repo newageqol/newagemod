@@ -1304,6 +1304,10 @@ internal sealed class FighterDoll : MonoBehaviour
 
     internal SpriteRenderer View => _view;
 
+    internal SoulLeaves Passing { get; private set; }
+
+    private Rebirth _rebirth;
+
     internal Vector3 HeadShift(Camera eye)
     {
         if (eye == null || _view == null || _view.sprite == null || _viewLook == null) return Vector3.zero;
@@ -1370,6 +1374,8 @@ internal sealed class FighterDoll : MonoBehaviour
         ThingImages.Learned -= OnLearned;
         if (Plugin.Store != null && _arrived != null) Plugin.Store.Arrived -= _arrived;
         Camera.onPreCull -= BeforeCull;
+        Unpass();
+        Unborn();
         try { RestoreModel(); } catch { }
         try { if (_owner != null && _capsuleTouched) _owner.RecalculateCapsuleHeight(); } catch { }
         if (_skin != null) Destroy(_skin);
@@ -1524,9 +1530,60 @@ internal sealed class FighterDoll : MonoBehaviour
             _queue.Clear();
             _playing = null;
             if (Trace.On) Trace.Write($"'{Who}' was dead before first seen: lies down at once, death clip not played");
+            Pass(true);
             return;
         }
         Launch("die", "death");
+        Pass(false);
+    }
+
+    private void Pass(bool instant)
+    {
+        if (Passing != null || _view == null || !DeathFx.On) return;
+        Unborn();
+        try
+        {
+            Passing = new SoulLeaves(this, instant);
+            if (Trace.On) Trace.Write($"'{Who}' death look: {(instant ? "already grey" : "soul leaves the body")}");
+        }
+        catch (Exception ex)
+        {
+            Passing = null;
+            Plugin.Log.LogWarning("[death fx] " + ex.Message);
+        }
+    }
+
+    private void Reborn()
+    {
+        bool had = Passing != null;
+        Unpass();
+        if (!had || _view == null || !DeathFx.On) return;
+        try
+        {
+            _rebirth = new Rebirth(this);
+            if (Trace.On) Trace.Write($"'{Who}' rebirth look: soul returns to the body");
+        }
+        catch (Exception ex)
+        {
+            _rebirth = null;
+            Plugin.Log.LogWarning("[death fx] rebirth: " + ex.Message);
+        }
+    }
+
+    private void Unborn()
+    {
+        if (_rebirth == null) return;
+        try { _rebirth.Stop(_skin); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[death fx] rebirth stop: " + ex.Message); }
+        _rebirth = null;
+    }
+
+    private void Unpass()
+    {
+        if (Passing == null) return;
+        try { Passing.Stop(_skin); }
+        catch (Exception ex) { Plugin.Log.LogWarning("[death fx] stop: " + ex.Message); }
+        Passing = null;
     }
 
     public void Rise()
@@ -1535,6 +1592,7 @@ internal sealed class FighterDoll : MonoBehaviour
         _queue.Clear();
         _finishedRequest = _requestCounter;
         if (_playing == "die") _playing = null;
+        Reborn();
         if (Trace.On) Trace.Write($"'{Who}' raised");
     }
 
@@ -2101,6 +2159,20 @@ internal sealed class FighterDoll : MonoBehaviour
         var paint = new Color(tint.r, tint.g, tint.b, alpha);
         if (_view.color != paint) _view.color = paint;
         SyncHalo();
+        if (Passing != null)
+        {
+            try { Passing.Sync(); }
+            catch (Exception ex) { Plugin.Log.LogWarning("[death fx] frame: " + ex.Message); Unpass(); }
+        }
+        if (_rebirth != null)
+        {
+            try
+            {
+                _rebirth.Sync();
+                if (_rebirth.Done) Unborn();
+            }
+            catch (Exception ex) { Plugin.Log.LogWarning("[death fx] rebirth frame: " + ex.Message); Unborn(); }
+        }
         Diagnose(label, frame);
     }
 

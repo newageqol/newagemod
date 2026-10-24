@@ -35,12 +35,18 @@ namespace NewAge2D
 
         public static float ShadowStrength = 0.85f, NightBoost;
         public static GameObject FireField, FireWall;
+        static Color? FireColor;
         public static float SunScale = 0.5f, AmbientScale = 0.62f, FireIntensity = 2.2f, FireRange = 15f, FireUp = 0.9f, NightSun = 1f, FogStart = 90f, FogEnd = 230f, NightFogStart = -1f, NightFogEnd = -1f;
         static Color? NightFog;
 
+        static float ShadowBias = -1f, NormalBias = -1f;
+
         public static void Use(ArenaCfg cfg)
         {
+            ShadowBias = cfg.shadowBias;
+            NormalBias = cfg.shadowNormalBias;
             FireIntensity = cfg.fireIntensity * 0.6f;
+            FireColor = string.IsNullOrEmpty(cfg.fireColor) ? (Color?)null : ArenaCfg.Hex(cfg.fireColor);
             FireRange = cfg.fireRange;
             FireUp = cfg.fireUp;
             Electric = cfg.electric;
@@ -58,6 +64,7 @@ namespace NewAge2D
 
         public static float GameHour() => (float)((DateTime.UtcNow.TimeOfDay.TotalHours + 3.0) % 24.0);
         public static bool IsNight(float hour) => hour >= 19.4f || hour < 6f;
+        public static bool IsEvening(float hour) => hour >= 17.8f || hour < 6.4f;
 
         public float Hour { get; private set; }
         public float NightGrade { get; private set; }
@@ -72,6 +79,7 @@ namespace NewAge2D
         {
             Hour = hour;
             Shader.SetGlobalFloat("_ArenaClipY", root.position.y + 0.02f);
+            Shader.SetGlobalFloat("_ArenaT0", Time.timeSinceLevelLoad);
             int i = 0;
             while (Keys[i + 1].h < hour) i++;
             var a = Keys[i].k; var b = Keys[i + 1].k;
@@ -95,8 +103,8 @@ namespace NewAge2D
                 _sun = go.AddComponent<Light>();
                 _sun.type = LightType.Directional;
                 _sun.shadows = LightShadows.Soft;
-                _sun.shadowBias = 0.05f;
-                _sun.shadowNormalBias = 0.45f;
+                _sun.shadowBias = ShadowBias > 0f ? ShadowBias : 0.05f;
+                _sun.shadowNormalBias = NormalBias > 0f ? NormalBias : 0.45f;
                 _sun.renderMode = LightRenderMode.ForcePixel;
             }
             SunDir = dir;
@@ -132,8 +140,12 @@ namespace NewAge2D
             bool night = IsNight(hour);
             var nightGroup = root.Find("Night");
             if (nightGroup != null) nightGroup.gameObject.SetActive(night);
+            var dayGroup = root.Find("Day");
+            if (dayGroup != null) dayGroup.gameObject.SetActive(!night);
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
                 if (t.name.EndsWith("_night", StringComparison.Ordinal)) t.gameObject.SetActive(night);
+            var eveGroup = root.Find("Evening_night");
+            if (eveGroup != null) eveGroup.gameObject.SetActive(IsEvening(hour));
             var fires = root.Find("Fires");
             if (fires != null)
             {
@@ -159,13 +171,13 @@ namespace NewAge2D
                 Spawn(at, pack, cards ? 1.5f : 1f, cards ? 0.08f : 0f);
             }
             else if (at.childCount == 0 && !Electric) Particles(at, flame);
-            if (!field) return;
+            if (!field || FireIntensity <= 0f) return;
             var lg = new GameObject("fireLight");
             lg.transform.SetParent(at.parent, false);
             lg.transform.localPosition = at.localPosition + new Vector3(0f, FireUp, 0f);
             var l = lg.AddComponent<Light>();
             l.type = LightType.Point;
-            l.color = Electric ? new Color(1f, 0.78f, 0.5f) : new Color(1f, 0.6f, 0.28f);
+            l.color = FireColor ?? (Electric ? new Color(1f, 0.78f, 0.5f) : new Color(1f, 0.6f, 0.28f));
             l.range = FireRange;
             l.intensity = FireIntensity;
             l.shadows = LightShadows.None;

@@ -535,8 +535,6 @@ namespace NewAgeQoL
             _lit = null;
         }
 
-        private static System.Reflection.MethodInfo _judgeCall;
-        private static bool _judgeAsked;
 
         private EQuickButtonValidationResult Check(IQuickButton skill)
         {
@@ -553,14 +551,7 @@ namespace NewAgeQoL
                 if (_spells)
                 {
                     var book = Book();
-                    if (book == null) return EQuickButtonValidationResult.Success;
-                    if (!_judgeAsked)
-                    {
-                        _judgeAsked = true;
-                        _judgeCall = AccessTools.Method(typeof(Spellbook), "GetValidator");
-                        if (_judgeCall == null) Plugin.Trace(_tag + " spellbook has no GetValidator, the game checks the target");
-                    }
-                    var spellJudge = _judgeCall != null ? _judgeCall.Invoke(book, null) as QuickButtonUsageValidator : null;
+                    var spellJudge = book != null ? book.Validator : null;
                     return spellJudge == null ? EQuickButtonValidationResult.Success : spellJudge.Validate(data, skill, hex);
                 }
                 var holder = Holder();
@@ -605,7 +596,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (!on) { Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto); return; }
+                if (!on) { Pointer.Plain(); return; }
                 if (_cursor == null) _cursor = Crosshair();
                 if (_cursor != null) Cursor.SetCursor(_cursor, new Vector2(15f, 15f), CursorMode.Auto);
             }
@@ -1159,15 +1150,29 @@ namespace NewAgeQoL
                 if (one.Id == DodgesButtonStateHolder.HantingOnButtonId || one.Id == DodgesButtonStateHolder.HantingOffButtonId)
                     all.RemoveAt(i);
             }
-            for (int i = 0; i < all.Count; i++)
-            {
-                if (!Summon(all[i])) continue;
-                var call = all[i];
-                all.RemoveAt(i);
-                all.Insert(0, call);
-                break;
-            }
+            all.Sort(Arrived);
             return all;
+        }
+
+        private static readonly Dictionary<int, int> Arrival = new Dictionary<int, int>();
+        private static int _arrivals;
+
+        internal static void Came(QuickButton button, EQuickButtonType type)
+        {
+            if (button == null || type != EQuickButtonType.DODGE) return;
+            Arrival[button.Id] = ++_arrivals;
+        }
+
+        private static int Rank(IQuickButton one)
+        {
+            int at;
+            return one != null && Arrival.TryGetValue(one.Id, out at) ? at : int.MaxValue;
+        }
+
+        private static int Arrived(IQuickButton a, IQuickButton b)
+        {
+            int byArrival = Rank(a).CompareTo(Rank(b));
+            return byArrival != 0 ? byArrival : a.Id.CompareTo(b.Id);
         }
 
         private void Refresh()
@@ -1321,9 +1326,17 @@ namespace NewAgeQoL
             var ind = me != null ? me.Indicators : null;
             if (ind == null) return null;
             if (skill.StaminaCost > ind.CurrentStamina) return Lang.T("не хватает энергии");
-            if (skill.ManaCost > ind.CurrentMana) return Lang.T("не хватает маны");
+            if (skill.ManaCost > ind.CurrentMana && !ManaFree()) return Lang.T("не хватает маны");
             if (skill.ExpowerCost > ind.CurrentExpower) return Poor;
             return null;
+        }
+
+        private bool ManaFree()
+        {
+            if (!_spells) return false;
+            var book = Book();
+            var judge = book != null ? book.Validator as SpellButtonUsageValidator : null;
+            return judge != null && !judge.NeedVerifyManaInCombat;
         }
 
         private static bool Fallen(ICombatData cd)
@@ -2063,6 +2076,16 @@ namespace NewAgeQoL
     internal static class SkillListPhasePatch
     {
         private static void Postfix() => SkillList.PhaseOver();
+    }
+
+    [HarmonyPatch(typeof(QuickButtonStateHolder), "CreateButton")]
+    internal static class SkillListArrivalPatch
+    {
+        private static void Postfix(QuickButton __result, EQuickButtonType type)
+        {
+            try { SkillList.Came(__result, type); }
+            catch (Exception e) { Plugin.Trace("[dodges] arrival: " + e.Message); }
+        }
     }
 
     internal sealed class HoverWatch : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler

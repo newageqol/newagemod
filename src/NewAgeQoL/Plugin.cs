@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.25.0";
+        public const string Version = "0.26.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -72,32 +72,13 @@ namespace NewAgeQoL
         internal static ConfigEntry<float> CfgSmallScreen;
         internal static ConfigEntry<bool> CfgNewPlaces;
         internal static ConfigEntry<bool> CfgNewArenas;
-        internal static ConfigEntry<int> CfgArenaQuality;
         internal static ConfigEntry<bool> CfgRosterFolded;
         internal static ConfigEntry<bool> CfgFightsFolded;
         internal static bool NewPlaces => CfgNewPlaces == null || CfgNewPlaces.Value;
 
         public static bool NewArenas => CfgNewArenas == null || CfgNewArenas.Value;
 
-        internal static bool ArenaLiteAuto
-        {
-            get
-            {
-                string n = (UnityEngine.SystemInfo.graphicsDeviceName ?? "").ToLowerInvariant();
-                if (n.Contains("intel") && !n.Contains("arc")) return true;
-                if (n.Contains("radeon(tm) graphics") || n.Contains("radeon graphics") || n.Contains("vega")) return true;
-                return UnityEngine.SystemInfo.graphicsMemorySize > 0 && UnityEngine.SystemInfo.graphicsMemorySize < 2500;
-            }
-        }
 
-        public static bool ArenaLite
-        {
-            get
-            {
-                int q = CfgArenaQuality == null ? 0 : CfgArenaQuality.Value;
-                return q == 2 || (q != 1 && ArenaLiteAuto);
-            }
-        }
         internal static ConfigEntry<string> CfgEffectsWindow;
         internal static ConfigEntry<bool> CfgHelpFolded;
         internal static ConfigEntry<bool> CfgTravelButton;
@@ -279,8 +260,6 @@ namespace NewAgeQoL
                 "Новые локации мода (ночной Иллениум, банк, рынок и другие) и экран загрузки мода. Выключено — игра показывает свои локации и свои картинки загрузки локаций и боёв. Меняется со следующего захода в локацию.");
             CfgNewArenas = Config.Bind("Interface", "NewArenas", true,
                 "Объёмные 3D-арены мода вместо плоских картинок поля в боях на арене. Выключено — бой идёт на обычной картинке арены, как раньше. Выключайте, если 3D-арена тормозит. Меняется со следующего боя.");
-            CfgArenaQuality = Config.Bind("Interface", "ArenaQuality", 0,
-                "Качество 3D-арен: 0 — само по видеокарте (встроенная графика Intel/AMD или меньше 2,5 ГБ видеопамяти получает лёгкое), 1 — полное, 2 — лёгкое (облегчённые модели, без города за стенами, короткие грубые тени, до 4 огней). Меняется со следующего боя.");
             CfgRosterFolded = Config.Bind("Interface", "CharactersFolded", false,
                 "Список персонажей аккаунта справа свёрнут вправо. Меняется кнопкой «Персонажи» сбоку от списка, запоминается между заходами.");
             CfgFightsFolded = Config.Bind("Interface", "FightsFolded", false,
@@ -547,6 +526,8 @@ namespace NewAgeQoL
                 new Part { Name = "BankHall.Tick", Do = BankHall.Tick },
                 new Part { Name = "Locations.Tick", Do = Locations.Tick },
                 new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
+                new Part { Name = "HexRange.Tick", Do = HexRange.Tick },
+                new Part { Name = "Pointer.Tick", Do = Pointer.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
                 new Part { Name = "SpareSession.Tick", Do = SpareSession.Tick },

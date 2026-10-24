@@ -6,13 +6,14 @@ namespace NewAge2D;
 
 internal sealed class Arena3D
 {
-    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap9", "arena9") };
+    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9") };
 
     private sealed class Scene
     {
         public AssetBundle Bundle;
         public GameObject Prefab;
         public ArenaCfg Cfg;
+        public long Stamp;
     }
 
     private static readonly Dictionary<string, Scene> Scenes = new();
@@ -46,6 +47,7 @@ internal sealed class Arena3D
     internal ArenaCfg Cfg { get; private set; } = new ArenaCfg();
 
     internal static bool Any;
+    internal static Color DollTint = Color.white;
 
     internal static float TestHour = -1f;
 
@@ -66,7 +68,6 @@ internal sealed class Arena3D
             if (ground.File.IndexOf(map, StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 if (!File.Exists(Path.Combine(Dir, "arena_fx"))) return null;
-                if (LiteGpu && File.Exists(Path.Combine(Dir, bundle + "lite"))) return bundle + "lite";
                 return File.Exists(Path.Combine(Dir, bundle)) ? bundle : null;
             }
         return null;
@@ -87,8 +88,6 @@ internal sealed class Arena3D
                     var prop = asm.GetType("NewAgeQoL.Plugin", false)?.GetProperty("NewArenas", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                     if (prop == null) continue;
                     _qolArenas = (Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>), prop.GetGetMethod());
-                    var lite = asm.GetType("NewAgeQoL.Plugin", false)?.GetProperty("ArenaLite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    if (lite != null) _qolLite = (Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>), lite.GetGetMethod());
                     break;
                 }
             }
@@ -98,23 +97,18 @@ internal sealed class Arena3D
         catch { return true; }
     }
 
-    private static Func<bool> _qolLite;
-
-    internal static bool LiteGpu
-    {
-        get
-        {
-            if (!_qolLooked) QolAllows();
-            try { if (_qolLite != null) return _qolLite(); }
-            catch { }
-            string n = (SystemInfo.graphicsDeviceName ?? "").ToLowerInvariant();
-            if (n.Contains("intel") && !n.Contains("arc")) return true;
-            if (n.Contains("radeon(tm) graphics") || n.Contains("radeon graphics") || n.Contains("vega")) return true;
-            return SystemInfo.graphicsMemorySize > 0 && SystemInfo.graphicsMemorySize < 2500;
-        }
-    }
-
     private sealed class Loader : MonoBehaviour { }
+
+    private static long Stamp(string bundle)
+    {
+        try
+        {
+            var f = new FileInfo(Path.Combine(Dir, bundle));
+            var c = new FileInfo(Path.Combine(Dir, bundle + ".cam.json"));
+            return (f.Exists ? f.LastWriteTimeUtc.Ticks ^ f.Length : 0L) ^ (c.Exists ? c.LastWriteTimeUtc.Ticks : 0L);
+        }
+        catch { return 0L; }
+    }
 
     private static IEnumerator Load(string bundle)
     {
@@ -147,13 +141,14 @@ internal sealed class Arena3D
                 scene.Prefab = prefabReq.allAssets.Length > 0 ? prefabReq.allAssets[0] as GameObject : null;
                 var cfg = scene.Bundle.LoadAllAssets<TextAsset>();
                 scene.Cfg = cfg.Length > 0 ? ArenaCfg.Parse(cfg[0].text) : new ArenaCfg();
-                var camPath = Path.Combine(Dir, (bundle.EndsWith("lite") ? bundle.Substring(0, bundle.Length - 4) : bundle) + ".cam.json");
+                var camPath = Path.Combine(Dir, bundle + ".cam.json");
                 if (File.Exists(camPath))
                 {
                     try { JsonUtility.FromJsonOverwrite(File.ReadAllText(camPath), scene.Cfg); }
                     catch (Exception e) { Plugin.Log.LogWarning("[arena3d] camera file: " + e.Message); }
                 }
             }
+            scene.Stamp = Stamp(bundle);
             Scenes[bundle] = scene;
         }
         finally { _loading = false; }
@@ -163,6 +158,12 @@ internal sealed class Arena3D
     internal IEnumerator Attach(Transform grid, Camera eye, Func<bool> alive, Action shown)
     {
         while (_loading) yield return null;
+        if (Scenes.TryGetValue(_bundle, out var old) && old.Stamp != Stamp(_bundle))
+        {
+            if (old.Bundle != null) old.Bundle.Unload(true);
+            Scenes.Remove(_bundle);
+            Plugin.Log.LogInfo($"[arena3d] {_bundle} changed on disk, reloading");
+        }
         if (!Scenes.ContainsKey(_bundle))
         {
             var host = new GameObject("NewAge2D.Arena3DLoader");
@@ -183,12 +184,12 @@ internal sealed class Arena3D
         _root.transform.localRotation = Quaternion.identity;
         _root.transform.localScale = Vector3.one;
         DimMapLights();
-        bool lite = _bundle.EndsWith("lite");
-        QualitySettings.shadowDistance = lite ? 60f : 120f;
-        QualitySettings.shadowCascades = lite ? 1 : 4;
-        QualitySettings.pixelLightCount = lite ? 4 : Mathf.Max(QualitySettings.pixelLightCount, 12);
-        if (lite) { QualitySettings.shadowResolution = ShadowResolution.Low; QualitySettings.lodBias = 0.5f; }
-        else QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
+        QualitySettings.shadowDistance = 120f;
+        QualitySettings.shadowCascades = 4;
+        if (Cfg.shadowDist > 0f) QualitySettings.shadowDistance = Cfg.shadowDist;
+        if (Cfg.shadowCascades > 0) QualitySettings.shadowCascades = Cfg.shadowCascades;
+        QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 12);
+        QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
         float hour = TestHour >= 0f ? TestHour : (float)((DateTime.UtcNow.TimeOfDay.TotalHours + Plugin.CfgFieldZone.Value) % 24.0 + 24.0) % 24f;
         bool night = ArenaLook.IsNight(hour);
         ArenaLook.Use(Cfg);
@@ -199,13 +200,15 @@ internal sealed class Arena3D
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);
         if (eye != null) eye.backgroundColor = ArenaCfg.Hex(night ? Cfg.bgNight : Cfg.bgDay);
         if (eye != null) _root.AddComponent<ArenaOcclude>().Init(_root.transform, eye, Cfg);
-        if (eye != null && _post != null && !LiteGpu)
+        if (eye != null && _post != null)
         {
             _eye = eye;
             _eyeHdr = eye.allowHDR;
             eye.allowHDR = true;
             _postOn = eye.gameObject.AddComponent<ArenaPost>();
             _postOn.Setup(_post, hour, look.NightGrade, Cfg.nightPost);
+            float dim = Mathf.Min(1f, 1f / Mathf.Max(0.01f, Mathf.Lerp(1f, Cfg.nightPost, look.NightGrade)));
+            DollTint = new Color(dim, dim, dim, 1f);
         }
         else if (eye != null && _grade != null)
         {
@@ -213,6 +216,7 @@ internal sealed class Arena3D
             _gradeOn.Mat = _grade;
             _gradeOn.Night = look.NightGrade;
         }
+        DollTint *= Color.Lerp(Color.white, Field.Night, look.NightGrade);
         Any = true;
         shown?.Invoke();
         Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}");
@@ -261,6 +265,7 @@ internal sealed class Arena3D
     internal void Detach()
     {
         Any = false;
+        DollTint = Color.white;
         if (_root != null) UnityEngine.Object.Destroy(_root);
         _root = null;
         if (_gradeOn != null) UnityEngine.Object.Destroy(_gradeOn);

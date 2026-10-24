@@ -34,10 +34,15 @@ namespace NewAge2D
         public float standsTop = 29.6f;
         public ArenaHeight height;
         public float fireIntensity = 2.2f, fireRange = 15f, fireUp = 0.9f;
+        public float shadowDist = -1f;
+        public int shadowCascades = -1;
+        public float yawMax = -1f;
+        public float shadowBias = -1f, shadowNormalBias = -1f;
         public float pitchMin = -1f, nightSun = 1f, fogStart = 90f, fogEnd = 230f, nightFogStart = -1f, nightFogEnd = -1f;
-        public float sunScale = -1f, ambientScale = -1f, shadowStrength = -1f, nightBoost = 0f, nightPost = 1f, maxDist = 75f, homePitch = -1f, homeDist = -1f, camTop = 999f, openRise = 4.5f, openDrop = 2f, wallGap = 2.5f, camAbove = -999f, pitchMax = 1.35f;
+        public float sunScale = -1f, ambientScale = -1f, shadowStrength = -1f, nightBoost = 0f, nightPost = 1f, maxDist = 75f, homePitch = -1f, homeDist = -1f, camTop = 999f, openRise = 4.5f, openDrop = 2f, wallGap = 2.5f, camAbove = -999f, pitchMax = 1.35f, homeWide = 0f;
         public bool electric;
         public bool storm;
+        public string fireColor = "";
         public string bgDay = "000000", bgNight = "000000", nightFog = "";
         public float[] motes = { 13f, 2.5f, 15.6f, 47f, 9f, 26f };
 

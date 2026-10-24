@@ -138,7 +138,9 @@ internal static class Field
     internal static readonly Color Morning = new(1f, 0.96f, 0.90f);
     internal static readonly Color Night = new(0.76f, 0.82f, 0.97f);
 
-    internal static Color DayTint
+    internal static Color DayTint => Arena3D.Any ? Arena3D.DollTint : BackdropTint;
+
+    private static Color BackdropTint
     {
         get
         {

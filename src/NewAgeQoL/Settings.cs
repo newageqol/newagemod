@@ -58,13 +58,6 @@ namespace NewAgeQoL
                     : null,
                 B(Lang.T("Новые локации и экран загрузки мода"), Plugin.CfgNewPlaces),
                 B(Lang.T("Новые 3D-арены в боях"), Plugin.CfgNewArenas),
-                Plugin.CfgArenaQuality == null ? null : new CycleRow
-                {
-                    Title = Lang.T("Качество 3D-арен"),
-                    Cfg = Plugin.CfgArenaQuality,
-                    Count = 3,
-                    Name = q => q == 1 ? Lang.T("Полное") : q == 2 ? Lang.T("Лёгкое") : Plugin.ArenaLiteAuto ? Lang.T("Авто: лёгкое") : Lang.T("Авто: полное"),
-                },
                 new Header { Title = Lang.T("Кнопки") },
                 B(Lang.T("Возврат в Иллениум ведёт на арену, к турнирам"), Plugin.CfgTownTournament),
                 B(Lang.T("Кнопка запасного набора"), Plugin.CfgArtifactButtons),

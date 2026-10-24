@@ -49,6 +49,7 @@ namespace NewAgeQoL
         private static MaterialPropertyBlock _paint;
 
         internal static int LitId => _litPick;
+        internal static bool Shown => _shown;
 
         internal static void Tick()
         {
@@ -72,12 +73,12 @@ namespace NewAgeQoL
             _shown = over;
             try
             {
-                if (over)
+                if (over && !Pointer.Drawn)
                 {
                     var hand = Hand();
                     Cursor.SetCursor(hand, new Vector2(6f * _scale, 0f), CursorMode.Auto);
                 }
-                else if (!SkillList.Armed) Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                else if (!over && !SkillList.Armed) Pointer.Plain();
             }
             catch (Exception e) { Plugin.Trace("[fighter] cursor: " + e.Message); }
         }
@@ -155,7 +156,7 @@ namespace NewAgeQoL
             return FighterHint.Ray(cd, camera, true) ?? FighterHint.OnHex(cd, true);
         }
 
-        private static bool OverUi()
+        internal static bool OverUi()
         {
             var system = EventSystem.current;
             if (system == null) return false;

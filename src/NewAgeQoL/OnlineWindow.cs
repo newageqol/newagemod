@@ -209,7 +209,7 @@ namespace NewAgeQoL
             if (age >= 0 && !OnlineList.Busy && !st.StartsWith(Lang.T("Ошибка"), StringComparison.Ordinal))
             {
                 int wait = OnlineList.Wait;
-                st += Lang.F(" · обновлено {0} с назад · ", age) + (wait > 0 ? Lang.F("новый список через {0} с", wait) : Lang.T("можно обновить"));
+                st = (st.Length > 0 ? st + " · " : "") + Lang.F("обновлено {0} с назад", age) + " · " + (wait > 0 ? Lang.F("новый список через {0} с", wait) : Lang.T("можно обновить"));
             }
             if (OnlineCharms.Gathering && st.Length > 0) st += Lang.T(" · заклятия загружаются…");
             if (_friends && !Friends.Loaded) st = Lang.T("список друзей загружается…") + (st.Length > 0 ? " · " + st : "");

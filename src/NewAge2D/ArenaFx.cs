@@ -80,7 +80,7 @@ internal sealed class ArenaFx : MonoBehaviour
 
     private void Motes(Material mat, Color tint)
     {
-        if (mat == null) return;
+        if (mat == null || _motes == null || _motes.Length < 6) return;
         var go = new GameObject("motes");
         go.transform.SetParent(_root, false);
         go.transform.localPosition = new Vector3(_motes[0], _motes[1], -_motes[2]);
@@ -110,7 +110,7 @@ internal sealed class ArenaFx : MonoBehaviour
 
     private void Puffs(Material mat, Color dust)
     {
-        if (mat == null) return;
+        if (mat == null || _motes == null || _motes.Length < 6) return;
         var go = new GameObject("puffs");
         go.transform.SetParent(_root, false);
         _puffs = go.AddComponent<ParticleSystem>();

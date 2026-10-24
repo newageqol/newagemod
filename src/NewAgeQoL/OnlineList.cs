@@ -308,7 +308,7 @@ namespace NewAgeQoL
             lock (Gate)
             {
                 _players = list;
-                _status = Lang.F("В игре: {0}", list.Count);
+                _status = "";
                 _busy = false;
                 _version++;
             }

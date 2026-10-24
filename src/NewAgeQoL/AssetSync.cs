@@ -461,12 +461,7 @@ namespace NewAgeQoL
             Plugin.Instance.StartCoroutine(Arenas());
         }
 
-        private static bool ArenaWanted(string name, HashSet<string> all, bool lite)
-        {
-            if (name.EndsWith(".cam.json", StringComparison.OrdinalIgnoreCase) || name.Equals("arena_fx", StringComparison.OrdinalIgnoreCase)) return true;
-            if (name.EndsWith("lite", StringComparison.OrdinalIgnoreCase)) return lite;
-            return !lite || !all.Contains(name + "lite");
-        }
+        private static bool ArenaWanted(string name) => !name.EndsWith("lite", StringComparison.OrdinalIgnoreCase);
 
         private static IEnumerator Arenas()
         {
@@ -487,12 +482,11 @@ namespace NewAgeQoL
             }
             var entries = Parse(Encoding.UTF8.GetString(manifest)).Where(e => e.Path.StartsWith(ArenaDir + "/", StringComparison.OrdinalIgnoreCase)).ToList();
             if (_known == null) LoadState();
-            bool lite = Plugin.ArenaLite;
             var all = new HashSet<string>(entries.Select(e => Path.GetFileName(e.Path)), StringComparer.OrdinalIgnoreCase);
             int got = 0, kept = 0, later = 0;
             foreach (var entry in entries)
             {
-                if (!ArenaWanted(Path.GetFileName(entry.Path), all, lite)) continue;
+                if (!ArenaWanted(Path.GetFileName(entry.Path))) continue;
                 entry.Home = ArenaBase;
                 string have = null;
                 yield return Hash(Path.Combine(Root, entry.Path), entry.Path, h => have = h);
@@ -525,13 +519,13 @@ namespace NewAgeQoL
             if (entries.Count > 0 && Directory.Exists(shelf))
                 foreach (var file in Directory.GetFiles(shelf))
                 {
-                    if (all.Contains(Path.GetFileName(file))) continue;
+                    if (all.Contains(Path.GetFileName(file)) && ArenaWanted(Path.GetFileName(file))) continue;
                     try { File.Delete(file); }
                     catch (Exception e) { Plugin.Trace("[arenas] removing " + Path.GetFileName(file) + ": " + e.Message); }
                 }
             try { SaveState(); }
             catch (Exception e) { Plugin.Warn("[arenas] state: " + e.Message); }
-            Plugin.Log.LogInfo("[arenas] " + (lite ? "light" : "full") + " set: " + kept + " in place, " + got + " downloaded, " + later + " wait for the next start");
+            Plugin.Log.LogInfo("[arenas] full set: " + kept + " in place, " + got + " downloaded, " + later + " wait for the next start");
         }
 
         private static IEnumerator Download(string name, Action<byte[], string, long> done, int timeout = 30, string home = Base)
