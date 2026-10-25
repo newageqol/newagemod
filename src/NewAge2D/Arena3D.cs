@@ -217,6 +217,8 @@ internal sealed class Arena3D
             _gradeOn.Night = look.NightGrade;
         }
         DollTint *= Color.Lerp(Color.white, Field.Night, look.NightGrade);
+        float doll = Mathf.Lerp(1f, Mathf.Clamp(Cfg.nightDoll, 0.2f, 1.5f), look.NightGrade);
+        DollTint = new Color(DollTint.r * doll, DollTint.g * doll, DollTint.b * doll, DollTint.a);
         Any = true;
         shown?.Invoke();
         Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}");
