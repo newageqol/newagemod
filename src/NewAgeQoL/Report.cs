@@ -587,7 +587,7 @@ namespace NewAgeQoL
                 box.Append("экран: ").Append(Screen.width).Append('×').Append(Screen.height)
                    .Append(Screen.fullScreen ? ", во весь экран" : ", в окне").Append("\r\n");
                 box.Append("время: ").Append(DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture))
-                   .Append(" UTC, по игре ").Append(DateTime.UtcNow.AddHours(3).ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)).Append("\r\n");
+                   .Append(" UTC, по Киеву ").Append(Kyiv.Now.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)).Append("\r\n");
                 try
                 {
                     var user = Controllers.User;

@@ -1156,7 +1156,7 @@ namespace NewAgeQoL
         private void Update()
         {
             if (Time.unscaledTime < _next) return;
-            var now = DateTime.UtcNow.AddHours(3);
+            var now = Kyiv.Now;
             _next = Time.unscaledTime + (60 - now.Second);
             int stamp = now.Hour * 60 + now.Minute;
             if (stamp == _shown) return;

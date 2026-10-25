@@ -190,7 +190,7 @@ internal sealed class Arena3D
         if (Cfg.shadowCascades > 0) QualitySettings.shadowCascades = Cfg.shadowCascades;
         QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 12);
         QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
-        float hour = TestHour >= 0f ? TestHour : (float)((DateTime.UtcNow.TimeOfDay.TotalHours + Plugin.CfgFieldZone.Value) % 24.0 + 24.0) % 24f;
+        float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
         bool night = ArenaLook.IsNight(hour);
         ArenaLook.Use(Cfg);
         var look = _root.AddComponent<ArenaLook>();
@@ -232,6 +232,7 @@ internal sealed class Arena3D
             foreach (var light in root.GetComponentsInChildren<Light>(true))
             {
                 if (light == null || !light.enabled) continue;
+                if (_root != null && light.transform.IsChildOf(_root.transform)) continue;
                 light.enabled = false;
                 _lights.Add(light);
             }

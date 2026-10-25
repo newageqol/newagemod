@@ -630,8 +630,8 @@ namespace NewAgeQoL
         private static string When(long at)
         {
             if (at <= 0) return "";
-            var game = DateTimeOffset.FromUnixTimeSeconds(at).UtcDateTime.AddHours(3);
-            var today = DateTime.UtcNow.AddHours(3).Date;
+            var game = Kyiv.From(DateTimeOffset.FromUnixTimeSeconds(at).UtcDateTime);
+            var today = Kyiv.Now.Date;
             var inv = System.Globalization.CultureInfo.InvariantCulture;
             return game.Date == today ? game.ToString("HH:mm", inv) : game.ToString("dd.MM HH:mm", inv);
         }

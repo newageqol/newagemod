@@ -155,7 +155,7 @@ internal static class Field
 
     internal static string DayPart()
     {
-        int hour = DateTime.UtcNow.AddHours(Plugin.CfgFieldZone.Value).Hour;
+        int hour = Kyiv.Now.Hour;
         if ((hour >= 6 && hour <= 8) || (hour >= 18 && hour <= 20)) return "_morning";
         return hour > 8 && hour < 18 ? "_day" : "_night";
     }

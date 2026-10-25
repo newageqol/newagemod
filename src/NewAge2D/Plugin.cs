@@ -45,7 +45,6 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<float> CfgFieldView;
     internal static ConfigEntry<float> CfgFieldOffsetX;
     internal static ConfigEntry<float> CfgFieldOffsetY;
-    internal static ConfigEntry<int> CfgFieldZone;
     internal static ConfigEntry<bool> CfgArena3D;
     internal static ConfigEntry<float> CfgSoundBefore;
 
@@ -98,7 +97,6 @@ public class Plugin : BaseUnityPlugin
         CfgFieldOffsetX = Config.Bind("Field", "OffsetX", 0f, "Сдвиг картинки поля вправо в пикселях Flash, если клетки разошлись с рисунком");
         CfgFieldOffsetY = Config.Bind("Field", "OffsetY", 0f, "Сдвиг картинки поля вниз в пикселях Flash");
         CfgArena3D = Config.Bind("Field", "Arena3D", true, "Объёмная 3D-арена вместо плоской картинки поля на картах, для которых она собрана (arenaCombatMap1, 2, 3 и 4). Свет и огонь по игровому времени");
-        CfgFieldZone = Config.Bind("Field", "ServerHours", 3, "Часовой пояс сервера относительно UTC: по нему карта берётся утренняя, дневная или ночная");
 
         CfgSoundBefore = Config.Bind("General", "GameSoundBeforeFlash", -1f,
             "Служебное: громкость звука игры до включения Flash-вида. При Flash-виде звук игры уходит в 0, а ползунок «Звук» в настройках игры прячется: свои звуки игра привязывает к 3D-моделям и анимациям Unity. При выключении вида громкость возвращается. -1 — мод звук не глушил.");

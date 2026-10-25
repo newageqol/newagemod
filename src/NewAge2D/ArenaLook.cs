@@ -62,7 +62,7 @@ namespace NewAge2D
             NightFog = !string.IsNullOrEmpty(cfg.nightFog) && int.TryParse(cfg.nightFog, System.Globalization.NumberStyles.HexNumber, null, out var nf) ? Hex(nf) : (Color?)null;
         }
 
-        public static float GameHour() => (float)((DateTime.UtcNow.TimeOfDay.TotalHours + 3.0) % 24.0);
+        public static float GameHour() => (float)Kyiv.Now.TimeOfDay.TotalHours;
         public static bool IsNight(float hour) => hour >= 19.4f || hour < 6f;
         public static bool IsEvening(float hour) => hour >= 17.8f || hour < 6.4f;
 

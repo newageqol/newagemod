@@ -13,6 +13,7 @@ namespace NewAgeQoL
     internal static class ClaimRoster
     {
         private const float Delay = 0.3f;
+        private const float Grace = 0.3f;
         private const float Every = 1f;
         private const float RowWide = 300f;
         private const float Shrink = 0.68f;
@@ -46,6 +47,10 @@ namespace NewAgeQoL
 
         private static RosterHover _hover;
         private static float _since;
+        private static int _heldId;
+        private static int _heldRoom;
+        private static bool _heldFight;
+        private static float _lostAt;
         private static float _askAt;
         private static bool _fresh;
         private static float _paintAt;
@@ -79,7 +84,13 @@ namespace NewAgeQoL
         internal static void Enter(RosterHover hover)
         {
             if (hover == null) return;
+            bool same = (_hover != null || _lostAt > 0f) && hover.Id == _heldId && hover.Room == _heldRoom && hover.Fight == _heldFight;
             _hover = hover;
+            _lostAt = 0f;
+            if (same) return;
+            _heldId = hover.Id;
+            _heldRoom = hover.Room;
+            _heldFight = hover.Fight;
             _since = Time.unscaledTime;
             _askAt = _since + Delay;
             _fresh = true;
@@ -90,7 +101,15 @@ namespace NewAgeQoL
         {
             if (_hover != hover) return;
             _hover = null;
+            _lostAt = 0f;
             Hide();
+        }
+
+        internal static void Lost(RosterHover hover)
+        {
+            if (_hover != hover) return;
+            _hover = null;
+            _lostAt = Time.unscaledTime;
         }
 
         private static void Hide()
@@ -103,8 +122,15 @@ namespace NewAgeQoL
             try
             {
                 AskCards();
-                if (_hover == null || !_hover.isActiveAndEnabled) { _hover = null; Hide(); return; }
                 float now = Time.unscaledTime;
+                if (_hover == null || !_hover.isActiveAndEnabled)
+                {
+                    _hover = null;
+                    if (_lostAt > 0f && now - _lostAt < Grace) return;
+                    _lostAt = 0f;
+                    Hide();
+                    return;
+                }
                 bool busy;
                 lock (Gate)
                 {
@@ -488,6 +514,6 @@ namespace NewAgeQoL
 
         public void OnPointerExit(PointerEventData e) => ClaimRoster.Leave(this);
 
-        private void OnDisable() => ClaimRoster.Leave(this);
+        private void OnDisable() => ClaimRoster.Lost(this);
     }
 }

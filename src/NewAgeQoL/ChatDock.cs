@@ -1185,7 +1185,7 @@ namespace NewAgeQoL
         {
             if (_clock == null) return;
             var at = Server();
-            string now = at.HasValue ? at.Value.AddHours(3).ToString("HH:mm") : "--:--";
+            string now = at.HasValue ? Kyiv.From(at.Value).ToString("HH:mm") : "--:--";
             string place = (_clock.gameObject.activeInHierarchy ? "visible" : "hidden")
                 + ", position " + _clock.rectTransform.anchoredPosition + " size " + _clock.rectTransform.sizeDelta;
             if (place != _clockPlace)
