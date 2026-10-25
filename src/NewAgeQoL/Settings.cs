@@ -83,7 +83,7 @@ namespace NewAgeQoL
                 new Header { Title = Lang.T("Звуки") },
                 Sl(Lang.T("Громкость звуков мода"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
                 Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f),
-                A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя: Cold Stone Reverb, Procession of Ashes, Heartbeat Groove, Pulse of the Void. Треки сделал автор мода."), 10f)),
+                A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя: Cold Stone Reverb, Procession of Ashes, Heartbeat Groove, Pulse of the Void, Menacing Waltz. Треки сделал автор мода."), 10f)),
 
                 new Header { Title = "" },
             };

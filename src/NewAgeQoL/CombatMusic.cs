@@ -453,7 +453,16 @@ namespace NewAgeQoL
                     request.Abort();
                     Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load in " + LoadWait + " s");
                 }
-                else if (request.result == UnityWebRequest.Result.Success) clip = DownloadHandlerAudioClip.GetContent(request);
+                else if (request.result == UnityWebRequest.Result.Success)
+                {
+                    clip = DownloadHandlerAudioClip.GetContent(request);
+                    if (clip == null || clip.length <= 0f)
+                    {
+                        if (clip != null) UnityEngine.Object.Destroy(clip);
+                        clip = null;
+                        Plugin.Warn("[music] " + Path.GetFileName(path) + " did not open as sound: the file must hold only an Ogg Vorbis track");
+                    }
+                }
                 else Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
             }
             if (generation != _generation)
