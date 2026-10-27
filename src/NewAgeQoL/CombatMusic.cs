@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -209,7 +209,7 @@ namespace NewAgeQoL
             deck.Source.clip = null;
             deck.Weight = 0f;
             deck.Want = 0f;
-            if (clip != null) UnityEngine.Object.Destroy(clip);
+            Release(clip);
         }
 
         private static void End(float fade, bool over)
@@ -387,7 +387,7 @@ namespace NewAgeQoL
                 _scanned = false;
                 _generation++;
                 _loading = false;
-                if (_next != null) UnityEngine.Object.Destroy(_next);
+                Release(_next);
                 _next = null;
                 _nextSong = -1;
                 _last = -1;
@@ -434,40 +434,78 @@ namespace NewAgeQoL
             Plugin.Instance.StartCoroutine(Fetch(song, _generation));
         }
 
+        private static bool _noStream;
+        private static readonly Dictionary<AudioClip, DownloadHandler> Held = new Dictionary<AudioClip, DownloadHandler>();
+
+        private static void Release(AudioClip clip)
+        {
+            if (ReferenceEquals(clip, null)) return;
+            Held.TryGetValue(clip, out var handler);
+            Held.Remove(clip);
+            if (clip != null) UnityEngine.Object.Destroy(clip);
+            if (handler == null) return;
+            try { handler.Dispose(); }
+            catch (Exception e) { Plugin.Trace("[music] stream release: " + e.Message); }
+        }
+
         private static IEnumerator Fetch(int song, int generation)
         {
             string path = Songs[song];
             AudioClip clip = null;
-            using (var request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, AudioType.OGGVORBIS))
+            for (int attempt = 0; attempt < 2 && clip == null; attempt++)
             {
-                if (request.downloadHandler is DownloadHandlerAudioClip handler)
+                bool stream = attempt == 0 && !_noStream;
+                using (var request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, AudioType.OGGVORBIS))
                 {
-                    handler.streamAudio = false;
-                    handler.compressed = true;
-                }
-                var sending = request.SendWebRequest();
-                float until = Time.unscaledTime + LoadWait;
-                while (!sending.isDone && Time.unscaledTime < until) yield return null;
-                if (!sending.isDone)
-                {
-                    request.Abort();
-                    Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load in " + LoadWait + " s");
-                }
-                else if (request.result == UnityWebRequest.Result.Success)
-                {
+                    var handler = request.downloadHandler as DownloadHandlerAudioClip;
+                    if (handler != null)
+                    {
+                        handler.streamAudio = stream;
+                        handler.compressed = !stream;
+                        if (stream) request.disposeDownloadHandlerOnDispose = false;
+                    }
+                    var sending = request.SendWebRequest();
+                    float until = Time.unscaledTime + LoadWait;
+                    while (!sending.isDone && Time.unscaledTime < until) yield return null;
+                    if (!sending.isDone)
+                    {
+                        request.Abort();
+                        if (stream) handler?.Dispose();
+                        Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load in " + LoadWait + " s");
+                        break;
+                    }
+                    if (request.result != UnityWebRequest.Result.Success)
+                    {
+                        if (stream) handler?.Dispose();
+                        Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
+                        break;
+                    }
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
                     clip = DownloadHandlerAudioClip.GetContent(request);
+                    if (stream)
+                    {
+                        if (clip != null && handler != null) Held[clip] = handler;
+                        else handler?.Dispose();
+                    }
+                    Plugin.Trace("[music] " + Path.GetFileName(path) + " opened " + (stream ? "as a stream" : "whole") + " in " + watch.ElapsedMilliseconds + " ms");
                     if (clip == null || clip.length <= 0f)
                     {
-                        if (clip != null) UnityEngine.Object.Destroy(clip);
+                        Release(clip);
                         clip = null;
+                        if (stream)
+                        {
+                            _noStream = true;
+                            Plugin.Trace("[music] streamed track has no length, loading tracks whole from now on");
+                            continue;
+                        }
                         Plugin.Warn("[music] " + Path.GetFileName(path) + " did not open as sound: the file must hold only an Ogg Vorbis track");
                     }
                 }
-                else Plugin.Warn("[music] " + Path.GetFileName(path) + " did not load: " + request.error);
+                if (!stream) break;
             }
             if (generation != _generation)
             {
-                if (clip != null) UnityEngine.Object.Destroy(clip);
+                Release(clip);
                 yield break;
             }
             _loading = false;

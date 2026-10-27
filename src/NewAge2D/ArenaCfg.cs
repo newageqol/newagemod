@@ -38,8 +38,8 @@ namespace NewAge2D
         public int shadowCascades = -1;
         public float yawMax = -1f;
         public float shadowBias = -1f, shadowNormalBias = -1f;
-        public float pitchMin = -1f, nightSun = 1f, fogStart = 90f, fogEnd = 230f, nightFogStart = -1f, nightFogEnd = -1f;
-        public float sunScale = -1f, ambientScale = -1f, shadowStrength = -1f, nightBoost = 0f, nightPost = 1f, nightDoll = 1f, maxDist = 75f, homePitch = -1f, homeDist = -1f, camTop = 999f, openRise = 4.5f, openDrop = 2f, wallGap = 2.5f, camAbove = -999f, pitchMax = 1.35f, homeWide = 0f;
+        public float pitchMin = -1f, nightSun = 0.35f, nightAmbient = 0.55f, nightVig = 0.08f, nightCold = 0.35f, nightLevel = 0.2f, fogStart = 90f, fogEnd = 230f, nightFogStart = -1f, nightFogEnd = -1f;
+        public float sunScale = -1f, ambientScale = -1f, shadowStrength = -1f, nightBoost = 0f, nightPost = 1f, nightDoll = 1f, fieldGlow = 1.7f, mobGlow = 1.1f, lampGlow = 4f, lampBoost = 1.5f, lampReach = 30f, lampMax = 22f, fieldGlowHigh = 10f, fieldGlowAngle = 115f, maxDist = 75f, homePitch = -1f, homeDist = -1f, camTop = 999f, openRise = 4.5f, openDrop = 2f, wallGap = 2.5f, camAbove = -999f, pitchMax = 1.35f, homeWide = 0f;
         public bool electric;
         public bool storm;
         public string fireColor = "";

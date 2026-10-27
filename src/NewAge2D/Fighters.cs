@@ -2180,6 +2180,12 @@ internal sealed class FighterDoll : MonoBehaviour
         var tint = Field.DayTint;
         var paint = new Color(tint.r, tint.g, tint.b, alpha);
         if (_view.color != paint) _view.color = paint;
+        if (_skin != null)
+        {
+            float lift = Arena3D.Any ? 1f / Mathf.Max(0.3f, ArenaPost.Gain) : 1f;
+            var boost = new Color(lift, lift, lift, 1f);
+            if (_skin.color != boost) _skin.color = boost;
+        }
         SyncHalo();
         if (Passing != null)
         {

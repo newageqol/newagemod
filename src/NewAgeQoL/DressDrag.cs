@@ -149,7 +149,7 @@ namespace NewAgeQoL
             {
                 var data = cell.Data;
                 if (data != null && data.InventoryId > 0)
-                    Run(data.SubType == EThingSubType.RELIQUIAE ? Relic(data.InventoryId, (int)data.SubType) : Dress(data.InventoryId, (int)data.SubType, null));
+                    Run(Rotates(data.SubType) ? Relic(data.InventoryId, data.ThingId, (int)data.SubType) : Dress(data.InventoryId, (int)data.SubType, null));
                 return;
             }
             Wait(cell, () => Pass(cell));
@@ -244,11 +244,13 @@ namespace NewAgeQoL
                 ThingContextActionResponseMessage freed = null;
                 yield return Act(there.Id, EThingActionButton.TAKE_OFF, 0, r => freed = r);
                 if (freed == null || !freed.Success) yield break;
+                Apply(freed);
                 if (!Landed(freed, there.ThingId, out backId, out backTab)) backId = 0;
             }
             var button = into.HasValue ? Into(into.Value) : EThingActionButton.DRESS;
             ThingContextActionResponseMessage dressed = null;
             yield return Act(id, button, Tab(), r => dressed = r);
+            if (dressed != null && dressed.Success) Apply(dressed);
             if (backId > 0 && dressed != null && !dressed.Success)
             {
                 Plugin.Trace("[items] item " + id + " was not put on, returning item " + backId + " to slot " + into.Value);
@@ -256,8 +258,11 @@ namespace NewAgeQoL
             }
         }
 
-        private static int _relicTurn;
-        private static float _relicAt = -100f;
+        private static readonly Dictionary<int, int> RelicTurn = new Dictionary<int, int>();
+        private static readonly Dictionary<int, float> RelicAt = new Dictionary<int, float>();
+
+        private static bool Rotates(EThingSubType kind) =>
+            kind == EThingSubType.RELIQUIAE || kind == EThingSubType.RING || kind == EThingSubType.EARING;
 
         private static List<ESlots.SlotType> RelicOrder(int kind)
         {
@@ -296,30 +301,41 @@ namespace NewAgeQoL
             }
         }
 
-        private static IEnumerator Relic(int id, int kind)
+        private static IEnumerator Relic(int id, int thingId, int kind)
         {
             var order = RelicOrder(kind);
             if (order.Count == 0) yield break;
             foreach (var slot in order)
             {
                 if (Busy(slot)) continue;
-                Plugin.Trace("[items] relic " + id + " goes to the free slot " + slot);
+                Plugin.Trace("[items] item " + id + " of kind " + kind + " goes to the free slot " + slot);
                 ThingContextActionResponseMessage reply = null;
                 yield return Act(id, Into(slot), Tab(), r => reply = r);
                 if (reply != null && reply.Success) Apply(reply);
-                _relicTurn = 0;
+                RelicTurn[kind] = 0;
                 yield break;
             }
-            if (Time.unscaledTime - _relicAt > 60f) _relicTurn = 0;
-            var target = order[_relicTurn % order.Count];
-            _relicTurn++;
-            _relicAt = Time.unscaledTime;
+            if (!RelicAt.TryGetValue(kind, out var at) || Time.unscaledTime - at > 60f) RelicTurn[kind] = 0;
+            RelicTurn.TryGetValue(kind, out var turn);
+            var target = order[turn % order.Count];
+            for (int i = 0; i < order.Count; i++)
+            {
+                var slot = order[(turn + i) % order.Count];
+                if (Slots.TryGetValue(slot, out var worn) && worn != null && worn.ThingId != thingId)
+                {
+                    target = slot;
+                    turn += i;
+                    break;
+                }
+            }
+            RelicTurn[kind] = turn + 1;
+            RelicAt[kind] = Time.unscaledTime;
             if (!Slots.TryGetValue(target, out var there) || there == null || there.Id <= 0)
             {
-                Plugin.Trace("[items] relic " + id + ": slot " + target + " is not known yet, skipping");
+                Plugin.Trace("[items] item " + id + ": slot " + target + " is not known yet, skipping");
                 yield break;
             }
-            Plugin.Trace("[items] all relic slots are taken, relic " + id + " replaces the one in " + target);
+            Plugin.Trace("[items] all slots of kind " + kind + " are taken, item " + id + " replaces the one in " + target);
             yield return Dress(id, kind, target);
         }
 

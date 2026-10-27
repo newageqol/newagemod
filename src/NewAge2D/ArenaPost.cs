@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace NewAge2D
 {
@@ -32,22 +33,34 @@ namespace NewAge2D
 
         static readonly int IdBloom = Shader.PropertyToID("_BloomTex");
 
+        static readonly int IdGrade = Shader.PropertyToID("_GradeMul");
+
         Material _mat;
         readonly RenderTexture[] _mips = new RenderTexture[6];
+        RenderTexture _probe;
+        Color _grade = Color.white;
+        float _night, _target, _gain = 1f, _goal = 1f, _next;
+        bool _asked, _seen;
 
-        public void Setup(Material mat, float hour, float night, float lift)
+        internal static float Gain = 1f;
+
+        public void Setup(Material mat, float hour, float night, float dark, float cold, float target)
         {
             _mat = mat;
+            _night = night;
+            _target = target;
+            Gain = 1f;
             hour = (hour % 24f + 24f) % 24f;
             int i = 0;
             while (i < Keys.Length - 2 && Keys[i + 1].h < hour) i++;
             var a = Keys[i]; var b = Keys[i + 1];
             float k = Mathf.InverseLerp(a.h, b.h, hour);
-            mat.SetColor("_GradeMul", Color.Lerp(a.mul, b.mul, k) * Mathf.Lerp(1f, lift, night));
+            _grade = Color.Lerp(a.mul, b.mul, k);
+            mat.SetColor(IdGrade, _grade);
             mat.SetFloat("_Sat", Mathf.Lerp(a.sat, b.sat, k));
             mat.SetFloat("_Con", Mathf.Lerp(a.con, b.con, k));
-            mat.SetFloat("_Vig", Mathf.Lerp(a.vig, b.vig, k));
-            mat.SetFloat("_Night", night);
+            mat.SetFloat("_Vig", Mathf.Lerp(a.vig, b.vig, k) + dark * night);
+            mat.SetFloat("_Night", night * cold);
             mat.SetFloat("_Grain", 0.05f * night);
             mat.SetFloat("_BloomInt", Mathf.Lerp(0.18f, 0.35f, night));
             mat.SetFloat("_Threshold", 2f);
@@ -56,9 +69,47 @@ namespace NewAge2D
             mat.SetFloat("_Lut", 0f);
         }
 
+        void Measure(RenderTexture src)
+        {
+            if (_night < 0.01f || _target <= 0f || _asked || Time.unscaledTime < _next || !SystemInfo.supportsAsyncGPUReadback) return;
+            if (_probe == null) _probe = new RenderTexture(32, 18, 0, RenderTextureFormat.ARGBFloat) { name = "NewAge2D.Exposure" };
+            Graphics.Blit(src, _probe);
+            _asked = true;
+            AsyncGPUReadback.Request(_probe, 0, TextureFormat.RGBAFloat, Got);
+        }
+
+        void Got(AsyncGPUReadbackRequest req)
+        {
+            _asked = false;
+            _next = Time.unscaledTime + 0.5f;
+            if (this == null || req.hasError) return;
+            var px = req.GetData<Color>();
+            double sum = 0;
+            for (int i = 0; i < px.Length; i++) sum += Mathf.Min(4f, 0.2126f * px[i].r + 0.7152f * px[i].g + 0.0722f * px[i].b);
+            float mean = (float)(sum / Mathf.Max(1, px.Length));
+            _goal = Mathf.Lerp(1f, Mathf.Clamp(Mathf.Sqrt(_target / Mathf.Max(mean, 1e-3f)), 0.65f, 1.5f), _night);
+            if (!_seen) { _gain = _goal; _seen = true; Plugin.Log.LogInfo($"[arena3d] night exposure: frame brightness {mean:0.000}, target {_target:0.000}, gain {_goal:0.00}"); }
+        }
+
+        void Update()
+        {
+            if (_mat == null) return;
+            _gain = Mathf.MoveTowards(_gain, _goal, Time.unscaledDeltaTime * 0.6f);
+            Gain = _gain;
+            _mat.SetColor(IdGrade, _grade * _gain);
+        }
+
+        void OnDestroy()
+        {
+            Gain = 1f;
+            if (_probe != null) { _probe.Release(); Destroy(_probe); }
+            _probe = null;
+        }
+
         void OnRenderImage(RenderTexture src, RenderTexture dst)
         {
             if (_mat == null) { Graphics.Blit(src, dst); return; }
+            Measure(src);
             var fmt = src.format;
             int w = Mathf.Max(1, src.width / 2), h = Mathf.Max(1, src.height / 2);
             int n = 0;

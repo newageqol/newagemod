@@ -6,7 +6,7 @@ namespace NewAge2D;
 
 internal sealed class Arena3D
 {
-    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9") };
+    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9") };
 
     private sealed class Scene
     {
@@ -48,6 +48,8 @@ internal sealed class Arena3D
 
     internal static bool Any;
     internal static Color DollTint = Color.white;
+    private static readonly Color FieldWarm = new(1f, 0.82f, 0.55f);
+    private static readonly Color DollWarm = new(0.97f, 0.94f, 0.88f);
 
     internal static float TestHour = -1f;
 
@@ -188,13 +190,36 @@ internal sealed class Arena3D
         QualitySettings.shadowCascades = 4;
         if (Cfg.shadowDist > 0f) QualitySettings.shadowDistance = Cfg.shadowDist;
         if (Cfg.shadowCascades > 0) QualitySettings.shadowCascades = Cfg.shadowCascades;
-        QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 12);
+        QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 32);
         QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
         float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
         bool night = ArenaLook.IsNight(hour);
         ArenaLook.Use(Cfg);
         var look = _root.AddComponent<ArenaLook>();
         look.Apply(_root.transform, hour, _flame);
+        float ground = _root.transform.position.y;
+        var mid = _root.transform.position;
+        if (eye != null)
+        {
+            var ray = eye.transform.forward;
+            float run = ray.y < -0.05f ? (eye.transform.position.y - ground) / -ray.y : 20f;
+            mid = eye.transform.position + ray * run;
+        }
+        if (Cfg.fieldGlow > 0f && look.NightGrade > 0.01f && eye != null && !_root.GetComponentsInChildren<Light>(true).Any(l => l.type == LightType.Spot && ArenaNight.Flood(l)))
+        {
+            var glow = new GameObject("NewAge2D.FieldGlow").AddComponent<Light>();
+            glow.transform.SetParent(_root.transform, false);
+            glow.transform.position = new Vector3(mid.x, ground + Cfg.fieldGlowHigh, mid.z);
+            glow.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            glow.type = LightType.Spot;
+            glow.spotAngle = Cfg.fieldGlowAngle;
+            glow.range = Cfg.fieldGlowHigh * 2.5f;
+            glow.color = FieldWarm;
+            glow.intensity = Cfg.fieldGlow * look.NightGrade;
+            glow.shadows = LightShadows.None;
+            glow.renderMode = LightRenderMode.ForcePixel;
+        }
+        _root.AddComponent<ArenaNight>().Init(_root.transform, eye, Cfg, look.NightGrade, night, mid);
         if (_fxBundle != null) _root.AddComponent<ArenaFx>().Init(_root.transform, _fxBundle, Cfg, look.SunDir, night, look.SunColor);
         if (_fxBundle != null && Cfg.storm)
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);
@@ -206,9 +231,7 @@ internal sealed class Arena3D
             _eyeHdr = eye.allowHDR;
             eye.allowHDR = true;
             _postOn = eye.gameObject.AddComponent<ArenaPost>();
-            _postOn.Setup(_post, hour, look.NightGrade, Cfg.nightPost);
-            float dim = Mathf.Min(1f, 1f / Mathf.Max(0.01f, Mathf.Lerp(1f, Cfg.nightPost, look.NightGrade)));
-            DollTint = new Color(dim, dim, dim, 1f);
+            _postOn.Setup(_post, hour, look.NightGrade, Cfg.nightVig, Cfg.nightCold, Cfg.nightLevel);
         }
         else if (eye != null && _grade != null)
         {
@@ -216,12 +239,27 @@ internal sealed class Arena3D
             _gradeOn.Mat = _grade;
             _gradeOn.Night = look.NightGrade;
         }
-        DollTint *= Color.Lerp(Color.white, Field.Night, look.NightGrade);
+        DollTint = Color.Lerp(Color.white, _postOn != null ? DollWarm : Field.Night, look.NightGrade);
+        int lowered = BelowDolls(_root);
         float doll = Mathf.Lerp(1f, Mathf.Clamp(Cfg.nightDoll, 0.2f, 1.5f), look.NightGrade);
         DollTint = new Color(DollTint.r * doll, DollTint.g * doll, DollTint.b * doll, DollTint.a);
         Any = true;
         shown?.Invoke();
-        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}");
+        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}");
+    }
+
+    private static int BelowDolls(GameObject root)
+    {
+        int lowered = 0;
+        foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            foreach (var material in renderer.sharedMaterials)
+            {
+                if (material == null || material.renderQueue <= 2500 || material.renderQueue >= 4000) continue;
+                renderer.sortingOrder = short.MinValue;
+                lowered++;
+                break;
+            }
+        return lowered;
     }
 
     private void DimMapLights()

@@ -36,7 +36,7 @@ namespace NewAge2D
         public static float ShadowStrength = 0.85f, NightBoost;
         public static GameObject FireField, FireWall;
         static Color? FireColor;
-        public static float SunScale = 0.5f, AmbientScale = 0.62f, FireIntensity = 2.2f, FireRange = 15f, FireUp = 0.9f, NightSun = 1f, FogStart = 90f, FogEnd = 230f, NightFogStart = -1f, NightFogEnd = -1f;
+        public static float SunScale = 0.42f, AmbientScale = 0.54f, FireIntensity = 2.2f, FireRange = 15f, FireUp = 0.9f, NightSun = 0.35f, NightAmbient = 0.55f, FogStart = 90f, FogEnd = 230f, NightFogStart = -1f, NightFogEnd = -1f;
         static Color? NightFog;
 
         static float ShadowBias = -1f, NormalBias = -1f;
@@ -50,11 +50,12 @@ namespace NewAge2D
             FireRange = cfg.fireRange;
             FireUp = cfg.fireUp;
             Electric = cfg.electric;
-            SunScale = cfg.sunScale > 0f ? cfg.sunScale : 0.5f;
-            AmbientScale = cfg.ambientScale > 0f ? cfg.ambientScale : 0.62f;
+            SunScale = cfg.sunScale > 0f ? cfg.sunScale : 0.42f;
+            AmbientScale = cfg.ambientScale > 0f ? cfg.ambientScale : 0.54f;
             ShadowStrength = cfg.shadowStrength > 0f ? cfg.shadowStrength : 0.85f;
             NightBoost = cfg.nightBoost;
-            NightSun = cfg.nightSun > 0f ? cfg.nightSun : 1f;
+            NightSun = cfg.nightSun > 0f ? cfg.nightSun : 0.35f;
+            NightAmbient = cfg.nightAmbient > 0f ? cfg.nightAmbient : 0.55f;
             FogStart = cfg.fogStart > 0f ? cfg.fogStart : 90f;
             FogEnd = cfg.fogEnd > FogStart ? cfg.fogEnd : 230f;
             NightFogStart = cfg.nightFogStart;
@@ -86,7 +87,7 @@ namespace NewAge2D
             float span = Keys[i + 1].h - Keys[i].h, k = span > 0 ? (hour - Keys[i].h) / span : 0;
             float el = Mathf.Lerp(a.el, b.el, k), si = Mathf.Lerp(a.si, b.si, k), hi = Mathf.Lerp(a.hi, b.hi, k), exp = Mathf.Lerp(a.exp, b.exp, k);
             NightGrade = Mathf.Lerp(a.nk, b.nk, k);
-            float amb = AmbientScale * (1f + NightBoost * NightGrade);
+            float amb = AmbientScale * (1f + NightBoost * NightGrade) * Mathf.Lerp(1f, NightAmbient, NightGrade);
             Color sun = Color.Lerp(a.sun, b.sun, k), sky = Color.Lerp(a.sky, b.sky, k), gnd = Color.Lerp(a.gnd, b.gnd, k), fog = Color.Lerp(a.fog, b.fog, k);
             if (NightFog.HasValue) fog = Color.Lerp(fog, NightFog.Value, NightGrade);
             bool lit = hour >= 5f && hour < 20.6f;
