@@ -15,17 +15,17 @@ namespace NewAge2D
             var center = new Vector3(cfg.center[0], 0f, -cfg.center[1]);
             if (streak != null)
             {
-                var c = Color.Lerp(col, ArenaCfg.Hex("ffe2b8"), 0.12f); c.a = night ? 0.4f : 0.6f;
-                var ps = Make(root, "storm_streaks", center + new Vector3(0f, 2.5f, 0f), wind, new Vector3(90f, 4.8f, 90f), streak, c, 4500);
+                var c = Color.Lerp(col, ArenaCfg.Hex("ffe2b8"), 0.12f); c.a = night ? 0.22f : 0.32f;
+                var ps = Make(root, "storm_streaks", center + new Vector3(0f, 2.5f, 0f), wind, new Vector3(90f, 4.8f, 90f), streak, c, 1600);
                 var main = ps.main;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 6f);
-                main.startSpeed = new ParticleSystem.MinMaxCurve(8f, 17f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(5f, 10f);
                 main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.035f);
-                var em = ps.emission; em.rateOverTime = 930f;
+                var em = ps.emission; em.rateOverTime = 300f;
                 var noise = ps.noise; noise.enabled = true; noise.strength = 0.6f; noise.frequency = 0.4f; noise.scrollSpeed = 0.5f;
                 var r = ps.GetComponent<ParticleSystemRenderer>();
                 r.renderMode = ParticleSystemRenderMode.Stretch;
-                r.velocityScale = 0.05f;
+                r.velocityScale = 0.04f;
                 r.lengthScale = 1f;
                 Fade(ps, 0.1f);
                 ps.Play();
@@ -69,7 +69,7 @@ namespace NewAge2D
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
-            main.loop = true; main.prewarm = true; main.duration = 5f;
+            main.loop = true; main.prewarm = true; main.duration = 5f; main.useUnscaledTime = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = max;
             main.startColor = col;
@@ -93,7 +93,7 @@ namespace NewAge2D
 
         void Update()
         {
-            float t = Time.time * 1000f, gust = 1f + 0.35f * Mathf.Sin(t / 1900f) + 0.2f * Mathf.Sin(t / 700f);
+            float t = Time.unscaledTime * 1000f, gust = 1f + 0.07f * Mathf.Sin(t / 4100f) + 0.03f * Mathf.Sin(t / 1700f);
             foreach (var ps in _systems)
             {
                 if (ps == null) continue;
