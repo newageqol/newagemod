@@ -38,8 +38,8 @@ namespace NewAgeQoL
                 if (_fighting && !fighting) Skip.Clear();
                 _fighting = fighting;
                 var cd = fighting ? Combat() : null;
-                var me = cd != null ? cd.MyCharacter : null;
-                if (me != null && cd.Characters != null && cd.Characters.TryGetValue(me.UserId, out var mine) && ReferenceEquals(mine, me))
+                var me = FighterHint.Body(cd);
+                if (me != null)
                 {
                     int reach = 0;
                     try { reach = me.StrikeRange; } catch { }

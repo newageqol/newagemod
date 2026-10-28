@@ -36,6 +36,8 @@ namespace NewAgeQoL
         private const float CharmEvery = 0.8f;
         private const int CharmRounds = 30;
         private const string Mark = "newage-observers 1";
+        private const float Patience = 5f;
+        private const float Retry = 1f;
 
         private static readonly object Gate = new object();
         private static List<OnlinePlayer> _players = new List<OnlinePlayer>();
@@ -272,14 +274,25 @@ namespace NewAgeQoL
 
         private static IEnumerator Fetch()
         {
-            var req = UnityWebRequest.Get(Server);
-            req.timeout = 20;
-            req.redirectLimit = 0;
-            req.SetRequestHeader("User-Agent", "NewAgeQoL");
-            yield return req.SendWebRequest();
-            long code = req.responseCode;
-            string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
-            req.Dispose();
+            float silentAt = -1f;
+            long code;
+            string body;
+            while (true)
+            {
+                var req = UnityWebRequest.Get(Server);
+                req.timeout = 20;
+                req.redirectLimit = 0;
+                req.SetRequestHeader("User-Agent", "NewAgeQoL");
+                yield return req.SendWebRequest();
+                code = req.responseCode;
+                body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
+                req.Dispose();
+                if (body.StartsWith(Mark, StringComparison.Ordinal)) break;
+                if (silentAt < 0f) silentAt = Time.unscaledTime;
+                if (Time.unscaledTime - silentAt >= Patience) break;
+                Plugin.Trace("[online] observer server did not answer (" + code + "), asking again");
+                yield return new WaitForSecondsRealtime(Retry);
+            }
             List<OnlinePlayer> list = null;
             long gen = 0;
             try { list = Take(code, body, out gen); }

@@ -18,6 +18,8 @@ namespace NewAgeQoL
         private const float RowWide = 300f;
         private const float Shrink = 0.68f;
         private const float ListEvery = 120f;
+        private const float Patience = 5f;
+        private const float Retry = 1f;
 
         private const string Server = "https://newage-observers.outerlab.org/v1/roster";
         private const string Mark = "newage-observers 1";
@@ -44,6 +46,8 @@ namespace NewAgeQoL
         private static Answer _bad;
         private static bool _busy;
         private static bool _finished;
+        private static bool _kept;
+        private static float _silentAt = -1f;
 
         private static RosterHover _hover;
         private static float _since;
@@ -137,7 +141,7 @@ namespace NewAgeQoL
                     if (_finished)
                     {
                         _finished = false;
-                        if (!_fresh) _askAt = now + Every;
+                        if (!_fresh) _askAt = now + (_kept ? Retry : Every);
                     }
                     busy = _busy;
                 }
@@ -224,6 +228,13 @@ namespace NewAgeQoL
         {
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
             {
+                if (_silentAt < 0f) _silentAt = Time.unscaledTime;
+                if (Time.unscaledTime - _silentAt < Patience)
+                {
+                    lock (Gate) { _kept = true; _busy = false; _finished = true; }
+                    Plugin.Trace("[roster] " + id + ": observer server did not answer (" + code + "), asking again");
+                    return;
+                }
                 Done(id, null, code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code));
                 return;
             }
@@ -243,8 +254,10 @@ namespace NewAgeQoL
         private static void Done(int id, List<Fighter> people, string error)
         {
             var answer = new Answer { Id = id, People = people, Error = error, At = DateTime.UtcNow };
+            if (people != null) _silentAt = -1f;
             lock (Gate)
             {
+                _kept = false;
                 if (people != null) { _good = answer; _bad = null; }
                 else _bad = answer;
                 _busy = false;

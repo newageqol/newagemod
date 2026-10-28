@@ -25,7 +25,7 @@ namespace NewAgeQoL
         {
             if (!SideButtons.InCombat() || BodyClick.OverUi()) return -1;
             var cd = FighterHint.Cd();
-            var me = cd != null ? cd.MyCharacter : null;
+            var me = FighterHint.Body(cd);
             if (me == null || me.HexGridPosition == null) return -1;
             if (!SkillList.HexUnder(out var hex) || hex == null) return -1;
             var cells = cd.Cells;

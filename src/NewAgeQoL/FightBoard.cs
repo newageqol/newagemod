@@ -21,6 +21,8 @@ namespace NewAgeQoL
         private const float OpenEvery = 3f;
         private const float ClaimEvery = 1f;
         private const float FoldedEvery = 15f;
+        private const float Patience = 5f;
+        private const float Retry = 1f;
 
         private sealed class Item
         {
@@ -56,6 +58,8 @@ namespace NewAgeQoL
         private static float _askAt;
         private static float _paintAt;
         private static float _top;
+        private static float _silentAt = -1f;
+        private static bool _kept;
 
         internal static float Bottom => _canvasGo != null && _canvasGo.activeInHierarchy && _fold != null ? _top + _fold.Height : 0f;
 
@@ -129,20 +133,30 @@ namespace NewAgeQoL
             long code = req.responseCode;
             string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
             req.Dispose();
+            _kept = false;
             try { Take(code, body); }
             catch (Exception e) { _error = Lang.T("ответ не разобран"); _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
             _busy = false;
-            _askAt = Time.unscaledTime + (Chaotic.Showing ? ClaimEvery : _fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
+            _askAt = Time.unscaledTime + (_kept ? Retry : Chaotic.Showing ? ClaimEvery : _fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
         }
 
         private static void Take(long code, string body)
         {
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
             {
+                float silent = Time.unscaledTime;
+                if (_silentAt < 0f) _silentAt = silent;
+                if (silent - _silentAt < Patience)
+                {
+                    _kept = true;
+                    Plugin.Trace("[fights] observer server did not answer (" + code + "), keeping the last list");
+                    return;
+                }
                 _error = code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code);
                 _items = null;
                 return;
             }
+            _silentAt = -1f;
             float at = Time.unscaledTime;
             var items = new List<Item>();
             var down = new List<int>();

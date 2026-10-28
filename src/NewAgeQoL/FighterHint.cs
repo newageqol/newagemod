@@ -474,9 +474,16 @@ namespace NewAgeQoL
             Width();
         }
 
+        internal static PlayerCharacter Body(ICombatData cd)
+        {
+            var me = cd != null ? cd.MyCharacter : null;
+            if (me == null || cd.Characters == null) return null;
+            return cd.Characters.TryGetValue(me.UserId, out var mine) && ReferenceEquals(mine, me) ? me : null;
+        }
+
         internal static int Far(AbstractCharacter ch, ICombatData cd)
         {
-            var mine = cd != null ? cd.MyCharacter : null;
+            var mine = Body(cd);
             if (mine == null) return -1;
             try { return HexUtils.range(mine.HexGridPosition, ch.HexGridPosition); }
             catch (Exception e) { Plugin.Trace("[fighter] distance: " + e.Message); return -1; }
