@@ -20,6 +20,9 @@ namespace NewAgeQoL
         private const float Pad = 12f;
         private const float Pic = 30f;
         private const int Most = 4;
+        private const float Floor = 16f;
+        private const float Least = 100f;
+        private const int Batch = 4;
         private const int RepairDone = 361;
 
         private static readonly Color Exp = new Color32(132, 190, 255, 255);
@@ -34,6 +37,10 @@ namespace NewAgeQoL
             internal Text Title;
             internal string Head;
             internal LayoutElement Size;
+            internal LayoutElement Room;
+            internal RectTransform List;
+            internal Transform Rows;
+            internal readonly Queue<DialogDescriptionItemMessage> Pending = new Queue<DialogDescriptionItemMessage>();
             internal readonly List<GameObject> Body = new List<GameObject>();
             internal GameObject Wear;
             internal readonly HashSet<long> Worn = new HashSet<long>();
@@ -100,6 +107,7 @@ namespace NewAgeQoL
                 if (Plates.Count == 0 || Roster.Shopping()) { if (_canvasGo.activeSelf) _canvasGo.SetActive(false); return; }
                 if (!_canvasGo.activeSelf) _canvasGo.SetActive(true);
                 Place();
+                Fill();
                 Age();
             }
             catch (Exception e) { Plugin.Trace("[loot] " + e.Message); }
@@ -215,6 +223,21 @@ namespace NewAgeQoL
             }
         }
 
+        private static void Fill()
+        {
+            int left = Batch;
+            foreach (var plate in Plates)
+            {
+                if (plate.Rows == null) continue;
+                while (left > 0 && plate.Pending.Count > 0)
+                {
+                    Row(plate.Rows, plate, plate.Pending.Dequeue());
+                    left--;
+                }
+                if (left == 0) return;
+            }
+        }
+
         private static void Show(Plate plate)
         {
             foreach (var pic in plate.Pics)
@@ -236,6 +259,27 @@ namespace NewAgeQoL
             float y = below > 0f ? -(below + 10f) : -HelpColumn.Head;
             var want = new Vector2(x, y);
             if ((_stack.anchoredPosition - want).sqrMagnitude > 0.25f) _stack.anchoredPosition = want;
+            Fit(-y);
+        }
+
+        private static void Fit(float top)
+        {
+            float high = ((RectTransform)_canvasGo.transform).rect.height;
+            foreach (var plate in Plates)
+            {
+                if (plate.Go == null) continue;
+                float tall = plate.Rt.rect.height;
+                if (plate.Room != null && !plate.Shut)
+                {
+                    float now = plate.Room.preferredHeight;
+                    float full = LayoutUtility.GetPreferredHeight(plate.List);
+                    float room = high - top - Floor - (tall - now);
+                    float want = Mathf.Min(full, Mathf.Max(room, Mathf.Min(full, Least)));
+                    if (Mathf.Abs(want - now) > 0.5f) plate.Room.preferredHeight = want;
+                    tall += want - now;
+                }
+                top += tall + 8f;
+            }
         }
 
         private static void Fold(Plate plate, bool shut)
@@ -266,6 +310,7 @@ namespace NewAgeQoL
         {
             Plates.Remove(plate);
             plate.Pics.Clear();
+            plate.Pending.Clear();
             if (plate.Go != null) UnityEngine.Object.Destroy(plate.Go);
         }
 
@@ -316,7 +361,9 @@ namespace NewAgeQoL
             if (result.Items.Count > 0)
             {
                 Line(go.transform, global::NewAgeQoL.Lang.T("Добыча"), 12, FontStyle.Normal, WardrobeLook.Faint);
-                foreach (var item in result.Items) Row(go.transform, plate, item);
+                plate.Rows = List(go.transform, plate);
+                plate.Room.preferredHeight = result.Items.Count * (Pic + 4f) - 4f;
+                foreach (var item in result.Items) plate.Pending.Enqueue(item);
             }
             else if (gains.Count == 0)
             {
@@ -361,6 +408,42 @@ namespace NewAgeQoL
             x.raycastTarget = false;
             OnlineWindow.Place(x.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(0f, 2f));
             return go;
+        }
+
+        private static Transform List(Transform host, Plate plate)
+        {
+            var scrollGo = new GameObject("items", typeof(RectTransform), typeof(ScrollRect), typeof(RectMask2D), typeof(LayoutElement));
+            scrollGo.transform.SetParent(host, false);
+            plate.Room = scrollGo.GetComponent<LayoutElement>();
+            plate.Room.preferredWidth = Wide - Pad * 2f;
+            var scroll = scrollGo.GetComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.scrollSensitivity = 32f;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+
+            var list = new GameObject("rows", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            list.transform.SetParent(scrollGo.transform, false);
+            var lrt = (RectTransform)list.transform;
+            lrt.anchorMin = new Vector2(0f, 1f);
+            lrt.anchorMax = new Vector2(1f, 1f);
+            lrt.pivot = new Vector2(0.5f, 1f);
+            lrt.offsetMin = Vector2.zero;
+            lrt.offsetMax = Vector2.zero;
+            var group = list.GetComponent<VerticalLayoutGroup>();
+            group.spacing = 4f;
+            group.childAlignment = TextAnchor.UpperLeft;
+            group.childControlWidth = true;
+            group.childControlHeight = true;
+            group.childForceExpandWidth = false;
+            group.childForceExpandHeight = false;
+            var fit = list.GetComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = lrt;
+            scroll.viewport = (RectTransform)scrollGo.transform;
+            plate.List = lrt;
+            return list.transform;
         }
 
         private static void Row(Transform host, Plate plate, DialogDescriptionItemMessage item)
@@ -436,7 +519,6 @@ namespace NewAgeQoL
                     case EDialogDescriptionItemType.ITEM_TYPE_THING:
                         if (string.IsNullOrEmpty(item.Image)) return;
                         plate.Pics.Add(new KeyValuePair<Image, string>(image, item.Image));
-                        Show(plate);
                         return;
                     case EDialogDescriptionItemType.ITEM_TYPE_ENCHANTMENT: sprite = AtlasUtils.GetStateSprite(EStateType.GlobalEnchantment, item.Id); break;
                     case EDialogDescriptionItemType.ITEM_TYPE_PROFESSION: sprite = AtlasUtils.GetProfessionIcon(item.Id); break;

@@ -20,6 +20,10 @@ namespace NewAgeQoL
         private const float ListEvery = 120f;
         private const float Patience = 5f;
         private const float Retry = 1f;
+        private const float Gap = 8f;
+        private const int Above = 29000;
+        private const int Batch = 12;
+        private static readonly List<OnlinePlayer> Waiting = new List<OnlinePlayer>();
 
         private const string Server = "https://newage-observers.outerlab.org/v1/roster";
         private const string Mark = "newage-observers 1";
@@ -152,6 +156,7 @@ namespace NewAgeQoL
                     _paintAt = now + 0.25f;
                     if (!Fill()) return;
                 }
+                Grow();
                 Place();
             }
             catch (Exception e) { Plugin.Trace("[roster] " + e.Message); _hover = null; Hide(); }
@@ -308,7 +313,7 @@ namespace NewAgeQoL
             var place = new Vector2(mouse.x + 18f, mouse.y - 18f);
             if (place.x + w > box.xMax - 8f) place.x = mouse.x - 18f - w;
             place.x = Mathf.Clamp(place.x, box.xMin + 8f, Mathf.Max(box.xMin + 8f, box.xMax - 8f - w));
-            if (place.y - h < box.yMin + 8f) place.y = Mathf.Min(box.yMax - 8f, box.yMin + 8f + h);
+            if (place.y - h < box.yMin + Gap) place.y = Mathf.Min(box.yMax - Gap, box.yMin + Gap + h);
             if (tip.anchoredPosition != place) tip.anchoredPosition = place;
         }
 
@@ -350,12 +355,14 @@ namespace NewAgeQoL
             if (!retry) _retryUntil = Time.unscaledTime + RetryFor;
             _retryAt = Time.unscaledTime + RetryEvery;
 
+            Waiting.Clear();
             for (int i = _rows.childCount - 1; i >= 0; i--) { var old = _rows.GetChild(i); old.SetParent(null, false); UnityEngine.Object.Destroy(old.gameObject); }
             bool active = people != null && people.Count > 0;
             if (_rows.gameObject.activeSelf != active) _rows.gameObject.SetActive(active);
             if (!active) return true;
 
             var prefab = OnlineWindow.RowPrefab();
+            Columns(prefab, people.Count);
             bool strangers = false;
             foreach (var f in people)
             {
@@ -373,8 +380,7 @@ namespace NewAgeQoL
                     Vip = known != null && known.Vip,
                     Dealer = known != null && known.Dealer,
                 };
-                if (prefab != null) Row(prefab, p);
-                else Plainly(p);
+                Waiting.Add(p);
             }
             if (strangers && Time.unscaledTime - _listAt > ListEvery && !OnlineList.Busy)
             {
@@ -382,6 +388,36 @@ namespace NewAgeQoL
                 OnlineList.Refresh();
             }
             return true;
+        }
+
+        private static void Grow()
+        {
+            if (Waiting.Count == 0 || _tipGo == null || !_tipGo.activeSelf) return;
+            var prefab = OnlineWindow.RowPrefab();
+            int n = Mathf.Min(Batch, Waiting.Count);
+            for (int i = 0; i < n; i++)
+            {
+                if (prefab != null) Row(prefab, Waiting[i]);
+                else Plainly(Waiting[i]);
+            }
+            Waiting.RemoveRange(0, n);
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)_tipGo.transform);
+        }
+
+        private static void Columns(GameObject prefab, int count)
+        {
+            var grid = _rows.GetComponent<GridLayoutGroup>();
+            float h = 20f;
+            if (prefab != null)
+            {
+                var rt = (RectTransform)prefab.transform;
+                h = (rt.rect.height > 4f ? rt.rect.height : (rt.sizeDelta.y > 4f ? rt.sizeDelta.y : 34f)) * Shrink;
+            }
+            grid.cellSize = new Vector2(RowWide * Shrink, h);
+            float high = _canvas != null ? ((RectTransform)_canvas.transform).rect.height : 1080f;
+            int fit = Mathf.Max(5, Mathf.FloorToInt((high - 2f * Gap - 70f) / h));
+            int columns = Mathf.CeilToInt(count / (float)fit);
+            grid.constraintCount = Mathf.Max(1, Mathf.CeilToInt(count / (float)Mathf.Max(1, columns)));
         }
 
         private static void Row(GameObject prefab, OnlinePlayer p)
@@ -462,6 +498,9 @@ namespace NewAgeQoL
             _listSeen = -1;
             _tipGo = new GameObject("QoLRosterTip", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter), typeof(CanvasGroup));
             _tipGo.transform.SetParent(area, false);
+            var lift = _tipGo.AddComponent<Canvas>();
+            lift.overrideSorting = true;
+            lift.sortingOrder = Above;
             var rt = (RectTransform)_tipGo.transform;
             rt.anchorMin = rt.anchorMax = area.pivot;
             rt.pivot = new Vector2(0f, 1f);
@@ -489,14 +528,15 @@ namespace NewAgeQoL
 
             _title = Caption(13, FontStyle.Bold, WardrobeLook.Bright);
 
-            var list = new GameObject("rows", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            var list = new GameObject("rows", typeof(RectTransform), typeof(GridLayoutGroup));
             list.transform.SetParent(_tipGo.transform, false);
-            var lines = list.GetComponent<VerticalLayoutGroup>();
-            lines.spacing = 0f;
-            lines.childControlWidth = true;
-            lines.childControlHeight = true;
-            lines.childForceExpandWidth = true;
-            lines.childForceExpandHeight = false;
+            var lines = list.GetComponent<GridLayoutGroup>();
+            lines.spacing = new Vector2(Gap, 0f);
+            lines.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            lines.startAxis = GridLayoutGroup.Axis.Vertical;
+            lines.childAlignment = TextAnchor.UpperLeft;
+            lines.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+            lines.constraintCount = 1;
             _rows = list.transform;
 
             _note = Caption(12, FontStyle.Normal, WardrobeLook.Label);

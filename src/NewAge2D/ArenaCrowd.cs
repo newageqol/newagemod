@@ -32,6 +32,7 @@ namespace NewAge2D
         public readonly List<string> Acts = new List<string>();
         readonly Dictionary<(Mesh, int, Material), List<Matrix4x4>> _groups = new Dictionary<(Mesh, int, Material), List<Matrix4x4>>();
         readonly List<Mesh> _owned = new List<Mesh>();
+        readonly List<Matrix4x4> _chunk = new List<Matrix4x4>(1023);
         int _layer;
         Transform _crowd;
 
@@ -136,15 +137,20 @@ namespace NewAge2D
                     }
                 }
             }
-            var chunk = new List<Matrix4x4>(1023);
             foreach (var kv in _groups)
             {
                 var list = kv.Value;
+                if (list.Count == 0) continue;
+                if (list.Count <= 1023)
+                {
+                    Graphics.DrawMeshInstanced(kv.Key.Item1, kv.Key.Item2, kv.Key.Item3, list, null, ShadowCastingMode.Off, true, _layer);
+                    continue;
+                }
                 for (int i = 0; i < list.Count; i += 1023)
                 {
-                    chunk.Clear();
-                    for (int j = i; j < Mathf.Min(list.Count, i + 1023); j++) chunk.Add(list[j]);
-                    Graphics.DrawMeshInstanced(kv.Key.Item1, kv.Key.Item2, kv.Key.Item3, chunk, null, ShadowCastingMode.Off, true, _layer);
+                    _chunk.Clear();
+                    for (int j = i; j < Mathf.Min(list.Count, i + 1023); j++) _chunk.Add(list[j]);
+                    Graphics.DrawMeshInstanced(kv.Key.Item1, kv.Key.Item2, kv.Key.Item3, _chunk, null, ShadowCastingMode.Off, true, _layer);
                 }
             }
         }

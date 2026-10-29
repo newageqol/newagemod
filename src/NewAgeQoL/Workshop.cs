@@ -39,10 +39,17 @@ namespace NewAgeQoL
         private static bool _mine;
         private static float _askAt;
 
+        private static int _hereFrame = -1;
+        private static bool _here;
+
         internal static bool Here()
         {
-            try { return Controllers.Get<ArtWorkshopController>() != null; }
-            catch { return false; }
+            int frame = Time.frameCount;
+            if (frame == _hereFrame) return _here;
+            _hereFrame = frame;
+            try { _here = Controllers.Get<ArtWorkshopController>() != null; }
+            catch { _here = false; }
+            return _here;
         }
 
         internal static bool Busy => _dialog != null;
