@@ -26,8 +26,8 @@ internal static class ArenaHome
         var go = new GameObject("Reset", typeof(RectTransform), typeof(Image), typeof(Button));
         go.transform.SetParent(_canvas.transform, false);
         _button = (RectTransform)go.transform;
-        _button.anchorMin = _button.anchorMax = new Vector2(1f, 0f);
-        _button.pivot = new Vector2(1f, 0f);
+        _button.anchorMin = _button.anchorMax = Vector2.zero;
+        _button.pivot = Vector2.zero;
         _button.sizeDelta = new Vector2(Round, Round);
         _button.anchoredPosition = Spot();
         var image = go.GetComponent<Image>();
@@ -65,7 +65,7 @@ internal static class ArenaHome
         int n = 2;
         try { if (_taken != null) n = _taken(); }
         catch { }
-        return new Vector2(-(Margin + n * (Round + Margin)), Margin);
+        return new Vector2(Margin + n * (Round + Margin), Margin);
     }
 
     private sealed class Follow : MonoBehaviour

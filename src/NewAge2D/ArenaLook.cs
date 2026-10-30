@@ -236,7 +236,7 @@ namespace NewAge2D
             if (Electric) return;
             float t = Time.time * 1000f;
             for (int i = 0; i < _fires.Count; i++)
-                if (_fires[i] != null)
+                if (_fires[i] != null && _fires[i].renderMode != LightRenderMode.ForceVertex)
                     _fires[i].intensity = FireIntensity * (1f + Mathf.Sin(t / 80f + _phase[i]) * 0.08f + Mathf.Sin(t / 29f + _phase[i] * 1.35f) * 0.05f);
         }
     }

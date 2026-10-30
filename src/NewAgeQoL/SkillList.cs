@@ -18,15 +18,58 @@ namespace NewAgeQoL
         private const float TopGap = 104f;
         private const float SideGap = 14f;
 
-        internal enum Kind { Abilities, Tricks, Things, Spells }
+        internal enum Kind { Abilities, Tricks, Things, Spells, Potions }
 
         internal static readonly SkillList Abilities = new SkillList(Kind.Abilities);
         internal static readonly SkillList Tricks = new SkillList(Kind.Tricks);
         internal static readonly SkillList Things = new SkillList(Kind.Things);
         internal static readonly SkillList Spells = new SkillList(Kind.Spells);
+        internal static readonly SkillList Potions = new SkillList(Kind.Potions);
 
-        private static readonly SkillList[] Lists = { Abilities, Tricks, Things, Spells };
-        private static readonly SkillList[] Every = { Abilities, Tricks, Things, Spells };
+        private static readonly SkillList[] Lists = { Abilities, Tricks, Things, Spells, Potions };
+        private static readonly SkillList[] Every = { Abilities, Tricks, Things, Spells, Potions };
+
+        private static readonly int[][] Shelves =
+        {
+            new[] { 70048, 70046, 70040, 16102, 16105, 16123, 16101, 16104, 16122, 16100, 16103, 16121, 16124 },
+            new[] { 70043, 70045, 70041, 16202, 16205, 16208, 16201, 16204, 16207, 16200, 16203, 16206, 16209 },
+            new[] { 70044, 70047, 16505, 16081, 16302, 16080, 16099, 16301, 16098, 16079, 16300, 16303, 16088 },
+            new[] { 16857, 16852, 16853, 16858, 16854, 16856 },
+        };
+
+        private static readonly Color[] ShelfPaints =
+        {
+            new Color(0.86f, 0.22f, 0.18f, 1f),
+            new Color(0.30f, 0.52f, 0.92f, 1f),
+            new Color(0.92f, 0.74f, 0.20f, 1f),
+            new Color(0.32f, 0.74f, 0.34f, 1f),
+        };
+
+        private static int Shelf(int id)
+        {
+            for (int i = 0; i < Shelves.Length; i++)
+                if (Array.IndexOf(Shelves[i], id) >= 0) return i;
+            return -1;
+        }
+
+        private static int ByShelf(IQuickButton a, IQuickButton b)
+        {
+            int sa = Shelf(a.Id), sb = Shelf(b.Id);
+            if (sa != sb) return sa.CompareTo(sb);
+            int byPlace = Array.IndexOf(Shelves[sa], a.Id).CompareTo(Array.IndexOf(Shelves[sb], b.Id));
+            return byPlace != 0 ? byPlace : a.Id.CompareTo(b.Id);
+        }
+
+        private static Sprite ShelfMark(int shelf)
+        {
+            switch (shelf)
+            {
+                case 1: return Icons.Drop();
+                case 2: return Icons.Bolt();
+                case 3: return Icons.Mushroom();
+                default: return Icons.Heart();
+            }
+        }
 
         private static float _ateAt;
 
@@ -57,23 +100,25 @@ namespace NewAgeQoL
         private readonly bool _tricks;
         private readonly bool _things;
         private readonly bool _spells;
+        private readonly bool _potions;
         private readonly string _tag;
 
         private SkillList(Kind kind)
         {
             _tricks = kind == Kind.Tricks;
-            _things = kind == Kind.Things;
+            _potions = kind == Kind.Potions;
+            _things = kind == Kind.Things || _potions;
             _spells = kind == Kind.Spells;
-            _tag = _tricks ? "[dodges]" : _things ? "[things]" : _spells ? "[magic]" : "[skills]";
+            _tag = _tricks ? "[dodges]" : _potions ? "[potions]" : _things ? "[things]" : _spells ? "[magic]" : "[skills]";
         }
 
         private bool Native => _tricks || _things || _spells;
 
-        internal static bool Armed => Abilities._armed != null || Tricks._armed != null || Things._armed != null || Spells._armed != null;
+        internal static bool Armed => Abilities._armed != null || Tricks._armed != null || Things._armed != null || Spells._armed != null || Potions._armed != null;
 
         internal static List<IQuickButton> Of(Kind kind)
         {
-            var one = kind == Kind.Tricks ? Tricks : kind == Kind.Things ? Things : kind == Kind.Spells ? Spells : Abilities;
+            var one = kind == Kind.Tricks ? Tricks : kind == Kind.Things ? Things : kind == Kind.Spells ? Spells : kind == Kind.Potions ? Potions : Abilities;
             try { return one.All(); }
             catch { return new List<IQuickButton>(); }
         }
@@ -91,7 +136,7 @@ namespace NewAgeQoL
 
         internal static bool Use(int id)
         {
-            foreach (var one in new[] { Abilities, Tricks, Spells, Things })
+            foreach (var one in new[] { Abilities, Tricks, Spells, Potions, Things })
             {
                 var skill = one.Skill(id);
                 if (skill == null) continue;
@@ -121,6 +166,7 @@ namespace NewAgeQoL
             Tricks.Step();
             Things.Step();
             Spells.Step();
+            Potions.Step();
         }
 
         internal static void Aim()
@@ -130,6 +176,7 @@ namespace NewAgeQoL
             Tricks.Target();
             Things.Target();
             Spells.Target();
+            Potions.Target();
         }
 
         internal static bool EscapeClose()
@@ -137,6 +184,7 @@ namespace NewAgeQoL
             bool done = Abilities.Cancel();
             if (Tricks.Cancel()) done = true;
             if (Things.Cancel()) done = true;
+            if (Potions.Cancel()) done = true;
             return Spells.Cancel() || done;
         }
 
@@ -667,6 +715,7 @@ namespace NewAgeQoL
             try
             {
                 if (_spells) { var book = Book(); return book == null ? null : book.GetButton(id) as IQuickButton; }
+                if (_potions && Shelf(id) < 0) return null;
                 var holder = Holder();
                 return holder == null ? null : holder.GetButton(id);
             }
@@ -702,6 +751,7 @@ namespace NewAgeQoL
             Row();
             var prt = (RectTransform)_panelGo.transform;
             if (_tricks) { Strip(prt); return; }
+            if (_potions) { Dock(prt); return; }
             if (_things) { Column(prt); return; }
             if (_spells) { Crown(prt); return; }
             prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 1f);
@@ -965,7 +1015,7 @@ namespace NewAgeQoL
             {
                 if (_spells ? Book() == null : Holder() == null) { _found = false; return; }
                 _found = true;
-                if (_hidden != null) return;
+                if (_hidden != null || _potions) return;
                 _ctrl = null;
                 var button = FromController() ?? FromContainer();
                 if (button == null) { Plugin.Trace(_tag + " skills button not found"); return; }
@@ -1027,6 +1077,10 @@ namespace NewAgeQoL
                 foreach (var one in part)
                     if (one != null && Seen.Add(one.Id)) into.Add(one);
             }
+            if (!_things) return into;
+            for (int i = into.Count - 1; i >= 0; i--)
+                if ((Shelf(into[i].Id) >= 0) != _potions) into.RemoveAt(i);
+            if (_potions) into.Sort(ByShelf);
             return into;
         }
 
@@ -1078,6 +1132,7 @@ namespace NewAgeQoL
             _upPic = null;
             _downPic = null;
             Live.Clear();
+            Marks.Clear();
             if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             _canvasGo = null;
             _panelGo = null;
@@ -1100,6 +1155,23 @@ namespace NewAgeQoL
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
+
+            if (_potions)
+            {
+                _panelGo = new GameObject("shelves", typeof(RectTransform), typeof(Image));
+                _panelGo.transform.SetParent(go.transform, false);
+                var back = _panelGo.GetComponent<Image>();
+                back.color = WardrobeLook.Window;
+                back.sprite = OnlineWindow.Rounded(16);
+                back.type = Image.Type.Sliced;
+                WardrobeLook.Frame(_panelGo, WardrobeLook.Edge);
+                var srt = (RectTransform)_panelGo.transform;
+                srt.anchorMin = srt.anchorMax = Vector2.zero;
+                srt.pivot = Vector2.zero;
+                _panelGo.SetActive(false);
+                _cells = _panelGo.transform;
+                return;
+            }
 
             _panelGo = new GameObject("skills", typeof(RectTransform), typeof(GridLayoutGroup), typeof(ContentSizeFitter));
             _panelGo.transform.SetParent(go.transform, false);
@@ -1133,6 +1205,7 @@ namespace NewAgeQoL
         private List<IQuickButton> Shown()
         {
             var all = All(Bag);
+            if (_potions) return all;
             if (_things)
             {
                 _total = all.Count;
@@ -1201,8 +1274,117 @@ namespace NewAgeQoL
             HideTip();
             for (int i = _cells.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_cells.GetChild(i).gameObject);
             Live.Clear();
+            Marks.Clear();
             foreach (var one in all) Slot(one);
+            if (!_potions) return;
+            foreach (var one in all)
+            {
+                int shelf = Shelf(one.Id);
+                if (shelf < 0 || Marks.ContainsKey(shelf)) continue;
+                var markGo = new GameObject("shelf" + shelf, typeof(RectTransform), typeof(Image));
+                markGo.transform.SetParent(_cells, false);
+                var mark = markGo.GetComponent<Image>();
+                mark.sprite = ShelfMark(shelf);
+                mark.color = ShelfPaints[shelf];
+                mark.preserveAspect = true;
+                mark.raycastTarget = false;
+                var mrt = (RectTransform)markGo.transform;
+                mrt.anchorMin = mrt.anchorMax = Vector2.zero;
+                mrt.pivot = new Vector2(0.5f, 0.5f);
+                Marks[shelf] = mark;
+            }
+            _dockSide = 0f;
         }
+
+        private const float DockGap = 8f;
+        private const float DockPad = 7f;
+        private const float ShelfGap = 5f;
+        private const float DockBiggest = 56f;
+        private const float DockSmallest = 24f;
+
+        private readonly Dictionary<int, Image> Marks = new Dictionary<int, Image>();
+        private readonly int[] ShelfCount = new int[4];
+        private float _dockSide;
+
+        private void Dock(RectTransform prt)
+        {
+            bool any = Sig.Count > 0 && ChatDock.Active;
+            if (prt.gameObject.activeSelf != any) prt.gameObject.SetActive(any);
+            if (!any) return;
+
+            var canvas = _canvasGo.GetComponent<Canvas>();
+            float scale = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
+            float room = ChatDock.LeftPixels / scale - DockGap * 2f;
+            float high = Mathf.Max(DockBiggest * 2f, ChatDock.PanelPixels / scale - DockGap);
+
+            Array.Clear(ShelfCount, 0, ShelfCount.Length);
+            foreach (int id in Sig)
+            {
+                int shelf = Shelf(id);
+                if (shelf >= 0) ShelfCount[shelf]++;
+            }
+            int rows = 0, widest = 0;
+            foreach (int n in ShelfCount)
+            {
+                if (n == 0) continue;
+                rows++;
+                if (n > widest) widest = n;
+            }
+            if (rows == 0 || room < DockPad * 2f + Mathf.Round(DockSmallest * 0.6f) + DockSmallest + ShelfGap) { prt.gameObject.SetActive(false); return; }
+
+            float side = DockBiggest, mark = 0f;
+            int per = 1, lines = rows;
+            for (; side >= DockSmallest; side--)
+            {
+                mark = Mathf.Round(side * 0.6f);
+                per = Mathf.FloorToInt((room - DockPad * 2f - mark) / (side + ShelfGap));
+                if (per < 1) continue;
+                lines = 0;
+                foreach (int n in ShelfCount) if (n > 0) lines += (n + per - 1) / per;
+                if (lines * side + (lines - 1) * ShelfGap + DockPad * 2f <= high) break;
+            }
+            side = Mathf.Max(DockSmallest, side);
+            int across = Mathf.Min(widest, per);
+            var size = new Vector2(DockPad * 2f + mark + across * (side + ShelfGap), DockPad * 2f + lines * side + (lines - 1) * ShelfGap);
+            if (prt.sizeDelta != size) prt.sizeDelta = size;
+            var corner = new Vector2(1f, 0f);
+            if (prt.anchorMin != corner) prt.anchorMin = prt.anchorMax = corner;
+            if (prt.pivot != Vector2.zero) prt.pivot = Vector2.zero;
+            var spot = new Vector2(Mathf.Min(-DockGap - size.x, DockGap - ChatDock.LeftPixels / scale), DockGap);
+            if ((prt.anchoredPosition - spot).sqrMagnitude > 0.25f) prt.anchoredPosition = spot;
+            if (side == _dockSide && size == _dockSize) return;
+            _dockSide = side;
+            _dockSize = size;
+
+            int row = -1, last = -1, column = 0;
+            foreach (int id in Sig)
+            {
+                int shelf = Shelf(id);
+                if (shelf < 0) continue;
+                if (shelf != last) { row++; last = shelf; column = 0; }
+                else if (column > 0 && column % per == 0) row++;
+                float y = size.y - DockPad - side * 0.5f - row * (side + ShelfGap);
+                Image sign;
+                if (column == 0 && Marks.TryGetValue(shelf, out sign) && sign != null)
+                {
+                    var mrt = sign.rectTransform;
+                    mrt.sizeDelta = new Vector2(mark, mark);
+                    mrt.anchoredPosition = new Vector2(DockPad + mark * 0.5f, y);
+                }
+                Cell cell;
+                if (Live.TryGetValue(id, out cell) && cell.Press != null)
+                {
+                    var crt = (RectTransform)cell.Press.transform;
+                    crt.anchorMin = crt.anchorMax = Vector2.zero;
+                    crt.pivot = new Vector2(0.5f, 0.5f);
+                    crt.sizeDelta = new Vector2(side, side);
+                    crt.anchoredPosition = new Vector2(DockPad + mark + ShelfGap + (column % per) * (side + ShelfGap) + side * 0.5f, y);
+                }
+                column++;
+            }
+        }
+
+        private Vector2 _dockSize;
 
         private void Paint(List<IQuickButton> all)
         {
@@ -1539,7 +1721,7 @@ namespace NewAgeQoL
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, point, null, out spot))
                 {
                     var trt = (RectTransform)_tipGo.transform;
-                    if (_tricks)
+                    if (_tricks || _potions)
                     {
                         trt.pivot = new Vector2(0f, 0f);
                         trt.anchoredPosition = new Vector2(spot.x, spot.y + near.rect.height + 8f);

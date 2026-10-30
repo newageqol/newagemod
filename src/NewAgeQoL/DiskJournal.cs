@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -20,6 +20,7 @@ namespace NewAgeQoL
         private static int _since;
         private static bool _told;
         private static bool _rotateBroken;
+        private static Tap _tap;
 
         internal static string Folder => Path.Combine(Paths.CachePath, "NewAgeQoL");
 
@@ -40,6 +41,8 @@ namespace NewAgeQoL
                 _writer.Flush();
                 _source = source;
                 source.LogEvent += OnLog;
+                _tap = new Tap();
+                Logger.Listeners.Add(_tap);
             }
             catch (Exception e) { source.LogWarning("disk log did not open: " + e.Message); }
         }
@@ -47,6 +50,8 @@ namespace NewAgeQoL
         internal static void Detach(ManualLogSource source)
         {
             try { source.LogEvent -= OnLog; } catch { }
+            try { if (_tap != null) Logger.Listeners.Remove(_tap); } catch { }
+            _tap = null;
             lock (Gate)
             {
                 _writer?.Dispose();
@@ -122,12 +127,24 @@ namespace NewAgeQoL
 
         private static void Write(LogEventArgs e)
         {
-            _writer.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) + " [" + e.Level + "] " + e.Data);
+            _writer.WriteLine(DateTime.Now.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) + " [" + e.Level + "] " + (e.Source?.SourceName == TwoD ? "[2D] " : "") + e.Data);
             if (Important(e.Level) || ++_since >= FlushEvery) { _writer.Flush(); _since = 0; }
             if (++_lines < CheckEvery) return;
             _lines = 0;
             if (_rotateBroken || _writer.BaseStream.Length <= Limit) return;
             Roll();
+        }
+
+        private const string TwoD = "New Age 2D";
+
+        private sealed class Tap : ILogListener
+        {
+            public void LogEvent(object sender, LogEventArgs e)
+            {
+                if (e.Source?.SourceName == TwoD) OnLog(sender, e);
+            }
+
+            public void Dispose() { }
         }
 
         private static void Said()

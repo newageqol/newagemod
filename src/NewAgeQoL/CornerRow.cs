@@ -7,7 +7,7 @@ namespace NewAgeQoL
         internal const float Round = 56f;
         internal const float Margin = 8f;
 
-        internal static Vector2 Spot(int index) => new Vector2(-(Margin + index * (Round + Margin)), Margin);
+        internal static Vector2 Spot(int index) => new Vector2(Margin + index * (Round + Margin), Margin);
 
         internal static int Before(int slot)
         {

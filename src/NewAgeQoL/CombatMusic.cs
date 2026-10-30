@@ -57,6 +57,8 @@ namespace NewAgeQoL
         private static float _endShare;
         private static bool _synced;
         private static bool _rescan;
+        private static bool _rivalsSeen;
+        private static bool _joined;
 
         private static GameObject _buttonCanvas;
         private static Image _note;
@@ -77,6 +79,8 @@ namespace NewAgeQoL
                 {
                     _finished = false;
                     _muted = false;
+                    _rivalsSeen = false;
+                    _joined = false;
                 }
                 if (!_synced && volume > 0.001f && !fight && SideButtons.InWorld() && Plugin.Instance != null)
                 {
@@ -85,6 +89,17 @@ namespace NewAgeQoL
                 }
                 var cd = fight ? FighterHint.Cd() : null;
                 var me = Me(cd);
+                bool watching = fight && Spectate.Peeking;
+                if (!_joined && me != null && !watching)
+                {
+                    _joined = true;
+                    Plugin.Trace("[music] own fighter in this fight");
+                }
+                if (!_rivalsSeen && me != null && Rivals(cd, me))
+                {
+                    _rivalsSeen = true;
+                    Plugin.Trace("[music] live rivals in this fight");
+                }
                 try { Button(fight && volume > 0.001f && (_playing || _muted) && !_ending); }
                 catch (Exception e)
                 {
@@ -99,7 +114,7 @@ namespace NewAgeQoL
                     if (volume <= 0.001f) return;
                     Scan();
                     if (_next == null) Load();
-                    if (me == null || _finished || !Rivals(cd, me) || _next == null) return;
+                    if (!fight || watching || !_joined || _finished || !_rivalsSeen || _next == null) return;
                     Begin();
                     return;
                 }
@@ -117,7 +132,7 @@ namespace NewAgeQoL
                     if (_endShare <= 0f) Stop(_over);
                     return;
                 }
-                if (me == null)
+                if (!fight || watching)
                 {
                     End(LossFade, false);
                     return;
@@ -261,8 +276,8 @@ namespace NewAgeQoL
                 var body = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button));
                 body.transform.SetParent(_buttonCanvas.transform, false);
                 var rect = body.GetComponent<RectTransform>();
-                rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
-                rect.pivot = new Vector2(1f, 0f);
+                rect.anchorMin = rect.anchorMax = Vector2.zero;
+                rect.pivot = Vector2.zero;
                 _buttonRect = rect;
                 rect.sizeDelta = new Vector2(ButtonSide, ButtonSide);
                 var face = body.GetComponent<Image>();

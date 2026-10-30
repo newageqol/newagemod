@@ -44,7 +44,7 @@ internal sealed class ArenaNight : MonoBehaviour
         {
             if (light.type != LightType.Point && light.type != LightType.Spot) continue;
             if (light.name.StartsWith("NewAge2D.")) continue;
-            light.renderMode = LightRenderMode.ForcePixel;
+            if (light.renderMode != LightRenderMode.ForceVertex) light.renderMode = LightRenderMode.ForcePixel;
             if (!Flood(light)) light.intensity *= Mathf.Lerp(1f, _cfg.lampBoost, _night);
             own.Add(light.transform.position);
             _lamps.Add(light);

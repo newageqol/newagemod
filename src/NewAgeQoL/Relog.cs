@@ -79,10 +79,10 @@ namespace NewAgeQoL
             _barGo.transform.SetParent(area, false);
             _bar = (RectTransform)_barGo.transform;
             _bar.localScale = Vector3.one;
-            _bar.anchorMin = _bar.anchorMax = new Vector2(1f, 0f);
-            _bar.pivot = new Vector2(1f, 0f);
+            _bar.anchorMin = _bar.anchorMax = Vector2.zero;
+            _bar.pivot = Vector2.zero;
             _bar.sizeDelta = new Vector2(Round, Round);
-            _bar.anchoredPosition = new Vector2(-Margin, Margin);
+            _bar.anchoredPosition = new Vector2(Margin, Margin);
             _over = _barGo.GetComponent<RelogHover>();
 
             var back = _barGo.GetComponent<Image>();
@@ -119,8 +119,8 @@ namespace NewAgeQoL
             _plate = new GameObject("caption", typeof(RectTransform), typeof(Image));
             _plate.transform.SetParent(_bar, false);
             var prt = (RectTransform)_plate.transform;
-            prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
-            prt.pivot = new Vector2(1f, 0f);
+            prt.anchorMin = prt.anchorMax = new Vector2(0f, 1f);
+            prt.pivot = new Vector2(0f, 0f);
             prt.sizeDelta = new Vector2(230f, 30f);
             prt.anchoredPosition = new Vector2(0f, 8f);
             var plate = _plate.GetComponent<Image>();

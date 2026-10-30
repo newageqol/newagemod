@@ -203,7 +203,7 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Trace("[strike] strike button: " + e.Message); }
         }
 
-        private static void Shut(string why)
+        internal static void Shut(string why)
         {
             _mine = false;
             try
@@ -363,6 +363,7 @@ namespace NewAgeQoL
 
         internal static void Key()
         {
+            Shut("strike key pressed");
             string locked = Locked();
             if (locked != null) { Plugin.Trace("[strike] key: " + locked + " - not striking"); return; }
             if (Swing()) return;
@@ -420,6 +421,7 @@ namespace NewAgeQoL
         {
             try
             {
+                Strike.Shut("strike button pressed");
                 string locked = Strike.Locked();
                 if (locked == null) return !Strike.Swing();
                 Plugin.Trace("[strike] strike button: " + locked + " - not striking");

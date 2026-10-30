@@ -220,6 +220,7 @@ internal sealed class Arena3D
             glow.renderMode = LightRenderMode.ForcePixel;
         }
         _root.AddComponent<ArenaNight>().Init(_root.transform, eye, Cfg, look.NightGrade, night, mid);
+        int vertexLights = LightBudget(_root.transform, mid);
         if (_fxBundle != null) _root.AddComponent<ArenaFx>().Init(_root.transform, _fxBundle, Cfg, look.SunDir, night, look.SunColor);
         if (_fxBundle != null && Cfg.storm)
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);
@@ -245,7 +246,29 @@ internal sealed class Arena3D
         DollTint = new Color(DollTint.r * doll, DollTint.g * doll, DollTint.b * doll, DollTint.a);
         Any = true;
         shown?.Invoke();
-        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}");
+        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}, vertex lights {vertexLights}");
+    }
+
+    private const int PixelLights = 8;
+
+    private static int LightBudget(Transform root, Vector3 mid)
+    {
+        var points = root.GetComponentsInChildren<Light>()
+            .Where(l => l.isActiveAndEnabled && l.type == LightType.Point && l.renderMode != LightRenderMode.ForceVertex && !l.name.StartsWith("collapse"))
+            .OrderBy(l => (l.transform.position - mid).sqrMagnitude)
+            .ToList();
+        int demoted = 0;
+        foreach (var light in points.Skip(PixelLights))
+        {
+            light.renderMode = LightRenderMode.ForceVertex;
+            light.range *= 1.3f;
+            light.intensity *= 1.2f;
+            demoted++;
+        }
+        foreach (var light in root.GetComponentsInChildren<Light>(true))
+            if (light.renderMode == LightRenderMode.ForceVertex && light.TryGetComponent<Animation>(out var flicker))
+                flicker.enabled = false;
+        return demoted;
     }
 
     private static int BelowDolls(GameObject root)
