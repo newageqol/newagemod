@@ -137,6 +137,7 @@ internal static class HexLook
     private static Transform _failedGrid;
 
     private static Cell[,] _indexed;
+    private static bool _ring = true;
     private static float _countAt;
     private static readonly Dictionary<Cell, int> Where = new();
     private static readonly HashSet<int> Set = new();
@@ -270,7 +271,8 @@ internal static class HexLook
         int open = 0;
         foreach (var cell in cells)
             if (cell != null) open++;
-        if (ReferenceEquals(cells, _indexed) && open == Where.Count) return;
+        if (ReferenceEquals(cells, _indexed) && open == Where.Count && _ring == Arena3D.EdgeRing) return;
+        _ring = Arena3D.EdgeRing;
         _indexed = cells;
         Where.Clear();
         for (int x = 0; x < cells.GetLength(0); x++)
@@ -308,8 +310,9 @@ internal static class HexLook
                 _faint.Quad(a - core, b - core, b + core, a + core, over, over, over, over);
             }
         }
-        foreach (int key in Set)
-            _faint.Fan(Middle(key), blocked);
+        if (_ring)
+            foreach (int key in Set)
+                _faint.Fan(Middle(key), blocked);
         _faint.End();
         if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[hexes] field grid: {Where.Count} cells, {Edges.Count} edges, {Set.Count} blocked cells along the edge, brightness {bright:0.##}");
     }

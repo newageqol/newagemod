@@ -14,18 +14,17 @@ namespace NewAgeQoL
     {
         private const float Delay = 0.3f;
         private const float Grace = 0.3f;
-        private const float Every = 1f;
         private const float RowWide = 300f;
         private const float Shrink = 0.68f;
         private const float ListEvery = 120f;
-        private const float Patience = 5f;
-        private const float Retry = 1f;
         private const float Gap = 8f;
         private const int Above = 29000;
         private const int Batch = 12;
         private static readonly List<OnlinePlayer> Waiting = new List<OnlinePlayer>();
 
-        private const string Server = "https://newage-observers.outerlab.org/v1/roster";
+        private const string AllClaims = "https://newage-observers.outerlab.org/v1/claims";
+        private const float BoardEvery = 0.85f;
+        private const float BoardForget = 120f;
         private const string Mark = "newage-observers 1";
         private static readonly int[] Rooms = { 14, 19, 334 };
 
@@ -45,13 +44,19 @@ namespace NewAgeQoL
             internal DateTime At;
         }
 
-        private static readonly object Gate = new object();
-        private static Answer _good;
-        private static Answer _bad;
-        private static bool _busy;
-        private static bool _finished;
-        private static bool _kept;
-        private static float _silentAt = -1f;
+        private sealed class Board
+        {
+            internal Dictionary<int, List<Fighter>> Claims;
+            internal Dictionary<int, List<Fighter>> Fights;
+            internal DateTime At;
+            internal string Error;
+            internal bool Busy;
+            internal float Next;
+        }
+
+        private static readonly Dictionary<int, Board> Boards = new Dictionary<int, Board>();
+        private static readonly HashSet<RosterHover> Shown = new HashSet<RosterHover>();
+        private static readonly HashSet<int> Polled = new HashSet<int>();
 
         private static RosterHover _hover;
         private static float _since;
@@ -59,8 +64,6 @@ namespace NewAgeQoL
         private static int _heldRoom;
         private static bool _heldFight;
         private static float _lostAt;
-        private static float _askAt;
-        private static bool _fresh;
         private static float _paintAt;
         private static float _listAt = -ListEvery;
 
@@ -100,8 +103,6 @@ namespace NewAgeQoL
             _heldRoom = hover.Room;
             _heldFight = hover.Fight;
             _since = Time.unscaledTime;
-            _askAt = _since + Delay;
-            _fresh = true;
             _paintAt = 0f;
         }
 
@@ -113,8 +114,14 @@ namespace NewAgeQoL
             Hide();
         }
 
+        internal static void Appear(RosterHover hover)
+        {
+            if (hover != null) Shown.Add(hover);
+        }
+
         internal static void Lost(RosterHover hover)
         {
+            Shown.Remove(hover);
             if (_hover != hover) return;
             _hover = null;
             _lostAt = Time.unscaledTime;
@@ -130,6 +137,7 @@ namespace NewAgeQoL
             try
             {
                 AskCards();
+                PollBoards();
                 float now = Time.unscaledTime;
                 if (_hover == null || !_hover.isActiveAndEnabled)
                 {
@@ -139,17 +147,6 @@ namespace NewAgeQoL
                     Hide();
                     return;
                 }
-                bool busy;
-                lock (Gate)
-                {
-                    if (_finished)
-                    {
-                        _finished = false;
-                        if (!_fresh) _askAt = now + (_kept ? Retry : Every);
-                    }
-                    busy = _busy;
-                }
-                if (!busy && now >= _askAt && Reachable()) Ask();
                 if (now - _since < Delay) return;
                 if (now >= _paintAt || _tipGo == null)
                 {
@@ -199,25 +196,37 @@ namespace NewAgeQoL
             }
         }
 
-        private static int Room() => _hover != null && _hover.Room > 0 ? _hover.Room : Chaotic.Room;
+        private static int Room() => RoomOf(_hover);
+
+        private static int RoomOf(RosterHover hover) => hover != null && hover.Room > 0 ? hover.Room : Chaotic.Room;
 
         private static bool Reachable() => Array.IndexOf(Rooms, Room()) >= 0;
 
-        private static void Ask()
+        private static void PollBoards()
         {
-            int id = _hover.Id;
-            bool fight = _hover.Fight;
-            int room = Room();
-            _fresh = false;
-            _askAt = float.MaxValue;
-            if (Plugin.Instance == null) return;
-            lock (Gate) _busy = true;
-            Plugin.Instance.StartCoroutine(Fetch(id, fight, room));
+            if (Shown.Count == 0 || Plugin.Instance == null) return;
+            Polled.Clear();
+            Shown.RemoveWhere(h => h == null);
+            foreach (var hover in Shown)
+            {
+                if (!hover.isActiveAndEnabled) continue;
+                int room = RoomOf(hover);
+                if (Array.IndexOf(Rooms, room) >= 0) Polled.Add(room);
+            }
+            float now = Time.unscaledTime;
+            foreach (int room in Polled)
+            {
+                Board board;
+                if (!Boards.TryGetValue(room, out board)) Boards[room] = board = new Board();
+                if (board.Busy || now < board.Next) continue;
+                board.Busy = true;
+                Plugin.Instance.StartCoroutine(FetchBoard(room, board));
+            }
         }
 
-        private static IEnumerator Fetch(int id, bool fight, int room)
+        private static IEnumerator FetchBoard(int room, Board board)
         {
-            var req = UnityWebRequest.Get(Server + "?room=" + room + "&id=" + id + "&fight=" + (fight ? "1" : "0"));
+            var req = UnityWebRequest.Get(AllClaims + "?room=" + room);
             req.timeout = 10;
             req.redirectLimit = 0;
             req.SetRequestHeader("User-Agent", "NewAgeQoL");
@@ -225,50 +234,54 @@ namespace NewAgeQoL
             long code = req.responseCode;
             string body = req.downloadHandler == null ? "" : req.downloadHandler.text ?? "";
             req.Dispose();
-            try { Take(id, code, body); }
-            catch (Exception e) { Done(id, null, e.Message); }
+            try { TakeBoard(room, board, code, body); }
+            catch (Exception e) { board.Error = e.Message; }
+            board.Busy = false;
+            board.Next = Time.unscaledTime + BoardEvery;
         }
 
-        private static void Take(int id, long code, string body)
+        private static void TakeBoard(int room, Board board, long code, string body)
         {
             if (!body.StartsWith(Mark, StringComparison.Ordinal))
             {
-                if (_silentAt < 0f) _silentAt = Time.unscaledTime;
-                if (Time.unscaledTime - _silentAt < Patience)
-                {
-                    lock (Gate) { _kept = true; _busy = false; _finished = true; }
-                    Plugin.Trace("[roster] " + id + ": observer server did not answer (" + code + "), asking again");
-                    return;
-                }
-                Done(id, null, code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code));
+                board.Error = code == 0 ? Lang.T("сервер наблюдателей недоступен") : Lang.F("сервер наблюдателей ответил {0}", code);
+                Plugin.Trace("[roster] room " + room + ": " + board.Error);
                 return;
             }
-            var people = new List<Fighter>();
+            var claims = new Dictionary<int, List<Fighter>>();
+            var fights = new Dictionary<int, List<Fighter>>();
+            List<Fighter> people = null;
             foreach (var raw in body.Split('\n'))
             {
                 var bits = raw.TrimEnd('\r').Split('\t');
-                if (bits.Length >= 2 && bits[0] == "!") { Done(id, null, bits[1]); return; }
+                if (bits.Length >= 2 && bits[0] == "!") { board.Error = bits[1]; return; }
                 int uid, level;
-                if (bits.Length < 4 || !int.TryParse(bits[0], out uid) || bits[1].Length == 0) continue;
+                if (bits.Length >= 2 && (bits[0] == "c" || bits[0] == "f"))
+                {
+                    int cid;
+                    people = int.TryParse(bits[1], out cid) ? (bits[0] == "c" ? claims : fights)[cid] = new List<Fighter>() : null;
+                    continue;
+                }
+                if (people == null || bits.Length < 4 || !int.TryParse(bits[0], out uid) || bits[1].Length == 0) continue;
                 int.TryParse(bits[2], out level);
                 people.Add(new Fighter { Id = uid, Login = bits[1], Level = level, Clan = bits[3] });
             }
-            Done(id, people, null);
+            board.Claims = claims;
+            board.Fights = fights;
+            board.At = DateTime.UtcNow;
+            board.Error = null;
         }
 
-        private static void Done(int id, List<Fighter> people, string error)
+        private static void FromBoard(int id, bool fight, out Answer good, out Answer bad)
         {
-            var answer = new Answer { Id = id, People = people, Error = error, At = DateTime.UtcNow };
-            if (people != null) _silentAt = -1f;
-            lock (Gate)
-            {
-                _kept = false;
-                if (people != null) { _good = answer; _bad = null; }
-                else _bad = answer;
-                _busy = false;
-                _finished = true;
-            }
-            if (error != null) Plugin.Trace("[roster] " + id + ": " + error);
+            good = null;
+            bad = null;
+            Board board;
+            if (!Boards.TryGetValue(Room(), out board)) return;
+            bool known = board.Claims != null && (DateTime.UtcNow - board.At).TotalSeconds < BoardForget;
+            List<Fighter> people;
+            if (known && (fight ? board.Fights : board.Claims).TryGetValue(id, out people)) good = new Answer { Id = id, People = people, At = board.At };
+            else if (!known && board.Error != null) bad = new Answer { Id = id, Error = board.Error, At = DateTime.UtcNow };
         }
 
         private static Canvas _canvas;
@@ -285,7 +298,7 @@ namespace NewAgeQoL
             int id = _hover.Id;
             bool fight = _hover.Fight;
             Answer good, bad;
-            lock (Gate) { good = _good; bad = _bad; }
+            FromBoard(id, fight, out good, out bad);
             if (good != null && good.Id != id) good = null;
             if (bad != null && bad.Id != id) bad = null;
 
@@ -324,9 +337,6 @@ namespace NewAgeQoL
             if (bad != null) return "<color=#f07a6e>" + Plain(bad.Error) + "</color>";
             if (good.People.Count == 0) return "<color=#acb3bd>" + (fight ? Lang.T("сервер не назвал игроков") : Lang.T("в заявке никого")) + "</color>";
             long age = (long)(DateTime.UtcNow - good.At).TotalSeconds;
-            bool asking;
-            lock (Gate) asking = _busy;
-            if (age >= 3 && (_fresh || asking)) return "<color=#747b85>" + Lang.T("обновляю…") + "</color>";
             return age >= 3 ?"<color=#747b85>" + Lang.F("обновлено {0} с назад", age) + "</color>" : "";
         }
 
@@ -566,6 +576,8 @@ namespace NewAgeQoL
         public void OnPointerEnter(PointerEventData e) => ClaimRoster.Enter(this);
 
         public void OnPointerExit(PointerEventData e) => ClaimRoster.Leave(this);
+
+        private void OnEnable() => ClaimRoster.Appear(this);
 
         private void OnDisable() => ClaimRoster.Lost(this);
     }

@@ -170,6 +170,8 @@ namespace NewAgeQoL
             }
         }
 
+        internal static float SinkPixels => Active && _canvasGo != null ? (Sink - Edge) * Scale(Sheet()) : 0f;
+
         internal static void Wake()
         {
             _next = 0f;

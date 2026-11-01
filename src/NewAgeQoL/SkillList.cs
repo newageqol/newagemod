@@ -1314,8 +1314,10 @@ namespace NewAgeQoL
 
             var canvas = _canvasGo.GetComponent<Canvas>();
             float scale = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
+            float grow = Mathf.Clamp(Plugin.CfgPotionScale.Value, 0.7f, 1.6f);
+            float biggest = DockBiggest * grow, smallest = DockSmallest * grow;
             float room = ChatDock.LeftPixels / scale - DockGap * 2f;
-            float high = Mathf.Max(DockBiggest * 2f, ChatDock.PanelPixels / scale - DockGap);
+            float high = Mathf.Max(biggest * 2f, ChatDock.PanelPixels / scale * Mathf.Max(1f, grow));
 
             Array.Clear(ShelfCount, 0, ShelfCount.Length);
             foreach (int id in Sig)
@@ -1330,11 +1332,11 @@ namespace NewAgeQoL
                 rows++;
                 if (n > widest) widest = n;
             }
-            if (rows == 0 || room < DockPad * 2f + Mathf.Round(DockSmallest * 0.6f) + DockSmallest + ShelfGap) { prt.gameObject.SetActive(false); return; }
+            if (rows == 0 || room < DockPad * 2f + Mathf.Round(smallest * 0.6f) + smallest + ShelfGap) { prt.gameObject.SetActive(false); return; }
 
-            float side = DockBiggest, mark = 0f;
+            float side = biggest, mark = 0f;
             int per = 1, lines = rows;
-            for (; side >= DockSmallest; side--)
+            for (; side >= smallest; side--)
             {
                 mark = Mathf.Round(side * 0.6f);
                 per = Mathf.FloorToInt((room - DockPad * 2f - mark) / (side + ShelfGap));
@@ -1343,14 +1345,15 @@ namespace NewAgeQoL
                 foreach (int n in ShelfCount) if (n > 0) lines += (n + per - 1) / per;
                 if (lines * side + (lines - 1) * ShelfGap + DockPad * 2f <= high) break;
             }
-            side = Mathf.Max(DockSmallest, side);
+            side = Mathf.Max(smallest, side);
             int across = Mathf.Min(widest, per);
-            var size = new Vector2(DockPad * 2f + mark + across * (side + ShelfGap), DockPad * 2f + lines * side + (lines - 1) * ShelfGap);
+            float sunk = ChatDock.SinkPixels / scale;
+            var size = new Vector2(DockPad * 2f + mark + across * (side + ShelfGap), DockPad * 2f + lines * side + (lines - 1) * ShelfGap + sunk);
             if (prt.sizeDelta != size) prt.sizeDelta = size;
             var corner = new Vector2(1f, 0f);
             if (prt.anchorMin != corner) prt.anchorMin = prt.anchorMax = corner;
             if (prt.pivot != Vector2.zero) prt.pivot = Vector2.zero;
-            var spot = new Vector2(Mathf.Min(-DockGap - size.x, DockGap - ChatDock.LeftPixels / scale), DockGap);
+            var spot = new Vector2(Mathf.Min(-DockGap - size.x, DockGap - ChatDock.LeftPixels / scale), -sunk);
             if ((prt.anchoredPosition - spot).sqrMagnitude > 0.25f) prt.anchoredPosition = spot;
             if (side == _dockSide && size == _dockSize) return;
             _dockSide = side;
@@ -1399,8 +1402,8 @@ namespace NewAgeQoL
                 bool cooling = Cooling(skill);
                 int rounds = skill.Recharge - skill.Turn;
                 cell.Block = why;
-                if (cell.Icon != null) cell.Icon.color = bright ? Color.white : cooling ? new Color(1f, 1f, 1f, 0.75f) : new Color(0.5f, 0.5f, 0.5f, 0.4f);
-                if (cell.Dim != null) cell.Dim.enabled = !bright && !cooling;
+                if (cell.Icon != null) cell.Icon.color = bright ? Color.white : cooling ? new Color(1f, 1f, 1f, 0.75f) : _potions ? new Color(0.8f, 0.8f, 0.8f, 0.7f) : new Color(0.5f, 0.5f, 0.5f, 0.4f);
+                if (cell.Dim != null) cell.Dim.enabled = !bright && !cooling && !_potions;
                 if (cell.Cool != null)
                 {
                     cell.Cool.enabled = cooling;
@@ -1416,7 +1419,13 @@ namespace NewAgeQoL
                 {
                     bool show = skill.Count > 0 && (skill.Count < 100 || _things);
                     cell.Count.enabled = show;
-                    if (show) cell.Count.text = Num(skill.Count);
+                    if (show)
+                    {
+                        cell.Count.text = Num(skill.Count);
+                        int size = _potions && _dockSide > 0f ? Mathf.Clamp(Mathf.RoundToInt(_dockSide * 0.3f), 10, 20) : 13;
+                        if (skill.Count >= 1000) size -= 2;
+                        if (cell.Count.fontSize != size) cell.Count.fontSize = size;
+                    }
                 }
                 if (cell.Edge != null)
                 {
@@ -2105,7 +2114,8 @@ namespace NewAgeQoL
             go.transform.SetParent(_cells, false);
 
             var frame = go.GetComponent<Image>();
-            frame.color = WardrobeLook.Card;
+            int shelf = _potions ? Shelf(skill.Id) : -1;
+            frame.color = shelf >= 0 ? Color.Lerp(WardrobeLook.Card, ShelfPaints[shelf], 0.3f) : WardrobeLook.Card;
             frame.sprite = _tricks ? OnlineWindow.Disc() : OnlineWindow.Rounded(6);
             frame.type = _tricks ? Image.Type.Simple : Image.Type.Sliced;
 
@@ -2116,7 +2126,8 @@ namespace NewAgeQoL
 
             var iconGo = new GameObject("icon", typeof(RectTransform), typeof(Image));
             iconGo.transform.SetParent(go.transform, false);
-            OnlineWindow.Place((RectTransform)iconGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(4f, 4f), new Vector2(-4f, -4f));
+            float inset = shelf >= 0 ? 2f : 4f;
+            OnlineWindow.Place((RectTransform)iconGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(inset, inset), new Vector2(-inset, -inset));
             var icon = iconGo.GetComponent<Image>();
             icon.sprite = AtlasUtils.GetQuickButtonSprite(skill);
             icon.preserveAspect = true;
@@ -2147,6 +2158,7 @@ namespace NewAgeQoL
 
             var count = OnlineWindow.Label(go.transform, "", 13, FontStyle.Bold, WardrobeLook.Bright);
             count.alignment = TextAnchor.LowerRight;
+            count.horizontalOverflow = HorizontalWrapMode.Overflow;
             count.raycastTarget = false;
             var shadow = count.gameObject.AddComponent<Outline>();
             shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);

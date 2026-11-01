@@ -42,6 +42,8 @@ namespace NewAge2D
         public float sunScale = -1f, ambientScale = -1f, shadowStrength = -1f, nightBoost = 0f, nightPost = 1f, nightDoll = 1f, fieldGlow = 1.7f, mobGlow = 1.1f, lampGlow = 4f, lampBoost = 1.5f, lampReach = 30f, lampMax = 22f, fieldGlowHigh = 10f, fieldGlowAngle = 115f, maxDist = 75f, homePitch = -1f, homeDist = -1f, camTop = 999f, openRise = 4.5f, openDrop = 2f, wallGap = 2.5f, camAbove = -999f, pitchMax = 1.35f, homeWide = 0f;
         public bool electric;
         public bool storm;
+        public bool edgeRing = true;
+        public float dusk = -1f;
         public string fireColor = "";
         public string bgDay = "000000", bgNight = "000000", nightFog = "";
         public float[] motes = { 13f, 2.5f, 15.6f, 47f, 9f, 26f };

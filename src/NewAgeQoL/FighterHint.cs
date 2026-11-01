@@ -33,6 +33,10 @@ namespace NewAgeQoL
         private static CanvasGroup _veil;
         private static Text _title, _range, _meta, _branch;
         private static Text _hp, _mp, _sp;
+        private static GameObject _drinksGo;
+        private static readonly GameObject[] DrinkChip = new GameObject[Drinks.Kinds];
+        private static readonly Image[] DrinkIcon = new Image[Drinks.Kinds];
+        private static readonly Text[] DrinkLeft = new Text[Drinks.Kinds];
         private static GameObject _barsGo;
         private static Transform _rows;
         private static string _rowsSig = "";
@@ -243,6 +247,12 @@ namespace NewAgeQoL
             nc.AddMessageListener(24, OnRound);
             nc.RemoveMessageListener(433, OnWho);
             nc.AddMessageListener(433, OnWho);
+            nc.RemoveMessageListener(29, Drinks.OnAnimation);
+            nc.AddMessageListener(29, Drinks.OnAnimation);
+            nc.RemoveMessageListener(347, Drinks.OnButtons);
+            nc.AddMessageListener(347, Drinks.OnButtons);
+            nc.RemoveMessageListener(139, Drinks.OnUsed);
+            nc.AddMessageListener(139, Drinks.OnUsed);
             _on = nc;
         }
 
@@ -271,6 +281,7 @@ namespace NewAgeQoL
             Swept.Clear();
             _sweepAt = 0f;
             _rowsSig = "";
+            Drinks.Forget();
         }
 
         private static void Sweep(ICombatData cd)
@@ -302,6 +313,7 @@ namespace NewAgeQoL
 
         private static void OnRound(object m)
         {
+            Drinks.OnRound(m);
             Swept.Clear();
             _sweepAt = 0f;
         }
@@ -451,6 +463,7 @@ namespace NewAgeQoL
                 }
             }
             else _barsGo.SetActive(false);
+            ShowDrinks(ch.UserId);
 
             List<UserEnchantmentsResponseItem> items;
             bool known = Effects(ch.UserId, out items);
@@ -655,8 +668,7 @@ namespace NewAgeQoL
             w = Mathf.Max(w, Measure(_title.text, 12, FontStyle.Bold));
             if (_range.gameObject.activeSelf) w = Mathf.Max(w, Measure(_range.text, 12, FontStyle.Bold));
             if (_meta.gameObject.activeSelf) w = Mathf.Max(w, Measure(_meta.text, 9, FontStyle.Normal));
-            if (_branch.gameObject.activeSelf) w = Mathf.Max(w, Measure(_branch.text, 9, FontStyle.Normal));
-            if (_barsGo != null && _barsGo.activeSelf)
+            if (_branch.gameObject.activeSelf) w = Mathf.Max(w, Measure(_branch.text, 9, FontStyle.Normal));            if (_barsGo != null && _barsGo.activeSelf)
             {
                 float bars = Measure(_hp.text, 9, FontStyle.Bold) + Measure(_mp.text, 9, FontStyle.Bold) + Measure(_sp.text, 9, FontStyle.Bold);
                 w = Mathf.Max(w, bars + 3f * 13f + 2f * 8f);
@@ -797,6 +809,7 @@ namespace NewAgeQoL
             _branch.text = "";
             _branch.gameObject.SetActive(false);
             Bars(_board);
+            DrinkRow(_board);
             Rule(_board);
             var rowsGo = new GameObject("rows", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             rowsGo.transform.SetParent(_board, false);
@@ -839,6 +852,84 @@ namespace NewAgeQoL
             _hp = Pair(_barsGo.transform, Heart(), new Color32(255, 106, 90, 255));
             _mp = Pair(_barsGo.transform, Icon(EActionParamIconType.MANA_COST), new Color32(109, 179, 255, 255));
             _sp = Pair(_barsGo.transform, Icon(EActionParamIconType.STAMINA_COST), new Color32(255, 210, 87, 255));
+        }
+
+        private static void DrinkRow(Transform host)
+        {
+            _drinksGo = new GameObject("drinks", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            _drinksGo.transform.SetParent(host, false);
+            var row = _drinksGo.GetComponent<HorizontalLayoutGroup>();
+            row.spacing = 6f;
+            row.padding = new RectOffset(0, 0, 2, 2);
+            row.childAlignment = TextAnchor.MiddleCenter;
+            row.childControlWidth = true;
+            row.childControlHeight = true;
+            row.childForceExpandWidth = false;
+            row.childForceExpandHeight = false;
+            var le = _drinksGo.GetComponent<LayoutElement>();
+            le.preferredHeight = 24f; le.minHeight = 24f;
+
+            for (int k = 0; k < Drinks.Kinds; k++)
+            {
+                var chip = new GameObject("drink", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+                chip.transform.SetParent(_drinksGo.transform, false);
+                var back = chip.GetComponent<Image>();
+                back.sprite = OnlineWindow.Rounded(8);
+                back.type = Image.Type.Sliced;
+                back.color = new Color(1f, 1f, 1f, 0.07f);
+                back.raycastTarget = false;
+                var lay = chip.GetComponent<HorizontalLayoutGroup>();
+                lay.padding = new RectOffset(4, 7, 1, 1);
+                lay.spacing = 3f;
+                lay.childAlignment = TextAnchor.MiddleCenter;
+                lay.childControlWidth = true;
+                lay.childControlHeight = true;
+                lay.childForceExpandWidth = false;
+                lay.childForceExpandHeight = false;
+                var cle = chip.GetComponent<LayoutElement>();
+                cle.preferredHeight = 20f; cle.minHeight = 20f;
+
+                var iconGo = new GameObject("flask", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                iconGo.transform.SetParent(chip.transform, false);
+                var icon = iconGo.GetComponent<Image>();
+                icon.sprite = Drinks.Flask(k);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                var ile = iconGo.GetComponent<LayoutElement>();
+                ile.preferredWidth = 18f; ile.minWidth = 18f; ile.preferredHeight = 18f; ile.minHeight = 18f;
+
+                var left = Line(chip.transform, 12, FontStyle.Bold, Drinks.Tints[k], TextAnchor.MiddleLeft);
+                left.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var shade = left.gameObject.AddComponent<Shadow>();
+                shade.effectColor = new Color(0f, 0f, 0f, 0.6f);
+                shade.effectDistance = new Vector2(1f, -1f);
+                var tle = left.gameObject.AddComponent<LayoutElement>();
+                tle.preferredHeight = 16f; tle.minHeight = 16f;
+
+                DrinkChip[k] = chip;
+                DrinkIcon[k] = icon;
+                DrinkLeft[k] = left;
+                chip.SetActive(false);
+            }
+            _drinksGo.SetActive(false);
+        }
+
+        private static void ShowDrinks(int userId)
+        {
+            bool any = false;
+            for (int k = 0; k < Drinks.Kinds; k++)
+            {
+                int left;
+                bool drank = Drinks.Left(userId, k, out left);
+                if (DrinkChip[k].activeSelf != drank) DrinkChip[k].SetActive(drank);
+                if (!drank) continue;
+                any = true;
+                bool ready = left <= 0;
+                DrinkLeft[k].text = ready ? "" : left.ToString();
+                if (DrinkLeft[k].gameObject.activeSelf == ready) DrinkLeft[k].gameObject.SetActive(!ready);
+                DrinkIcon[k].color = ready ? new Color(1f, 1f, 1f, 0.4f) : Color.white;
+            }
+            if (_drinksGo.activeSelf != any) _drinksGo.SetActive(any);
         }
 
         private static Text Pair(Transform host, Sprite mark, Color32 tint)

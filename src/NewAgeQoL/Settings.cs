@@ -67,6 +67,7 @@ namespace NewAgeQoL
 
                 new Header { Title = Lang.T("Банки") },
                 B(Lang.T("Пить до полного"), Plugin.CfgFlaskFillToMax),
+                Sl(Lang.T("Размер панели банок в бою"), Plugin.CfgPotionScale, 0.7f, 1.6f),
                 Pick(Lang.T("Жизнь"), Plugin.CfgFlaskHpName, Plugin.CfgFlaskHpId),
                 Pick(Lang.T("Мана"), Plugin.CfgFlaskManaName, Plugin.CfgFlaskManaId),
                 Pick(Lang.T("Энергия"), Plugin.CfgFlaskEnergyName, Plugin.CfgFlaskEnergyId),

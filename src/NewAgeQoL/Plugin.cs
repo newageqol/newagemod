@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.32.0";
+        public const string Version = "0.33.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -70,6 +70,7 @@ namespace NewAgeQoL
         internal static ConfigEntry<float> CfgSoundVolume;
         internal static ConfigEntry<float> CfgMusicVolume;
         internal static ConfigEntry<float> CfgSmallScreen;
+        internal static ConfigEntry<float> CfgPotionScale;
         internal static ConfigEntry<bool> CfgNewPlaces;
         internal static ConfigEntry<bool> CfgNewArenas;
         internal static ConfigEntry<bool> CfgRosterFolded;
@@ -266,6 +267,9 @@ namespace NewAgeQoL
                 "Список заявок и боёв Иллениума справа свёрнут вправо. Меняется кнопкой «Бои» сбоку от списка, запоминается между заходами.");
             CfgSmallScreen = Config.Bind("Interface", "SmallScreenScale", 1.2f,
                 "Во сколько раз крупнее делать интерфейс мода (чат, приёмы, подсказки, кнопки) на экранах ниже 1080 точек по высоте: 1 — как в игре, 1.2 — на пятую часть крупнее, до 1.5. Крупнее пиксель в пиксель не растёт, на 1080p и больше ничего не меняется.");
+            CfgPotionScale = Config.Bind("Interface", "PotionPanelScale", 1f,
+                "Размер панели банок справа от чата в бою: 1 — как раньше, по месту рядом с чатом; больше — ячейки крупнее, панель при нехватке места растёт вверх над чатом; меньше — мельче. От 0.7 до 1.6.");
+            CfgPotionScale.Value = UnityEngine.Mathf.Clamp(CfgPotionScale.Value, 0.7f, 1.6f);
             CfgSoundVolume.Value = UnityEngine.Mathf.Clamp01(CfgSoundVolume.Value);
             CfgMusicVolume.Value = UnityEngine.Mathf.Clamp01(CfgMusicVolume.Value);
             Chars.Own("Combat", "CameraPanExtra", 0.5f,

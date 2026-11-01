@@ -6,7 +6,7 @@ namespace NewAge2D;
 
 internal sealed class Arena3D
 {
-    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9") };
+    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9"), ("arenaCombatMap7", "arena7"), ("21x21_arena", "arena21") };
 
     private sealed class Scene
     {
@@ -47,6 +47,7 @@ internal sealed class Arena3D
     internal ArenaCfg Cfg { get; private set; } = new ArenaCfg();
 
     internal static bool Any;
+    internal static bool EdgeRing = true;
     internal static Color DollTint = Color.white;
     private static readonly Color FieldWarm = new(1f, 0.82f, 0.55f);
     private static readonly Color DollWarm = new(0.97f, 0.94f, 0.88f);
@@ -193,6 +194,7 @@ internal sealed class Arena3D
         QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 32);
         QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
         float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
+        if (Cfg.dusk >= 0f) hour = Cfg.dusk;
         bool night = ArenaLook.IsNight(hour);
         ArenaLook.Use(Cfg);
         var look = _root.AddComponent<ArenaLook>();
@@ -245,6 +247,7 @@ internal sealed class Arena3D
         float doll = Mathf.Lerp(1f, Mathf.Clamp(Cfg.nightDoll, 0.2f, 1.5f), look.NightGrade);
         DollTint = new Color(DollTint.r * doll, DollTint.g * doll, DollTint.b * doll, DollTint.a);
         Any = true;
+        EdgeRing = Cfg.edgeRing;
         shown?.Invoke();
         Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}, vertex lights {vertexLights}");
     }
@@ -329,6 +332,7 @@ internal sealed class Arena3D
     internal void Detach()
     {
         Any = false;
+        EdgeRing = true;
         DollTint = Color.white;
         if (_root != null) UnityEngine.Object.Destroy(_root);
         _root = null;
