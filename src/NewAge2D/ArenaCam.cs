@@ -203,9 +203,14 @@ internal sealed class ArenaCam
     private float Clear(float x, float z)
     {
         if (_clear == null) return 999f;
-        int i = Mathf.RoundToInt((x - _height.x0) / _height.step), j = Mathf.RoundToInt((z - _height.z0) / _height.step);
-        if (i < 0 || j < 0 || i >= _height.nx || j >= _height.nz) return 0f;
-        return _clear[j * _height.nx + i];
+        float fx = (x - _height.x0) / _height.step, fz = (z - _height.z0) / _height.step;
+        int nx = _height.nx, nz = _height.nz;
+        if (fx < 0f || fz < 0f || fx > nx - 1 || fz > nz - 1) return 0f;
+        int i = Mathf.Min((int)fx, nx - 2), j = Mathf.Min((int)fz, nz - 2);
+        float a = fx - i, b = fz - j;
+        float c0 = Mathf.Lerp(_clear[j * nx + i], _clear[j * nx + i + 1], a);
+        float c1 = Mathf.Lerp(_clear[(j + 1) * nx + i], _clear[(j + 1) * nx + i + 1], a);
+        return Mathf.Lerp(c0, c1, b);
     }
 
     private float Around(float x, float z, float r)
@@ -228,13 +233,26 @@ internal sealed class ArenaCam
         float len = dir.magnitude;
         if (len < 0.01f) return dist;
         dir /= len;
-        for (float d = 2f; d <= len; d += 0.4f)
+        for (float d = 2f; d <= len + 0.8f; d += 0.4f)
         {
-            var q = from + dir * d;
-            float g = Around(q.x, q.z, 1.2f);
-            if (q.y < g + Mathf.Min(1.5f, 0.2f + 0.15f * d) || q.y > CamTop || Clear(q.x, q.z) < WallGap) return Mathf.Max(MinDist * 0.5f, dist * (d - 0.8f) / len);
+            if (!Blocked(from, dir, d)) continue;
+            float lo = d > 2f ? d - 0.4f : d, hi = d;
+            for (int k = 0; k < 8; k++)
+            {
+                float m = (lo + hi) * 0.5f;
+                if (Blocked(from, dir, m)) hi = m;
+                else lo = m;
+            }
+            return Mathf.Max(MinDist * 0.5f, dist * Mathf.Min(len, lo - 0.8f) / len);
         }
         return dist;
+    }
+
+    private bool Blocked(Vector3 from, Vector3 dir, float d)
+    {
+        var q = from + dir * d;
+        float g = Around(q.x, q.z, 1.2f);
+        return q.y < g + Mathf.Min(1.5f, 0.2f + 0.15f * d) || q.y > CamTop || Clear(q.x, q.z) < WallGap;
     }
 
     private bool Inside(Vector3 q) =>
@@ -331,9 +349,21 @@ internal sealed class ArenaCam
             lift = Mathf.Min(LiftMax, lift + 0.03f);
             reach = Reach(_yaw, lift, _dist, _target);
         }
-        _lift = _lift < 0f || lift > _lift ? lift : _lift + (lift - _lift) * ease;
+        if (lift > _pitch && reach >= need)
+        {
+            float lo = Mathf.Max(_pitch, lift - 0.03f), hi = lift;
+            for (int k = 0; k < 6; k++)
+            {
+                float m = (lo + hi) * 0.5f;
+                if (Reach(_yaw, m, _dist, _target) >= need) hi = m;
+                else lo = m;
+            }
+            lift = hi;
+        }
+        float dodge = 1f - Mathf.Pow(1f - 0.25f, dt);
+        _lift = _lift < 0f ? lift : _lift + (lift - _lift) * (lift > _lift ? dodge : ease);
         reach = Reach(_yaw, _lift, _dist, _target);
-        _boom = _boom < 0f || reach < _boom ? reach : _boom + (reach - _boom) * ease;
+        _boom = _boom < 0f ? reach : _boom + (reach - _boom) * (reach < _boom ? dodge : ease);
         var pos = At(_yaw, _lift, _boom, _target);
         float floor = Mathf.Max(Around(pos.x, pos.z, 1.2f) + 2.5f, CamLow);
         _floor = _floorSet && floor < _floor ? _floor + (floor - _floor) * (1f - Mathf.Pow(1f - 0.08f, dt)) : floor;

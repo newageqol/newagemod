@@ -668,15 +668,22 @@ namespace NewAgeQoL
             w = Mathf.Max(w, Measure(_title.text, 12, FontStyle.Bold));
             if (_range.gameObject.activeSelf) w = Mathf.Max(w, Measure(_range.text, 12, FontStyle.Bold));
             if (_meta.gameObject.activeSelf) w = Mathf.Max(w, Measure(_meta.text, 9, FontStyle.Normal));
-            if (_branch.gameObject.activeSelf) w = Mathf.Max(w, Measure(_branch.text, 9, FontStyle.Normal));            if (_barsGo != null && _barsGo.activeSelf)
+            if (_branch.gameObject.activeSelf) w = Mathf.Max(w, Measure(_branch.text, 9, FontStyle.Normal));
+            if (_barsGo != null && _barsGo.activeSelf)
             {
-                float bars = Measure(_hp.text, 9, FontStyle.Bold) + Measure(_mp.text, 9, FontStyle.Bold) + Measure(_sp.text, 9, FontStyle.Bold);
-                w = Mathf.Max(w, bars + 3f * 13f + 2f * 8f);
+                float bars = Wide(_hp) + 13f + 8f + Wide(_mp) + 13f;
+                if (_sp.transform.parent.gameObject.activeSelf) bars += 8f + Wide(_sp) + 13f;
+                w = Mathf.Max(w, bars + 6f);
             }
             w = Mathf.Clamp(Mathf.Ceil(w) + 14f, 150f, 520f);
             if (Mathf.Abs(_board.sizeDelta.x - w) < 0.5f) return;
             _ble.preferredWidth = w; _ble.minWidth = w;
             _board.sizeDelta = new Vector2(w, _board.sizeDelta.y);
+        }
+
+        private static float Wide(Text t)
+        {
+            return Mathf.Max(t.preferredWidth, Measure(t.text, t.fontSize, t.fontStyle));
         }
 
         internal static string Turns(int n)
@@ -920,14 +927,13 @@ namespace NewAgeQoL
             for (int k = 0; k < Drinks.Kinds; k++)
             {
                 int left;
-                bool drank = Drinks.Left(userId, k, out left);
-                if (DrinkChip[k].activeSelf != drank) DrinkChip[k].SetActive(drank);
-                if (!drank) continue;
+                bool waiting = Drinks.Left(userId, k, out left) && left > 0;
+                if (DrinkChip[k].activeSelf != waiting) DrinkChip[k].SetActive(waiting);
+                if (!waiting) continue;
                 any = true;
-                bool ready = left <= 0;
-                DrinkLeft[k].text = ready ? "" : left.ToString();
-                if (DrinkLeft[k].gameObject.activeSelf == ready) DrinkLeft[k].gameObject.SetActive(!ready);
-                DrinkIcon[k].color = ready ? new Color(1f, 1f, 1f, 0.4f) : Color.white;
+                DrinkLeft[k].text = left.ToString();
+                if (!DrinkLeft[k].gameObject.activeSelf) DrinkLeft[k].gameObject.SetActive(true);
+                DrinkIcon[k].color = Color.white;
             }
             if (_drinksGo.activeSelf != any) _drinksGo.SetActive(any);
         }

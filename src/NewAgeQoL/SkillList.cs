@@ -169,6 +169,19 @@ namespace NewAgeQoL
             Potions.Step();
         }
 
+        internal static void Rehide()
+        {
+            Abilities.Cloak();
+            Tricks.Cloak();
+            Things.Cloak();
+            Spells.Cloak();
+        }
+
+        private void Cloak()
+        {
+            if (_found && _hidden != null && _hidden.activeSelf) Veil(_hidden, true);
+        }
+
         internal static void Aim()
         {
             if (Input.GetMouseButtonDown(0)) _ateAt = 0f;
@@ -2270,6 +2283,16 @@ namespace NewAgeQoL
     internal static class SkillListPhasePatch
     {
         private static void Postfix() => SkillList.PhaseOver();
+    }
+
+    [HarmonyPatch(typeof(CombatButtonsController), "OnCombatInitializedResponse")]
+    internal static class SkillListInitPatch
+    {
+        private static void Postfix()
+        {
+            try { SkillList.Rehide(); }
+            catch (Exception e) { Plugin.Trace("[skills] rehide: " + e.Message); }
+        }
     }
 
     [HarmonyPatch(typeof(QuickButtonStateHolder), "CreateButton")]

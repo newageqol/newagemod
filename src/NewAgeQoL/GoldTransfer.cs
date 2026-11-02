@@ -20,6 +20,8 @@ namespace NewAgeQoL
         private static bool _good;
         private static int _version;
         private static string _announce;
+        private static bool _toMe;
+        private static double _credit;
 
         internal static bool Busy { get { lock (Gate) return _busy; } }
         internal static int Version { get { lock (Gate) return _version; } }
@@ -29,6 +31,22 @@ namespace NewAgeQoL
             string say;
             lock (Gate) { say = _announce; _announce = null; }
             if (say != null) Notice.Show(say, 8f);
+            Credit();
+        }
+
+        private static void Credit()
+        {
+            double add;
+            lock (Gate) { add = _credit; _credit = 0; }
+            if (add <= 0) return;
+            try
+            {
+                var cash = Controllers.User?.Cash;
+                if (cash == null) return;
+                cash.Gold = (float)Math.Round(cash.Gold + add, 2);
+                Plugin.Trace("[gold] top panel credited");
+            }
+            catch { }
         }
 
         private static string Spare() => (Plugin.CfgOnlineLogin?.Value ?? "").Trim();
@@ -168,6 +186,7 @@ namespace NewAgeQoL
             {
                 if (_busy) return false;
                 _busy = true;
+                _toMe = string.Equals(target, Mine(), StringComparison.OrdinalIgnoreCase);
                 _status = SpareSession.Online ? Lang.T("Отправляю перевод…") : Lang.T("Вхожу запасным аккаунтом…");
                 _good = true;
                 _version++;
@@ -233,6 +252,7 @@ namespace NewAgeQoL
             bool ok = success == "1" || success == "true";
             string msg = Attr(answer, "msg");
             Plugin.Trace("[gold] transfer " + (ok ? "accepted" : "refused") + " by server");
+            if (ok) lock (Gate) { if (_toMe) _credit += amount; }
             Done((ok ? Lang.T("Перевод принят") : Lang.T("Перевод отклонён")) + (msg.Length > 0 ? ": " + msg : "."), ok);
         }
     }

@@ -49,6 +49,7 @@ namespace NewAgeQoL
         private static SideFold _fold;
         private static RectTransform _panel;
         private static Text _note;
+        private static RectTransform _content;
         private static readonly List<GameObject> Rows = new List<GameObject>();
         private static readonly List<Line> Lines = new List<Line>();
         private static List<Item> _items;
@@ -239,6 +240,49 @@ namespace NewAgeQoL
             _note.alignment = TextAnchor.MiddleLeft;
             _note.raycastTarget = false;
             _note.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            var viewGo = new GameObject("view", typeof(RectTransform), typeof(RectMask2D));
+            viewGo.transform.SetParent(_panel, false);
+            var view = (RectTransform)viewGo.transform;
+            OnlineWindow.Place(view, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(0f, Pad), new Vector2(0f, -Pad));
+
+            var contentGo = new GameObject("content", typeof(RectTransform));
+            contentGo.transform.SetParent(view, false);
+            _content = (RectTransform)contentGo.transform;
+            _content.anchorMin = new Vector2(0f, 1f);
+            _content.anchorMax = Vector2.one;
+            _content.pivot = new Vector2(0.5f, 1f);
+            _content.sizeDelta = Vector2.zero;
+            _content.anchoredPosition = Vector2.zero;
+
+            var scroll = _panel.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.inertia = false;
+            scroll.scrollSensitivity = RowH + Gap;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.viewport = view;
+            scroll.content = _content;
+
+            var barGo = new GameObject("scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barGo.transform.SetParent(_panel, false);
+            OnlineWindow.Place((RectTransform)barGo.transform, new Vector2(1f, 0f), Vector2.one, new Vector2(1f, 0.5f), new Vector2(-5f, Pad), new Vector2(-2f, -Pad));
+            barGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+            var bar = barGo.GetComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            var handleGo = new GameObject("handle", typeof(RectTransform), typeof(Image));
+            handleGo.transform.SetParent(barGo.transform, false);
+            var handle = (RectTransform)handleGo.transform;
+            OnlineWindow.Place(handle, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            var grip = handleGo.GetComponent<Image>();
+            grip.color = WardrobeLook.Faint;
+            grip.sprite = OnlineWindow.Rounded(2);
+            grip.type = Image.Type.Sliced;
+            bar.handleRect = handle;
+            bar.targetGraphic = grip;
+            scroll.verticalScrollbar = bar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
             _drawn = "";
             _askAt = 0f;
             _paintAt = 0f;
@@ -285,37 +329,27 @@ namespace NewAgeQoL
                 _note.gameObject.SetActive(true);
                 _note.text = empty;
                 OnlineWindow.Place(_note.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(10f, 0f), new Vector2(-8f, 0f));
+                _content.sizeDelta = Vector2.zero;
                 _panel.sizeDelta = new Vector2(RowW, RowH + Pad * 2f);
                 return;
             }
             _note.gameObject.SetActive(false);
-            int shown = Mathf.Min(Most, count);
-            float y = -Pad;
-            for (int i = 0; i < shown; i++)
+            float y = 0f;
+            for (int i = 0; i < count; i++)
             {
                 Rows.Add(Row(items[i], y));
                 y -= RowH + Gap;
             }
-            if (count > shown)
-            {
-                var more = OnlineWindow.Label(_panel, Lang.F("и ещё {0}", count - shown), 11, FontStyle.Normal, WardrobeLook.Faint);
-                more.raycastTarget = false;
-                more.alignment = TextAnchor.MiddleLeft;
-                var mrt = more.rectTransform;
-                mrt.anchorMin = mrt.anchorMax = new Vector2(0f, 1f);
-                mrt.pivot = new Vector2(0f, 1f);
-                mrt.sizeDelta = new Vector2(RowW - Pad * 2f, 16f);
-                mrt.anchoredPosition = new Vector2(Pad + 4f, y);
-                Rows.Add(more.gameObject);
-                y -= 16f + Gap;
-            }
-            _panel.sizeDelta = new Vector2(RowW, -y - Gap + Pad);
+            float all = -y - Gap;
+            float seen = Mathf.Min(count, Most) * (RowH + Gap) - Gap;
+            _content.sizeDelta = new Vector2(0f, all);
+            _panel.sizeDelta = new Vector2(RowW, seen + Pad * 2f);
         }
 
         private static GameObject Row(Item it, float y)
         {
             var go = new GameObject("QoLFightRow", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(_panel, false);
+            go.transform.SetParent(_content, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
@@ -435,6 +469,7 @@ namespace NewAgeQoL
             _fold = null;
             _panel = null;
             _note = null;
+            _content = null;
             Rows.Clear();
             Lines.Clear();
             _drawn = "";
