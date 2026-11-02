@@ -74,7 +74,7 @@ namespace NewAgeQoL
             try
             {
                 var msg = response as AnimationResponseMessage;
-                if (msg != null && msg.Groups != null && msg.Groups.Count > 0) PhaseWatch.Played();
+                if (msg != null && msg.EndBattlePhase) PhaseWatch.Played();
             }
             catch (Exception e) { Plugin.Trace("[phase watch] " + e.Message); }
         }
