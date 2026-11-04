@@ -385,6 +385,15 @@ namespace NewAgeQoL
             return _padOk;
         }
 
+        internal static bool OnField(ICombatData cd, OffsetCoord hex)
+        {
+            var cells = cd != null ? cd.Cells : null;
+            if (hex == null || cells == null) return false;
+            int x = hex.clientX, y = hex.clientY;
+            if (x < 0 || y < 0 || x >= cells.GetLength(0) || y >= cells.GetLength(1)) return false;
+            return cells[x, y] != null;
+        }
+
         private static bool Look(out OffsetCoord hex)
         {
             hex = default(OffsetCoord);
@@ -466,6 +475,13 @@ namespace NewAgeQoL
 
             OffsetCoord hex;
             if (over || !HexUnder(out hex)) { ClearCell(); FlashLook.Hint(0); return; }
+            if (!OnField(cd, hex))
+            {
+                ClearCell();
+                FlashLook.Hint(0);
+                if (Input.GetMouseButtonDown(0)) { Ate(); Plugin.Trace(_tag + " click outside the field ignored"); }
+                return;
+            }
             bool fits = Check(skill, hex) == EQuickButtonValidationResult.Success;
             FlashLook.Hint(fits ? 1 : 2);
             if (!_cellSet || !hex.Equals(_cell) || fits != _cellOk)
@@ -1955,6 +1971,11 @@ namespace NewAgeQoL
             try
             {
                 if (skill == null) return;
+                if ((_tricks || _spells) && (!SideButtons.InCombat() || Spectate.Peeking))
+                {
+                    Plugin.Trace(_tag + " key " + skill.Id + " outside own combat ignored");
+                    return;
+                }
                 if (Focused(skill)) return;
                 bool twice = Twice(skill.Id);
                 bool single = Single(skill);
