@@ -593,7 +593,7 @@ namespace NewAgeQoL
             float wide = Mathf.Min(Wide, room);
             float span = _folded ? StripWide : StripWide + StripGap + wide;
 
-            float low = Floor(left, left + span * scale, dockBottom + Gap * scale);
+            float low = Floor(left, left + span * scale, dockBottom + Gap * scale, dockTop);
             _left = left / scale;
             _low = low / scale;
             _wide = wide;
@@ -601,7 +601,7 @@ namespace NewAgeQoL
             return true;
         }
 
-        private static float Floor(float from, float to, float low)
+        private static float Floor(float from, float to, float low, float top)
         {
             float best = low;
             float tallest = Screen.height * 0.4f;
@@ -625,7 +625,7 @@ namespace NewAgeQoL
                 float yMin = Mathf.Min(a.y, b.y), yMax = Mathf.Max(a.y, b.y);
                 if (yMax - yMin > tallest || xMax - xMin > widest) continue;
                 if (xMax <= from || xMin >= to) continue;
-                if (yMin > Screen.height * 0.5f) continue;
+                if (yMin > Screen.height * 0.5f || yMin >= top) continue;
                 if (yMax + Rise > best) best = yMax + Rise;
             }
             return best;

@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.34.1";
+        public const string Version = "0.35.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -510,7 +510,6 @@ namespace NewAgeQoL
                 new Part { Name = "Chest.Tick", Do = Chest.Tick },
                 new Part { Name = "Roster.Tick", Do = Roster.Tick },
                 new Part { Name = "FightBoard.Tick", Do = FightBoard.Tick },
-                new Part { Name = "PhaseWatch.Tick", Do = PhaseWatch.Tick },
                 new Part { Name = "Mail.Tick", Do = Mail.Tick },
                 new Part { Name = "UiScale.Tick", Do = UiScale.Tick },
                 new Part { Name = "Dialogs.Tick", Do = Dialogs.Tick },
@@ -588,6 +587,7 @@ namespace NewAgeQoL
                 new Part { Name = "CombatBar.Keep", Do = CombatBar.Keep },
                 new Part { Name = "Chaotic.Keep", Do = Chaotic.Keep },
                 new Part { Name = "ChatPick.Tick", Do = ChatPick.Tick },
+                new Part { Name = "ActionAsk.Keep", Do = ActionAsk.Keep },
             };
             return _late;
         }

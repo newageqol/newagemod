@@ -14,11 +14,14 @@ internal static class StunStars
         public string Name;
         public GameObject Root;
         public Renderer[] Parts;
+        public StatusLook Look;
     }
 
     private static readonly Dictionary<int, int> Masks = new();
     private static readonly Dictionary<int, Star> Live = new();
     private static readonly Dictionary<string, GameObject> Prefabs = new();
+    private static readonly Dictionary<int, float> Since = new();
+    private const float PrisonWait = 0.35f;
     private static ICombatData _combat;
 
     [HarmonyPrefix, HarmonyPatch(typeof(CombatData), nameof(CombatData.HangEffect))]
@@ -31,12 +34,24 @@ internal static class StunStars
                 Clear();
                 _combat = __instance;
             }
-            if (effectMask == 0) Masks.Remove(userId);
-            else Masks[userId] = effectMask;
+            if (effectMask == 0)
+            {
+                Masks.Remove(userId);
+                Since.Remove(userId);
+                StatusFx.Release(userId);
+            }
+            else
+            {
+                if (!Masks.ContainsKey(userId)) Since[userId] = Time.time;
+                Masks[userId] = effectMask;
+                if (StatusFx.On) StatusFx.Ask(userId);
+            }
             if (Trace.On) Trace.Write($"fighter {userId}: stun stars mask {effectMask}");
         }
         catch (Exception ex) { Plugin.Log.LogWarning("[stun stars] " + ex.Message); }
     }
+
+    internal static bool Stunned(int userId) => Masks.ContainsKey(userId);
 
     internal static void Remember(string name, GameObject prefab)
     {
@@ -65,7 +80,9 @@ internal static class StunStars
                     continue;
                 }
                 if (!show || !character.Initialized) continue;
-                string name = Masks[id] > 1 ? Dizzy : Stun;
+                bool fx = StatusFx.On;
+                string name = fx ? StatusFx.InPrison(id) ? StatusFx.Prison : StatusFx.Stun : Masks[id] > 1 ? Dizzy : Stun;
+                if (fx && !Live.ContainsKey(id) && Since.TryGetValue(id, out float since) && Time.time - since < PrisonWait) continue;
                 if (Live.TryGetValue(id, out var star) && (star.Root == null || star.Name != name))
                 {
                     Drop(star);
@@ -96,6 +113,11 @@ internal static class StunStars
 
     private static Star Build(string name)
     {
+        if (name == StatusFx.Stun || name == StatusFx.Prison)
+        {
+            var look = StatusFx.Build(name);
+            return look == null ? null : new Star { Name = name, Root = look.gameObject, Parts = new Renderer[0], Look = look };
+        }
         if (!Prefabs.TryGetValue(name, out var prefab) || prefab == null) return null;
         var root = new GameObject("NewAge2D.StunStars");
         var effect = UnityEngine.Object.Instantiate(prefab);
@@ -110,6 +132,12 @@ internal static class StunStars
     private static void Place(Star star, AbstractCharacter character, Camera eye)
     {
         var doll = Fighters.DollOf(character);
+        if (star.Look != null)
+        {
+            if (doll != null && doll.Placed) StatusFx.Place(star.Look, doll, doll.SortingOrder + 1);
+            else if (doll == null) StatusFx.PlaceAt(star.Look, character, eye);
+            return;
+        }
         var collider = character.CharacterCollider;
         Vector3 spot;
         int order;
@@ -131,14 +159,22 @@ internal static class StunStars
 
     private static void Drop(Star star)
     {
+        if (star?.Look != null)
+        {
+            star.Look.Finish();
+            return;
+        }
         if (star?.Root != null) UnityEngine.Object.Destroy(star.Root);
     }
 
     private static void Clear()
     {
-        foreach (var star in Live.Values) Drop(star);
+        foreach (var star in Live.Values)
+            if (star?.Root != null) UnityEngine.Object.Destroy(star.Root);
         Live.Clear();
         Masks.Clear();
+        Since.Clear();
+        StatusFx.Clear();
         _combat = null;
     }
 }

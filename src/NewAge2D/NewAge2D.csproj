@@ -89,8 +89,17 @@
     </Reference>
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(LocalFx)' == 'true'">
+    <DefineConstants>$(DefineConstants);LOCAL_FX</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <StatusBundle>$(MSBuildProjectDirectory)/../../../../_heavy/assets/hd2d/spellfx/bundle/newage2d_status</StatusBundle>
+  </PropertyGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="death.bundle" LogicalName="NewAge2D.death.bundle" />
+    <EmbeddedResource Include="$(StatusBundle)" LogicalName="NewAge2D.status.bundle" Condition="'$(LocalFx)' == 'true' And Exists('$(StatusBundle)')" />
   </ItemGroup>
 
   <ItemGroup>

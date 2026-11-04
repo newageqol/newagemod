@@ -1736,6 +1736,8 @@ internal sealed class FighterDoll : MonoBehaviour
 
     internal float FitHeight { get; private set; }
 
+    internal float Tall => _crown > 0f ? _crown * transform.localScale.y : _view != null ? _view.bounds.size.y : 0f;
+
     private void FitCapsule(Camera eye)
     {
         if (!Plugin.CfgFitCapsule.Value || _owner == null || !_owner.Initialized || _owner.Dead) return;

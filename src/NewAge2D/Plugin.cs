@@ -40,6 +40,7 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<bool> CfgFlashMagic;
     internal static ConfigEntry<bool> CfgSpellMarks;
     internal static ConfigEntry<bool> CfgStunStars;
+    internal static ConfigEntry<bool> CfgStunFx;
     internal static ConfigEntry<float> CfgVivid;
     internal static ConfigEntry<int> CfgFrameMemory;
     internal static ConfigEntry<float> CfgFieldView;
@@ -89,6 +90,9 @@ public class Plugin : BaseUnityPlugin
         CfgFlashMagic = Config.Bind("Combat", "FlashMagic", true, "Рисовать ауры школ магии из Flash-клиента (BM, WM, NM) и эффект вещей (EF) на цели заклинания");
         CfgSpellMarks = Config.Bind("Combat", "SpellTargets", true, "Показывать, на кого легло заклинание: над целью появляется игровой значок заклинания, как в 3D-клиенте. У массовых заклинаний — над каждым, на кого легло");
         CfgStunStars = Config.Bind("Combat", "StunStars", true, "Показывать над бойцом игровые звёздочки оглушения и паралича, как в 3D-клиенте: от «Угрозы», «Сокрушающего удара», «Астральной тюрьмы» и других. Пропадают, когда эффект кончился, боец погиб или бой закончился");
+#if LOCAL_FX
+        CfgStunFx = Config.Bind("Combat", "StunEffects", true, "Вместо звёздочек: оглушённого и парализованного бойца сковывают красные цепи, а в «Астральной тюрьме» он стоит внутри светящейся сферы. Работает, когда включены звёздочки (StunStars)");
+#endif
         CfgVivid = Config.Bind("Combat", "Vivid", 1.15f,
             "Сочность кукол, вещей и эффектов: 1 — цвета ровно как во Flash, больше — насыщеннее и контрастнее. Считается один раз при отрисовке кадра, в бою ничего не стоит");
         CfgFrameMemory = Config.Bind("Combat", "FrameMemory", 0,
