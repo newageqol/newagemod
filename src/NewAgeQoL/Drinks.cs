@@ -8,19 +8,23 @@ namespace NewAgeQoL
 {
     internal static class Drinks
     {
-        internal const int Kinds = 3;
+        internal const int Kinds = 4;
+        internal const int Cannibal = 3;
         private const int DrinkEffect = 9;
+        private const int DodgeEffect = 3;
         private const int ChangeType = 2;
         private const float OwnLag = 1f;
 
-        private static readonly string[] Changes = { "change_life", "change_mana", "change_stamina" };
-        private static readonly int[] Liquids = { 1, 2, 0 };
-        private static readonly int[] Recharge = { 6, 6, 7 };
+        private static readonly string[] Changes = { "change_life", "change_mana", "change_stamina", null };
+        private static readonly int[] Liquids = { 1, 2, 0, 0 };
+        private static readonly int[] Recharge = { 6, 6, 7, 10 };
+        private static int _cannibalRecharge;
         internal static readonly Color32[] Tints =
         {
             new Color32(255, 106, 90, 255),
             new Color32(109, 179, 255, 255),
             new Color32(255, 210, 87, 255),
+            new Color32(150, 226, 120, 255),
         };
 
         private sealed class Sip
@@ -95,6 +99,7 @@ namespace NewAgeQoL
                 var item = items[i];
                 if (item == null) continue;
                 if (item.VisualEffect == DrinkEffect) Sipped(item, items, i);
+                else if (item.VisualEffect == DodgeEffect && item.VisualEffectSubId.GetValueOrDefault() == DodgeConsts.DODGE_CANNIBALISM) Ate(item.SourceUserId);
                 Scan(item.Items);
             }
         }
@@ -122,6 +127,43 @@ namespace NewAgeQoL
             }
             if (kind < 0) return;
             Drank(who, kind);
+        }
+
+        private static void Ate(int who)
+        {
+            if (who == 0) return;
+            bool mine = Me() == who;
+            int own = mine ? OwnCannibal() : 0;
+            if (own > 0) _cannibalRecharge = own;
+            int recharge = own > 0 ? own : _cannibalRecharge > 0 ? _cannibalRecharge : Recharge[Cannibal];
+            if (recharge <= 0)
+            {
+                Plugin.Trace("[drinks] " + who + ": cannibalism, recharge unknown");
+                return;
+            }
+            Sip[] row;
+            if (!Sips.TryGetValue(who, out row)) Sips[who] = row = new Sip[Kinds];
+            row[Cannibal] = new Sip { Walk = _walks, Recharge = recharge };
+            Plugin.Trace("[drinks] " + who + (mine ? " (me)" : "") + ": cannibalism, recharge " + recharge + ", walk round " + _walks);
+        }
+
+        private static int OwnCannibal()
+        {
+            try
+            {
+                var cd = FighterHint.Cd();
+                var manager = cd != null ? cd.ButtonManager : null;
+                var button = manager != null ? manager.Dodges.GetButton(DodgeConsts.DODGE_CANNIBALISM) : null;
+                int recharge = button != null ? button.Recharge : 0;
+                return recharge > 0 && recharge <= 100 ? recharge : 0;
+            }
+            catch { return 0; }
+        }
+
+        internal static void Learn()
+        {
+            int own = OwnCannibal();
+            if (own > 0) _cannibalRecharge = own;
         }
 
         private static bool Change(AnimationItemMessage one, int who, ref int kind)
@@ -170,6 +212,13 @@ namespace NewAgeQoL
         {
             var have = Flasks[kind];
             if (have != null && have.texture != null) return have;
+            if (kind == Cannibal)
+            {
+                try { have = AtlasUtils.GetQuickButtonSprite("dodge" + DodgeConsts.DODGE_CANNIBALISM); }
+                catch (Exception e) { Plugin.Trace("[drinks] cannibal icon: " + e.Message); }
+                Flasks[kind] = have;
+                return have;
+            }
             try
             {
                 const int side = 64;

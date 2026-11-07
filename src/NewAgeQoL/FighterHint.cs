@@ -314,6 +314,7 @@ namespace NewAgeQoL
         private static void OnRound(object m)
         {
             Drinks.OnRound(m);
+            Drinks.Learn();
             Swept.Clear();
             _sweepAt = 0f;
         }
