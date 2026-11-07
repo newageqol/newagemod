@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Transport.Messages.Common.User;
 using Transport.Messages.Responses.User.Info;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -357,22 +358,100 @@ namespace NewAgeQoL
             if (people != null)
                 foreach (var f in people) sb.Append(f.Id).Append(':').Append(f.Level).Append(',');
             string shape = sb.ToString();
-            bool retry = shape == _drawn && listed == _listSeen;
+            bool same = shape == _drawn;
+            bool retry = same && listed == _listSeen;
             if (retry && !Stale()) return false;
             _drawn = shape;
             _listSeen = listed;
-            _hidden = false;
-            if (!retry) _retryUntil = Time.unscaledTime + RetryFor;
+            if (!same) _retryUntil = Time.unscaledTime + RetryFor;
             _retryAt = Time.unscaledTime + RetryEvery;
 
-            Waiting.Clear();
-            for (int i = _rows.childCount - 1; i >= 0; i--) { var old = _rows.GetChild(i); old.SetParent(null, false); UnityEngine.Object.Destroy(old.gameObject); }
             bool active = people != null && people.Count > 0;
+            var prefab = active ? OnlineWindow.RowPrefab() : null;
+            bool switched = active && prefab != null && _plain;
+            if (!active || prefab == null || switched || !Unique(people)) Clear();
+            _plain = active && prefab == null;
+            if (switched) same = false;
             if (_rows.gameObject.activeSelf != active) _rows.gameObject.SetActive(active);
             if (!active) return true;
 
-            var prefab = OnlineWindow.RowPrefab();
-            Columns(prefab, people.Count);
+            var players = Players(people);
+            if (prefab == null)
+            {
+                Columns(null, people.Count);
+                Waiting.AddRange(players);
+                return true;
+            }
+
+            bool moved = !same;
+            if (!same) Columns(prefab, people.Count);
+            Keep.Clear();
+            foreach (var p in players) Keep.Add(p.Id);
+            Ready.Clear();
+            foreach (var pair in Slots) if (!Keep.Contains(pair.Key)) Ready.Add(pair.Key);
+            foreach (int id in Ready)
+            {
+                var gone = Slots[id].Holder;
+                Slots.Remove(id);
+                WaitingSlots.Remove(id);
+                if (gone != null) { gone.transform.SetParent(null, false); UnityEngine.Object.Destroy(gone); }
+            }
+
+            _hidden = false;
+            for (int i = 0; i < players.Count; i++)
+            {
+                var p = players[i];
+                Slot slot;
+                if (!Slots.TryGetValue(p.Id, out slot) || slot.Holder == null)
+                {
+                    var holder = new GameObject("QoLRosterSlot", typeof(RectTransform), typeof(LayoutElement));
+                    holder.transform.SetParent(_rows, false);
+                    Slots[p.Id] = slot = new Slot { Holder = holder };
+                    WaitingSlots[p.Id] = p;
+                    moved = true;
+                }
+                else if (slot.Widget == null) WaitingSlots[p.Id] = p;
+                else moved |= Refresh(slot, p);
+                if (slot.Holder.transform.GetSiblingIndex() != i) { slot.Holder.transform.SetSiblingIndex(i); moved = true; }
+                if (slot.Hidden) _hidden = true;
+            }
+            return moved;
+        }
+
+        private static readonly HashSet<int> Keep = new HashSet<int>();
+        private static bool _plain;
+
+        private static void Clear()
+        {
+            Waiting.Clear();
+            WaitingSlots.Clear();
+            Slots.Clear();
+            _hidden = false;
+            for (int i = _rows.childCount - 1; i >= 0; i--) { var old = _rows.GetChild(i); old.SetParent(null, false); UnityEngine.Object.Destroy(old.gameObject); }
+        }
+
+        private static bool Unique(List<Fighter> people)
+        {
+            Keep.Clear();
+            foreach (var f in people) if (!Keep.Add(f.Id)) return false;
+            return true;
+        }
+
+        private sealed class Slot
+        {
+            internal GameObject Holder;
+            internal UserRowWidget Widget;
+            internal string Sign;
+            internal bool Hidden;
+            internal readonly List<Image> Muted = new List<Image>();
+        }
+
+        private static readonly Dictionary<int, Slot> Slots = new Dictionary<int, Slot>();
+        private static readonly Dictionary<int, OnlinePlayer> WaitingSlots = new Dictionary<int, OnlinePlayer>();
+
+        private static List<OnlinePlayer> Players(List<Fighter> people)
+        {
+            var list = new List<OnlinePlayer>(people.Count);
             bool strangers = false;
             foreach (var f in people)
             {
@@ -390,29 +469,38 @@ namespace NewAgeQoL
                     Vip = known != null && known.Vip,
                     Dealer = known != null && known.Dealer,
                 };
-                Waiting.Add(p);
+                list.Add(p);
             }
             if (strangers && Time.unscaledTime - _listAt > ListEvery && !OnlineList.Busy)
             {
                 _listAt = Time.unscaledTime;
                 OnlineList.Refresh();
             }
-            return true;
+            return list;
         }
 
         private static void Grow()
         {
-            if (Waiting.Count == 0 || _tipGo == null || !_tipGo.activeSelf) return;
+            if ((Waiting.Count == 0 && WaitingSlots.Count == 0) || _tipGo == null || !_tipGo.activeSelf) return;
             var prefab = OnlineWindow.RowPrefab();
             int n = Mathf.Min(Batch, Waiting.Count);
-            for (int i = 0; i < n; i++)
-            {
-                if (prefab != null) Row(prefab, Waiting[i]);
-                else Plainly(Waiting[i]);
-            }
+            for (int i = 0; i < n; i++) Plainly(Waiting[i]);
             Waiting.RemoveRange(0, n);
+            if (WaitingSlots.Count > 0 && prefab != null)
+            {
+                Ready.Clear();
+                foreach (var pair in WaitingSlots)
+                {
+                    Slot slot;
+                    if (Slots.TryGetValue(pair.Key, out slot) && slot.Holder != null) Row(prefab, slot, pair.Value);
+                    Ready.Add(pair.Key);
+                }
+                foreach (int id in Ready) WaitingSlots.Remove(id);
+            }
             LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)_tipGo.transform);
         }
+
+        private static readonly List<int> Ready = new List<int>();
 
         private static void Columns(GameObject prefab, int count)
         {
@@ -430,10 +518,9 @@ namespace NewAgeQoL
             grid.constraintCount = Mathf.Max(1, Mathf.CeilToInt(count / (float)Mathf.Max(1, columns)));
         }
 
-        private static void Row(GameObject prefab, OnlinePlayer p)
+        private static void Row(GameObject prefab, Slot slot, OnlinePlayer p)
         {
-            var holder = new GameObject("QoLRosterSlot", typeof(RectTransform), typeof(LayoutElement));
-            holder.transform.SetParent(_rows, false);
+            var holder = slot.Holder;
             var go = UnityEngine.Object.Instantiate(prefab, holder.transform, false);
             Clones.StripHotkeys(go, prefab);
             go.name = "QoLRosterRow";
@@ -448,28 +535,76 @@ namespace NewAgeQoL
             le.preferredHeight = h * Shrink;
             le.minHeight = h * Shrink;
             le.preferredWidth = RowWide * Shrink;
-            var w = go.GetComponent<UserRowWidget>();
-            if (w != null)
-            {
-                var data = OnlineWindow.Row(p);
-                Card card;
-                if (Cards.TryGetValue(p.Id, out card))
-                {
-                    if (card.ClassId > 0) data.ClassId = card.ClassId;
-                    if (!string.IsNullOrEmpty(card.ClanIcon) && !ClanPics.Missing(card.ClanIcon)) { data.ClanIcon = card.ClanIcon; data.ClanIconCode = null; }
-                    else if (card.ClanCode.HasValue && OnlineWindow.ClanArt(card.ClanCode.Value) != null) { data.ClanIconCode = card.ClanCode; data.ClanIcon = null; }
-                    if (card.Rank > 0) data.Rank = card.Rank;
-                    if (p.Level <= 0 && card.Level > 0) data.Level = card.Level;
-                }
-                w.Data = data;
-                OnlineWindow.Flatten(w, false);
-            }
             var hush = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
             hush.blocksRaycasts = false;
             hush.interactable = false;
+            slot.Widget = go.GetComponent<UserRowWidget>();
+            slot.Sign = null;
+            if (slot.Widget != null) Paint(slot, p);
             foreach (var g in go.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
-            foreach (var image in go.GetComponentsInChildren<Image>(true))
-                if (image.enabled && Dead(image.sprite)) { image.enabled = false; _hidden = true; }
+            if (slot.Widget == null) Mute(slot);
+        }
+
+        private static bool Refresh(Slot slot, OnlinePlayer p)
+        {
+            var data = Data(p);
+            string sign = Sign(data);
+            bool retry = slot.Hidden && Time.unscaledTime < _retryUntil;
+            if (sign == slot.Sign && !retry) return false;
+            Paint(slot, data, sign);
+            return true;
+        }
+
+        private static void Paint(Slot slot, OnlinePlayer p)
+        {
+            var data = Data(p);
+            Paint(slot, data, Sign(data));
+        }
+
+        private static void Paint(Slot slot, UserRowInfoMessage data, string sign)
+        {
+            slot.Sign = sign;
+            foreach (var image in slot.Muted) if (image != null) image.enabled = true;
+            slot.Muted.Clear();
+            slot.Widget.Data = data;
+            OnlineWindow.Flatten(slot.Widget, false);
+            Mute(slot);
+        }
+
+        private static void Mute(Slot slot)
+        {
+            slot.Hidden = false;
+            if (slot.Holder == null) return;
+            foreach (var image in slot.Holder.GetComponentsInChildren<Image>(true))
+                if (image.enabled && Dead(image.sprite)) { image.enabled = false; slot.Muted.Add(image); slot.Hidden = true; _hidden = true; }
+        }
+
+        private static UserRowInfoMessage Data(OnlinePlayer p)
+        {
+            var data = OnlineWindow.Row(p);
+            Card card;
+            if (Cards.TryGetValue(p.Id, out card))
+            {
+                if (card.ClassId > 0) data.ClassId = card.ClassId;
+                if (!string.IsNullOrEmpty(card.ClanIcon) && !ClanPics.Missing(card.ClanIcon)) { data.ClanIcon = card.ClanIcon; data.ClanIconCode = null; }
+                else if (card.ClanCode.HasValue && OnlineWindow.ClanArt(card.ClanCode.Value) != null) { data.ClanIconCode = card.ClanCode; data.ClanIcon = null; }
+                if (card.Rank > 0) data.Rank = card.Rank;
+                if (p.Level <= 0 && card.Level > 0) data.Level = card.Level;
+            }
+            return data;
+        }
+
+        private static string Sign(UserRowInfoMessage data)
+        {
+            var sb = new StringBuilder();
+            foreach (var prop in typeof(UserRowInfoMessage).GetProperties())
+            {
+                if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
+                object v;
+                try { v = prop.GetValue(data); } catch { v = null; }
+                sb.Append(prop.Name).Append('=').Append(v).Append(';');
+            }
+            return sb.ToString();
         }
 
         private const float RetryFor = 15f;
@@ -504,6 +639,9 @@ namespace NewAgeQoL
         private static void Build(RectTransform area)
         {
             if (_tipGo != null) UnityEngine.Object.Destroy(_tipGo);
+            Slots.Clear();
+            WaitingSlots.Clear();
+            Waiting.Clear();
             _drawn = "";
             _listSeen = -1;
             _tipGo = new GameObject("QoLRosterTip", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter), typeof(CanvasGroup));

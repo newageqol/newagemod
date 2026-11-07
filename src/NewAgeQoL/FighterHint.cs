@@ -439,6 +439,9 @@ namespace NewAgeQoL
                 _mp.text = mana + " / " + ind.MaxMana;
                 _sp.text = friend ? ind.CurrentStamina + later.Stamina + " / " + ind.MaxStamina : "";
                 _sp.transform.parent.gameObject.SetActive(friend);
+                Snug(_hp);
+                Snug(_mp);
+                Snug(_sp);
                 _barsGo.SetActive(true);
                 if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
                 {
@@ -671,8 +674,8 @@ namespace NewAgeQoL
             if (_branch.gameObject.activeSelf) w = Mathf.Max(w, Measure(_branch.text, 9, FontStyle.Normal));
             if (_barsGo != null && _barsGo.activeSelf)
             {
-                float bars = Wide(_hp) + 13f + 8f + Wide(_mp) + 13f;
-                if (_sp.transform.parent.gameObject.activeSelf) bars += 8f + Wide(_sp) + 13f;
+                float bars = Wide(_hp) + 1f + 13f + 8f + Wide(_mp) + 1f + 13f;
+                if (_sp.transform.parent.gameObject.activeSelf) bars += 8f + Wide(_sp) + 1f + 13f;
                 w = Mathf.Max(w, bars + 6f);
             }
             w = Mathf.Clamp(Mathf.Ceil(w) + 14f, 150f, 520f);
@@ -681,9 +684,27 @@ namespace NewAgeQoL
             _board.sizeDelta = new Vector2(w, _board.sizeDelta.y);
         }
 
+        private static void Snug(Text t)
+        {
+            var le = t != null ? t.GetComponent<LayoutElement>() : null;
+            if (le == null) return;
+            float w = Mathf.Ceil(Wide(t)) + 1f;
+            if (Mathf.Abs(le.preferredWidth - w) < 0.5f) return;
+            le.preferredWidth = w;
+            le.minWidth = w;
+        }
+
+        private static readonly TextGenerator Gauge = new TextGenerator();
+
         private static float Wide(Text t)
         {
-            return Mathf.Max(t.preferredWidth, Measure(t.text, t.fontSize, t.fontStyle));
+            float w = Mathf.Max(t.preferredWidth, Measure(t.text, t.fontSize, t.fontStyle));
+            if (string.IsNullOrEmpty(t.text) || t.font == null) return w;
+            float scale = _canvas != null && _canvas.scaleFactor > 0.01f ? _canvas.scaleFactor : 1f;
+            var settings = t.GetGenerationSettings(Vector2.zero);
+            settings.scaleFactor = scale;
+            float drawn = Gauge.GetPreferredWidth(t.text, settings) / scale;
+            return Mathf.Max(w, drawn) + 2f;
         }
 
         internal static string Turns(int n)

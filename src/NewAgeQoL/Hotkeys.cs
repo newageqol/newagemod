@@ -911,7 +911,8 @@ namespace NewAgeQoL
             if (SideButtons.InCombat())
                 foreach (var kind in new[] { SkillList.Kind.Abilities, SkillList.Kind.Tricks, SkillList.Kind.Spells })
                     foreach (var one in SkillList.Of(kind))
-                        if (one != null && !string.IsNullOrEmpty(one.Name)) live[Mark(kind) + ":" + one.Id] = SkillList.Spoken(one.Name);
+                        if (one != null && !string.IsNullOrEmpty(one.Name) && one.Id != DodgesButtonStateHolder.HantingOffButtonId)
+                            live[Mark(kind) + ":" + one.Id] = SkillList.Spoken(one.Name);
 
             foreach (var pair in Learned)
                 if (!live.ContainsKey(pair.Key)) live[pair.Key] = SkillList.Spoken(pair.Value);

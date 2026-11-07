@@ -35,6 +35,7 @@ namespace NewAgeQoL
             try
             {
                 int kind = KindOf(ctrl, announceId);
+                Spectate.Joined(kind);
                 _joined = kind == Kind;
                 _inside = false;
                 Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - Dozen" : ""));

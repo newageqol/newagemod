@@ -6,7 +6,7 @@ namespace NewAge2D;
 
 internal sealed class Arena3D
 {
-    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9"), ("arenaCombatMap7", "arena7"), ("21x21_arena", "arena21") };
+    private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9"), ("arenaCombatMap7", "arena7"), ("21x21_arena", "arena21"), ("Bugurt", "arenabugurt") };
 
     private sealed class Scene
     {
@@ -39,6 +39,7 @@ internal sealed class Arena3D
     private int _shadowCascades, _pixelLights;
     private ShadowResolution _shadowResolution;
     private float _lodBias;
+    private AnisotropicFiltering _aniso;
 
     internal Arena3D(string bundle) { _bundle = bundle; }
 
@@ -193,6 +194,7 @@ internal sealed class Arena3D
         if (Cfg.shadowCascades > 0) QualitySettings.shadowCascades = Cfg.shadowCascades;
         QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 32);
         QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
+        QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
         float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
         if (Cfg.dusk >= 0f) hour = Cfg.dusk;
         bool night = ArenaLook.IsNight(hour);
@@ -327,6 +329,7 @@ internal sealed class Arena3D
         _pixelLights = QualitySettings.pixelLightCount;
         _shadowResolution = QualitySettings.shadowResolution;
         _lodBias = QualitySettings.lodBias;
+        _aniso = QualitySettings.anisotropicFiltering;
     }
 
     internal void Detach()
@@ -361,5 +364,6 @@ internal sealed class Arena3D
         QualitySettings.pixelLightCount = _pixelLights;
         QualitySettings.shadowResolution = _shadowResolution;
         QualitySettings.lodBias = _lodBias;
+        QualitySettings.anisotropicFiltering = _aniso;
     }
 }

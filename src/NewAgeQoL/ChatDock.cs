@@ -1092,7 +1092,7 @@ namespace NewAgeQoL
                 return;
             }
             if (!Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.KeypadEnter)) return;
-            if (Roster.Asking || CultPotions.Asking || Ingots.Asking || TravelEnter.Asking || ScoutEnter.Asking) return;
+            if (ActionAsk.Asking || Roster.Asking || CultPotions.Asking || Ingots.Asking || TravelEnter.Asking || ScoutEnter.Asking) return;
 
             if (_input.isFocused)
             {

@@ -56,6 +56,8 @@ namespace NewAgeQoL
         private static float _askAt, _askUntil, _heardAt;
         private static int _heardFrame;
         private static bool _asking, _answered;
+        private static int _claimKind;
+        private static string _sceneSeen;
 
 
         internal static void Tick()
@@ -63,6 +65,7 @@ namespace NewAgeQoL
             try
             {
                 Mine();
+                Seen();
                 if (_exitAt > 0f && !SideButtons.InCombat()) _exitAt = 0f;
                 if (Time.unscaledTime >= _listenAt)
                 {
@@ -208,12 +211,30 @@ namespace NewAgeQoL
                     var cd = FighterHint.Cd();
                     var me = cd != null ? cd.MyCharacter : null;
                     if (me == null || !me.Dead) return false;
+                    if (_claimKind == (int)EClaimType.Chaotic || _claimKind == (int)EClaimType.EliteChaotic) return false;
                     if (!me.Initialized) return true;
                     var live = me.Indicators;
                     return live != null && live.IsDecayed;
                 }
                 catch { return false; }
             }
+        }
+
+        internal static void Joined(int kind)
+        {
+            _claimKind = kind;
+            Plugin.Trace("[fights] joined a claim of kind " + kind);
+        }
+
+        private static void Seen()
+        {
+            var scene = SideButtons.Scene();
+            if (scene == _sceneSeen) return;
+            _sceneSeen = scene;
+            if (_claimKind == 0) return;
+            if (!SideButtons.IsScene(EUnityScene.StaticLocation) && !SideButtons.IsScene(EUnityScene.GlobalMapLocation)) return;
+            _claimKind = 0;
+            Plugin.Trace("[fights] back in the world, claim kind cleared");
         }
 
         private static void Mine()

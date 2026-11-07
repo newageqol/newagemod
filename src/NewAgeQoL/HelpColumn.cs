@@ -189,6 +189,7 @@ namespace NewAgeQoL
 
         private static void Close()
         {
+            ActionAsk.Drop();
             HideTip();
             Settle();
             if (_panelGo != null && _panelGo.activeSelf) _panelGo.SetActive(false);
@@ -460,9 +461,30 @@ namespace NewAgeQoL
             return Used.TryGetValue(id, out when) && Time.unscaledTime - when < 0.4f;
         }
 
+        private static void Ask(QuickButton button)
+        {
+            if (button == null || Waiting(button.Id)) return;
+            HideTip();
+            int id = button.Id;
+            string warn = !button.Enabled && !string.IsNullOrEmpty(button.DisableCause) ? button.DisableCause : null;
+            ActionAsk.Ask(Quickslots.Icon(button), button.Name, Quickslots.About(button),
+                null, warn, () => Use(Fresh(id)));
+        }
+
+        private static QuickButton Fresh(int id)
+        {
+            foreach (var one in Quickslots.Help()) if (one.Id == id) return one;
+            return null;
+        }
+
         private static void Use(QuickButton button)
         {
-            if (button == null) return;
+            if (button == null)
+            {
+                Plugin.Trace("[help] record vanished while asking, nothing sent");
+                return;
+            }
+            if (!SideButtons.InWorld() || SideButtons.InCombat() || !Quickslots.OnMap) return;
             if (Waiting(button.Id)) return;
             Used[button.Id] = Time.unscaledTime;
             string trouble = Quickslots.Apply(button);
@@ -529,7 +551,7 @@ namespace NewAgeQoL
             colors.fadeDuration = 0f;
             press.colors = colors;
             var shot = button;
-            press.onClick.AddListener(() => Use(shot));
+            press.onClick.AddListener(() => Ask(shot));
 
             var watch = go.AddComponent<HoverWatch>();
             var where = (RectTransform)go.transform;

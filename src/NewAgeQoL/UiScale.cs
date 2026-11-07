@@ -25,6 +25,7 @@ namespace NewAgeQoL
             if (scaler == null) return;
             try
             {
+                Owned.RemoveAll(one => one == null);
                 if (!Owned.Contains(scaler)) Owned.Add(scaler);
                 Fit(scaler);
             }

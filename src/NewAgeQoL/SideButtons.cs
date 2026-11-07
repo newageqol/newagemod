@@ -1496,7 +1496,7 @@ namespace NewAgeQoL
             return _scene;
         }
 
-        private static bool IsScene(EUnityScene scene)
+        internal static bool IsScene(EUnityScene scene)
         {
             int id = (int)scene;
             if (!SceneNames.TryGetValue(id, out var name))

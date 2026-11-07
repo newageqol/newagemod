@@ -39,11 +39,70 @@ namespace NewAgeQoL
         private static CanvasGroup _veil;
         private static bool _told;
         private static bool _parked;
+        private static bool _own;
+        private static Action _yes;
         private static readonly StringBuilder Sign = new StringBuilder();
         private static readonly List<KeyValuePair<Sprite, string>> Params = new List<KeyValuePair<Sprite, string>>();
 
+        internal static void Ask(Sprite icon, string title, string body, string chip, string warn, Action yes)
+        {
+            try
+            {
+                if (_root == null) Build();
+                Unveil();
+                _own = true;
+                _yes = yes;
+                if (!_root.activeSelf) _root.SetActive(true);
+                _shown = null;
+
+                _icon.sprite = icon;
+                _icon.enabled = icon != null;
+                _title.text = title ?? "";
+                _body.text = body ?? "";
+                _body.gameObject.SetActive(!string.IsNullOrEmpty(_body.text));
+                _warn.text = warn ?? "";
+                _warn.gameObject.SetActive(!string.IsNullOrEmpty(_warn.text));
+
+                for (int i = _chips.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_chips.GetChild(i).gameObject);
+                if (!string.IsNullOrEmpty(chip)) Chip(null, chip);
+                _chips.gameObject.SetActive(!string.IsNullOrEmpty(chip));
+
+                _ok.interactable = true;
+                _okBack.color = WardrobeLook.Accent;
+                _okText.color = WardrobeLook.OnAccent;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_panel);
+                Plugin.Trace("[action window] asking before using '" + title + "'");
+            }
+            catch (Exception e) { Plugin.Trace("[action window] ask: " + e.Message); }
+        }
+
+        internal static bool Asking => _own && _root != null && _root.activeSelf;
+
+        internal static void Drop()
+        {
+            if (!_own) return;
+            _own = false;
+            _yes = null;
+            Hide();
+        }
+
+        private static void KeepOwn()
+        {
+            if (_root == null || !_root.activeSelf) { _own = false; _yes = null; return; }
+            if (Input.GetKeyDown(KeyCode.Escape)) { Cancel(); return; }
+            if ((Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) && !Typing()) Confirm();
+        }
+
+        private static bool Typing()
+        {
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            var picked = es != null ? es.currentSelectedGameObject : null;
+            return picked != null && (picked.GetComponent<InputField>() != null || picked.GetComponent("TMP_InputField") != null);
+        }
+
         internal static void Keep()
         {
+            if (_own) { KeepOwn(); return; }
             ConfirmActionDialogController ctrl = null;
             ConfirmActionDialog view = null;
             try
@@ -163,6 +222,14 @@ namespace NewAgeQoL
 
         private static void Confirm()
         {
+            if (_own)
+            {
+                var yes = _yes;
+                Drop();
+                try { yes?.Invoke(); }
+                catch (Exception e) { Plugin.Trace("[action window] own confirm: " + e.Message); }
+                return;
+            }
             try
             {
                 if (_ok != null && !_ok.interactable) return;
@@ -183,6 +250,7 @@ namespace NewAgeQoL
 
         private static void Cancel()
         {
+            if (_own) { Drop(); return; }
             try
             {
                 var ctrl = Controllers.Get<ConfirmActionDialogController>();
