@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.37.0";
+        public const string Version = "0.38.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -518,6 +518,8 @@ namespace NewAgeQoL
                 new Part { Name = "Outcome.Tick", Do = Outcome.Tick },
                 new Part { Name = "ClanMark.Tick", Do = ClanMark.Tick },
                 new Part { Name = "TabPanelFitPatch.Tick", Do = TabPanelFitPatch.Tick },
+                new Part { Name = "TabColumn.Tick", Do = TabColumn.Tick },
+                new Part { Name = "GridWheel.Tick", Do = GridWheel.Tick },
                 new Part { Name = "Workshop.Net", Do = Workshop.Net },
                 new Part { Name = "Strike.Tick", Do = Strike.Tick },
                 new Part { Name = "WalkKeys.Tick", Do = WalkKeys.Tick },
