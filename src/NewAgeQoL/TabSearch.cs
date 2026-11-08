@@ -334,16 +334,21 @@ namespace NewAgeQoL
         }
     }
 
-    [HarmonyPatch(typeof(BaseGridContentPanel<InventoryThingTabContentDto>), "TabContent", MethodType.Setter)]
+    [HarmonyPatch(typeof(BaseThingTabPanelResolver<InventoryThingTabContentDto, UserMenuController.ETabs>), "SetTabContent")]
     public static class TabSearchListPatch
     {
-        private static void Prefix(BaseGridContentPanel<InventoryThingTabContentDto> __instance, ref ListWrapper<InventoryThingTabContentDto> value)
+        private static readonly AccessTools.FieldRef<BaseThingTabPanelResolver<InventoryThingTabContentDto, UserMenuController.ETabs>, BaseGridContentPanel<InventoryThingTabContentDto>> GridRef =
+            AccessTools.FieldRefAccess<BaseThingTabPanelResolver<InventoryThingTabContentDto, UserMenuController.ETabs>, BaseGridContentPanel<InventoryThingTabContentDto>>("_panelContent");
+
+        private static void Postfix(BaseThingTabPanelResolver<InventoryThingTabContentDto, UserMenuController.ETabs> __instance)
         {
             try
             {
-                if (value == null || value is FilteredListWrapper<InventoryThingTabContentDto>) return;
-                if (!TabSearch.Ours(__instance)) return;
-                value = new SearchList(value.Content);
+                var grid = GridRef(__instance);
+                if (grid == null || !TabSearch.Ours(grid)) return;
+                var now = grid.TabContent;
+                if (now == null || now is FilteredListWrapper<InventoryThingTabContentDto>) return;
+                grid.TabContent = new SearchList(now.Content);
             }
             catch (Exception e) { Plugin.Fault("[tabsearch] list: " + e.Message); }
         }
