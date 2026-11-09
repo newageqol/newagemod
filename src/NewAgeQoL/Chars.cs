@@ -60,7 +60,8 @@ namespace NewAgeQoL
         {
             "Combat/CameraRange", "Combat/ResultDialogScale", "Look/GothicShops", "Map/PortalList",
             "Map/VertexLabels", "Map/VertexLabelType", "Map/VertexLabelBillboard", "Map/VertexLabelSharpness",
-            "Map/VertexLabelLift", "Map/VertexLabelColor", "Mod/FlashLookWasOn",
+            "Map/VertexLabelLift", "Map/VertexLabelColor", "Mod/FlashLookWasOn", "Online/Login", "Online/Password",
+            "Online/FlashVersion",
         };
         private static ConfigFile _home;
         private static ConfigFile _file;

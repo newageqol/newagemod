@@ -41,7 +41,6 @@ namespace NewAgeQoL
             internal Action<string> Set;
             internal Action Reset;
             internal Action Remember;
-            internal bool Secret;
         }
 
         private static List<RowDef> Rows()
@@ -75,10 +74,6 @@ namespace NewAgeQoL
 
                 new Header { Title = Lang.T("Бой") },
                 B(Lang.T("Контрприём на себя в первой фазе"), Plugin.CfgCounterAuto),
-
-                new Header { Title = Lang.T("Запасной аккаунт") },
-                S(Lang.T("Логин запасного аккаунта"), Plugin.CfgOnlineLogin),
-                S(Lang.T("Пароль запасного аккаунта"), Plugin.CfgOnlinePassword, secret: true),
 
 
                 new Header { Title = Lang.T("Звуки") },
@@ -150,7 +145,7 @@ namespace NewAgeQoL
         private static RowDef Sl(string title, ConfigEntry<float> cfg, float min, float max, Action<float> onChange = null) =>
             cfg == null ? null : new SliderRow { Title = title, Cfg = cfg, Min = min, Max = max, OnChange = onChange };
 
-        private static RowDef S(string title, ConfigEntry<string> cfg, bool secret = false) =>
+        private static RowDef S(string title, ConfigEntry<string> cfg) =>
             cfg == null ? null : new ValueRow
             {
                 Title = title,
@@ -158,7 +153,6 @@ namespace NewAgeQoL
                 Set = v => cfg.Value = (v ?? "").Trim(),
                 Remember = () => Remember(cfg),
                 Reset = () => cfg.Value = (string)cfg.DefaultValue,
-                Secret = secret,
             };
 
         private static string UpdateTitle()
@@ -833,8 +827,7 @@ namespace NewAgeQoL
 
             var row = (ValueRow)def;
             if (row.Remember != null) row.Remember();
-            Func<string> shown = () => row.Secret ? new string('•', row.Get().Length) : row.Get();
-            if (value != null) value.text = shown();
+            if (value != null) value.text = row.Get();
 
             if (background == null || value == null) return;
             if (button != null) UnityEngine.Object.DestroyImmediate(button);
@@ -843,15 +836,14 @@ namespace NewAgeQoL
             input.targetGraphic = background;
             input.textComponent = value;
             input.lineType = InputField.LineType.SingleLine;
-            if (row.Secret) input.contentType = InputField.ContentType.Password;
-            value.text = shown();
+            value.text = row.Get();
             input.SetTextWithoutNotify(row.Get());
             input.onEndEdit.AddListener(v =>
             {
                 row.Set(v);
                 string now = row.Get();
                 input.SetTextWithoutNotify(now);
-                value.text = shown();
+                value.text = now;
             });
         }
 

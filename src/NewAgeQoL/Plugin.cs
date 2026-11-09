@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.40.0";
+        public const string Version = "0.41.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -53,9 +53,6 @@ namespace NewAgeQoL
         internal static ConfigEntry<string> CfgManikinTaken;
         internal static ConfigEntry<float> CfgCamPanExtra;
         internal static ConfigEntry<float> CfgCamRoomExtra;
-        internal static ConfigEntry<string> CfgOnlineLogin;
-        internal static ConfigEntry<string> CfgOnlinePassword;
-        internal static ConfigEntry<string> CfgOnlineVersion;
         internal static ConfigEntry<string> CfgOnlineClanCache;
         internal static ConfigEntry<string> CfgOnlineClanNames;
         internal static ConfigEntry<bool> CfgOnlineByClan;
@@ -228,12 +225,6 @@ namespace NewAgeQoL
                 "Что запасной набор взял из хранилища, пары «номер вещи:количество». При возврате эти вещи уезжают обратно в хранилище, остальные остаются в сумке. Заполняется само.", e => CfgManikinTaken = e);
             Chars.Fresh("Artifacts", "StorageCache", "",
                 "Что мод в последний раз видел в хранилище, пары «номер вещи:количество». Нужно, чтобы окно запасного набора показывало вещи из хранилища, когда ты не в нём. Заполняется само.", e => CfgStorageCache = e);
-            Chars.Own("Online", "Login", "",
-                "Логин запасного аккаунта: через него мод переводит золото. Пусто — кнопка подскажет, что настроить.", e => CfgOnlineLogin = e);
-            Chars.Own("Online", "Password", "",
-                "Пароль запасного аккаунта. Хранится в этом файле открытым текстом.", e => CfgOnlinePassword = e);
-            Chars.Own("Online", "FlashVersion", "11073",
-                "Номер версии старого 2D-клиента, который мод называет серверу при входе запасным аккаунтом. Менять только если сервер отвечает «Обновите версию игры».", e => CfgOnlineVersion = e);
             CfgOnlineClanCache = Config.Bind("Online", "ClanIconCache", "",
                 "Узнанные коды значков кланов для окна «Кто в игре» в виде «значок:код» через запятую. Заполняется само, чтобы значки появлялись сразу.");
             CfgOnlineClanNames = Config.Bind("Online", "ClanNameCache", "",
@@ -539,9 +530,7 @@ namespace NewAgeQoL
                 new Part { Name = "Pointer.Tick", Do = Pointer.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
                 new Part { Name = "FlaskPicker.Tick", Do = FlaskPicker.Tick },
-                new Part { Name = "SpareSession.Tick", Do = SpareSession.Tick },
                 new Part { Name = "OnlineList.Tick", Do = OnlineList.Tick },
-                new Part { Name = "GoldTransfer.Tick", Do = GoldTransfer.Tick },
                 new Part { Name = "CardAsk.Tick", Do = CardAsk.Tick },
                 new Part { Name = "OnlineWindow.Tick", Do = OnlineWindow.Tick },
                 new Part { Name = "QuestBoard.Tick", Do = QuestBoard.Tick },
@@ -627,7 +616,6 @@ namespace NewAgeQoL
             DressDrag.Shutdown();
             CardAsk.Shutdown();
             Claims.Shutdown();
-            SpareSession.Shutdown();
             DiskJournal.Detach(Logger);
         }
 
