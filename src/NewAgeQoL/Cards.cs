@@ -39,7 +39,7 @@ namespace NewAgeQoL
                 Listen();
                 Drain();
             }
-            catch (Exception e) { Plugin.Trace("[card] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] " + e.Message); }
         }
 
         private static void Listen()
@@ -47,8 +47,8 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(433, OnCard);
-            nc.AddMessageListener(433, OnCard);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnCard);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnCard);
             _on = nc;
         }
 
@@ -76,7 +76,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[card] " + (m.Login ?? m.UserId.ToString()) + ": class " + m.ClassId
                              + ", clan " + (m.ClanName ?? "none"));
             }
-            catch (Exception e) { Plugin.Trace("[card] reply: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] reply: " + e.Message); }
         }
 
         private static void Drain()

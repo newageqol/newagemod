@@ -199,7 +199,7 @@ namespace NewAgeQoL
         {
             if (_shared != null) return _shared;
             try { _shared = System.IO.File.Exists(SharedFile) ? System.IO.File.ReadAllText(SharedFile) : ""; }
-            catch (Exception e) { Plugin.Trace("[travel] shared gates: " + e.Message); _shared = ""; }
+            catch (Exception e) { Plugin.Caught("[travel] shared gates: " + e.Message); _shared = ""; }
             return _shared;
         }
 
@@ -400,7 +400,7 @@ namespace NewAgeQoL
                 if (best > 0) Plugin.Trace("[travel] location " + map.MapId + " has its own exit to area " + best + ", gates to target " + length);
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[travel] location exits: " + e.Message); return -1; }
+            catch (Exception e) { Plugin.Caught("[travel] location exits: " + e.Message); return -1; }
         }
 
         private static bool Allowed(int place, int area)
@@ -687,7 +687,7 @@ namespace NewAgeQoL
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(SharedFile));
                 System.IO.File.WriteAllText(SharedFile, _shared);
             }
-            catch (Exception e) { Plugin.Trace("[travel] shared gates not written: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[travel] shared gates not written: " + e.Message); }
             Plugin.Trace("[travel] remembered gate " + from + ">" + to + ":" + vertex);
         }
 

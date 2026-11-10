@@ -113,7 +113,7 @@ namespace NewAgeQoL
                 _askAt = Time.unscaledTime + AskEvery;
                 nc.SendRequest(new UserInfoRequest(p.Id, p.Login));
             }
-            catch (Exception e) { Plugin.Trace("[online] clan icons: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] clan icons: " + e.Message); }
         }
 
         private static void Listen()
@@ -121,8 +121,8 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(433, OnUserInfo);
-            nc.AddMessageListener(433, OnUserInfo);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnUserInfo);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnUserInfo);
             _on = nc;
         }
 

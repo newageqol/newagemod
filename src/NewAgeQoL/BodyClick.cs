@@ -67,7 +67,7 @@ namespace NewAgeQoL
                     over = body != null || Walk(cd);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[fighter] cursor: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] cursor: " + e.Message); }
             Light(cd, body);
             if (over == _shown) return;
             _shown = over;
@@ -80,7 +80,7 @@ namespace NewAgeQoL
                 }
                 else if (!over && !SkillList.Armed) Pointer.Plain();
             }
-            catch (Exception e) { Plugin.Trace("[fighter] cursor: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] cursor: " + e.Message); }
         }
 
         private static void Light(ICombatData cd, AbstractCharacter body)
@@ -90,7 +90,7 @@ namespace NewAgeQoL
             Unlight(cd);
             if (cd == null || body == null || at == null) return;
             try { _litPick = cd.SetSelection(at, 0, Lit, true, true); }
-            catch (Exception e) { Plugin.Trace("[fighter] hex highlight: " + e.Message); _litPick = 0; }
+            catch (Exception e) { Plugin.Caught("[fighter] hex highlight: " + e.Message); _litPick = 0; }
             _litData = cd;
             _litFor = body.UserId;
             _litAt = at;
@@ -102,7 +102,7 @@ namespace NewAgeQoL
             if (_litPick != 0 && _litData != null && ReferenceEquals(_litData, cd))
             {
                 try { _litData.ClearSelection(_litPick); }
-                catch (Exception e) { Plugin.Trace("[fighter] clear hex highlight: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[fighter] clear hex highlight: " + e.Message); }
             }
             _litPick = 0;
             _litFor = 0;
@@ -134,7 +134,7 @@ namespace NewAgeQoL
                 skin.SetPropertyBlock(_paint);
                 _tinted = skin;
             }
-            catch (Exception e) { Plugin.Trace("[fighter] model highlight: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] model highlight: " + e.Message); }
         }
 
         internal static AbstractCharacter Hovered(ICombatData cd)
@@ -225,7 +225,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[fighter] body click: " + e.Message);
+                Plugin.Caught("[fighter] body click: " + e.Message);
                 return true;
             }
         }
@@ -246,7 +246,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[walk] click button check: " + e.Message);
+                Plugin.Caught("[walk] click button check: " + e.Message);
                 return true;
             }
         }

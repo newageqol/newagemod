@@ -461,7 +461,7 @@ namespace NewAgeQoL
                 WatchedWish[row] = "";
                 Plugin.Trace("[flasks] " + Titles[row] + ": '" + want + "' now stored as id " + id);
             }
-            catch (System.Exception e) { Plugin.Trace("[flasks] name to id conversion: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[flasks] name to id conversion: " + e.Message); }
         }
 
         private static bool NeedNames()
@@ -1078,12 +1078,12 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null) return false;
                 if (_listeners && ReferenceEquals(_boundTo, nc)) return true;
-                nc.AddMessageListener(359, OnTabs);
-                nc.AddMessageListener(380, OnTabContent);
-                nc.AddMessageListener(385, OnThingInfo);
-                nc.AddMessageListener(416, OnAction);
-                nc.AddMessageListener(431, OnGift);
-                nc.AddMessageListener(444, OnChest);
+                nc.AddMessageListener(ResponseConsts.THING_TYPE_TABS_RESPONSE, OnTabs);
+                nc.AddMessageListener(ResponseConsts.THING_TAB_INVENTORY_RESPONSE, OnTabContent);
+                nc.AddMessageListener(ResponseConsts.GENERAL_THING_HINT_RESPONSE, OnThingInfo);
+                nc.AddMessageListener(ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, OnAction);
+                nc.AddMessageListener(ResponseConsts.QUEST_REWARD_RESPONSE, OnGift);
+                nc.AddMessageListener(ResponseConsts.UNITY3D_GET_DAILY_REWARD_RESPONSE, OnChest);
                 _boundTo = nc;
                 _listeners = true;
                 return true;
@@ -1270,7 +1270,7 @@ namespace NewAgeQoL
                 RequestScanNow();
                 Plugin.Trace("[flasks] " + (ours ? "our stock changed" : why) + ": recounting stock");
             }
-            catch (System.Exception e) { Plugin.Trace("[flasks] purchase: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[flasks] purchase: " + e.Message); }
         }
 
         private const float Answer = 6f;

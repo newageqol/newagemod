@@ -107,7 +107,7 @@ internal static class ThingImages
             if (connection == null || !connection.IsConnected()) return false;
             if (!_listening)
             {
-                connection.AddMessageListener(385, OnInfo);
+                connection.AddMessageListener(ResponseConsts.GENERAL_THING_HINT_RESPONSE, OnInfo);
                 _listening = true;
             }
             return true;
@@ -128,7 +128,7 @@ internal static class ThingImages
 
     public static void Stop()
     {
-        try { if (_listening) NetworkConnection.Instance?.RemoveMessageListener(385, OnInfo); }
+        try { if (_listening) NetworkConnection.Instance?.RemoveMessageListener(ResponseConsts.GENERAL_THING_HINT_RESPONSE, OnInfo); }
         catch { }
         _listening = false;
         Save();

@@ -153,7 +153,7 @@ namespace NewAgeQoL
                 }
                 Lay();
             }
-            catch (Exception e) { Plugin.Trace("[spectate] " + e.Message); Kill(); }
+            catch (Exception e) { Plugin.Caught("[spectate] " + e.Message); Kill(); }
         }
 
         private static void Prune()

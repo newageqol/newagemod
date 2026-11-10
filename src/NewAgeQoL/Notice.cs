@@ -44,7 +44,7 @@ namespace NewAgeQoL
                 LayoutRebuilder.ForceRebuildLayoutImmediate(_stack);
                 Spot();
             }
-            catch (Exception e) { Plugin.Trace("[message] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[message] " + e.Message); }
         }
 
         internal static void Tick()

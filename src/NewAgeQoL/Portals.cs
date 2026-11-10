@@ -95,7 +95,7 @@ namespace NewAgeQoL
                 Paint();
                 Place();
             }
-            catch (Exception e) { Plugin.Trace("[portal] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[portal] " + e.Message); }
         }
 
         private static int Keeper(LocationMap map)
@@ -179,7 +179,7 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<QuestController>();
                 if (ctrl != null && ctrl.QuestDialog != null) AccessTools.Method(typeof(QuestController), "CloseQuestDialog")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[portal] close dialog window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[portal] close dialog window: " + e.Message); }
         }
 
         private static void Tell(QuestDialogResponseMessage reply)
@@ -406,7 +406,7 @@ namespace NewAgeQoL
         private static void Postfix(SceneObjectInfo objectInfo, UnityEngine.Events.UnityEvent __result)
         {
             try { Portals.Early(objectInfo, __result); }
-            catch (Exception e) { Plugin.Trace("[portal] keeper button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[portal] keeper button: " + e.Message); }
         }
     }
 
@@ -422,7 +422,7 @@ namespace NewAgeQoL
                 Portals.Take(reply);
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[portal] reply: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[portal] reply: " + e.Message); return true; }
         }
     }
 }

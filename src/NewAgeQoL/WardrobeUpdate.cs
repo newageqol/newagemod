@@ -262,7 +262,7 @@ namespace NewAgeQoL
         private static void Head(UnityWebRequest req, string name, string value)
         {
             try { req.SetRequestHeader(name, value); }
-            catch (Exception e) { Plugin.Trace("[wardrobe] header " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] header " + name + ": " + e.Message); }
         }
 
         private static Reply Grab(UnityWebRequest req)

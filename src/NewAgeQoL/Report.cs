@@ -98,7 +98,7 @@ namespace NewAgeQoL
                 var setup = UnityEngine.Object.FindObjectOfType<SetupDialog>();
                 if (setup != null) setup.Close();
             }
-            catch (Exception e) { Plugin.Trace("[report] game settings window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[report] game settings window: " + e.Message); }
             try
             {
                 Build();
@@ -144,7 +144,7 @@ namespace NewAgeQoL
                 _told.ActivateInputField();
                 _told.caretPosition = _told.text != null ? _told.text.Length : 0;
             }
-            catch (Exception e) { Plugin.Trace("[report] input field: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[report] input field: " + e.Message); }
         }
 
         internal static void Paste()
@@ -231,7 +231,7 @@ namespace NewAgeQoL
                     return cut;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[report] read " + path + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[report] read " + path + ": " + e.Message); return null; }
         }
 
         private static void Add(string name, byte[] data)
@@ -407,7 +407,7 @@ namespace NewAgeQoL
                 string dir = Path.GetDirectoryName(box.File);
                 if (!string.IsNullOrEmpty(dir)) Application.OpenURL("file:///" + dir.Replace("\\", "/"));
             }
-            catch (Exception e) { Plugin.Trace("[report] folder: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[report] folder: " + e.Message); }
         }
 
         private static readonly List<string> Notes = new List<string>();
@@ -435,6 +435,7 @@ namespace NewAgeQoL
                     {
                         Put(zip, "описание.txt", head);
                         foreach (var one in files) Put(zip, "вложения/" + one.Name, one.Data);
+                        Put(zip, "мод/состояние.txt", Encoding.UTF8.GetBytes(Health.Text()));
                         Logs(zip, player);
                     }
                     box.Zip = ms.ToArray();
@@ -1077,7 +1078,7 @@ namespace NewAgeQoL
                 }
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[report] image header: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[report] image header: " + e.Message); return false; }
             finally { GlobalUnlock(handle); }
         }
 
@@ -1117,7 +1118,7 @@ namespace NewAgeQoL
                 pic.Apply();
                 return pic.EncodeToPNG();
             }
-            catch (Exception e) { Plugin.Trace("[report] clipboard image: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[report] clipboard image: " + e.Message); return null; }
             finally { if (pic != null) UnityEngine.Object.Destroy(pic); }
         }
     }

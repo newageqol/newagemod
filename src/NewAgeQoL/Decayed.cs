@@ -31,11 +31,11 @@ namespace NewAgeQoL
                         if (__instance.Characters != null && __instance.Characters.TryGetValue(one.UserId, out body)) ChatDock.Fallen(__instance, body);
                         __instance.RemoveCharacter(one.UserId);
                     }
-                    catch (Exception e) { Plugin.Trace("[combat] body " + one.UserId + " not removed: " + e); }
+                    catch (Exception e) { Plugin.Caught("[combat] body " + one.UserId + " not removed: " + e); }
                 }
                 if (kept != null) newIndicators = kept;
             }
-            catch (Exception e) { Plugin.Trace("[combat] decayed bodies: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[combat] decayed bodies: " + e.Message); }
         }
     }
 }

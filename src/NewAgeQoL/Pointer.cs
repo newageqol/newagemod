@@ -35,7 +35,7 @@ namespace NewAgeQoL
                 if (art == null) { Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto); return; }
                 Cursor.SetCursor(art.texture, Tip * _scale, CursorMode.Auto);
             }
-            catch (Exception e) { Plugin.Trace("[pointer] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[pointer] " + e.Message); }
         }
     }
 }

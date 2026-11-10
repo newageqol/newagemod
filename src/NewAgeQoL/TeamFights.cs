@@ -57,7 +57,7 @@ namespace NewAgeQoL
                 field.SetValue(list);
                 Plugin.Trace("[team fights] arena button added for location " + TeamFights.Room);
             }
-            catch (Exception e) { Plugin.Trace("[team fights] arena button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[team fights] arena button: " + e.Message); }
         }
 
         private static void Leave(Traverse field, IList<SceneObjectInfo> infos)
@@ -92,7 +92,7 @@ namespace NewAgeQoL
                 var view = Traverse.Create(__instance).Property("EnterfightView").GetValue<BaseEnterfightView>();
                 if (view != null) view.SetCaption(Lang.T(TeamFights.Caption));
             }
-            catch (Exception e) { Plugin.Trace("[team fights] title: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[team fights] title: " + e.Message); }
         }
     }
 }

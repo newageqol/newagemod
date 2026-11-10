@@ -226,7 +226,7 @@ namespace NewAgeQoL
         {
             if (!__runOriginal) return;
             try { Focus.Before(__instance, button); }
-            catch (Exception e) { Plugin.Trace("[combo] before dodge: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[combo] before dodge: " + e.Message); }
         }
     }
 
@@ -236,7 +236,7 @@ namespace NewAgeQoL
         private static void Postfix(CombatData __instance)
         {
             try { Focus.Round(__instance); }
-            catch (Exception e) { Plugin.Trace("[combo] new round: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[combo] new round: " + e.Message); }
         }
     }
 }

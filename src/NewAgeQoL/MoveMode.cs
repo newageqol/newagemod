@@ -120,7 +120,7 @@ namespace NewAgeQoL
                 if (three == null) return;
                 MoveMode.Note(three.Value1, three.Value3);
             }
-            catch (Exception e) { Plugin.Trace("[speed] server response: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[speed] server response: " + e.Message); }
         }
     }
 }

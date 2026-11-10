@@ -37,9 +37,9 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             try { Show(); }
-            catch (Exception e) { Plugin.Trace("[relog] button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[relog] button: " + e.Message); }
             try { Watch(); }
-            catch (Exception e) { Plugin.Trace("[relog] cover: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[relog] cover: " + e.Message); }
         }
 
         private static void Show()

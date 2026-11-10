@@ -37,7 +37,7 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             try { Listen(); }
-            catch (Exception e) { Plugin.Trace("[armor] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[armor] " + e.Message); }
         }
 
         private static void Listen()
@@ -45,17 +45,17 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(433, OnInfo);
-            nc.AddMessageListener(433, OnInfo);
-            nc.RemoveMessageListener(472, OnBeast);
-            nc.AddMessageListener(472, OnBeast);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnInfo);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnInfo);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_MONSTER_INFO_RESPONSE, OnBeast);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_MONSTER_INFO_RESPONSE, OnBeast);
             _on = nc;
         }
 
         private static void OnInfo(object message)
         {
             try { Remember(message as Unity3DUserInfoResponseMessage); }
-            catch (Exception e) { Plugin.Trace("[armor] response: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[armor] response: " + e.Message); }
         }
 
         internal static void Remember(Unity3DUserInfoResponseMessage m)
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 Version++;
                 if (!had) Plugin.Trace("[armor] breed " + m.Id + ": " + m.Armor + " on all zones");
             }
-            catch (Exception e) { Plugin.Trace("[armor] monster: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[armor] monster: " + e.Message); }
         }
 
         internal static void AskBeast(int race)
@@ -176,7 +176,7 @@ namespace NewAgeQoL
                 Armor.Remember(message);
                 PlayerCard.Show(__instance, message);
             }
-            catch (Exception e) { Plugin.Trace("[armor] card: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[armor] card: " + e.Message); }
         }
     }
 }

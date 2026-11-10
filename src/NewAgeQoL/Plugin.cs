@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.42.0";
+        public const string Version = "0.43.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -72,9 +72,9 @@ namespace NewAgeQoL
         internal static ConfigEntry<bool> CfgNewArenas;
         internal static ConfigEntry<bool> CfgRosterFolded;
         internal static ConfigEntry<bool> CfgFightsFolded;
-        internal static bool NewPlaces => CfgNewPlaces == null || CfgNewPlaces.Value;
+        internal static bool NewPlaces => CfgNewPlaces != null && CfgNewPlaces.Value;
 
-        public static bool NewArenas => CfgNewArenas == null || CfgNewArenas.Value;
+        public static bool NewArenas => CfgNewArenas != null && CfgNewArenas.Value;
 
 
         internal static ConfigEntry<string> CfgEffectsWindow;
@@ -112,6 +112,7 @@ namespace NewAgeQoL
                 Log.LogInfo("Mod is disabled: the client runs as usual, it can be enabled with the \"Enable mod\" button in the game settings.");
                 return;
             }
+            Health.Listen();
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
             Chars.Home(Config);
             Lang.Bind(Config);
@@ -248,9 +249,9 @@ namespace NewAgeQoL
                 "Громкость звуков из старого клиента, от 0 (тишина) до 1. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат в любом случае, пока включён звук мода.", e => CfgSoundVolume = e);
             Chars.Own("Sounds", "CombatMusicVolume", 0.5f,
                 "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков: каждый бой свой трек, когда трек кончается, плавно начинается следующий. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
-            CfgNewPlaces = Config.Bind("Interface", "NewLocations", true,
+            CfgNewPlaces = Config.Bind("Interface", "NewLocations", false,
                 "Новые локации мода (ночной Иллениум, банк, рынок и другие) и экран загрузки мода. Выключено — игра показывает свои локации и свои картинки загрузки локаций и боёв. Меняется со следующего захода в локацию.");
-            CfgNewArenas = Config.Bind("Interface", "NewArenas", true,
+            CfgNewArenas = Config.Bind("Interface", "NewArenas", false,
                 "Объёмные 3D-арены мода вместо плоских картинок поля в боях на арене. Выключено — бой идёт на обычной картинке арены, как раньше. Выключайте, если 3D-арена тормозит. Меняется со следующего боя.");
             CfgRosterFolded = Config.Bind("Interface", "CharactersFolded", false,
                 "Список персонажей аккаунта справа свёрнут вправо. Меняется кнопкой «Персонажи» сбоку от списка, запоминается между заходами.");
@@ -335,14 +336,16 @@ namespace NewAgeQoL
                 foreach (var t in typeof(Plugin).Assembly.GetTypes())
                 {
                     if (t.GetCustomAttributes(typeof(HarmonyPatch), true).Length == 0) continue;
-                    try { harmony.CreateClassProcessor(t).Patch(); }
-                    catch (System.Exception e) { Log.LogError("Harmony: " + t.Name + " — " + e.Message); }
+                    try { harmony.CreateClassProcessor(t).Patch(); Health.Patched(); }
+                    catch (System.Exception e) { Health.Unpatched(t, e); Log.LogError("Harmony: " + t.Name + " — " + e.Message); }
                 }
             }
-            catch (System.Exception e) { Log.LogError("Harmony: " + e); }
+            catch (System.Exception e) { Health.Unpatched(null, e); Log.LogError("Harmony: " + e); }
 
             try { BundleWatch.Hook(); }
             catch (System.Exception e) { Log.LogError("BundleWatch: " + e.Message); }
+
+            Health.Start();
 
             Log.LogInfo("New Age QoL " + Version + " loaded.");
         }
@@ -419,6 +422,18 @@ namespace NewAgeQoL
             [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
         {
             if (Log == null) return;
+            Health.Count(text, Tag(text) + who, line);
+            int hushed;
+            if (!Allow(text, who, line, 60d, out hushed)) return;
+            Log.LogWarning(text + Again(hushed));
+        }
+
+        internal static void Caught(string text,
+            [System.Runtime.CompilerServices.CallerMemberName] string who = null,
+            [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+        {
+            if (Log == null) return;
+            Health.Count(text, Tag(text) + who, line);
             int hushed;
             if (!Allow(text, who, line, 60d, out hushed)) return;
             Log.LogWarning(text + Again(hushed));
@@ -429,6 +444,7 @@ namespace NewAgeQoL
             [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
         {
             if (Log == null) return;
+            Health.Count(text, Tag(text) + who, line);
             int hushed;
             if (!Allow(text, who, line, 60d, out hushed)) return;
             Log.LogError(text + Again(hushed));
@@ -443,6 +459,7 @@ namespace NewAgeQoL
 
         internal static void Wake()
         {
+            Health.Tell();
             Curtain.Raise();
             try
             {
@@ -458,7 +475,7 @@ namespace NewAgeQoL
                 Contracts.Wake();
                 CombatCam.Wake();
             }
-            catch (System.Exception e) { Trace("[scene] awake: " + e.Message); }
+            catch (System.Exception e) { Caught("[scene] awake: " + e.Message); }
         }
 
         private sealed class Part
@@ -538,6 +555,7 @@ namespace NewAgeQoL
                 new Part { Name = "QuestTrack.Tick", Do = QuestTrack.Tick },
                 new Part { Name = "CultPotions.Tick", Do = CultPotions.Tick },
                 new Part { Name = "Ingots.Tick", Do = Ingots.Tick },
+                new Part { Name = "StoragePick.Tick", Do = StoragePick.Tick },
                 new Part { Name = "Portals.Tick", Do = Portals.Tick },
                 new Part { Name = "TravelEnter.Tick", Do = TravelEnter.Tick },
                 new Part { Name = "ScoutEnter.Tick", Do = ScoutEnter.Tick },
@@ -565,6 +583,7 @@ namespace NewAgeQoL
                 new Part { Name = "CombatMusic.Tick", Do = CombatMusic.Tick },
                 new Part { Name = "AssetSync.ArenaTick", Do = AssetSync.ArenaTick },
                 new Part { Name = "Curtain.Tick", Do = Curtain.Tick },
+                new Part { Name = "Health.Tick", Do = Health.Tick },
             };
             return _parts;
         }
@@ -611,6 +630,7 @@ namespace NewAgeQoL
         private void OnDestroy()
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnScene;
+            Health.Silence();
             CultPotions.Shutdown();
             Ingots.Shutdown();
             DressDrag.Shutdown();

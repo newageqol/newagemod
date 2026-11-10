@@ -44,7 +44,7 @@ namespace NewAgeQoL
                 Held[key] = new Veil { Group = group, Was = group.alpha, At = Time.unscaledTime, Own = own, Patient = patient };
                 group.alpha = 0f;
             }
-            catch (Exception e) { Plugin.Trace("[curtain] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[curtain] " + e.Message); }
         }
 
         internal static void Show(Component part)
@@ -133,7 +133,7 @@ namespace NewAgeQoL
                 if (veil.Own) UnityEngine.Object.Destroy(veil.Group);
                 else veil.Group.alpha = veil.Was;
             }
-            catch (Exception e) { Plugin.Trace("[curtain] release: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[curtain] release: " + e.Message); }
         }
     }
 }

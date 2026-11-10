@@ -52,7 +52,7 @@ namespace NewAgeQoL
                 _live = pick;
                 Plugin.Trace("[chat] selection enabled on " + host.name);
             }
-            catch (Exception e) { Plugin.Trace("[chat] selection: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] selection: " + e.Message); }
         }
 
         internal static void Forget()
@@ -62,7 +62,7 @@ namespace NewAgeQoL
             Stuck = null;
             if (pick == null) return;
             try { pick.Clear(); pick.Shut(); }
-            catch (Exception e) { Plugin.Trace("[chat] selection forget: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] selection forget: " + e.Message); }
         }
 
         internal static void Drop()
@@ -82,7 +82,7 @@ namespace NewAgeQoL
                 if (!ctrl) return;
                 if (Input.GetKeyDown(KeyCode.C)) pick.Copy();
             }
-            catch (Exception e) { Plugin.Trace("[chat] copy: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] copy: " + e.Message); }
         }
 
         private void OnDisable()
@@ -191,7 +191,7 @@ namespace NewAgeQoL
                 if (e.clickCount < 2 || _moved) return;
                 Whole(Spot(e.position, e.pressEventCamera));
             }
-            catch (Exception err) { Plugin.Trace("[chat] click: " + err.Message); }
+            catch (Exception err) { Plugin.Caught("[chat] click: " + err.Message); }
         }
 
         private static bool Breaks(char one)

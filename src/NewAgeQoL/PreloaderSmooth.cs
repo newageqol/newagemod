@@ -28,7 +28,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[loading] smooth ring: " + e.Message);
+                Plugin.Caught("[loading] smooth ring: " + e.Message);
                 return true;
             }
         }

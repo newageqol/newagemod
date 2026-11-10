@@ -81,7 +81,7 @@ namespace NewAgeQoL
                 Prune();
                 Show();
             }
-            catch (Exception e) { Plugin.Trace("[fights] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fights] " + e.Message); }
         }
 
         private static void Listen()
@@ -89,12 +89,12 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(161, OnCombat);
-            nc.AddMessageListener(161, OnCombat);
-            nc.RemoveMessageListener(17, OnAnnounce);
-            nc.AddMessageListener(17, OnAnnounce);
-            nc.RemoveMessageListener(351, OnResult);
-            nc.AddMessageListener(351, OnResult);
+            nc.RemoveMessageListener(ResponseConsts.COMBAT_INFO_RESPONCE, OnCombat);
+            nc.AddMessageListener(ResponseConsts.COMBAT_INFO_RESPONCE, OnCombat);
+            nc.RemoveMessageListener(ResponseConsts.UPDATE_FIGHT_ANONCE, OnAnnounce);
+            nc.AddMessageListener(ResponseConsts.UPDATE_FIGHT_ANONCE, OnAnnounce);
+            nc.RemoveMessageListener(ResponseConsts.NEW_COMBAT_RESULT_RESPONCE, OnResult);
+            nc.AddMessageListener(ResponseConsts.NEW_COMBAT_RESULT_RESPONCE, OnResult);
             _on = nc;
         }
 
@@ -288,7 +288,7 @@ namespace NewAgeQoL
                 Exit();
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[fights] game leave: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[fights] game leave: " + e.Message); return true; }
         }
 
         private static void Leave()

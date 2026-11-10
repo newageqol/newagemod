@@ -225,6 +225,7 @@ internal sealed class Arena3D
         }
         _root.AddComponent<ArenaNight>().Init(_root.transform, eye, Cfg, look.NightGrade, night, mid);
         int vertexLights = LightBudget(_root.transform, mid);
+        _root.AddComponent<ArenaLite>().Init(_root.transform, mid);
         if (_fxBundle != null) _root.AddComponent<ArenaFx>().Init(_root.transform, _fxBundle, Cfg, look.SunDir, night, look.SunColor);
         if (_fxBundle != null && Cfg.storm)
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);

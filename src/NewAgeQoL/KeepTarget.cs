@@ -38,7 +38,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[target] fight against players: selection stays on " + chosen.UserId);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[target] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[target] " + e.Message); }
             return false;
         }
 

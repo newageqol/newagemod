@@ -20,7 +20,7 @@ namespace NewAgeQoL
                 nc.RemoveMessageListener(UserEnchantments, handler);
                 nc.RemoveMessageListener(UserEnchantments, handler);
             }
-            catch (Exception e) { Plugin.Trace("[enchantments] unhook: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[enchantments] unhook: " + e.Message); }
         }
     }
 }

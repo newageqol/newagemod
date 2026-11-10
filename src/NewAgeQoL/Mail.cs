@@ -168,7 +168,7 @@ namespace NewAgeQoL
                 PlaceIcon();
                 Blink(now);
             }
-            catch (Exception e) { Plugin.Trace("[mail] " + e.Message); DropIcon(); }
+            catch (Exception e) { Plugin.Caught("[mail] " + e.Message); DropIcon(); }
         }
 
         private static IEnumerator Fetch(string url, string box)
@@ -190,7 +190,7 @@ namespace NewAgeQoL
                 if (body.StartsWith(Mark, StringComparison.Ordinal)) Take(body);
                 else Plugin.Trace("[mail] server answered " + code);
             }
-            catch (Exception e) { Plugin.Trace("[mail] answer: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[mail] answer: " + e.Message); }
             _busy = false;
             _askAt = Time.unscaledTime + (_panelGo != null ? OpenEvery : _iconCanvas != null ? ShownEvery : Every);
         }
@@ -560,7 +560,7 @@ namespace NewAgeQoL
                 if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(_field.gameObject);
                 _field.ActivateInputField();
             }
-            catch (Exception e) { Plugin.Trace("[mail] input field: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[mail] input field: " + e.Message); }
         }
 
         private static void Draw()

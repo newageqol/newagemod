@@ -46,7 +46,7 @@ namespace NewAgeQoL
                 }
                 Plugin.Trace("[chest] window scaled to " + k.ToString("0.00") + ", UI parts " + moved);
             }
-            catch (Exception e) { Plugin.Trace("[chest] window size: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chest] window size: " + e.Message); }
         }
 
         private static float Scale()

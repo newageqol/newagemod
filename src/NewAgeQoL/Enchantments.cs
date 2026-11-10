@@ -106,7 +106,7 @@ namespace NewAgeQoL
                 Stand();
                 Tip();
             }
-            catch (Exception e) { Plugin.Trace("[states] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[states] " + e.Message); }
         }
 
         private static CanvasGroup _hid;
@@ -129,7 +129,7 @@ namespace NewAgeQoL
                 Blank(_hid);
                 Plugin.Trace("[states] game column covered: " + go.name);
             }
-            catch (Exception e) { Plugin.Trace("[states] game column: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[states] game column: " + e.Message); }
         }
 
         private static void Blank(CanvasGroup veil)
@@ -308,7 +308,7 @@ namespace NewAgeQoL
                 }
                 nc.SendRequest(new GlobalEnchantmentsRequest(me, id));
             }
-            catch (Exception e) { Plugin.Trace("[states] request " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[states] request " + id + ": " + e.Message); }
         }
 
         private static void Refresh()

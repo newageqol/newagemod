@@ -106,7 +106,7 @@ namespace NewAgeQoL
                     sprite.name = icon;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon '" + icon + "' failed to parse: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon '" + icon + "' failed to parse: " + e.Message); }
             if (sprite == null)
             {
                 Failed[icon] = Time.unscaledTime;
@@ -161,7 +161,7 @@ namespace NewAgeQoL
                 Directory.CreateDirectory(Folder);
                 File.WriteAllBytes(PathOf(icon), data);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon '" + icon + "' was not saved: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon '" + icon + "' was not saved: " + e.Message); }
         }
     }
 
@@ -177,7 +177,7 @@ namespace NewAgeQoL
                 if (message == null || message.ClanName == null || message.ClanIcon == null) return;
                 ClanPics.Fill(image, message.ClanIcon);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon in card: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon in card: " + e.Message); }
         }
     }
 
@@ -194,7 +194,7 @@ namespace NewAgeQoL
                 if (user == null || user.ClanIcon == null) return;
                 ClanPics.Fill(image, user.ClanIcon);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon in spyglass: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon in spyglass: " + e.Message); }
         }
     }
 
@@ -210,7 +210,7 @@ namespace NewAgeQoL
                 if (value == null || value.IconCode.HasValue || value.Icon == null) return;
                 ClanPics.Fill(image, value.Icon);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon in clan list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon in clan list: " + e.Message); }
         }
     }
 
@@ -227,7 +227,7 @@ namespace NewAgeQoL
                 if (image == null || !image.gameObject.activeSelf) return;
                 ClanPics.Fill(image, value.Icon);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon in clan relations: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon in clan relations: " + e.Message); }
         }
     }
 }

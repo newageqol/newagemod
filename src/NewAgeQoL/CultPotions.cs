@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 Paint();
                 Clamp();
             }
-            catch (Exception e) { Plugin.Trace("[cult] " + e.Message); Stop(Lang.F("ошибка: {0}", e.Message)); }
+            catch (Exception e) { Plugin.Caught("[cult] " + e.Message); Stop(Lang.F("ошибка: {0}", e.Message)); }
         }
 
         private static Cult Where()
@@ -148,8 +148,8 @@ namespace NewAgeQoL
             if (nc == null || ReferenceEquals(nc, _heard)) return;
             Unhear();
             _heard = nc;
-            nc.AddMessageListener(245, OnDialog);
-            nc.AddMessageListener(440, OnFavor);
+            nc.AddMessageListener(ResponseConsts.QUEST_DIALOG_RESPONCE, OnDialog);
+            nc.AddMessageListener(ResponseConsts.USER_PROFESSION_LIST_RESPONSE, OnFavor);
         }
 
         private static void Unhear()
@@ -159,10 +159,10 @@ namespace NewAgeQoL
             if (old == null) return;
             try
             {
-                old.RemoveMessageListener(245, OnDialog);
-                old.RemoveMessageListener(440, OnFavor);
+                old.RemoveMessageListener(ResponseConsts.QUEST_DIALOG_RESPONCE, OnDialog);
+                old.RemoveMessageListener(ResponseConsts.USER_PROFESSION_LIST_RESPONSE, OnFavor);
             }
-            catch (Exception e) { Plugin.Trace("[cult] unsubscribe: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[cult] unsubscribe: " + e.Message); }
         }
 
         internal static void Shutdown()
@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 var prefix = AccessTools.Method(typeof(CultPotionsDialogPatch), "Prefix");
                 if (original != null && prefix != null) new Harmony(Plugin.Guid).Unpatch(original, prefix);
             }
-            catch (Exception e) { Plugin.Trace("[cult] unpatch: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[cult] unpatch: " + e.Message); }
             if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             _canvasGo = null;
             _canvas = null;
@@ -224,7 +224,7 @@ namespace NewAgeQoL
                 _favorAskedAt = Time.unscaledTime;
                 NetworkConnection.Instance.SendRequest(new UserProfessionListRequest());
             }
-            catch (Exception e) { Plugin.Trace("[cult] favor request: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[cult] favor request: " + e.Message); }
         }
 
         private static string NameOf(int ability)
@@ -513,7 +513,7 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<QuestController>();
                 if (ctrl != null) AccessTools.Method(typeof(QuestController), "CloseQuestDialog")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[cult] close dialog window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[cult] close dialog window: " + e.Message); }
         }
 
         private static void Build()

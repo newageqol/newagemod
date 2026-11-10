@@ -169,7 +169,7 @@ namespace NewAgeQoL
                 Plugin.Log?.LogInfo("[settings] removed unused keys from " + Path.GetFileName(file.ConfigFilePath) + ": "
                     + string.Join(", ", gone.ConvertAll(d => d.Section + "/" + d.Key).ToArray()));
             }
-            catch (Exception e) { Plugin.Trace("[settings] cleanup: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] cleanup: " + e.Message); }
         }
 
         private static void Forget()

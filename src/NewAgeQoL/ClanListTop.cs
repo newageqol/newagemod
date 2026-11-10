@@ -25,7 +25,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[clan] list wheel step " + was.ToString("0.#") + " -> " + scroll.scrollSensitivity.ToString("0.#"));
                 Plugin.Trace("[clan] list held at the top until scrolled by hand");
             }
-            catch (Exception e) { Plugin.Trace("[clan] list top: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] list top: " + e.Message); }
         }
     }
 
@@ -125,7 +125,7 @@ namespace NewAgeQoL
                     + ", scroll " + ((RectTransform)scroll.transform).rect.width.ToString("0") + " wide, view " + (view != null ? view.rect.width.ToString("0") + " anchors " + view.anchorMin.x + ".." + view.anchorMax.x + " offsets " + view.offsetMin.x.ToString("0") + ".." + view.offsetMax.x.ToString("0") : "-")
                     + ", bar " + (barRt != null ? barRt.parent.name + " x " + barRt.anchoredPosition.x.ToString("0") + " w " + barRt.rect.width.ToString("0") : "none") + " (" + barHow + ")");
             }
-            catch (Exception e) { Plugin.Trace("[clan] members scroll: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] members scroll: " + e.Message); }
         }
     }
 

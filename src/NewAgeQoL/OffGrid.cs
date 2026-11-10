@@ -36,7 +36,7 @@ namespace NewAgeQoL
                 character.SetDefaultCharacterRotation();
                 Plugin.Trace("[combat] " + Who(character) + " - put on its cell");
             }
-            catch (Exception e) { Plugin.Trace("[combat] blocked cell placing: " + e); }
+            catch (Exception e) { Plugin.Caught("[combat] blocked cell placing: " + e); }
         }
 
         internal static bool Remove(CombatData data, int id)
@@ -57,7 +57,7 @@ namespace NewAgeQoL
                 }
                 value.Destroy();
             }
-            catch (Exception e) { Plugin.Trace("[combat] blocked cell removing: " + e); }
+            catch (Exception e) { Plugin.Caught("[combat] blocked cell removing: " + e); }
             return false;
         }
     }

@@ -1205,10 +1205,10 @@ namespace NewAgeQoL
                         if (_tipText == null || _tipFor != thing || about == null) return;
                         _tipText.text = About(thing, about);
                     }
-                    catch (Exception e) { Plugin.Trace("[craft] tooltip " + thing + ": " + e.Message); }
+                    catch (Exception e) { Plugin.Caught("[craft] tooltip " + thing + ": " + e.Message); }
                 });
             }
-            catch (Exception e) { Plugin.Trace("[craft] tooltip " + thing + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[craft] tooltip " + thing + ": " + e.Message); }
         }
 
         private static string About(int thing, IGeneralThingInfoDescription about)

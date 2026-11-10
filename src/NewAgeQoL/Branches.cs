@@ -147,7 +147,7 @@ namespace NewAgeQoL
                 _busy = true;
                 Plugin.Instance.StartCoroutine(Work());
             }
-            catch (Exception e) { Plugin.Trace("[branches] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[branches] " + e.Message); }
         }
 
         internal static void NewFight()
@@ -182,7 +182,7 @@ namespace NewAgeQoL
                         if (s != null && s.SourceUserId > 0) Live(s.SourceUserId, code, it.StateType, it.StateId);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[branches] live effects: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[branches] live effects: " + e.Message); }
         }
 
         private static int LiveCode(int type, int id)
@@ -849,7 +849,7 @@ namespace NewAgeQoL
         private static void Head(UnityWebRequest req, string name, string value)
         {
             try { req.SetRequestHeader(name, value); }
-            catch (Exception e) { Plugin.Trace("[branches] header " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[branches] header " + name + ": " + e.Message); }
         }
 
         private static void Grab(UnityWebRequest req, Reply reply)
@@ -879,7 +879,7 @@ namespace NewAgeQoL
                         return Encoding.UTF8.GetString(dst.ToArray());
                     }
                 }
-                catch (Exception e) { Plugin.Trace("[branches] decompress: " + e.Message); return ""; }
+                catch (Exception e) { Plugin.Caught("[branches] decompress: " + e.Message); return ""; }
             }
             return Encoding.UTF8.GetString(data);
         }

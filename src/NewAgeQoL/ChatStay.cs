@@ -132,7 +132,7 @@ namespace NewAgeQoL
                 if (last >= now.Count || !ReferenceEquals(now[last], before[before.Count - 1])) return 0f;
                 return -Height(panel, scroll, now, added);
             }
-            catch (Exception e) { Plugin.Trace("[chat] lines trimmed from top: " + e.Message); return 0f; }
+            catch (Exception e) { Plugin.Caught("[chat] lines trimmed from top: " + e.Message); return 0f; }
         }
 
         private static float Height(ChatPanelContent panel, ScrollRect scroll, IList<ITextScrollerContent> lines, int count)
@@ -258,7 +258,7 @@ namespace NewAgeQoL
                 Put(scroll, fromTop);
                 if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(Later(scroll, fromTop, _turn));
             }
-            catch (Exception e) { Plugin.Trace("[chat] scroll: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] scroll: " + e.Message); }
         }
 
         private static IEnumerator Later(ScrollRect scroll, float fromTop, int turn)
@@ -296,10 +296,10 @@ namespace NewAgeQoL
             __state = false;
             if (!ChatStay.On) return true;
             try { __state = ChatStay.Freeze(__instance); }
-            catch (Exception e) { Plugin.Trace("[chat] hold system log: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] hold system log: " + e.Message); }
             if (__state) return false;
             try { ChatStay.Remember(__instance); }
-            catch (Exception e) { Plugin.Trace("[chat] save scroll: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] save scroll: " + e.Message); }
             return true;
         }
 
@@ -307,7 +307,7 @@ namespace NewAgeQoL
         {
             if (!ChatStay.On || __state) return;
             try { ChatStay.Note(__instance); }
-            catch (Exception e) { Plugin.Trace("[chat] line list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] line list: " + e.Message); }
             if (!ChatStay.Held) return;
             ChatStay.Keep(ChatStay.Of(__instance), ChatStay.Mark);
         }
@@ -319,7 +319,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatPanelContent __instance)
         {
             try { ChatStay.Note(__instance); }
-            catch (Exception e) { Plugin.Trace("[chat] tab switch: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] tab switch: " + e.Message); }
         }
     }
 }

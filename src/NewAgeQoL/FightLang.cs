@@ -163,7 +163,7 @@ namespace NewAgeQoL
                 __state = resp.Text;
                 resp.Text = to;
             }
-            catch (Exception e) { Plugin.Trace("[lang] combat line: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[lang] combat line: " + e.Message); }
         }
 
         private static Exception Finalizer(ChatResponseMessage resp, string __state, Exception __exception)

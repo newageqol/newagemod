@@ -80,7 +80,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[market] lot scroll: " + e.Message);
+                Plugin.Caught("[market] lot scroll: " + e.Message);
                 return false;
             }
         }

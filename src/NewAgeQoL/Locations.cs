@@ -66,7 +66,7 @@ namespace NewAgeQoL
             _closeLater = false;
             if (_showing > 0) Plugin.Trace("[places] location still loading after " + HoldLongest + " s, loading screen closed anyway");
             try { Preloader.Close(); }
-            catch (Exception e) { Plugin.Trace("[places] closing loading screen: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] closing loading screen: " + e.Message); }
         }
 
         private static IEnumerator Held(IEnumerator run)
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 _warmed = true;
                 Plugin.Instance.StartCoroutine(Preload());
             }
-            catch (Exception e) { Plugin.Trace("[places] preload: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] preload: " + e.Message); }
         }
 
         private static IEnumerator Preload()
@@ -184,7 +184,7 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[places] scanning: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] scanning: " + e.Message); }
         }
 
         internal static Desc Find(string folder) => Known.TryGetValue(folder, out var d) ? d : null;
@@ -280,7 +280,7 @@ namespace NewAgeQoL
             if (compress && tex.width % 4 == 0 && tex.height % 4 == 0)
             {
                 try { tex.Compress(true); }
-                catch (Exception e) { Plugin.Trace("[places] compress " + file + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[places] compress " + file + ": " + e.Message); }
             }
             tex.Apply(!compress, true);
             return tex;
@@ -332,7 +332,7 @@ namespace NewAgeQoL
                     list.Add(new BankHall.Spot { Kind = p[0], U = F(1), V = F(2), H = F(3), D = p.Length > 4 ? F(4) : -1f });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[places] reading layers: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] reading layers: " + e.Message); }
             return list;
         }
 
@@ -408,7 +408,7 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[places] reading " + d.Name + " data: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] reading " + d.Name + " data: " + e.Message); }
             return data;
         }
 
@@ -491,7 +491,7 @@ namespace NewAgeQoL
                     if (SceneManager.GetSceneByName(s.Scene).isLoaded) SceneManager.UnloadSceneAsync(s.Scene);
                     Plugin.Trace("[places] left " + d.Name + ", settings restored");
                 }
-                catch (Exception e) { Plugin.Trace("[places] leaving " + d.Name + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[places] leaving " + d.Name + ": " + e.Message); }
             }
         }
     }

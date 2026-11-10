@@ -25,7 +25,7 @@ namespace NewAgeQoL
                 else RouteLog.Note("карта локации " + id, "saved map of location " + id);
                 if (had) Plugin.Trace("[roads] map of " + (world ? "area " : "location ") + id + " changed, saved again");
             }
-            catch (Exception e) { Plugin.Trace("[roads] map: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[roads] map: " + e.Message); }
         }
     }
 }

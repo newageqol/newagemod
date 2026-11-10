@@ -13,7 +13,7 @@ namespace NewAgeQoL
         private static void Postfix(Preloader __instance)
         {
             try { LoadScreen.Attach(__instance); }
-            catch (Exception e) { Plugin.Trace("[loading] screen: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loading] screen: " + e.Message); }
         }
     }
 

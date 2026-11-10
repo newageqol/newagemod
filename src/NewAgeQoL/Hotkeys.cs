@@ -200,7 +200,7 @@ namespace NewAgeQoL
             }
             Save();
             try { Notice.Show(Lang.F("Снято клавиш у умений и заклинаний: {0}. Эти клавиши заняты общими для аккаунта, назначь им другие", clash.Count), 7f); }
-            catch (Exception e) { Plugin.Trace("[hotkeys] busy keys notice: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] busy keys notice: " + e.Message); }
         }
 
         private static void Fill(string saved, bool own)
@@ -452,7 +452,7 @@ namespace NewAgeQoL
                     if (Fire(key, typing)) return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] " + e.Message); }
         }
 
         private static bool Fire(KeyCode key, bool typing)
@@ -605,7 +605,7 @@ namespace NewAgeQoL
                 }
                 if (off > 0) Plugin.Trace("[hotkeys] game keys removed: " + off);
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] game keys: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] game keys: " + e.Message); }
         }
 
         private static float _learnAt;
@@ -637,8 +637,8 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) return;
                 if (!_boundMastery)
                 {
-                    nc.AddMessageListener(11, OnMasteries);
-                    nc.AddMessageListener(432, OnDodges);
+                    nc.AddMessageListener(ResponseConsts.USER_MASTERY_RESPONCE, OnMasteries);
+                    nc.AddMessageListener(ResponseConsts.USER_SPELLBOOK_DODGES_LIST_RESPONSE, OnDodges);
                     _boundMastery = true;
                 }
                 _tries++;
@@ -648,7 +648,7 @@ namespace NewAgeQoL
                     if ((_heard & (4 << i)) == 0) nc.SendRequest(new UserSpellbookDodgesListRequest(Schools[i]));
                 Plugin.Trace("[hotkeys] asked the game for skills, dodges and spells of character " + Chars.Who + ", attempt " + _tries);
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] skills request: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] skills request: " + e.Message); }
         }
 
         internal static void Recheck()
@@ -700,7 +700,7 @@ namespace NewAgeQoL
                              + "; general skills skipped, they are passive");
                 if (added > 0 || dropped > 0) KeepKnown();
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] skills list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] skills list: " + e.Message); }
         }
 
         private static void OnDodges(object m)
@@ -734,7 +734,7 @@ namespace NewAgeQoL
                              + ": stored " + added + ", unnamed " + noName + (noName > 0 ? " (id" + unnamed + ")" : ""));
                 if (added > 0) KeepKnown();
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] dodges and spells list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] dodges and spells list: " + e.Message); }
         }
 
         private static string Cast(int id)
@@ -900,7 +900,7 @@ namespace NewAgeQoL
                 if (button == null) { Plugin.Trace("[hotkeys] no phase button"); return; }
                 button.OnClick();
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] phase: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] phase: " + e.Message); }
         }
 
         internal static List<Act> All()
@@ -991,7 +991,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[hotkeys] selected button: " + e.Message);
+                Plugin.Caught("[hotkeys] selected button: " + e.Message);
                 return true;
             }
         }
@@ -1030,7 +1030,7 @@ namespace NewAgeQoL
                     if (go != null) go.SetActive(false);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[hotkeys] settings before login: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] settings before login: " + e.Message); }
         }
     }
 
@@ -1056,7 +1056,7 @@ namespace NewAgeQoL
         private static void Postfix(BasePanelContentWindow __result)
         {
             try { if (__result != null && __result.GetComponent<SpellShopWatch>() == null) __result.gameObject.AddComponent<SpellShopWatch>(); }
-            catch (Exception e) { Plugin.Trace("[hotkeys] magic shop watch: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hotkeys] magic shop watch: " + e.Message); }
         }
     }
 }

@@ -75,7 +75,7 @@ namespace NewAgeQoL
                 Fill();
                 foreach (var face in Faces) Dress(face);
             }
-            catch (Exception e) { Plugin.Trace("[characters] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Caught("[characters] " + e.Message); Drop(); }
         }
 
         private static bool _shop;
@@ -398,7 +398,7 @@ namespace NewAgeQoL
         private static void Postfix(BasePanelContentWindow __instance)
         {
             try { Roster.Born(__instance); }
-            catch (Exception e) { Plugin.Trace("[characters] game window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[characters] game window: " + e.Message); }
         }
     }
 }

@@ -505,7 +505,7 @@ namespace NewAgeQoL
                         .Append(cam.targetTexture != null ? " to texture" : "").Append(" rect ").Append(cam.rect.width.ToString("0.00")).Append('x').Append(cam.rect.height.ToString("0.00"));
                 Plugin.Trace("[buttons] cameras when the window opened:" + (line.Length > 0 ? line.ToString() : " none") + ", screen bare " + Bare());
             }
-            catch (System.Exception e) { Plugin.Trace("[buttons] cameras: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[buttons] cameras: " + e.Message); }
         }
 
         private static readonly System.Reflection.FieldInfo SnapshotCamera = HarmonyLib.AccessTools.Field(typeof(BackgroundScreenshotMaker), "_renderCamera");
@@ -523,7 +523,7 @@ namespace NewAgeQoL
                 if (cam != null && SnapshotCamera?.GetValue(null) as Camera == cam && Object.FindObjectOfType<BackgroundScreenshotMaker>() != null)
                     cam.gameObject.SetActive(false);
             }
-            catch (System.Exception e) { Plugin.Trace("[buttons] camera back: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[buttons] camera back: " + e.Message); }
         }
 
         internal static void ScreenshotTaken(Component maker)
@@ -548,7 +548,7 @@ namespace NewAgeQoL
                 }
                 Plugin.Trace("[buttons] shop window took the scene snapshot, side buttons slide away" + (_borrowed != null ? " with the game camera kept on for the slide" : ""));
             }
-            catch (System.Exception e) { Plugin.Trace("[buttons] snapshot: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[buttons] snapshot: " + e.Message); }
         }
 
         private static void Veil(bool hide)
@@ -1096,7 +1096,7 @@ namespace NewAgeQoL
             if (Time.unscaledTime - _edgeAt < 0.5f) return null;
             _edgeAt = Time.unscaledTime;
             try { _edge = AtlasUtils.GetStateHighlightingSprite(EHighlightingType.Positive); }
-            catch (System.Exception e) { Plugin.Trace("[buttons] frame: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[buttons] frame: " + e.Message); }
             if (_edge != null && _edge.texture == null) _edge = null;
             return _edge;
         }
@@ -1462,9 +1462,11 @@ namespace NewAgeQoL
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         internal static bool ClaimLocked()
         {
-            try { return IsScene(EUnityScene.ChaoticWait) || IsScene(EUnityScene.QuestCombatWait); }
+            try { return IsScene(EUnityScene.ChaoticWait) || IsScene(EUnityScene.QuestCombatWait) || TeamFights.Here() == TournamentWait; }
             catch { return false; }
         }
+
+        private const int TournamentWait = 335;
 
         private static string _scene;
         private static bool _sceneHooked;

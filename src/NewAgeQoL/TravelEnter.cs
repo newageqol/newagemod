@@ -45,7 +45,7 @@ namespace NewAgeQoL
                 location = spot.LocationId;
                 return spot.VertexType == EGlobalMapVertexType.SavePoint && spot.IsRoot && spot.LocationId > 0 && spot.LocationId < 1000;
             }
-            catch (Exception e) { Plugin.Trace("[gate] town check: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[gate] town check: " + e.Message); return false; }
         }
 
         internal static void Tick()
@@ -68,7 +68,7 @@ namespace NewAgeQoL
                 _auto = false;
                 ok.onClick.Invoke();
             }
-            catch (Exception e) { Plugin.Trace("[gate] Enter: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[gate] Enter: " + e.Message); }
         }
     }
 
@@ -81,7 +81,7 @@ namespace NewAgeQoL
         private static void Postfix(string message, ConfirmMessageBox __result)
         {
             try { if (message == TravelEnter.Question) TravelEnter.Born(__result); }
-            catch (Exception e) { Plugin.Trace("[gate] window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[gate] window: " + e.Message); }
         }
     }
 }

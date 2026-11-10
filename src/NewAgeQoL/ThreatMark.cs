@@ -103,7 +103,7 @@ namespace NewAgeQoL
         private static void Prefix(int userId, int effectMask)
         {
             try { ThreatMark.Hang(userId, effectMask); }
-            catch (Exception e) { Plugin.Trace("[threat] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[threat] " + e.Message); }
         }
     }
 
@@ -113,7 +113,7 @@ namespace NewAgeQoL
         private static void Prefix()
         {
             try { ThreatMark.Reset(); }
-            catch (Exception e) { Plugin.Trace("[threat] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[threat] " + e.Message); }
         }
     }
 
@@ -123,7 +123,7 @@ namespace NewAgeQoL
         private static void Prefix(short responseId, object message)
         {
             try { ThreatMark.Wire(responseId, message); }
-            catch (Exception e) { Plugin.Trace("[threat] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[threat] " + e.Message); }
         }
     }
 }

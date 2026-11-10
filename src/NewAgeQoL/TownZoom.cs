@@ -20,7 +20,7 @@ namespace NewAgeQoL
                     if (i != null && i.ObjectType == EObjectType.LeaveTown) { town = true; break; }
                 if (town && Plugin.Instance != null) Plugin.Instance.StartCoroutine(Later());
             }
-            catch (Exception e) { Plugin.Trace("[zoom] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[zoom] " + e.Message); }
         }
 
         private static IEnumerator Later()
@@ -57,7 +57,7 @@ namespace NewAgeQoL
                 }
                 Plugin.Trace("[zoom] town camera zoomed out: " + t.position);
             }
-            catch (Exception e) { Plugin.Trace("[zoom] out: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[zoom] out: " + e.Message); }
         }
     }
 }

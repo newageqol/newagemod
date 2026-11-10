@@ -99,7 +99,7 @@ namespace NewAgeQoL
                         if (_refilterAt < 0f) _refilterAt = Time.unscaledTime + 0.3f;
                     });
                 }
-                catch (Exception e) { Plugin.Trace("[tabsearch] name " + id + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[tabsearch] name " + id + ": " + e.Message); }
             }
         }
 

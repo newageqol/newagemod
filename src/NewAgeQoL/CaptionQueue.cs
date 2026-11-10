@@ -56,7 +56,7 @@ namespace NewAgeQoL
             }
             catch (System.Exception e)
             {
-                Plugin.Trace("[labels] " + e.Message);
+                Plugin.Caught("[labels] " + e.Message);
                 return true;
             }
         }

@@ -104,7 +104,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatContent __instance, ChatResponseMessage resp)
         {
             try { ChatLinks.Mark(__instance, resp); }
-            catch (Exception e) { Plugin.Trace("[chat] links in line: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] links in line: " + e.Message); }
         }
     }
 

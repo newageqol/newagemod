@@ -813,7 +813,7 @@ namespace NewAgeQoL
                 EnsureListeners();
                 Send(new InventoryWearRequest());
             }
-            catch (System.Exception e) { Plugin.Trace("[art] worn items request: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[art] worn items request: " + e.Message); }
         }
 
         internal static bool NearStorage()
@@ -933,16 +933,28 @@ namespace NewAgeQoL
             }
         }
 
+        internal static IEnumerator Move(int id, bool toBox, int tab, int qty)
+        {
+            EnsureListeners();
+            return Act(id, toBox ? BtnPutToBox : BtnGetFromBox, toBox ? WinBox : WinByLocation, tab, qty);
+        }
+
+        internal static bool Moved => _lastOk;
+
+        internal static string MoveError => _lastErr;
+
+        internal static void Reload(int tab, bool toBox) => Send(new GetTabContentRequest(tab, toBox ? WinBox : WinByLocation));
+
         private static void EnsureListeners()
         {
             if (_listeners) return;
             var nc = NetworkConnection.Instance;
             if (nc == null) return;
-            nc.AddMessageListener(359, OnTabs);
-            nc.AddMessageListener(380, OnBagTab);
-            nc.AddMessageListener(381, OnShopTab);
-            nc.AddMessageListener(412, OnWear);
-            nc.AddMessageListener(416, OnAction);
+            nc.AddMessageListener(ResponseConsts.THING_TYPE_TABS_RESPONSE, OnTabs);
+            nc.AddMessageListener(ResponseConsts.THING_TAB_INVENTORY_RESPONSE, OnBagTab);
+            nc.AddMessageListener(ResponseConsts.BOX_TAB_RESPONSE, OnShopTab);
+            nc.AddMessageListener(ResponseConsts.INVENTORY_WEAR_RESPONSE, OnWear);
+            nc.AddMessageListener(ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, OnAction);
             _listeners = true;
         }
 

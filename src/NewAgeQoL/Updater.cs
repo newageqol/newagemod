@@ -100,7 +100,7 @@ namespace NewAgeQoL
 
             Release release = null;
             try { release = JsonUtility.FromJson<Release>(json); }
-            catch (Exception e) { Plugin.Trace("[update] parsing response: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[update] parsing response: " + e.Message); }
 
             string tag = release != null ? release.tag_name : null;
             _dllUrl = "";
@@ -319,7 +319,7 @@ namespace NewAgeQoL
                         break;
                     }
                 }
-                catch (Exception e) { Plugin.Trace("[update] file lookup: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[update] file lookup: " + e.Message); }
             }
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new Exception(Lang.T("не нашёл файл мода на диске"));
             if (data.Length < 20000) throw new Exception(Lang.T("файл подозрительно маленький"));
@@ -369,7 +369,7 @@ namespace NewAgeQoL
                 File.Replace(fresh, path, old);
                 return;
             }
-            catch (Exception e) { Plugin.Trace("[update] atomic replace failed: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[update] atomic replace failed: " + e.Message); }
 
             File.Move(path, old);
             try { File.Move(fresh, path); }

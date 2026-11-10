@@ -103,7 +103,7 @@ namespace NewAgeQoL
                 try { Button(fight && volume > 0.001f && (_playing || _muted) && !_ending); }
                 catch (Exception e)
                 {
-                    Plugin.Trace("[music] button: " + e.Message);
+                    Plugin.Caught("[music] button: " + e.Message);
                     if (_buttonCanvas != null) UnityEngine.Object.Destroy(_buttonCanvas);
                     _buttonCanvas = null;
                     _note = null;
@@ -143,7 +143,7 @@ namespace NewAgeQoL
                 if (left <= Fade + 0.3f && _next != null) Swap();
                 Apply(Audible);
             }
-            catch (Exception e) { Plugin.Trace("[music] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[music] " + e.Message); }
         }
 
         internal static void Over(bool win)
@@ -154,7 +154,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[music] fight over: " + (win ? "win" : "loss"));
                 End(win ? WinFade : LossFade, true);
             }
-            catch (Exception e) { Plugin.Trace("[music] over: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[music] over: " + e.Message); }
         }
 
         private static PlayerCharacter Me(ICombatData cd)
@@ -416,7 +416,7 @@ namespace NewAgeQoL
                 string old = Path.Combine(Path.Combine(Paths.CachePath, "NewAgeQoL"), "music");
                 if (Directory.Exists(old)) Directory.Delete(old, true);
             }
-            catch (Exception e) { Plugin.Trace("[music] old cache: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[music] old cache: " + e.Message); }
             try
             {
                 string shelf = Path.Combine(AssetSync.Root, AssetSync.MusicDir);
@@ -460,7 +460,7 @@ namespace NewAgeQoL
             if (clip != null) UnityEngine.Object.Destroy(clip);
             if (handler == null) return;
             try { handler.Dispose(); }
-            catch (Exception e) { Plugin.Trace("[music] stream release: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[music] stream release: " + e.Message); }
         }
 
         private static IEnumerator Fetch(int song, int generation)
@@ -594,7 +594,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[music] game music block hidden: " + box.name + ", caption row " + (row != null ? row.name : "-") + "; panel " + (box.parent != null ? box.parent.name : "-") + ": " + string.Join(", ", parts.ToArray()));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[music] game music slider: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[music] game music slider: " + e.Message); }
         }
 
         private static Transform Climb(Transform from, Transform top, Func<Transform, bool> fits)

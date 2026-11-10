@@ -291,7 +291,7 @@ namespace NewAgeQoL
                         foreach (var pair in known)
                             if (pair.Value != null) Icons[(int)pair.Key] = pair.Value;
                 }
-                catch (Exception e) { Plugin.Trace("[kit] game slot layout: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[kit] game slot layout: " + e.Message); }
 
             if (Icons.Count == 0) ByShape();
 
@@ -465,7 +465,7 @@ namespace NewAgeQoL
                     if (icon != null) list.Add(icon);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[kit] group " + field + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[kit] group " + field + ": " + e.Message); }
             return list;
         }
 

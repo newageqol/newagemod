@@ -141,7 +141,9 @@ namespace NewAgeQoL
         {
             public void LogEvent(object sender, LogEventArgs e)
             {
-                if (e.Source?.SourceName == TwoD) OnLog(sender, e);
+                if (e.Source?.SourceName != TwoD) return;
+                if ((e.Level & LogLevel.Error) != 0) Health.Heard("NewAge2D", e.Data as string);
+                OnLog(sender, e);
             }
 
             public void Dispose() { }

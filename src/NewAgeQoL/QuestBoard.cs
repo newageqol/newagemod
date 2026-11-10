@@ -119,7 +119,7 @@ namespace NewAgeQoL
                 }
                 Ask();
             }
-            catch (Exception e) { Plugin.Trace("[quests] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] " + e.Message); }
         }
 
         internal static void Reask()
@@ -197,7 +197,7 @@ namespace NewAgeQoL
                 nc.AddAfterMessageListener(431, Talked);
                 Plugin.Trace("[quests] listening for quest responses");
             }
-            catch (Exception e) { Plugin.Trace("[quests] subscription: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] subscription: " + e.Message); }
         }
 
         private static void OnDetail(object msg)
@@ -211,7 +211,7 @@ namespace NewAgeQoL
                 _asked = 0;
                 if (!Hooked()) Own(msg);
             }
-            catch (Exception e) { Plugin.Trace("[quests] response: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] response: " + e.Message); }
         }
 
         private static bool Hooked()
@@ -281,7 +281,7 @@ namespace NewAgeQoL
                 if (isNew) _newMark = got; else _goMark = got;
                 return got;
             }
-            catch (Exception e) { Plugin.Trace("[quests] status icon: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[quests] status icon: " + e.Message); return null; }
         }
 
         internal static void Talk(int questId)
@@ -446,7 +446,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 Waiting.Remove(questId);
-                Plugin.Trace("[quests] request " + questId + ": " + e.Message);
+                Plugin.Caught("[quests] request " + questId + ": " + e.Message);
             }
             return true;
         }
@@ -499,7 +499,7 @@ namespace NewAgeQoL
                 _pollAt = 0f;
                 Plugin.Trace("[quests] " + msg.QuestId + " '" + detail.Name + "'");
             }
-            catch (Exception e) { Plugin.Trace("[quests] response parse: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] response parse: " + e.Message); }
         }
 
         private static void Strip()
@@ -527,7 +527,7 @@ namespace NewAgeQoL
                 _told = true;
                 Plugin.Trace("[quests] faces on the right removed");
             }
-            catch (Exception e) { Plugin.Trace("[quests] faces column: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] faces column: " + e.Message); }
         }
     }
 
@@ -545,7 +545,7 @@ namespace NewAgeQoL
                 if (!ours) Plugin.Trace("[quests] details of quest " + detail.QuestId + " came unasked, quest window not opened");
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[quests] response intercept: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[quests] response intercept: " + e.Message); return true; }
         }
     }
 
@@ -558,7 +558,7 @@ namespace NewAgeQoL
             {
                 if (face != null && face.FaceMessage != null) QuestBoard.Opening(face.FaceMessage.QuestId);
             }
-            catch (Exception e) { Plugin.Trace("[quests] face click: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] face click: " + e.Message); }
         }
     }
 }

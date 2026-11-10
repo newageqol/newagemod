@@ -49,7 +49,7 @@ namespace NewAgeQoL
                     }
                 if (sprite == null) Plugin.Trace("[icons] image \"" + name + "\" not found");
             }
-            catch (Exception e) { Plugin.Trace("[icons] " + name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[icons] " + name + ": " + e.Message); }
             Drawn[name] = sprite;
             return sprite;
         }
@@ -299,7 +299,7 @@ namespace NewAgeQoL
                 tex.wrapMode = TextureWrapMode.Clamp;
                 return Sprite.Create(tex, new Rect(0f, 0f, Wide, Wide), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[icons] colored: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[icons] colored: " + e.Message); return null; }
         }
 
         internal static Sprite Scroll()
@@ -390,7 +390,7 @@ namespace NewAgeQoL
                 tex.wrapMode = TextureWrapMode.Clamp;
                 return Sprite.Create(tex, new Rect(0f, 0f, Side, Side), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[icons] " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[icons] " + e.Message); return null; }
         }
     }
 }

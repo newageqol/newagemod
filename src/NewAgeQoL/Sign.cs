@@ -28,7 +28,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[sign] " + e.Message);
+                Plugin.Caught("[sign] " + e.Message);
                 return false;
             }
         }

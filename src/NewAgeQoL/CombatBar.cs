@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 Place();
                 Shade();
             }
-            catch (Exception e) { Plugin.Trace("[bar] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Caught("[bar] " + e.Message); Drop(); }
         }
 
         private static void Build()
@@ -255,7 +255,7 @@ namespace NewAgeQoL
                 beast.ShowMonsterInfoDialog(who.Race);
                 Plugin.Trace("[bar] info on mob, race " + who.Race);
             }
-            catch (Exception e) { Plugin.Trace("[bar] info: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] info: " + e.Message); }
         }
 
         private static bool Stale()
@@ -279,11 +279,11 @@ namespace NewAgeQoL
             for (int i = 0; i < Pieces.Length; i++)
             {
                 try { found[i] = AccessTools.Field(typeof(PhaseTimerScript), Pieces[i]); }
-                catch (Exception e) { Plugin.Trace("[bar] clock " + Pieces[i] + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[bar] clock " + Pieces[i] + ": " + e.Message); }
             }
             _clockFields = found;
             try { _phaseField = AccessTools.Field(typeof(PhaseTimerScript), "_endPhaseButton"); }
-            catch (Exception e) { Plugin.Trace("[bar] phase button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] phase button: " + e.Message); }
         }
 
         private static PhaseTimerScript Script()
@@ -309,7 +309,7 @@ namespace NewAgeQoL
                 if (_clockFields[i] == null) continue;
                 Component part = null;
                 try { part = _clockFields[i].GetValue(script) as Component; }
-                catch (Exception e) { Plugin.Trace("[bar] clock " + Pieces[i] + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[bar] clock " + Pieces[i] + ": " + e.Message); }
                 var rt = part != null ? part.transform as RectTransform : null;
                 if (rt != null) parts.Add(rt);
             }
@@ -354,14 +354,14 @@ namespace NewAgeQoL
             if (script == null) return null;
             WireClock();
             try { return _phaseField?.GetValue(script) as Component; }
-            catch (Exception e) { Plugin.Trace("[bar] phase button: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[bar] phase button: " + e.Message); return null; }
         }
 
         private static Component Part(CombatButtonsController ctrl, string name)
         {
             if (ctrl == null) return null;
             try { return AccessTools.Property(typeof(CombatButtonsController), name)?.GetValue(ctrl) as Component; }
-            catch (Exception e) { Plugin.Trace("[bar] " + name + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[bar] " + name + ": " + e.Message); return null; }
         }
 
         private static bool Ours(RectTransform rt)
@@ -504,7 +504,7 @@ namespace NewAgeQoL
                 var state = rt.GetComponent<BaseStateButton>();
                 if (state != null && state.NormalSprite != null) return state.NormalSprite;
             }
-            catch (Exception e) { Plugin.Trace("[bar] own image: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] own image: " + e.Message); }
             return null;
         }
 
@@ -523,7 +523,7 @@ namespace NewAgeQoL
                 var sector = rt.GetComponent<SimpleSectorButtonSelector>();
                 if (sector != null) badge = AccessTools.Field(typeof(SimpleSectorButtonSelector), "RechargeImage")?.GetValue(sector) as Component;
             }
-            catch (Exception e) { Plugin.Trace("[bar] button parts: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] button parts: " + e.Message); }
 
             Image best = null, clean = null, top = null;
             var told = new StringBuilder();
@@ -720,7 +720,7 @@ namespace NewAgeQoL
                 var state = source.GetComponent<BaseStateButton>();
                 if (button == null && state != null) button = _stateField?.GetValue(state) as Button;
             }
-            catch (Exception e) { Plugin.Trace("[bar] game button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] game button: " + e.Message); }
             if (button == null) button = source.GetComponent<Button>();
             if (button == null) button = source.GetComponentInChildren<Button>(true);
             return button;
@@ -773,7 +773,7 @@ namespace NewAgeQoL
                 ExecuteEvents.Execute(source, pointer, ExecuteEvents.pointerClickHandler);
                 Plugin.Trace("[bar] pressed " + source.name);
             }
-            catch (Exception e) { Plugin.Trace("[bar] press " + source.name + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] press " + source.name + ": " + e.Message); }
         }
 
         private static void Shade()
@@ -847,7 +847,7 @@ namespace NewAgeQoL
                 Strip(Face(ctrl, "MyCharacterPanel"));
                 Cover(Face(ctrl, "SelectedCharacterPanel"));
             }
-            catch (Exception e) { Plugin.Trace("[bar] fighter panels: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] fighter panels: " + e.Message); }
         }
 
         private static void Strip(GameObject go)
@@ -997,7 +997,7 @@ namespace NewAgeQoL
                 _muted = true;
                 Plugin.Trace("[bar] no longer listening to dodge and item keys");
             }
-            catch (Exception e) { Plugin.Trace("[bar] dodge key: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] dodge key: " + e.Message); }
         }
 
         private static void Unmute()
@@ -1017,7 +1017,7 @@ namespace NewAgeQoL
                 Kept.Clear();
                 Plugin.Trace("[bar] dodge and item keys returned to the game");
             }
-            catch (Exception e) { Plugin.Trace("[bar] key return: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bar] key return: " + e.Message); }
         }
 
         private static HotkeyHandler Handler(EHotkeyActions action)
@@ -1050,7 +1050,7 @@ namespace NewAgeQoL
                     rt.anchoredPosition = was.Pos;
                     rt.sizeDelta = was.Size;
                 }
-                catch (Exception e) { Plugin.Trace("[bar] button return: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[bar] button return: " + e.Message); }
             }
             Held.Clear();
             Top.Clear();

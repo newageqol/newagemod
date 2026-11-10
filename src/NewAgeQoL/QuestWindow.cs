@@ -88,7 +88,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[quests] closing: " + e.Message);
+                Plugin.Caught("[quests] closing: " + e.Message);
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
             _canvasGo = null;
@@ -129,7 +129,7 @@ namespace NewAgeQoL
                 _filledAt = Time.unscaledTime;
                 Fill();
             }
-            catch (Exception e) { Plugin.Trace("[quests] window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] window: " + e.Message); }
         }
 
         private static void Reopen()
@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 QuestBoard.ReaskIfStale();
                 Fill();
             }
-            catch (Exception e) { Plugin.Trace("[quests] rebuild: " + e.Message); Teardown(); }
+            catch (Exception e) { Plugin.Caught("[quests] rebuild: " + e.Message); Teardown(); }
         }
 
         private static void Build()

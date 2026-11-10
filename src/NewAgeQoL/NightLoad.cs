@@ -72,7 +72,7 @@ namespace NewAgeQoL
             Plugin.Trace("[night] loading screen released" + (ok ? "" : " without the night town") + ": game " + _gameMs + " ms, night town " + _nightMs + " ms, whole " + Clock.ElapsedMilliseconds + " ms");
             _releasing = true;
             try { Preloader.Close(); }
-            catch (Exception e) { Plugin.Trace("[night] loading screen close: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] loading screen close: " + e.Message); }
             finally { _releasing = false; }
         }
 
@@ -82,7 +82,7 @@ namespace NewAgeQoL
         {
             _driving = true;
             try { Preloader.UpdateMainIndicator(Mixed()); }
-            catch (Exception e) { Plugin.Trace("[night] loading bar: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] loading bar: " + e.Message); }
             finally { _driving = false; }
         }
 
@@ -111,7 +111,7 @@ namespace NewAgeQoL
                 }
                 else NightLoad.Forget();
             }
-            catch (Exception e) { Plugin.Trace("[night] loading start: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] loading start: " + e.Message); }
         }
     }
 

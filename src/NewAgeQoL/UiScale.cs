@@ -29,7 +29,7 @@ namespace NewAgeQoL
                 if (!Owned.Contains(scaler)) Owned.Add(scaler);
                 Fit(scaler);
             }
-            catch (Exception e) { Plugin.Trace("[scale] canvas: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[scale] canvas: " + e.Message); }
         }
 
         internal static void Tick()
@@ -54,7 +54,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[scale] screen " + _w + "×" + _h + ": mod UI " + Mathf.RoundToInt(target / natural * 100f) + "% of the game's");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[scale] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[scale] " + e.Message); }
         }
 
         private static void Fit(CanvasScaler scaler)

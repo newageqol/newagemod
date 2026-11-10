@@ -140,7 +140,7 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) return false;
                 if (_listener) return true;
-                nc.AddMessageListener(388, OnRecipeInfo);
+                nc.AddMessageListener(ResponseConsts.GENERAL_RECIPE_HINT_RESPONSE, OnRecipeInfo);
                 _listener = true;
                 return true;
             }
@@ -366,7 +366,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[contracts] tab image arrived, icon updated in place");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[contracts] update tab icon: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[contracts] update tab icon: " + e.Message); }
         }
 
         internal static void Wake()

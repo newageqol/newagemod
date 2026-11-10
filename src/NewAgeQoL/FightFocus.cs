@@ -22,7 +22,7 @@ namespace NewAgeQoL
                 system.SetSelectedGameObject(null);
                 Plugin.Trace("[combat] fight start: chat input released, keys work right away");
             }
-            catch (Exception e) { Plugin.Trace("[combat] chat input: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[combat] chat input: " + e.Message); }
         }
     }
 

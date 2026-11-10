@@ -76,7 +76,7 @@ namespace NewAgeQoL
                 _why = "";
                 Draw(grid, hex, keyed);
             }
-            catch (Exception e) { Plugin.Trace("[walk] hex under mouse: " + e.Message); Hide(); }
+            catch (Exception e) { Plugin.Caught("[walk] hex under mouse: " + e.Message); Hide(); }
         }
 
         internal static bool Walkable(ICombatData cd, OffsetCoord hex)
@@ -84,7 +84,7 @@ namespace NewAgeQoL
             try { return cd.IsCellInActionSelection(hex); }
             catch (IndexOutOfRangeException) { return false; }
             catch (ArgumentOutOfRangeException) { return false; }
-            catch (Exception e) { Plugin.Trace("[walk] hex check: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[walk] hex check: " + e.Message); return false; }
         }
 
         private static Transform Grid()
@@ -94,7 +94,7 @@ namespace NewAgeQoL
             {
                 _padAt = Time.unscaledTime + 0.25f;
                 try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-                catch (Exception e) { Plugin.Trace("[walk] battlefield: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[walk] battlefield: " + e.Message); }
                 if (_pad != null) return _pad.transform;
             }
             if (_grid != null && _grid.gameObject.activeInHierarchy) return _grid;
@@ -103,7 +103,7 @@ namespace NewAgeQoL
                 if (_rig == null || !_rig.isActiveAndEnabled) _rig = UnityEngine.Object.FindObjectOfType<CameraControl>();
                 _grid = _rig != null ? AccessTools.Property(typeof(BaseUserInput), "gridTransform")?.GetValue(_rig) as Transform : null;
             }
-            catch (Exception e) { Plugin.Trace("[walk] combat grid: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] combat grid: " + e.Message); }
             return _grid;
         }
 
@@ -204,7 +204,7 @@ namespace NewAgeQoL
                 _eyeAt = at;
                 return _thick;
             }
-            catch (Exception e) { Plugin.Trace("[walk] outline width: " + e.Message); _thickKnown = false; return want; }
+            catch (Exception e) { Plugin.Caught("[walk] outline width: " + e.Message); _thickKnown = false; return want; }
         }
 
         private static void Build(Transform grid)

@@ -27,7 +27,7 @@ namespace NewAgeQoL
                 }
                 if (removed > 0) Plugin.Trace("[location] removed duplicate player " + id + " ×" + removed);
             }
-            catch (Exception e) { Plugin.Trace("[location] duplicates: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[location] duplicates: " + e.Message); }
         }
     }
 }

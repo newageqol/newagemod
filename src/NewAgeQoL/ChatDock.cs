@@ -175,6 +175,7 @@ namespace NewAgeQoL
         internal static void Wake()
         {
             _next = 0f;
+            foreach (var raise in Raises.Values) raise.Look = 0f;
         }
 
         internal static void Tick()
@@ -270,7 +271,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[dock] recipient not visible - drawing empty brackets");
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[dock] recipient: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] recipient: " + e.Message); }
             return false;
         }
 
@@ -328,7 +329,7 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] message: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] message: " + e.Message); }
         }
 
         internal static ChatContentHolder Board()
@@ -385,7 +386,7 @@ namespace NewAgeQoL
                 _seek = clean;
                 Sift();
             }
-            catch (Exception e) { Plugin.Trace("[dock] search: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] search: " + e.Message); }
         }
 
         private static void SeekOpen()
@@ -579,7 +580,7 @@ namespace NewAgeQoL
                     if (!ChatStay.Held) _bottomAt = Time.unscaledTime + 0.4f;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] append to feed: " + e.Message); Fresh.Clear(); _redo = true; }
+            catch (Exception e) { Plugin.Caught("[dock] append to feed: " + e.Message); Fresh.Clear(); _redo = true; }
         }
 
         private static void Rebuild()
@@ -617,7 +618,7 @@ namespace NewAgeQoL
                         + ", pour " + pourMs + " ms" + (drawMs >= 0 ? ", text " + (drawMs - pourMs) + " ms" : "")
                         + (fitMs >= 0 ? ", layout " + (fitMs - drawMs) + " ms" : ""));
             }
-            catch (Exception e) { Plugin.Trace("[dock] feed rebuild: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] feed rebuild: " + e.Message); }
         }
 
         private static void Pour(List<ChatResponseMessage> batch)
@@ -758,7 +759,7 @@ namespace NewAgeQoL
         {
             if (_view == null) return;
             try { ChatStay.Redraw(() => AccessTools.Method(typeof(ChatPanelContent), "OnChatChanged")?.Invoke(_view, null)); }
-            catch (Exception e) { Plugin.Trace("[dock] feed redraw: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] feed redraw: " + e.Message); }
         }
 
         private static void Quiet(ChatContentHolder holder, Action fill)
@@ -805,7 +806,7 @@ namespace NewAgeQoL
                 if (tint != null) line = "<color=" + tint + ">" + line + "</color>";
                 field.SetValue(item, line);
             }
-            catch (Exception e) { Plugin.Trace("[dock] line color: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] line color: " + e.Message); }
         }
 
         private static void Bottom()
@@ -822,7 +823,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[dock] private or team message - scrolled chat to it");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] scroll: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] scroll: " + e.Message); }
         }
 
         internal static void Wipe()
@@ -833,7 +834,7 @@ namespace NewAgeQoL
                 WipeBoard();
                 if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
             }
-            catch (Exception e) { Plugin.Trace("[dock] clear: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] clear: " + e.Message); }
         }
 
         private static void WipeOpen()
@@ -845,7 +846,7 @@ namespace NewAgeQoL
                 if (_view != null) _view.SetChatContent(_tab == 1 ? Board() : Talk);
                 Plugin.Trace("[dock] cleared tab " + (_tab == 1 ? "'System'" : "'Chat'") + ", the other one untouched");
             }
-            catch (Exception e) { Plugin.Trace("[dock] tab clear: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] tab clear: " + e.Message); }
         }
 
         private static void WipeTalk()
@@ -887,7 +888,7 @@ namespace NewAgeQoL
                 if (cw == null) return;
                 if (!cw.IsWindowOpened) cw.Open(null);
                 try { cw.ActiveTab = EChatTab.PRIVATE; }
-                catch (Exception e) { Plugin.Trace("[dock] private tab: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[dock] private tab: " + e.Message); }
                 cw.SetMessageRecipient(new UserContextMenuData(userId, login));
             }
             catch (Exception e) { Plugin.Warn("[dock] write to player: " + e.Message); }
@@ -1014,7 +1015,7 @@ namespace NewAgeQoL
                 var slot = AccessTools.Field(typeof(ContextMenu), "_currentInstance");
                 if (slot != null) slot.SetValue(null, null);
             }
-            catch (Exception e) { Plugin.Trace("[dock] close menu: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] close menu: " + e.Message); }
         }
 
         private static void Probe()
@@ -1223,7 +1224,7 @@ namespace NewAgeQoL
                 if (time.GetDifference() == 0L) { Once("server offset not received yet"); return null; }
                 return time.CurrentServerUTCTime;
             }
-            catch (Exception e) { Plugin.Trace("[dock] server time: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[dock] server time: " + e.Message); return null; }
         }
 
         internal static float CoverPixels
@@ -1264,7 +1265,7 @@ namespace NewAgeQoL
                 Value(3, expower, Mathf.Max(top, expower));
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[dock] combat indicators: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[dock] combat indicators: " + e.Message); return false; }
         }
 
         private const int ShroomFace = 16852;
@@ -1391,15 +1392,15 @@ namespace NewAgeQoL
                 if (!Raises.TryGetValue(path, out raise)) { raise = new Raise(); Raises[path] = raise; }
 
                 RectTransform rt = raise.Rt;
-                if (rt == null || Time.unscaledTime >= raise.Look)
+                if (Time.unscaledTime >= raise.Look)
                 {
-                    raise.Look = Time.unscaledTime + 0.5f;
                     try
                     {
                         var go = GameObject.Find(path);
                         if (go != null) rt = go.transform as RectTransform;
                     }
                     catch { }
+                    raise.Look = Time.unscaledTime + (rt != null ? 0.5f : 0.1f);
                 }
                 if (rt == null) rt = raise.Rt;
                 if (rt == null) continue;
@@ -1449,7 +1450,7 @@ namespace NewAgeQoL
                 _back = go != null ? go.transform as RectTransform : null;
                 if (_back != null) Plugin.Trace("[dock] return button panel: " + _back.name);
             }
-            catch (Exception e) { Plugin.Trace("[dock] return panel: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] return panel: " + e.Message); }
             return _back;
         }
 
@@ -1512,7 +1513,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[dock] location buttons panel: " + _row.name);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] buttons panel: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] buttons panel: " + e.Message); }
             return _row;
         }
 
@@ -1567,7 +1568,7 @@ namespace NewAgeQoL
                 if (group.childAlignment != middle) { group.childAlignment = middle; changed = true; }
                 return changed;
             }
-            catch (Exception e) { Plugin.Trace("[dock] location buttons: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[dock] location buttons: " + e.Message); return false; }
         }
 
         private static void Pack(RectTransform row)
@@ -1646,7 +1647,7 @@ namespace NewAgeQoL
                 KeepRow(row);
                 Recenter(row, _centerScale);
             }
-            catch (Exception e) { Plugin.Trace("[dock] location button added: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] location button added: " + e.Message); }
         }
 
         internal sealed class RowKeeper : MonoBehaviour
@@ -1655,7 +1656,7 @@ namespace NewAgeQoL
             {
                 if (!_centerOn || _row != transform) return;
                 try { Recenter(_row, _centerScale); }
-                catch (Exception e) { Plugin.Trace("[dock] location buttons each frame: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[dock] location buttons each frame: " + e.Message); }
             }
         }
 
@@ -1782,7 +1783,7 @@ namespace NewAgeQoL
                 Unbind();
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
-            catch (Exception e) { Plugin.Trace("[dock] teardown: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] teardown: " + e.Message); }
             _canvasGo = null;
             _canvas = null;
             _root = null;
@@ -2276,7 +2277,7 @@ namespace NewAgeQoL
         {
             ListWrapper<UserRowInfoMessage> now = null;
             try { now = Fetch(kind); }
-            catch (Exception e) { Plugin.Trace("[dock] list " + kind + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] list " + kind + ": " + e.Message); }
             var was = Lists[kind];
             if (was == now) return;
             if (was != null) was.OnChange -= ListHooks[kind];
@@ -2303,8 +2304,8 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _listHeard = null; return; }
             if (ReferenceEquals(_listHeard, nc)) return;
-            nc.RemoveMessageListener(460, OnPlayerList);
-            nc.AddMessageListener(460, OnPlayerList);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_PLAYER_LIST_RESPONSE, OnPlayerList);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_PLAYER_LIST_RESPONSE, OnPlayerList);
             _listHeard = nc;
         }
 
@@ -2317,7 +2318,7 @@ namespace NewAgeQoL
                 int want = _list == 1 ? (int)EUserListType.PLAYER_LIST_CLAN : (int)EUserListType.PLAYER_LIST_ALIANCE;
                 if (m.Type == want) _listDue = Time.frameCount;
             }
-            catch (Exception e) { Plugin.Trace("[dock] response 460: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] response 460: " + e.Message); }
         }
 
         private static void Freshen()
@@ -2340,7 +2341,7 @@ namespace NewAgeQoL
                 Refill();
                 Show(_tab);
             }
-            catch (Exception e) { Plugin.Trace("[dock] list rebuild: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] list rebuild: " + e.Message); }
         }
 
         private const float RowScale = 0.72f;
@@ -2359,7 +2360,7 @@ namespace NewAgeQoL
                 at.x += 8f;
                 Soon(at);
             }
-            catch (Exception e) { Plugin.Trace("[dock] nick menu: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] nick menu: " + e.Message); }
         }
 
         private static void Nudge(GameObject row)
@@ -2452,7 +2453,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[dock] menu parts: " + told);
                 Plugin.Trace("[dock] player menu: canvas " + (canvas != null ? canvas.name + " order " + canvas.sortingOrder : "none"));
             }
-            catch (Exception e) { Plugin.Trace("[dock] menu shift: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] menu shift: " + e.Message); }
         }
 
         private const float RowHigh = 22f;
@@ -2534,7 +2535,7 @@ namespace NewAgeQoL
                 Watched.Sort((a, b) => string.Compare(a.Login, b.Login, StringComparison.CurrentCultureIgnoreCase));
                 if (fallen) Recheck();
             }
-            catch (Exception e) { Plugin.Trace("[dock] fight roster: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] fight roster: " + e.Message); }
             return Watched;
         }
 
@@ -2584,7 +2585,7 @@ namespace NewAgeQoL
         private static void Watch()
         {
             try { Remember(); }
-            catch (Exception e) { Plugin.Trace("[dock] fight roster: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] fight roster: " + e.Message); }
             if (!Peek || _list != 0) { if (_castMark != 0) { _castMark = 0; Refill(); } return; }
             int mark = 0;
             try
@@ -2647,11 +2648,11 @@ namespace NewAgeQoL
                             ContextMenu.ShowContextMenu(stage != null ? stage.gameObject : go, _resolver, item.Data, EContextMenuSide.Left);
                             Nudge(go);
                         }
-                        catch (Exception e) { Plugin.Trace("[dock] player menu: " + e.Message); }
+                        catch (Exception e) { Plugin.Caught("[dock] player menu: " + e.Message); }
                     };
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] list rows: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] list rows: " + e.Message); }
         }
 
         private static int _rowLastId;
@@ -2675,7 +2676,7 @@ namespace NewAgeQoL
                 info.ShowUserInfoDialog(id, login);
                 Plugin.Trace("[dock] double click on player " + login + " - info opened");
             }
-            catch (Exception e) { Plugin.Trace("[dock] player info: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] player info: " + e.Message); }
         }
 
         private static readonly Color Clear = new Color(0f, 0f, 0f, 0f);
@@ -2694,7 +2695,7 @@ namespace NewAgeQoL
                 var level = AccessTools.Field(typeof(UserRowWidget), "LevelText")?.GetValue(widget) as Text;
                 if (level != null) level.color = WardrobeLook.Faint;
             }
-            catch (Exception e) { Plugin.Trace("[dock] player row styling: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] player row styling: " + e.Message); }
         }
 
         private static void Draggable(ChatPanelContent view)
@@ -2734,7 +2735,7 @@ namespace NewAgeQoL
                 bar.colors = tints;
                 Plugin.Trace("[dock] chat scrollbar: " + bar.name + ", handle " + (bar.handleRect != null ? bar.handleRect.name : "none"));
             }
-            catch (Exception e) { Plugin.Trace("[dock] chat scrollbar: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] chat scrollbar: " + e.Message); }
         }
 
         private static void Smaller(ChatPanelContent view)
@@ -2748,7 +2749,7 @@ namespace NewAgeQoL
                 float now = (float)size.GetValue(body, null);
                 if (now > 1f) size.SetValue(body, Mathf.Max(9f, now * 0.6f), null);
             }
-            catch (Exception e) { Plugin.Trace("[dock] chat font: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] chat font: " + e.Message); }
         }
 
         private static void Clicked(IChatLinkData data)
@@ -2766,7 +2767,7 @@ namespace NewAgeQoL
                 }
                 if (data != null) data.Execute();
             }
-            catch (Exception e) { Plugin.Trace("[dock] chat link: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] chat link: " + e.Message); }
         }
 
         private static bool _asMenu;
@@ -2788,7 +2789,7 @@ namespace NewAgeQoL
                 finally { _asMenu = false; }
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[dock] line menu: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[dock] line menu: " + e.Message); return false; }
         }
 
         private static Sprite _capUp;
@@ -2916,7 +2917,7 @@ namespace NewAgeQoL
                 _tipGo.SetActive(true);
                 _tipGo.transform.SetAsLastSibling();
             }
-            catch (Exception e) { Plugin.Trace("[dock] button hint: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] button hint: " + e.Message); }
         }
 
         private static void HideTip()
@@ -3114,7 +3115,7 @@ namespace NewAgeQoL
                 if (text == null || text.Trim().Length == 0) return;
                 _all = true;
             }
-            catch (Exception e) { Plugin.Trace("[dock] end of input: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] end of input: " + e.Message); }
         }
 
         private static string Flat(string text)
@@ -3139,7 +3140,7 @@ namespace NewAgeQoL
                     return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[dock] typing: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] typing: " + e.Message); }
         }
 
         private static GameObject Sieve(RectTransform host)
@@ -3237,7 +3238,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatResponseMessage message)
         {
             try { ChatDock.Feed(message); }
-            catch (Exception e) { Plugin.Trace("[dock] receive: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] receive: " + e.Message); }
         }
     }
 
@@ -3247,7 +3248,7 @@ namespace NewAgeQoL
         private static void Postfix()
         {
             try { ChatDock.Wipe(); }
-            catch (Exception e) { Plugin.Trace("[dock] reset: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] reset: " + e.Message); }
         }
     }
 
@@ -3322,7 +3323,7 @@ namespace NewAgeQoL
                 foreach (var menu in UnityEngine.Object.FindObjectsOfType<ContextMenu>())
                     if (menu != null && menu != __instance) { slot.SetValue(null, menu); break; }
             }
-            catch (Exception e) { Plugin.Trace("[dock] menu tracking: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] menu tracking: " + e.Message); }
         }
     }
 
@@ -3339,7 +3340,7 @@ namespace NewAgeQoL
                 ChatDock.NameMenu(__instance);
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[dock] right click in chat: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[dock] right click in chat: " + e.Message); return true; }
         }
     }
 
@@ -3354,7 +3355,7 @@ namespace NewAgeQoL
                 __instance.MoveTextEnd(false);
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[dock] selection on focus: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[dock] selection on focus: " + e.Message); return true; }
         }
     }
 
@@ -3365,7 +3366,7 @@ namespace NewAgeQoL
         {
             string text;
             try { text = ChatDock.Lines(__instance); }
-            catch (Exception e) { Plugin.Trace("[dock] lines on screen: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[dock] lines on screen: " + e.Message); return true; }
             if (text == null) return true;
             __result = text;
             return false;
@@ -3391,7 +3392,7 @@ namespace NewAgeQoL
                 var click = (Action<IChatLinkData>)Delegate.CreateDelegate(typeof(Action<IChatLinkData>), __instance, Fire);
                 made = new ChatContent(resp, click);
             }
-            catch (Exception e) { Plugin.Trace("[dock] long feed: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[dock] long feed: " + e.Message); return true; }
             var lines = Lines(__instance);
             lines.Add(made);
             while (lines.Count > ChatDock.Keep) lines.RemoveAt(0);
@@ -3415,7 +3416,7 @@ namespace NewAgeQoL
                 _said = message.MaxCharges;
                 Plugin.Trace("[dock] charge limit from server: " + message.MaxCharges + ", now " + message.CurrentCharges);
             }
-            catch (Exception e) { Plugin.Trace("[dock] charge limit: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] charge limit: " + e.Message); }
         }
     }
 
@@ -3439,7 +3440,7 @@ namespace NewAgeQoL
                 ChatDock.Moved(Number(head, "id"), Number(head, "mapType"));
                 Dozen.Moved(Number(head, "id"), Number(head, "mapType"));
             }
-            catch (Exception e) { Plugin.Trace("[dock] location change: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dock] location change: " + e.Message); }
         }
 
         private static int Number(string head, string name)

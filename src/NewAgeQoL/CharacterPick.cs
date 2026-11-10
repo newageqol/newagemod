@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 Pick(selector, index);
                 Plugin.Trace("[character] shown on the selection screen: " + message.Items[index].Login);
             }
-            catch (Exception e) { Plugin.Trace("[character] pick: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[character] pick: " + e.Message); }
         }
 
         private static void Learn(AvailableCharactersResponseMessage message)
@@ -139,7 +139,7 @@ namespace NewAgeQoL
                 for (int i = 0; i < stale; i++) connection.DisconnectEvent -= handler;
                 if (stale > 0 && Listeners != null) Plugin.Trace("[character] dropped " + stale + " stale disconnect listener(s) before subscribing again");
             }
-            catch (Exception e) { Plugin.Trace("[character] disconnect listeners: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[character] disconnect listeners: " + e.Message); }
         }
 
         private static int Count(object connection, SessionController session)

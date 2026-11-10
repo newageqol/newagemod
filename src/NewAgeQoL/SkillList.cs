@@ -263,7 +263,7 @@ namespace NewAgeQoL
                 Stop();
                 Place();
             }
-            catch (Exception e) { Plugin.Trace(_tag + " " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " " + e.Message); }
         }
 
         private static int _whoFrame = -1;
@@ -314,7 +314,7 @@ namespace NewAgeQoL
                 Disarm();
                 Fire(skill);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " target: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " target: " + e.Message); }
         }
 
         private static readonly Color Fits = new Color(0.2f, 1.3f, 0.25f, 1f);
@@ -351,7 +351,7 @@ namespace NewAgeQoL
             if (Time.unscaledTime < _padAt) return null;
             _padAt = Time.unscaledTime + 0.25f;
             try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-            catch (Exception e) { Plugin.Trace("[aim] battlefield: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[aim] battlefield: " + e.Message); }
             return _pad;
         }
 
@@ -362,7 +362,7 @@ namespace NewAgeQoL
                 if (Time.unscaledTime < _rigAt) return null;
                 _rigAt = Time.unscaledTime + 0.25f;
                 try { _rig = UnityEngine.Object.FindObjectOfType<CameraControl>(); }
-                catch (Exception e) { Plugin.Trace("[aim] camera: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[aim] camera: " + e.Message); }
                 if (_rig == null) return null;
             }
             if (!_gridAsked)
@@ -373,7 +373,7 @@ namespace NewAgeQoL
             }
             if (_gridProp == null) return null;
             try { return _gridProp.GetValue(_rig) as Transform; }
-            catch (Exception e) { Plugin.Trace("[aim] combat grid: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[aim] combat grid: " + e.Message); return null; }
         }
 
         internal static bool HexUnder(out OffsetCoord hex)
@@ -440,7 +440,7 @@ namespace NewAgeQoL
                 hex = HexUtils.pixelToOffset(grid.InverseTransformPoint(ray.GetPoint(along)));
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[aim] hex under mouse: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[aim] hex under mouse: " + e.Message); return false; }
         }
 
         private void ClearCell()
@@ -448,7 +448,7 @@ namespace NewAgeQoL
             if (_cellPick != 0)
             {
                 try { var cd = FighterHint.Cd(); if (cd != null) cd.ClearSelection(_cellPick); }
-                catch (Exception e) { Plugin.Trace(_tag + " clear hex highlight: " + e.Message); }
+                catch (Exception e) { Plugin.Caught(_tag + " clear hex highlight: " + e.Message); }
                 _cellPick = 0;
             }
             _cellSet = false;
@@ -492,7 +492,7 @@ namespace NewAgeQoL
                 _cellSet = true;
                 var paint = fits ? Fits : Wrong;
                 try { _cellPick = cd.SetSelection(hex, 0, paint, true, true); }
-                catch (Exception e) { Plugin.Trace("[aim] hex highlight: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[aim] hex highlight: " + e.Message); }
             }
             if (!Input.GetMouseButtonDown(0)) return;
             Ate();
@@ -532,7 +532,7 @@ namespace NewAgeQoL
             _hexOk = fits;
             var paint = _hexOk ? Fits : Wrong;
             try { _hexPick = cd.SetSelection(spot, 0, paint, true, true); }
-            catch (Exception e) { Plugin.Trace(_tag + " target hex: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " target hex: " + e.Message); }
             Glow(target);
         }
 
@@ -576,7 +576,7 @@ namespace NewAgeQoL
                 float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
                 Tint(wave);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " model highlight: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " model highlight: " + e.Message); }
         }
 
         private void Tint(float wave)
@@ -598,7 +598,7 @@ namespace NewAgeQoL
                 skin.SetPropertyBlock(_paint);
                 _painted = skin;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " model tint: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " model tint: " + e.Message); }
         }
 
         private void Unglow()
@@ -606,7 +606,7 @@ namespace NewAgeQoL
             if (_painted != null)
             {
                 try { _painted.SetPropertyBlock(null); }
-                catch (Exception e) { Plugin.Trace(_tag + " restore fighter material: " + e.Message); }
+                catch (Exception e) { Plugin.Caught(_tag + " restore fighter material: " + e.Message); }
                 _painted = null;
             }
             _lit = null;
@@ -638,7 +638,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace(_tag + " target check: " + e.Message);
+                Plugin.Caught(_tag + " target check: " + e.Message);
                 return EQuickButtonValidationResult.Success;
             }
         }
@@ -652,7 +652,7 @@ namespace NewAgeQoL
                 AirMessageScript.ShowErrorNotification(key);
                 Plugin.Trace(_tag + " target not valid: " + verdict);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " target refusal: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " target refusal: " + e.Message); }
         }
 
         private void ClearHex()
@@ -664,7 +664,7 @@ namespace NewAgeQoL
                 var cd = FighterHint.Cd();
                 if (cd != null) cd.ClearSelection(_hexPick);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " clear hex: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " clear hex: " + e.Message); }
             _hexPick = 0;
             _hexFor = 0;
         }
@@ -677,7 +677,7 @@ namespace NewAgeQoL
                 if (_cursor == null) _cursor = Crosshair();
                 if (_cursor != null) Cursor.SetCursor(_cursor, new Vector2(15f, 15f), CursorMode.Auto);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " cursor: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " cursor: " + e.Message); }
         }
 
         private Texture2D Crosshair()
@@ -748,7 +748,7 @@ namespace NewAgeQoL
                 var holder = Holder();
                 return holder == null ? null : holder.GetButton(id);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " skill " + id + ": " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught(_tag + " skill " + id + ": " + e.Message); return null; }
         }
 
         private const float Narrowest = 22f;
@@ -825,7 +825,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                if (_schoolSaid.Add(type)) Plugin.Trace("[magic] school of " + type.Name + " is unreadable: " + e.Message);
+                if (_schoolSaid.Add(type)) Plugin.Caught("[magic] school of " + type.Name + " is unreadable: " + e.Message);
             }
             return 0;
         }
@@ -1051,7 +1051,7 @@ namespace NewAgeQoL
                 _hidden = button.gameObject;
                 Plugin.Trace(_tag + " button hidden: " + button.name);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " source: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " source: " + e.Message); }
         }
 
         private QuickButtonStateHolder Holder()
@@ -1124,7 +1124,7 @@ namespace NewAgeQoL
                 _ctrl = ctrl;
                 return AccessTools.Property(typeof(CombatButtonsController), Key)?.GetValue(ctrl) as Component;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " combat controller: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught(_tag + " combat controller: " + e.Message); return null; }
         }
 
         private Component FromContainer()
@@ -1136,7 +1136,7 @@ namespace NewAgeQoL
                 if (_spells) return box.Resolve<ComplexSectorButtonSelector>(Key);
                 return box.Resolve<SimpleSectorButtonSelector>(Key);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " button " + Key + " from container: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught(_tag + " button " + Key + " from container: " + e.Message); return null; }
         }
 
         internal static void Veil(GameObject go, bool hide)
@@ -1228,7 +1228,7 @@ namespace NewAgeQoL
         private void Repaint()
         {
             try { if (_cells != null) Paint(Shown()); }
-            catch (Exception e) { Plugin.Trace(_tag + " redraw: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " redraw: " + e.Message); }
         }
 
         private List<IQuickButton> Shown()
@@ -1502,7 +1502,7 @@ namespace NewAgeQoL
                 _overRound = cd != null ? cd.RoundNum : -1;
                 Plugin.Trace("[skills] phase ended in round " + _overRound + ", buttons stay active");
             }
-            catch (Exception e) { Plugin.Trace("[skills] phase end: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[skills] phase end: " + e.Message); }
         }
 
         private static bool Over()
@@ -1601,13 +1601,13 @@ namespace NewAgeQoL
             {
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) return;
-                nc.RemoveMessageListener(419, OnHint);
-                nc.AddMessageListener(419, OnHint);
-                nc.RemoveMessageListener(409, OnEffect);
-                nc.AddMessageListener(409, OnEffect);
+                nc.RemoveMessageListener(ResponseConsts.DYNAMIC_HINT_RESPONSE, OnHint);
+                nc.AddMessageListener(ResponseConsts.DYNAMIC_HINT_RESPONSE, OnHint);
+                nc.RemoveMessageListener(ResponseConsts.GET_ACTION_EFFECT_DESCRIPTION_RESPONSE, OnEffect);
+                nc.AddMessageListener(ResponseConsts.GET_ACTION_EFFECT_DESCRIPTION_RESPONSE, OnEffect);
                 _listening = true;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " hint listener: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " hint listener: " + e.Message); }
         }
 
         private void OnHint(object message)
@@ -1637,7 +1637,7 @@ namespace NewAgeQoL
                 Told[id] = made;
                 if (_tipFor == id) Fill(id);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " description: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " description: " + e.Message); }
         }
 
         private EHintType HintKind => _things ? EHintType.THING : _tricks ? EHintType.DODGE : _spells ? EHintType.SPELL : EHintType.SKILL;
@@ -1686,7 +1686,7 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc != null && nc.IsConnected()) nc.SendRequest(new GetActionEffectDescriptionRequest(skill.QuickButtonType, id, who));
             }
-            catch (Exception e) { Plugin.Trace(_tag + " effect request " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " effect request " + id + ": " + e.Message); }
         }
 
         private void OnEffect(object message)
@@ -1705,7 +1705,7 @@ namespace NewAgeQoL
                 Plugin.Trace(_tag + " effect " + answer.ButtonId + " on target " + answer.TargetId + ": " + made);
                 if (_tipFor == answer.ButtonId) Fill(answer.ButtonId);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " effect: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " effect: " + e.Message); }
         }
 
         private void AskTold(int id)
@@ -1717,7 +1717,7 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc != null && nc.IsConnected()) nc.SendRequest(new DynamicHintRequest(HintKind, id, 0));
             }
-            catch (Exception e) { Plugin.Trace(_tag + " description request " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " description request " + id + ": " + e.Message); }
         }
 
         private string Phase(int phase)
@@ -1777,7 +1777,7 @@ namespace NewAgeQoL
                     Inside(trt, root);
                 }
             }
-            catch (Exception e) { Plugin.Trace(_tag + " hint " + id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " hint " + id + ": " + e.Message); }
         }
 
         private static void Inside(RectTransform tip, RectTransform root)
@@ -1799,7 +1799,7 @@ namespace NewAgeQoL
                 if (low < floor) low = floor;
                 tip.anchoredPosition = new Vector2(left + size.x * tip.pivot.x, low + size.y * tip.pivot.y);
             }
-            catch (Exception e) { Plugin.Trace("[hint] position: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hint] position: " + e.Message); }
         }
 
         internal static string Spoken(string text)
@@ -1940,7 +1940,7 @@ namespace NewAgeQoL
                 if (chosen == null || chosen.UserId == 0)
                 {
                     try { AirMessageScript.ShowErrorNotification("combat.gui.combatbutton.disablecause.target_not_selected"); }
-                    catch (Exception e) { Plugin.Trace(_tag + " target message: " + e.Message); }
+                    catch (Exception e) { Plugin.Caught(_tag + " target message: " + e.Message); }
                     Plugin.Trace(_tag + " double click: no fighter selected");
                     return;
                 }
@@ -2006,7 +2006,7 @@ namespace NewAgeQoL
                     if (chosen == null || chosen.UserId == 0)
                     {
                         try { AirMessageScript.ShowErrorNotification("combat.gui.combatbutton.disablecause.target_not_selected"); }
-                        catch (Exception e) { Plugin.Trace(_tag + " target message: " + e.Message); }
+                        catch (Exception e) { Plugin.Caught(_tag + " target message: " + e.Message); }
                         Plugin.Trace(_tag + " pursuit: no fighter selected");
                         return;
                     }
@@ -2069,7 +2069,7 @@ namespace NewAgeQoL
                 Plugin.Trace(_tag + " low on charges, opened refill for " + skill.Id);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace(_tag + " refill: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught(_tag + " refill: " + e.Message); return false; }
         }
 
         private void Paid()
@@ -2094,7 +2094,7 @@ namespace NewAgeQoL
                 Plugin.Trace(_tag + " charges bought, using " + skill.Id);
                 Hand(skill);
             }
-            catch (Exception e) { Plugin.Trace(_tag + " after refill: " + e.Message); }
+            catch (Exception e) { Plugin.Caught(_tag + " after refill: " + e.Message); }
         }
 
         private static bool Broke(EQuickButtonValidationResult verdict)
@@ -2296,7 +2296,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[aim] click on fighter does not fall through to the hex below");
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[aim] hex click: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[aim] hex click: " + e.Message); return true; }
         }
     }
 
@@ -2312,7 +2312,7 @@ namespace NewAgeQoL
         private static void Postfix()
         {
             try { SkillList.Rehide(); }
-            catch (Exception e) { Plugin.Trace("[skills] rehide: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[skills] rehide: " + e.Message); }
         }
     }
 
@@ -2322,7 +2322,7 @@ namespace NewAgeQoL
         private static void Postfix(QuickButton __result, EQuickButtonType type)
         {
             try { SkillList.Came(__result, type); }
-            catch (Exception e) { Plugin.Trace("[dodges] arrival: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dodges] arrival: " + e.Message); }
         }
     }
 

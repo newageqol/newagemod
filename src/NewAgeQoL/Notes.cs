@@ -69,7 +69,7 @@ namespace NewAgeQoL
                     try { File.Replace(temp, path, null); }
                     catch (Exception e)
                     {
-                        Plugin.Trace("[notes] atomic replace failed, replacing in steps: " + e.Message);
+                        Plugin.Caught("[notes] atomic replace failed, replacing in steps: " + e.Message);
                         File.Delete(path);
                         File.Move(temp, path);
                     }
@@ -171,7 +171,7 @@ namespace NewAgeQoL
                 box.AddComponent<NoteKeeper>();
                 return (RectTransform)box.transform;
             }
-            catch (Exception e) { Plugin.Trace("[notes] card field: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[notes] card field: " + e.Message); return null; }
         }
     }
 

@@ -49,7 +49,7 @@ namespace NewAgeQoL
                 _pollAt = Time.unscaledTime + 0.25f;
                 Refresh();
             }
-            catch (Exception e) { Plugin.Trace("[effects] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[effects] " + e.Message); }
         }
 
         private static GameObject _theirs;
@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 if (_theirs.activeSelf == !hide) return;
                 _theirs.SetActive(!hide);
             }
-            catch (Exception e) { Plugin.Trace("[effects] states column: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[effects] states column: " + e.Message); }
         }
 
         internal static void Toggle()
@@ -432,7 +432,7 @@ namespace NewAgeQoL
                 if (parts.Length == 2 && float.TryParse(parts[0], System.Globalization.NumberStyles.Float, ci, out x)
                     && float.TryParse(parts[1], System.Globalization.NumberStyles.Float, ci, out y)) pos = new Vector2(x, y);
             }
-            catch (Exception e) { Plugin.Trace("[effects] position: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[effects] position: " + e.Message); }
             return pos;
         }
 
@@ -445,7 +445,7 @@ namespace NewAgeQoL
                 var ci = System.Globalization.CultureInfo.InvariantCulture;
                 Plugin.CfgEffectsWindow.Value = rt.anchoredPosition.x.ToString("0", ci) + ";" + rt.anchoredPosition.y.ToString("0", ci);
             }
-            catch (Exception e) { Plugin.Trace("[effects] position: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[effects] position: " + e.Message); }
         }
 
         private static void Place(RectTransform rt, Vector2 min, Vector2 max, Vector2 pivot, Vector2 offMin, Vector2 offMax)

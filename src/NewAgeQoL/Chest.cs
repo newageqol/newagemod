@@ -50,7 +50,7 @@ namespace NewAgeQoL
                 }
                 Place(holder);
             }
-            catch (Exception e) { Plugin.Trace("[chest] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chest] " + e.Message); }
         }
 
         private static void Forget()
@@ -119,7 +119,7 @@ namespace NewAgeQoL
         private static void Postfix(OpenDailyChestButton __instance)
         {
             try { Chest.Found(__instance); }
-            catch (Exception e) { Plugin.Trace("[chest] appearance: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chest] appearance: " + e.Message); }
         }
     }
 }

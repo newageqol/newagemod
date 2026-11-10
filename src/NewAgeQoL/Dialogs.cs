@@ -41,7 +41,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[windows] " + root.name + " scaled to " + k);
                 CloseSeat.Attach(window);
             }
-            catch (Exception e) { Plugin.Trace("[windows] scaling: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] scaling: " + e.Message); }
         }
 
         private const int High = 990;
@@ -70,7 +70,7 @@ namespace NewAgeQoL
                 girl.enabled = false;
                 Plugin.Trace("[windows] game hint: picture removed, papyrus kept");
             }
-            catch (Exception e) { Plugin.Trace("[windows] game hint: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] game hint: " + e.Message); }
         }
 
         internal static void Raise(ConfirmActionDialog dialog)
@@ -97,7 +97,7 @@ namespace NewAgeQoL
                 if (k > 0.995f) return;
                 if (Mathf.Abs(rt.localScale.x - k) > 0.001f) rt.localScale = new Vector3(k, k, 1f);
             }
-            catch (Exception e) { Plugin.Trace("[windows] menu: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] menu: " + e.Message); }
         }
 
         private static void Menus()
@@ -158,7 +158,7 @@ namespace NewAgeQoL
                 _told = true;
                 Plugin.Trace("[windows] action window centered, scale " + k + ", layer " + High);
             }
-            catch (Exception e) { Plugin.Trace("[windows] action window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] action window: " + e.Message); }
         }
     }
 
@@ -182,7 +182,7 @@ namespace NewAgeQoL
                 if (button == null || window.Find("DialogCaption") == null || window.GetComponent<CloseSeat>() != null) return;
                 window.gameObject.AddComponent<CloseSeat>()._button = button;
             }
-            catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] close button: " + e.Message); }
         }
 
         private static string Edges(RectTransform one)
@@ -289,7 +289,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[windows] " + transform.root.name + ": tabs over the window " + (_tabs != null ? _tabs.name + " " + Edges(_tabs.transform as RectTransform) : "none"));
                 if (_tabs == null) Destroy(this);
             }
-            catch (Exception e) { Plugin.Trace("[windows] close button: " + e.Message); Destroy(this); }
+            catch (Exception e) { Plugin.Caught("[windows] close button: " + e.Message); Destroy(this); }
         }
     }
 
@@ -328,7 +328,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[windows] summon: rows " + content.childCount + ", height " + content.rect.height.ToString("0"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[windows] summon: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] summon: " + e.Message); }
         }
     }
 

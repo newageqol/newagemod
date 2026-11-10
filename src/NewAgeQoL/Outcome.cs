@@ -65,7 +65,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[outcome] server numbers came mid-calculation: " + (Absorbed.Count - before)
                         + " queued changes are already in them");
             }
-            catch (Exception e) { Plugin.Trace("[outcome] server numbers: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[outcome] server numbers: " + e.Message); }
         }
 
         private static void Absorb(ICombatData cd)
@@ -106,7 +106,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 Now.Clear();
-                Plugin.Trace("[outcome] animation queue: " + e.Message);
+                Plugin.Caught("[outcome] animation queue: " + e.Message);
             }
         }
 
@@ -120,7 +120,7 @@ namespace NewAgeQoL
                 _playing = AccessTools.FieldRefAccess<AnimationProcessor, List<AnimationGroup>>("activeGroups");
                 _started = AccessTools.FieldRefAccess<ChangeLifeAnimationItem, float?>("_startTime");
             }
-            catch (Exception e) { Plugin.Trace("[outcome] animation queue fields: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[outcome] animation queue fields: " + e.Message); }
         }
 
         private static void Walk(List<AnimationGroup> groups)

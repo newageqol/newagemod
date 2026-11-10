@@ -244,7 +244,7 @@ namespace NewAgeQoL
                     face.Solid = hi >= lo ? hi - lo + 1 : face.Height;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[smiles] glyph measure: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[smiles] glyph measure: " + e.Message); }
         }
 
         private static void Build()
@@ -324,7 +324,7 @@ namespace NewAgeQoL
                 _fitted = font;
                 Plugin.Trace("[smiles] size from font '" + font.name + "': " + main.pointSize + " pt");
             }
-            catch (Exception e) { Plugin.Trace("[smiles] size: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[smiles] size: " + e.Message); }
         }
 
         internal static string Dress(string text)
@@ -603,7 +603,7 @@ namespace NewAgeQoL
                 var run = __instance != null ? __instance.GetComponent<TMP_SpriteAnimator>() : null;
                 if (run != null) run.StopAllAnimations();
             }
-            catch (Exception e) { Plugin.Trace("[smiles] empty text: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[smiles] empty text: " + e.Message); }
         }
     }
 
@@ -614,7 +614,7 @@ namespace NewAgeQoL
         {
             if (!Smiles.Ready) return true;
             try { __result = Smiles.Dress(str); }
-            catch (Exception e) { Plugin.Trace("[smiles] line: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[smiles] line: " + e.Message); return true; }
             return false;
         }
     }

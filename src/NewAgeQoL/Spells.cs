@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(Unveil(panel, go, veil));
                 else { veil.alpha = 1f; veil.blocksRaycasts = true; }
             }
-            catch (Exception e) { Plugin.Trace("[spellbook] hide placeholders: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[spellbook] hide placeholders: " + e.Message); }
         }
 
         private static IEnumerator Unveil(UserMenuSpellBookPanelContent panel, GameObject go, CanvasGroup veil)
@@ -193,7 +193,7 @@ namespace NewAgeQoL
                 if (label != null) Tuck(label.transform, row.transform);
                 Plugin.Trace("[spellbook] dodges entry removed, in combat the book has spells only");
             }
-            catch (Exception e) { Plugin.Trace("[spellbook] dodges: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[spellbook] dodges: " + e.Message); }
         }
 
         private static T Grab<T>(UserMenuSpellBookPanelContent panel, string name) where T : Component
@@ -222,7 +222,7 @@ namespace NewAgeQoL
                 if (ctrl == null || !ctrl.IsWindowOpened) return;
                 AccessTools.Method(typeof(UserMenuController), "CloseWindow")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[spellbook] close: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[spellbook] close: " + e.Message); }
         }
     }
 
@@ -251,7 +251,7 @@ namespace NewAgeQoL
                 if (data.ContentType == UserMenuSpellBookPanelContentResolver.EUserMenuSpellBookSelectionButton.DODGES) return true;
                 return !Spells.Pick(data.Id);
             }
-            catch (Exception e) { Plugin.Trace("[spellbook] click: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[spellbook] click: " + e.Message); return true; }
         }
     }
 

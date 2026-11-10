@@ -101,7 +101,7 @@ namespace NewAgeQoL
                 Watch(true);
                 Plugin.Instance.StartCoroutine(Prep());
             }
-            catch (Exception e) { _prepping = false; Plugin.Trace("[night] prepare: " + e.Message); }
+            catch (Exception e) { _prepping = false; Plugin.Caught("[night] prepare: " + e.Message); }
         }
 
         private static void Drop()
@@ -211,7 +211,7 @@ namespace NewAgeQoL
                     Add(d.shadowMask);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[night] keep assets: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] keep assets: " + e.Message); }
             return Kept.Count;
         }
 
@@ -242,7 +242,7 @@ namespace NewAgeQoL
                     _uploadSlice = -1;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[night] upload settings: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] upload settings: " + e.Message); }
         }
 
         private static string _phase = "";
@@ -437,7 +437,7 @@ namespace NewAgeQoL
                 Plugin.Instance.StartCoroutine(Fetch());
                 Plugin.Trace("[night] preloading town bundle in background");
             }
-            catch (Exception e) { Plugin.Trace("[night] preload: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] preload: " + e.Message); }
         }
 
         private static IEnumerator Fetch()
@@ -553,7 +553,7 @@ namespace NewAgeQoL
                 if (raised > 0) Plugin.Trace("[night] click areas raised to the building tops: " + string.Join(", ", said));
                 if (parts.Count > 0) Plugin.Trace("[night] building parts made clickable: " + string.Join(", ", parts));
             }
-            catch (Exception e) { Plugin.Trace("[night] raise click areas: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] raise click areas: " + e.Message); }
         }
 
         private static Canvas _labels;
@@ -617,7 +617,7 @@ namespace NewAgeQoL
                 Backing(scene, gate, _gatePos, _gateSize);
                 Plugin.Trace("[night] dark backing behind the gate: holes " + holes + ", x " + x0.ToString("0.00") + ".." + x1.ToString("0.00") + ", y " + y0.ToString("0.00") + ".." + y1.ToString("0.00") + ", z " + b.max.z.ToString("0.00"));
             }
-            catch (Exception e) { Plugin.Trace("[night] gate backing: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] gate backing: " + e.Message); }
         }
 
         private static void Backing(Scene scene, MeshRenderer gate, Vector3 pos, Vector3 size)
@@ -1009,7 +1009,7 @@ namespace NewAgeQoL
                 var along = Vector3.Cross(Vector3.up, front).normalized;
                 for (float k = -0.5f; k <= 0.51f; k += 0.25f) spots.Add(ground + along * pw * k);
             }
-            catch (Exception e) { Plugin.Trace("[night] label: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] label: " + e.Message); }
         }
 
         private static void Arc(Scene scene, string text, Vector3 center, float radius, float middleDeg, List<Vector3> spots)
@@ -1039,7 +1039,7 @@ namespace NewAgeQoL
                     a += widths[i] / radius * Mathf.Rad2Deg;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[night] arc: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[night] arc: " + e.Message); }
         }
 
         private static void Clear(Scene scene, List<Vector3> spots)
@@ -1116,7 +1116,7 @@ namespace NewAgeQoL
                         case "fog": d.FogColor = new Color(F(1), F(2), F(3)); d.FogStart = F(4); d.FogEnd = F(5); break;
                     }
                 }
-                catch (Exception e) { Plugin.Trace("[night] data line '" + line + "': " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[night] data line '" + line + "': " + e.Message); }
             }
             return d;
         }

@@ -33,7 +33,7 @@ namespace NewAgeQoL
             if (!_closeLater) return;
             _closeLater = false;
             try { Preloader.Close(); }
-            catch (Exception e) { Plugin.Trace("[bank] closing loading screen: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bank] closing loading screen: " + e.Message); }
         }
         private static Texture2D _baseTex, _deltaTex, _fx2Tex, _depthTex, _idsTex;
 
@@ -58,7 +58,7 @@ namespace NewAgeQoL
                 if (!HaveFiles()) return;
                 Plugin.Instance.StartCoroutine(Warm());
             }
-            catch (Exception e) { Plugin.Trace("[bank] preload: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bank] preload: " + e.Message); }
         }
 
         private static IEnumerator Warm()
@@ -181,7 +181,7 @@ namespace NewAgeQoL
             if (compress && tex.width % 4 == 0 && tex.height % 4 == 0)
             {
                 try { tex.Compress(true); }
-                catch (Exception e) { Plugin.Trace("[bank] compress " + file + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[bank] compress " + file + ": " + e.Message); }
             }
             tex.Apply(!compress, true);
             return tex;
@@ -253,7 +253,7 @@ namespace NewAgeQoL
                     list.Add(new Spot { Kind = p[0], U = F(1), V = F(2), H = F(3), D = p.Length > 4 ? F(4) : -1f });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[bank] reading layers: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[bank] reading layers: " + e.Message); }
             return list;
         }
     }

@@ -110,7 +110,7 @@ namespace NewAgeQoL
                 Fill();
                 Age();
             }
-            catch (Exception e) { Plugin.Trace("[loot] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loot] " + e.Message); }
         }
 
         private static void Go()
@@ -139,7 +139,7 @@ namespace NewAgeQoL
             {
                 _looked = true;
                 try { _delayed = AccessTools.FieldRefAccess<SceneLoader, LocationResponseMessage>("_delayedMessage"); }
-                catch (Exception e) { Plugin.Trace("[loot] delayed map field: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[loot] delayed map field: " + e.Message); }
             }
             return _delayed == null || _delayed(real) != null;
         }
@@ -174,7 +174,7 @@ namespace NewAgeQoL
                     if (plate.Wear != null && plate.Worn.IsSubsetOf(done)) { UnityEngine.Object.Destroy(plate.Wear); plate.Wear = null; }
                 Plugin.Trace("[loot] worn things repaired");
             }
-            catch (Exception e) { Plugin.Trace("[loot] repair answer: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loot] repair answer: " + e.Message); }
         }
 
         private static void Repair(List<DialogDescriptionItemMessage> worn)
@@ -529,7 +529,7 @@ namespace NewAgeQoL
                 image.sprite = sprite;
                 image.enabled = true;
             }
-            catch (Exception e) { Plugin.Trace("[loot] icon " + item.Id + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loot] icon " + item.Id + ": " + e.Message); }
         }
 
         private static GameObject Worn(Transform host, List<DialogDescriptionItemMessage> worn)
@@ -627,10 +627,10 @@ namespace NewAgeQoL
                         if (about == null || string.IsNullOrEmpty(about.Name)) return;
                         done(about.Name);
                     }
-                    catch (Exception e) { Plugin.Trace("[loot] name " + thing + ": " + e.Message); }
+                    catch (Exception e) { Plugin.Caught("[loot] name " + thing + ": " + e.Message); }
                 });
             }
-            catch (Exception e) { Plugin.Trace("[loot] name " + thing + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loot] name " + thing + ": " + e.Message); }
         }
 
         private static void Hint(int thing)
@@ -640,7 +640,7 @@ namespace NewAgeQoL
                 DependencyContainer.GetContainer().Resolve<ThingHintController>()
                     .ShowThingHint(thing, EThingContextWindow.WINDOW_WITHOUT_ACTION, null, null);
             }
-            catch (Exception e) { Plugin.Trace("[loot] hint " + thing + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[loot] hint " + thing + ": " + e.Message); }
         }
 
         private static string Signed(double value)

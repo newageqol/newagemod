@@ -120,7 +120,7 @@ namespace NewAgeQoL
                     drag.Slot = pair.Key;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[items] slots: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] slots: " + e.Message); }
         }
 
         internal static void HookCell(InventoryThingItemRenderer cell)
@@ -135,7 +135,7 @@ namespace NewAgeQoL
                 drag.Cell = cell;
                 ItemTip.Attach(cell.gameObject, cell, null, default(ESlots.SlotType));
             }
-            catch (Exception e) { Plugin.Trace("[items] cell: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] cell: " + e.Message); }
         }
 
         internal static bool Dragging;
@@ -193,19 +193,19 @@ namespace NewAgeQoL
             _pending = null;
             _pendingRun = null;
             try { single(); }
-            catch (Exception e) { Plugin.Trace("[items] single click: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] single click: " + e.Message); }
         }
 
         private static void Pass(InventoryThingItemRenderer cell)
         {
             try { CellClick?.Invoke(cell, null); }
-            catch (Exception e) { Plugin.Trace("[items] cell click: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] cell click: " + e.Message); }
         }
 
         private static void Pass(InteractiveIcon icon)
         {
             try { IconClick?.Invoke(icon, null); }
-            catch (Exception e) { Plugin.Trace("[items] slot click: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] slot click: " + e.Message); }
         }
 
         private static void Run(IEnumerator job)
@@ -476,7 +476,7 @@ namespace NewAgeQoL
         private static void Forget(ResponseCallbackContext context)
         {
             try { context.Destroy(); }
-            catch (Exception e) { Plugin.Trace("[items] reply context: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] reply context: " + e.Message); }
         }
 
         internal static void Heard(HintResolverContext from, EThingActionButton button, object msg)
@@ -694,7 +694,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[items] moving item from slot " + from.Slot + " to slot " + slot);
                 Run(Move(from.Slot, slot));
             }
-            catch (Exception e) { Plugin.Trace("[items] drop: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[items] drop: " + e.Message); }
         }
     }
 

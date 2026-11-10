@@ -64,7 +64,7 @@ namespace NewAgeQoL
             {
                 if (!File.Exists(path) && File.Exists(path + ".new")) File.Move(path + ".new", path);
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] restoring " + Path.GetFileName(path) + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] restoring " + Path.GetFileName(path) + ": " + e.Message); }
         }
 
         internal static void Load()

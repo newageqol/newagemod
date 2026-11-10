@@ -17,14 +17,14 @@ namespace NewAgeQoL
         private static void Postfix(SetupDialog __instance)
         {
             try { __instance.StartCoroutine(Lower(__instance)); }
-            catch (Exception e) { Plugin.Trace("[settings] column: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] column: " + e.Message); }
         }
 
         private static IEnumerator Lower(SetupDialog dialog)
         {
             for (int step = 0; step < 3; step++) yield return null;
             try { Push(dialog); }
-            catch (Exception e) { Plugin.Trace("[settings] column: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] column: " + e.Message); }
         }
 
         private static void Push(SetupDialog dialog)

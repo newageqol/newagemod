@@ -114,7 +114,7 @@ namespace NewAgeQoL
                 Fill();
                 Clocks();
             }
-            catch (Exception e) { Plugin.Trace("[fights] " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Caught("[fights] " + e.Message); Drop(); }
         }
 
         private static void Poll()
@@ -136,7 +136,7 @@ namespace NewAgeQoL
             req.Dispose();
             _kept = false;
             try { Take(code, body); }
-            catch (Exception e) { _error = Lang.T("ответ не разобран"); _items = null; Plugin.Trace("[fights] answer: " + e.Message); }
+            catch (Exception e) { _error = Lang.T("ответ не разобран"); _items = null; Plugin.Caught("[fights] answer: " + e.Message); }
             _busy = false;
             _askAt = Time.unscaledTime + (_kept ? Retry : Chaotic.Showing ? ClaimEvery : _fold != null && _fold.Folded ? FoldedEvery : Claims() ? ClaimEvery : OpenEvery);
         }

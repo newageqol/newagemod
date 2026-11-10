@@ -31,8 +31,8 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _chatOn = null; return; }
             if (ReferenceEquals(_chatOn, nc)) return;
-            nc.RemoveMessageListener(4, OnChat);
-            nc.AddMessageListener(4, OnChat);
+            nc.RemoveMessageListener(ResponseConsts.CHAT_RESPONCE, OnChat);
+            nc.AddMessageListener(ResponseConsts.CHAT_RESPONCE, OnChat);
             _chatOn = nc;
         }
 
@@ -61,7 +61,7 @@ namespace NewAgeQoL
 
                 if (team) Team(); else Pm();
             }
-            catch (Exception e) { Plugin.Trace("[sound] chat: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[sound] chat: " + e.Message); }
         }
 
         internal static void Tick()
@@ -88,7 +88,7 @@ namespace NewAgeQoL
                 _phase = t;
                 if (fightEnded && Time.unscaledTime - _fightAt > 2f) Play("round_end");
             }
-            catch (Exception e) { Plugin.Trace("[sound] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[sound] " + e.Message); }
         }
 
         internal static void Pm()
@@ -137,7 +137,7 @@ namespace NewAgeQoL
                 _own.volume = 1f;
                 _own.PlayOneShot(clip, volume);
             }
-            catch (Exception e) { Plugin.Trace("[sound] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[sound] " + e.Message); }
         }
 
         private static AudioClip Clip(string name)

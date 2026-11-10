@@ -107,7 +107,7 @@ namespace NewAgeQoL
                 }
                 Note(cd, box);
             }
-            catch (Exception e) { Plugin.Trace("[highlight] cleanup: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[highlight] cleanup: " + e.Message); }
         }
 
         private static void Bind(ICombatData cd)
@@ -259,7 +259,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[highlight] circle around fighter " + bot.UserId + ": " + e.Message);
+                Plugin.Caught("[highlight] circle around fighter " + bot.UserId + ": " + e.Message);
                 return 0;
             }
         }
@@ -498,7 +498,7 @@ namespace NewAgeQoL
         private static void Postfix(AbstractCharacter __instance)
         {
             try { WalkGlow.Mark(__instance); }
-            catch (Exception e) { Plugin.Trace("[highlight] selection circle: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[highlight] selection circle: " + e.Message); }
         }
     }
 
@@ -528,13 +528,13 @@ namespace NewAgeQoL
         private static void Prefix()
         {
             try { WalkGlow.Phase(); }
-            catch (Exception e) { Plugin.Trace("[highlight] phase start: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[highlight] phase start: " + e.Message); }
         }
 
         private static void Postfix()
         {
             try { WalkGlow.Soon(); }
-            catch (Exception e) { Plugin.Trace("[highlight] new round: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[highlight] new round: " + e.Message); }
         }
     }
 }

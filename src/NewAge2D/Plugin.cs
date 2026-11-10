@@ -133,7 +133,12 @@ public class Plugin : BaseUnityPlugin
         CfgVivid.SettingChanged += (_, _) => Doll.Vivid = UnityEngine.Mathf.Clamp(CfgVivid.Value, 1f, 2f);
 
         _harmony = new Harmony(Guid);
-        _harmony.PatchAll();
+        foreach (var type in AccessTools.GetTypesFromAssembly(typeof(Plugin).Assembly))
+        {
+            if (type.GetCustomAttributes(typeof(HarmonyPatch), true).Length == 0) continue;
+            try { _harmony.CreateClassProcessor(type).Patch(); }
+            catch (Exception e) { Log.LogError("Harmony: " + type.Name + " — " + e.Message); }
+        }
         CfgKeepMagic.SettingChanged += (_, _) => Effects.Set(HideMagic);
         Log.LogInfo($"New Age 2D {Version} loaded, clip cache: {Store.CacheDir}, draw threads {DollWorker.WorkerCount}");
     }

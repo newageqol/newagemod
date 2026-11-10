@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 if (changed) Version++;
                 Plugin.Trace("[online] player states: lists " + found.Count + " of " + byId.Count + ", durations " + heard);
             }
-            catch (Exception e) { Plugin.Trace("[online] player states: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] player states: " + e.Message); }
         }
 
         internal static int Version;
@@ -166,7 +166,7 @@ namespace NewAgeQoL
                 }
                 Badges(crown, p);
             }
-            catch (Exception e) { Plugin.Trace("[online] state icons again " + p?.Login + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] state icons again " + p?.Login + ": " + e.Message); }
         }
 
         private static void Lists(List<string> inbox, Dictionary<int, List<OnlineCharm>> found)
@@ -241,7 +241,7 @@ namespace NewAgeQoL
                 Hover(crown.gameObject, p, Premium);
                 Badges(crown, p);
             }
-            catch (Exception e) { Plugin.Trace("[online] state icons " + p?.Login + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] state icons " + p?.Login + ": " + e.Message); }
         }
 
         private static void Badges(Image crown, OnlinePlayer p)
@@ -398,7 +398,7 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[online] state picture " + picture + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] state picture " + picture + ": " + e.Message); }
             if (sprite == null)
             {
                 Failed[picture] = Time.unscaledTime;
@@ -468,7 +468,7 @@ namespace NewAgeQoL
                 _paintAt = Time.unscaledTime + 0.5f;
                 Paint();
             }
-            catch (Exception e) { Plugin.Trace("[online] state hint: " + e.Message); _hover = null; Hide(); }
+            catch (Exception e) { Plugin.Caught("[online] state hint: " + e.Message); _hover = null; Hide(); }
         }
 
         private static void Paint()

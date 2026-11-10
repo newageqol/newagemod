@@ -141,7 +141,7 @@ namespace NewAgeQoL
                 Place(top, paged);
                 if (!_panelGo.activeSelf) _panelGo.SetActive(true);
             }
-            catch (Exception e) { Plugin.Trace("[help] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[help] " + e.Message); }
         }
 
         internal static bool Under()
@@ -592,7 +592,7 @@ namespace NewAgeQoL
                 float bottom = _panel.anchoredPosition.y + y - trt.rect.height;
                 if (bottom < floor) trt.anchoredPosition = new Vector2(x, y + (floor - bottom));
             }
-            catch (Exception e) { Plugin.Trace("[help] hint: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[help] hint: " + e.Message); }
         }
 
         private static void Lift()

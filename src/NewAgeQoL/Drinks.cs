@@ -88,7 +88,7 @@ namespace NewAgeQoL
                 foreach (var group in msg.Groups)
                     if (group != null) Scan(group.Items);
             }
-            catch (Exception e) { Plugin.Trace("[drinks] animation: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[drinks] animation: " + e.Message); }
         }
 
         private static void Scan(List<AnimationItemMessage> items)
@@ -215,7 +215,7 @@ namespace NewAgeQoL
             if (kind == Cannibal)
             {
                 try { have = AtlasUtils.GetQuickButtonSprite("dodge" + DodgeConsts.DODGE_CANNIBALISM); }
-                catch (Exception e) { Plugin.Trace("[drinks] cannibal icon: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[drinks] cannibal icon: " + e.Message); }
                 Flasks[kind] = have;
                 return have;
             }
@@ -249,7 +249,7 @@ namespace NewAgeQoL
                 have = Sprite.Create(tex, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
                 Flasks[kind] = have;
             }
-            catch (Exception e) { Plugin.Trace("[drinks] flask: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[drinks] flask: " + e.Message); }
             return have;
         }
 

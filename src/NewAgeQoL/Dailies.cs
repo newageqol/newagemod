@@ -28,7 +28,7 @@ namespace NewAgeQoL
                 }
                 Plugin.Trace("[quests] scrolls shrunk to " + k + " of game size");
             }
-            catch (Exception e) { Plugin.Trace("[quests] window size: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] window size: " + e.Message); }
         }
     }
 
@@ -53,7 +53,7 @@ namespace NewAgeQoL
                 int gone = was - got.ProgressTasks.Count;
                 if (gone > 0) Plugin.Trace("[quests] progress cards removed: " + gone);
             }
-            catch (Exception e) { Plugin.Trace("[quests] progress card: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[quests] progress card: " + e.Message); }
         }
     }
 }

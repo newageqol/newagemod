@@ -61,7 +61,7 @@ namespace NewAgeQoL
                 if (_paper != null && _paper.enabled) _paper.enabled = false;
                 if (_autoBar != null && _autoBar.enabled) _autoBar.enabled = false;
             }
-            catch (Exception e) { Plugin.Trace("[claims] late frame: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] late frame: " + e.Message); }
         }
 
         internal static void Wake()
@@ -309,7 +309,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[claims] claim creation window closed by Escape");
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[claims] Escape: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[claims] Escape: " + e.Message); return false; }
         }
 
         private static void Dress(RectTransform maker)
@@ -359,7 +359,7 @@ namespace NewAgeQoL
                 }
                 Plugin.Trace("[claims] create button decorations: " + (told.Length > 0 ? told.ToString() : "not found"));
             }
-            catch (Exception e) { Plugin.Trace("[claims] button decorations: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] button decorations: " + e.Message); }
         }
 
         private static RectTransform Maker()
@@ -440,7 +440,7 @@ namespace NewAgeQoL
                 if (_maker != null && _makerMoved) _maker.position = _makerHome;
                 if (_panel != null) UnityEngine.Object.Destroy(_panel);
             }
-            catch (Exception e) { Plugin.Trace("[claims] return: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] return: " + e.Message); }
             Folded.Clear();
             Bars.Clear();
             Trims.Clear();
@@ -559,7 +559,7 @@ namespace NewAgeQoL
                     if (low > area.rect.yMin && low < area.rect.yMax) return low + 26f;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[claims] header: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] header: " + e.Message); }
             return area.rect.yMax - 268f;
         }
 

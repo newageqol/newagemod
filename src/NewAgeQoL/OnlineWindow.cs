@@ -94,7 +94,7 @@ namespace NewAgeQoL
                 Rebuild();
                 Plugin.Trace("[online] window recreated after scene change");
             }
-            catch (Exception e) { Plugin.Trace("[online] recreate: " + e.Message); Teardown(); }
+            catch (Exception e) { Plugin.Caught("[online] recreate: " + e.Message); Teardown(); }
         }
 
         internal static void Close()
@@ -112,7 +112,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[online] close: " + e.Message);
+                Plugin.Caught("[online] close: " + e.Message);
                 if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             }
             _canvasGo = null;
@@ -508,7 +508,7 @@ namespace NewAgeQoL
         private static void Line(OnlinePlayer p, Transform host)
         {
             try { AddRow(p, host); }
-            catch (Exception e) { Plugin.Trace("[online] row " + p.Login + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] row " + p.Login + ": " + e.Message); }
         }
 
         private static void ByClans(List<OnlinePlayer> list)
@@ -570,7 +570,7 @@ namespace NewAgeQoL
             {
                 bool online = OnlineList.ById(pair.Key.UserId) != null;
                 try { AddRow(pair.Value, host, pair.Key, online); }
-                catch (Exception e) { Plugin.Trace("[online] friend row " + pair.Value.Login + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[online] friend row " + pair.Value.Login + ": " + e.Message); }
             }
         }
 
@@ -691,11 +691,11 @@ namespace NewAgeQoL
             }
             var resolver = friend != null ? Friends.Menu() ?? _resolver : _resolver;
             object menu = friend != null ? (object)new UserContextMenuData(friend.UserId, friend.Login) { PromptId = friend.PromptId } : null;
-            w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Trace("[online] click: " + e.Message); } };
+            w.OnItemClickDelegate = item => { try { ChatDock.WriteTo(p.Id, p.Login); } catch (Exception e) { Plugin.Caught("[online] click: " + e.Message); } };
             w.OnRightButtonClickDelegate = item =>
             {
                 try { ContextMenu.ShowContextMenu(go, resolver, menu ?? item.Data, EContextMenuSide.Left); }
-                catch (Exception e) { Plugin.Trace("[online] menu: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[online] menu: " + e.Message); }
             };
             if (!drawn) Pending.Add(new KeyValuePair<UserRowWidget, OnlinePlayer>(w, p));
         }
@@ -753,7 +753,7 @@ namespace NewAgeQoL
                     go.SetActive(true);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[online] game close button failed: " + e.Message); if (go != null) UnityEngine.Object.Destroy(go); go = null; }
+            catch (Exception e) { Plugin.Caught("[online] game close button failed: " + e.Message); if (go != null) UnityEngine.Object.Destroy(go); go = null; }
             if (go != null) return;
 
             var closeGo = new GameObject("close", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -824,7 +824,7 @@ namespace NewAgeQoL
                 var clan = AccessTools.Field(typeof(UserRowWidget), "ClanIconImage")?.GetValue(widget) as Image;
                 if (clan != null) clan.enabled = !Quickslots.Faded(clan.sprite);
             }
-            catch (Exception e) { Plugin.Trace("[online] row styling: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] row styling: " + e.Message); }
         }
 
         internal static void MarkAway(UserRowWidget widget, bool away)
@@ -840,7 +840,7 @@ namespace NewAgeQoL
                 var label = AccessTools.Field(typeof(UserRowWidget), "LoginText")?.GetValue(widget) as Text;
                 if (label != null) label.color = new Color32(150, 150, 150, 255);
             }
-            catch (Exception e) { Plugin.Trace("[online] afk mark: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] afk mark: " + e.Message); }
         }
 
         internal static void Extras(UserRowInfoMessage row)
@@ -862,7 +862,7 @@ namespace NewAgeQoL
                 row.Vip = full.Vip;
                 row.Dealer = full.Dealer;
             }
-            catch (Exception e) { Plugin.Trace("[online] row extras: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[online] row extras: " + e.Message); }
         }
 
         private static readonly Dictionary<string, KeyValuePair<bool, float>> Atlas = new Dictionary<string, KeyValuePair<bool, float>>();

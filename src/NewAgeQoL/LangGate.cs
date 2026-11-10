@@ -97,7 +97,7 @@ namespace NewAgeQoL
                 Build();
                 Say(string.Format("Завантажую український переклад…\n{0} з {1} МБ", Mb(got), Mb(total)), total > 0 ? Mathf.Clamp01(got / (float)total) : 0f);
             }
-            catch (Exception e) { Plugin.Trace("[lang] download window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[lang] download window: " + e.Message); }
         }
 
         private static string Mb(long bytes) => (bytes / 1048576.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("uk-UA"));

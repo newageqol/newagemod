@@ -50,7 +50,7 @@ namespace NewAgeQoL
                 }
                 if (!_hooked)
                 {
-                    nc.AddMessageListener(234, OnList);
+                    nc.AddMessageListener(ResponseConsts.FRIENDS_LIST_RESPONCE, OnList);
                     _hooked = true;
                 }
                 nc.SendRequest(new FriendsListRequest(me));
@@ -63,8 +63,8 @@ namespace NewAgeQoL
         {
             _again = 0f;
             if (!_hooked) return;
-            try { NetworkConnection.Instance?.RemoveMessageListener(234, OnList); }
-            catch (Exception e) { Plugin.Trace("[friends] unlisten: " + e.Message); }
+            try { NetworkConnection.Instance?.RemoveMessageListener(ResponseConsts.FRIENDS_LIST_RESPONCE, OnList); }
+            catch (Exception e) { Plugin.Caught("[friends] unlisten: " + e.Message); }
             _hooked = false;
         }
 
@@ -112,7 +112,7 @@ namespace NewAgeQoL
                 Version++;
                 Plugin.Trace("[friends] in list " + List.Count);
             }
-            catch (Exception e) { Plugin.Trace("[friends] list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[friends] list: " + e.Message); }
         }
     }
 }

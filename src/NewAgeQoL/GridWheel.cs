@@ -59,7 +59,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 _grid = null;
-                Plugin.Trace("[wheel] " + e.Message);
+                Plugin.Caught("[wheel] " + e.Message);
             }
         }
     }
@@ -77,7 +77,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[wheel] scroll: " + e.Message);
+                Plugin.Caught("[wheel] scroll: " + e.Message);
                 return true;
             }
         }

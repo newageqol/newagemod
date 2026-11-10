@@ -22,7 +22,7 @@ namespace NewAgeQoL
                 System.IO.File.AppendAllText(File, line + Environment.NewLine, new UTF8Encoding(false));
                 Plugin.Trace("[roads] " + text);
             }
-            catch (Exception e) { Plugin.Trace("[roads] write: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[roads] write: " + e.Message); }
         }
 
         private static void Load()
@@ -38,7 +38,7 @@ namespace NewAgeQoL
                     if (bar >= 0) _seen.Add(line.Substring(bar + 3).Trim());
                 }
             }
-            catch (Exception e) { Plugin.Trace("[roads] read: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[roads] read: " + e.Message); }
         }
 
         private static string Level()

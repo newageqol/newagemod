@@ -195,7 +195,7 @@ namespace NewAgeQoL
         internal static void Seed()
         {
             try { Blank(); }
-            catch (Exception e) { Plugin.Trace("[wardrobe] own character not read: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] own character not read: " + e.Message); }
             S.Settle(false);
         }
 
@@ -277,7 +277,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[wardrobe] own character not read: " + e.Message);
+                Plugin.Caught("[wardrobe] own character not read: " + e.Message);
                 S.Settle(false);
             }
             return dressed;
@@ -303,7 +303,7 @@ namespace NewAgeQoL
                 if (info != null) { me = info.UserId; login = info.Login; }
                 if (me > 0) Armor.AskNow(me, login);
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] card: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] card: " + e.Message); }
             AskMastery();
             yield return Plugin.Instance.StartCoroutine(Artifacts.FetchWear());
             if (!Artifacts.WearArrived)
@@ -357,12 +357,12 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) return;
                 if (!_masteryBound)
                 {
-                    nc.AddMessageListener(11, OnMastery);
+                    nc.AddMessageListener(ResponseConsts.USER_MASTERY_RESPONCE, OnMastery);
                     _masteryBound = true;
                 }
                 nc.SendRequest(new UserMasteryRequest());
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] skills request: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] skills request: " + e.Message); }
         }
 
         private static void OnMastery(object m)
@@ -378,7 +378,7 @@ namespace NewAgeQoL
                 _mastery = got;
                 Plugin.Trace("[wardrobe] general skills of the character: " + got.Count);
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] skills list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] skills list: " + e.Message); }
         }
 
         private static int Learn(Dictionary<int, InventoryWearResponseMessageItem> worn, Dictionary<int, IGeneralThingInfoDescription> told)
@@ -398,7 +398,7 @@ namespace NewAgeQoL
                     cache.Get(id, got => { if (got != null) told[id] = got; });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] artifact description: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] artifact description: " + e.Message); }
             return asked;
         }
 
@@ -1859,7 +1859,7 @@ namespace NewAgeQoL
                     if (System.IO.File.Exists(file) && Make(image, System.IO.File.ReadAllBytes(file))) return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] picture '" + image + "' from cache: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] picture '" + image + "' from cache: " + e.Message); }
             if (Plugin.Instance == null) return;
             Plugin.Instance.StartCoroutine(Fetch(image, file));
         }
@@ -1883,7 +1883,7 @@ namespace NewAgeQoL
                 System.IO.Directory.CreateDirectory(Folder);
                 System.IO.File.WriteAllBytes(file, data);
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] picture '" + image + "' was not saved: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] picture '" + image + "' was not saved: " + e.Message); }
         }
 
         private static bool Make(string image, byte[] data)

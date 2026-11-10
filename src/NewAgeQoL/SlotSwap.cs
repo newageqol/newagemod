@@ -345,7 +345,7 @@ namespace NewAgeQoL
             {
                 var conn = NetworkConnection.Instance;
                 if (conn == null || !conn.IsConnected()) return;
-                conn.AddMessageListener(416, msg =>
+                conn.AddMessageListener(ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, msg =>
                 {
                     var reply = msg as ThingContextActionResponseMessage;
                     if (reply != null && reply.Id == _waitFor) _reply = reply;

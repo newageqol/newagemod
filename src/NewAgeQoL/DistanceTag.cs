@@ -61,7 +61,7 @@ namespace NewAgeQoL
                 Shown.Clear();
                 Shown.AddRange(Now);
             }
-            catch (Exception e) { Plugin.Trace("[distance] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[distance] " + e.Message); }
         }
 
         private static GameObject Put(LifeManaEnergyDisplay caption, int far, bool near)
@@ -136,7 +136,7 @@ namespace NewAgeQoL
                     if (one != null && one.Fitment == true && DistanceTag.Skip.Add(one.UserId))
                         Plugin.Trace("[distance] no distance over neutral object " + one.UserId);
             }
-            catch (Exception e) { Plugin.Trace("[distance] fighters: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[distance] fighters: " + e.Message); }
         }
     }
 
@@ -151,7 +151,7 @@ namespace NewAgeQoL
                 if (one == null) return;
                 if (DistanceTag.Skip.Add(one.UserId)) Plugin.Trace("[distance] no distance over summoned " + one.UserId);
             }
-            catch (Exception e) { Plugin.Trace("[distance] summon: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[distance] summon: " + e.Message); }
         }
     }
 }

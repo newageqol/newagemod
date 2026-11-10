@@ -89,7 +89,7 @@ namespace NewAgeQoL
                 bool show = _open && !locked;
                 if (_list.gameObject.activeSelf != show) _list.gameObject.SetActive(show);
             }
-            catch (Exception e) { Plugin.Trace("[speed] bar: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[speed] bar: " + e.Message); }
         }
 
         private static string Caption(bool locked)

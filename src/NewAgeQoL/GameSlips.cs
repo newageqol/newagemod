@@ -21,7 +21,7 @@ namespace NewAgeQoL
                 if (hung != null && hung.TryGetValue(userId, out int was) && hung.Remove(userId))
                     Plugin.Trace("[stun] fighter " + userId + " got effect mask " + effectMask + " over " + was + ", old one taken off first");
             }
-            catch (Exception e) { Plugin.Trace("[stun] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[stun] " + e.Message); }
         }
     }
 
@@ -61,7 +61,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[lobby] " + e.Message);
+                Plugin.Caught("[lobby] " + e.Message);
                 return true;
             }
         }

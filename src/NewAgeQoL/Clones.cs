@@ -25,7 +25,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[clone] action key hook removed " + action + (original != null ? ", returned to original button" : ""));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[clone] hotkeys: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clone] hotkeys: " + e.Message); }
         }
 
         private static HotkeyHandler InSource(GameObject source, EHotkeyActions action)

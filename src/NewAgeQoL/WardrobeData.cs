@@ -242,7 +242,7 @@ namespace NewAgeQoL
                 Directory.CreateDirectory(Path.GetDirectoryName(ExtraFile));
                 File.AppendAllText(ExtraFile, Line(thing) + "\n", new UTF8Encoding(false));
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] item from the game not saved: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] item from the game not saved: " + e.Message); }
             return thing;
         }
 
@@ -284,7 +284,7 @@ namespace NewAgeQoL
                     added++;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[wardrobe] items from the game not read: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[wardrobe] items from the game not read: " + e.Message); }
             return added;
         }
 

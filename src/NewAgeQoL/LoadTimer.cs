@@ -118,7 +118,7 @@ namespace NewAgeQoL
                 sb.Append("; this session ").Append(key).Append(": ").Append(sum[0]).Append(" loads, avg ").Append(sum[1] / sum[0]).Append(" ms, longest ").Append(sum[2]).Append(" ms");
                 Write(sb.ToString());
             }
-            catch (Exception e) { Plugin.Trace("[load] report: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[load] report: " + e.Message); }
         }
 
         private static void Begin()
@@ -168,7 +168,7 @@ namespace NewAgeQoL
                     + ", CPU " + SystemInfo.processorType + " x" + SystemInfo.processorCount + ", screen " + Screen.width + "x" + Screen.height
                     + ", fps cap " + Application.targetFrameRate + ", mod " + Plugin.Version);
             }
-            catch (Exception e) { Plugin.Trace("[load] session: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[load] session: " + e.Message); }
         }
 
         private static void Write(string line)
@@ -202,7 +202,7 @@ namespace NewAgeQoL
         private static void Prefix(LocationMap map)
         {
             try { LoadTimer.Map(map); }
-            catch (Exception e) { Plugin.Trace("[load] map: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[load] map: " + e.Message); }
         }
     }
 

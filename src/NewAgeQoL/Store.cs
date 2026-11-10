@@ -51,7 +51,7 @@ namespace NewAgeQoL
                     while (sent < batch.Count && !broke)
                     {
                         try { NetworkConnection.Instance.SendRequest(new GeneralThingHintRequest(batch[sent])); sent++; }
-                        catch (System.Exception e) { broke = true; Plugin.Trace("[names] request " + batch[sent] + " was not sent: " + e.Message); }
+                        catch (System.Exception e) { broke = true; Plugin.Caught("[names] request " + batch[sent] + " was not sent: " + e.Message); }
                     }
                     if (broke) { Rewind(batch, sent); yield break; }
                     float t = 0f;
@@ -74,8 +74,8 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) return false;
                 if (_listener) return true;
-                nc.AddMessageListener(385, OnThingInfo);
-                nc.AddMessageListener(388, OnRecipeInfo);
+                nc.AddMessageListener(ResponseConsts.GENERAL_THING_HINT_RESPONSE, OnThingInfo);
+                nc.AddMessageListener(ResponseConsts.GENERAL_RECIPE_HINT_RESPONSE, OnRecipeInfo);
                 _listener = true;
                 return true;
             }

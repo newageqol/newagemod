@@ -93,7 +93,7 @@ namespace NewAgeQoL
                 Paint();
                 Clamp();
             }
-            catch (Exception e) { Plugin.Trace("[ingots] " + e.Message); Stop("ошибка: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[ingots] " + e.Message); Stop("ошибка: " + e.Message); }
         }
 
         private static bool Here()
@@ -112,7 +112,7 @@ namespace NewAgeQoL
             if (nc == null || ReferenceEquals(nc, _heard)) return;
             Unhear();
             _heard = nc;
-            nc.AddMessageListener(245, OnDialog);
+            nc.AddMessageListener(ResponseConsts.QUEST_DIALOG_RESPONCE, OnDialog);
         }
 
         private static void Unhear()
@@ -120,8 +120,8 @@ namespace NewAgeQoL
             var old = _heard as INetworkConnection;
             _heard = null;
             if (old == null) return;
-            try { old.RemoveMessageListener(245, OnDialog); }
-            catch (Exception e) { Plugin.Trace("[ingots] unsubscribe: " + e.Message); }
+            try { old.RemoveMessageListener(ResponseConsts.QUEST_DIALOG_RESPONCE, OnDialog); }
+            catch (Exception e) { Plugin.Caught("[ingots] unsubscribe: " + e.Message); }
         }
 
         internal static void Shutdown()
@@ -134,7 +134,7 @@ namespace NewAgeQoL
                 var prefix = AccessTools.Method(typeof(IngotsDialogPatch), "Prefix");
                 if (original != null && prefix != null) new Harmony(Plugin.Guid).Unpatch(original, prefix);
             }
-            catch (Exception e) { Plugin.Trace("[ingots] unpatch: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[ingots] unpatch: " + e.Message); }
             if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
             _canvasGo = null;
             _canvas = null;
@@ -428,7 +428,7 @@ namespace NewAgeQoL
                 var ctrl = Controllers.Get<QuestController>();
                 if (ctrl != null) AccessTools.Method(typeof(QuestController), "CloseQuestDialog")?.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[ingots] close dialog window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[ingots] close dialog window: " + e.Message); }
         }
 
         private static void Build()

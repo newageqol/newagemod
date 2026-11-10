@@ -239,7 +239,7 @@ namespace NewAgeQoL
             if (Hotkeys.Capturing) Hotkeys.Stop();
             Changelog.Close();
             ChatColors.Close();
-            if (revert) foreach (var u in _undo.Values) { try { u(); } catch (Exception e) { Plugin.Trace("[settings] revert: " + e.Message); } }
+            if (revert) foreach (var u in _undo.Values) { try { u(); } catch (Exception e) { Plugin.Caught("[settings] revert: " + e.Message); } }
             if (_win != null) UnityEngine.Object.Destroy(_win);
             _win = null;
             _frame = null;
@@ -389,7 +389,7 @@ namespace NewAgeQoL
             if (!int.TryParse(key.Substring(at + 1), out id)) return;
             Sprite sprite = null;
             try { sprite = AtlasUtils.GetQuickButtonSprite(type, id, 0); }
-            catch (System.Exception e) { Plugin.Trace("[settings] icon for " + key + ": " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[settings] icon for " + key + ": " + e.Message); }
             if (sprite == null) return;
             const float size = 30f;
             var go = new GameObject("QoLSpellIcon", typeof(RectTransform), typeof(Image));
@@ -584,7 +584,7 @@ namespace NewAgeQoL
                         + (child.gameObject.activeSelf ? "" : " (inactive)"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[settings] window dump: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] window dump: " + e.Message); }
         }
 
         private static void Grow(RectTransform rt, float extra, bool self)
@@ -889,7 +889,7 @@ namespace NewAgeQoL
                     return slider;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[settings] game slider failed: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] game slider failed: " + e.Message); }
 
             var sgo = new GameObject("MvlSlider", typeof(RectTransform), typeof(Slider));
             sgo.transform.SetParent(background.transform, false);
@@ -1089,7 +1089,7 @@ namespace NewAgeQoL
                     }
                 }
             }
-            catch (Exception e) { Plugin.Trace("[settings] escape: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] escape: " + e.Message); }
             return true;
         }
     }
@@ -1216,7 +1216,7 @@ namespace NewAgeQoL
                 root.sizeDelta = new Vector2(root.sizeDelta.x, root.sizeDelta.y + Mathf.Min(by, 60f));
                 Plugin.Trace("[settings] game settings window grew by " + by + ", now " + root.sizeDelta.y);
             }
-            catch (Exception e) { Plugin.Trace("[settings] settings window did not stretch: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] settings window did not stretch: " + e.Message); }
         }
     }
 
@@ -1234,7 +1234,7 @@ namespace NewAgeQoL
                 reset.gameObject.SetActive(false);
                 Plugin.Trace("[settings] 'Reset chat position' button hidden: the mod chat is in its own place");
             }
-            catch (Exception e) { Plugin.Trace("[settings] chat reset button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[settings] chat reset button: " + e.Message); }
         }
     }
 }

@@ -73,7 +73,7 @@ namespace NewAgeQoL
                 LayoutRebuilder.ForceRebuildLayoutImmediate(_panel);
                 Plugin.Trace("[action window] asking before using '" + title + "'");
             }
-            catch (Exception e) { Plugin.Trace("[action window] ask: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[action window] ask: " + e.Message); }
         }
 
         internal static bool Asking => _own && _root != null && _root.activeSelf;
@@ -110,7 +110,7 @@ namespace NewAgeQoL
                 ctrl = Controllers.Get<ConfirmActionDialogController>();
                 view = ctrl != null && ctrl.Opened ? ViewProp?.GetValue(ctrl) as ConfirmActionDialog : null;
             }
-            catch (Exception e) { Plugin.Trace("[action window] game window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[action window] game window: " + e.Message); }
 
             if (view == null || !view.gameObject.activeInHierarchy || view.IsAttackDialog || _parked)
             {
@@ -227,7 +227,7 @@ namespace NewAgeQoL
                 var yes = _yes;
                 Drop();
                 try { yes?.Invoke(); }
-                catch (Exception e) { Plugin.Trace("[action window] own confirm: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[action window] own confirm: " + e.Message); }
                 return;
             }
             try
@@ -245,7 +245,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[action window] game asked something more after confirm, its own window is back");
                 }
             }
-            catch (Exception e) { Plugin.Trace("[action window] confirm: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[action window] confirm: " + e.Message); }
         }
 
         private static void Cancel()
@@ -258,7 +258,7 @@ namespace NewAgeQoL
                 if (press == null) { Plugin.Trace("[action window] game has no cancel button"); return; }
                 press.OnClick();
             }
-            catch (Exception e) { Plugin.Trace("[action window] cancel: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[action window] cancel: " + e.Message); }
         }
 
         private static void Build()

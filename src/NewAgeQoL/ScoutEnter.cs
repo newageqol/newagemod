@@ -46,7 +46,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[scout] attack confirmed by Enter");
                 ok.onClick.Invoke();
             }
-            catch (Exception e) { Plugin.Trace("[scout] Enter: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[scout] Enter: " + e.Message); }
         }
     }
 
@@ -56,7 +56,7 @@ namespace NewAgeQoL
         private static void Postfix(ScoutingDialogParams dialogParams, ScoutingDialog __result)
         {
             try { ScoutEnter.Born(dialogParams, __result); }
-            catch (Exception e) { Plugin.Trace("[scout] window: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[scout] window: " + e.Message); }
         }
     }
 }

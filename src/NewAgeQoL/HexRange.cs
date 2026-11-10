@@ -16,7 +16,7 @@ namespace NewAgeQoL
         {
             int far = -1;
             try { far = Far(); }
-            catch (Exception e) { Plugin.Trace("[hexrange] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[hexrange] " + e.Message); }
             if (far < 0) { Hide(); return; }
             Show(far);
         }

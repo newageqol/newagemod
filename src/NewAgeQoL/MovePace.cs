@@ -54,7 +54,7 @@ namespace NewAgeQoL
                 conn.SendRequest(new BeginMoveRequest(target.Id));
                 Plugin.Trace("[speed] " + why + ": walking to v" + target.Id + " again, with the new speed");
             }
-            catch (Exception e) { Plugin.Trace("[speed] move resend: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[speed] move resend: " + e.Message); }
         }
     }
 
@@ -64,7 +64,7 @@ namespace NewAgeQoL
         private static void Postfix(object msg)
         {
             try { MovePace.Heard(msg as ThreeIntMessage); }
-            catch (Exception e) { Plugin.Trace("[speed] response 155: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[speed] response 155: " + e.Message); }
         }
     }
 }

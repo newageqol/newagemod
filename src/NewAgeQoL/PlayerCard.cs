@@ -96,7 +96,7 @@ namespace NewAgeQoL
                 }
                 LayoutRebuilder.MarkLayoutForRebuild(panel);
             }
-            catch (Exception e) { Plugin.Trace("[card] window width: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] window width: " + e.Message); }
         }
 
         private static IEnumerator Lay(GeneralUserInfoPanelContent panel, Unity3DUserInfoResponseMessage m)
@@ -420,7 +420,7 @@ namespace NewAgeQoL
                         profile.Fields[match.Groups[1].Value.Trim()] = Space.Replace(value, " ").Trim();
                     }
             }
-            catch (Exception e) { Plugin.Trace("[card] profile " + userId + " not parsed: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] profile " + userId + " not parsed: " + e.Message); }
             profile.Failed = profile.Fields.Count == 0;
             profile.Done = true;
             foreach (var wait in Live.ToArray())

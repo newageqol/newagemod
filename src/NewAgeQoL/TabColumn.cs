@@ -98,7 +98,7 @@ namespace NewAgeQoL
                 Place();
                 TabSearch.Tick(_panel, _tabs.transform as RectTransform);
             }
-            catch (Exception e) { Plugin.Trace("[tabcolumn] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[tabcolumn] " + e.Message); }
         }
 
         private static void Hide()

@@ -52,7 +52,7 @@ namespace NewAgeQoL
                 if (!SideButtons.InWorld() || !OnMap) return;
                 foreach (var name in Covered) Cover(name);
             }
-            catch (Exception e) { Plugin.Trace("[slots] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[slots] " + e.Message); }
         }
 
         private static void Cover(string name)
@@ -82,7 +82,7 @@ namespace NewAgeQoL
             var field = Field();
             if (field == null) return null;
             try { return field.GetValue(ctrl) as QuickButtonStateHolder; }
-            catch (Exception e) { Plugin.Trace("[slots] holder: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[slots] holder: " + e.Message); return null; }
         }
 
         private static FieldInfo Field()
@@ -131,7 +131,7 @@ namespace NewAgeQoL
                 if (part == null) return list;
                 foreach (var one in part) if (one != null) list.Add(one);
             }
-            catch (Exception e) { Plugin.Trace("[slots] help list: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[slots] help list: " + e.Message); }
             return list;
         }
 
@@ -144,8 +144,8 @@ namespace NewAgeQoL
                 if (nc == null || !nc.IsConnected()) return Lang.T("Нет соединения");
                 var holder = Holder();
                 int id = button.Id;
-                var context = new ResponseCallbackContext(387);
-                nc.SendRequest(context, new ContextActionRequest(id, UseButton, Window, Tab, 0), 416, id, msg =>
+                var context = new ResponseCallbackContext(ResponseConsts.CONTEXT_INVENTORY_THING_HINT_RESPONSE);
+                nc.SendRequest(context, new ContextActionRequest(id, UseButton, Window, Tab, 0), ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, id, msg =>
                 {
                     var answer = msg as ThingContextActionResponseMessage;
                     if (answer == null || answer.WindowId != Window) return;
@@ -196,7 +196,7 @@ namespace NewAgeQoL
                 fresh.Description = source.Description;
                 fresh.Unity3DCombatIconAtlasId = source.Unity3DCombatIconAtlasId;
             }
-            catch (Exception e) { Plugin.Trace("[slots] remainder recount: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[slots] remainder recount: " + e.Message); }
         }
 
         internal static Sprite Icon(QuickButton button)
@@ -306,7 +306,7 @@ namespace NewAgeQoL
                 Asked.Add(thingId);
                 cache.Get(thingId, got => { if (got != null) Told[thingId] = got; });
             }
-            catch (Exception e) { Plugin.Trace("[slots] description " + thingId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[slots] description " + thingId + ": " + e.Message); }
         }
     }
 }

@@ -31,8 +31,8 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) { _on = null; return; }
                 if (ReferenceEquals(_on, nc)) return;
-                nc.RemoveMessageListener(433, OnInfo);
-                nc.AddMessageListener(433, OnInfo);
+                nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnInfo);
+                nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnInfo);
                 _on = nc;
             }
             catch { _on = null; }
@@ -46,7 +46,7 @@ namespace NewAgeQoL
                 if (info == null || info.UserId <= 0) return;
                 Seen[info.UserId] = !string.IsNullOrEmpty(info.ClanName);
             }
-            catch (Exception e) { Plugin.Trace("[clan] player info response: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] player info response: " + e.Message); }
         }
 
         private static GeneralUserInfo Me()
@@ -134,7 +134,7 @@ namespace NewAgeQoL
                 icon.color = Color.white;
                 icon.gameObject.SetActive(true);
             }
-            catch (Exception e) { Plugin.Trace("[clan] icon: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[clan] icon: " + e.Message); }
         }
     }
 
@@ -167,7 +167,7 @@ namespace NewAgeQoL
                     if (Told.Add(key)) Plugin.Trace("[row] no picture for " + Fields[i] + (data != null ? " of " + data.Login + ", rights icon \"" + data.RightsIcon + "\"" : ""));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[row] badges: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[row] badges: " + e.Message); }
         }
     }
 }

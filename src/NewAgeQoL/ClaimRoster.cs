@@ -157,7 +157,7 @@ namespace NewAgeQoL
                 Grow();
                 Place();
             }
-            catch (Exception e) { Plugin.Trace("[roster] " + e.Message); _hover = null; Hide(); }
+            catch (Exception e) { Plugin.Caught("[roster] " + e.Message); _hover = null; Hide(); }
         }
 
         private static void AskCards()
@@ -166,8 +166,8 @@ namespace NewAgeQoL
             if (nc == null || !nc.IsConnected()) { _on = null; CardWant.Clear(); return; }
             if (!ReferenceEquals(_on, nc))
             {
-                nc.RemoveMessageListener(433, OnCard);
-                nc.AddMessageListener(433, OnCard);
+                nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnCard);
+                nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnCard);
                 _on = nc;
             }
             if (CardWant.Count == 0 || Time.unscaledTime < _cardAt) return;

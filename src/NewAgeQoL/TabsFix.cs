@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 foreach (var one in Rows) if (ReferenceEquals(one.Rt, rt)) return;
                 Rows.Add(new Row { Rt = rt, Told = true });
             }
-            catch (System.Exception e) { Plugin.Trace("[tabs] fit: " + e.Message); }
+            catch (System.Exception e) { Plugin.Caught("[tabs] fit: " + e.Message); }
         }
 
         internal static void Tick()
@@ -88,7 +88,7 @@ namespace NewAgeQoL
                 }
                 if (!row.Rt.gameObject.activeInHierarchy) continue;
                 try { Fit(row); }
-                catch (System.Exception e) { Plugin.Trace("[tabs] row: " + e.Message); }
+                catch (System.Exception e) { Plugin.Caught("[tabs] row: " + e.Message); }
             }
         }
 

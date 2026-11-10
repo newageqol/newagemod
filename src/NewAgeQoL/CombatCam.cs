@@ -33,7 +33,7 @@ namespace NewAgeQoL
                 _rigField = AccessTools.Field(typeof(CameraControl), "constraint");
                 _bodyProp = AccessTools.Property(typeof(BaseUserInput), "cameraTransform");
             }
-            catch (Exception e) { Plugin.Trace("[camera] camera fields: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[camera] camera fields: " + e.Message); }
         }
 
         private static float Pan
@@ -180,10 +180,10 @@ namespace NewAgeQoL
                                  + _maxPos.y.ToString("0.0") + " → " + rig.maxPos.y.ToString("0.0"));
                 }
             }
-            catch (Exception e) { Plugin.Trace("[camera] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[camera] " + e.Message); }
 
             try { Pull(); }
-            catch (Exception e) { Plugin.Trace("[camera] pull back: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[camera] pull back: " + e.Message); }
         }
 
         private static Vector3 Wider(Vector3 edge, Vector3 by, bool low)
@@ -214,7 +214,7 @@ namespace NewAgeQoL
                     _rig.minAngle = _minAngle;
                     _rig.maxAngle = _maxAngle;
                 }
-                catch (Exception e) { Plugin.Trace("[camera] restore original bounds: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[camera] restore original bounds: " + e.Message); }
             }
             _control = null;
             _rig = null;
@@ -297,7 +297,7 @@ namespace NewAgeQoL
                     }
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[camera] cell step: " + e.Message); return 0f; }
+            catch (Exception e) { Plugin.Caught("[camera] cell step: " + e.Message); return 0f; }
         }
 
         private static float Ground(Camera cam)
@@ -369,7 +369,7 @@ namespace NewAgeQoL
                 }
                 return seen > 0;
             }
-            catch (Exception e) { Plugin.Trace("[camera] view: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[camera] view: " + e.Message); return false; }
         }
 
         private static void Pull()

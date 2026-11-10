@@ -129,7 +129,7 @@ namespace NewAgeQoL
             Declined = false;
             AssetGate.Close();
             try { Settings.Close(); }
-            catch (Exception e) { Plugin.Trace("[assets] closing settings: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[assets] closing settings: " + e.Message); }
             Notice.Show(Lang.T("Локации мода скачаны. Они появятся при следующем входе в локацию."), 6f);
         }
 
@@ -184,7 +184,7 @@ namespace NewAgeQoL
                     if (Directory.Exists(old)) Directory.Delete(old, true);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[assets] removing old downloads: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[assets] removing old downloads: " + e.Message); }
             foreach (var g in Staged()) Settle(g);
         }
 
@@ -521,7 +521,7 @@ namespace NewAgeQoL
                 {
                     if (all.Contains(Path.GetFileName(file)) && ArenaWanted(Path.GetFileName(file))) continue;
                     try { File.Delete(file); }
-                    catch (Exception e) { Plugin.Trace("[arenas] removing " + Path.GetFileName(file) + ": " + e.Message); }
+                    catch (Exception e) { Plugin.Caught("[arenas] removing " + Path.GetFileName(file) + ": " + e.Message); }
                 }
             try { SaveState(); }
             catch (Exception e) { Plugin.Warn("[arenas] state: " + e.Message); }
@@ -698,7 +698,7 @@ namespace NewAgeQoL
                 foreach (var kv in _known) lines.Add(kv.Key + " " + kv.Value);
                 File.WriteAllLines(StateFile, lines.ToArray());
             }
-            catch (Exception e) { Plugin.Trace("[assets] saving state: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[assets] saving state: " + e.Message); }
         }
     }
     internal static class AssetGate

@@ -39,7 +39,7 @@ namespace NewAgeQoL
                 if (Sent.TryGetValue(key, out was) && Time.unscaledTime - was > Patience) Unstick(key);
                 Sent[key] = Time.unscaledTime;
             }
-            catch (Exception e) { Plugin.Trace("[card] old request not cleared: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] old request not cleared: " + e.Message); }
         }
 
         private static bool Ask(UserContextMenuData obj)
@@ -62,7 +62,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[card] ask by nick: " + e.Message);
+                Plugin.Caught("[card] ask by nick: " + e.Message);
                 return true;
             }
         }
@@ -80,7 +80,7 @@ namespace NewAgeQoL
             {
                 if (_on is INetworkConnection nc) nc.RemoveMessageListener(Answer, OnCard);
             }
-            catch (Exception e) { Plugin.Trace("[card] listener not removed: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[card] listener not removed: " + e.Message); }
             _on = null;
             _at = -1f;
             Sent.Clear();
@@ -132,7 +132,7 @@ namespace NewAgeQoL
             catch (Exception e)
             {
                 _at = -1f;
-                Plugin.Trace("[card] waiting for card: " + e.Message);
+                Plugin.Caught("[card] waiting for card: " + e.Message);
             }
         }
 

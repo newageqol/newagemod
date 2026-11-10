@@ -109,7 +109,7 @@ namespace NewAgeQoL
                 float at;
                 if (!AskedAt.TryGetValue(id, out at) || Time.unscaledTime - at > Fresh) Ask(id);
             }
-            catch (Exception e) { Plugin.Trace("[fighter] hint: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] hint: " + e.Message); }
         }
 
         private static void Hide()
@@ -190,7 +190,7 @@ namespace NewAgeQoL
                     if (!aliveOnly && corpse == null) corpse = ch;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[fighter] cell under mouse: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] cell under mouse: " + e.Message); }
             return corpse;
         }
 
@@ -241,24 +241,24 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(109, OnStates);
-            nc.AddMessageListener(109, OnStates);
-            nc.RemoveMessageListener(408, OnGroups);
-            nc.AddMessageListener(408, OnGroups);
-            nc.RemoveMessageListener(407, OnChanging);
-            nc.AddMessageListener(407, OnChanging);
-            nc.RemoveMessageListener(24, OnRound);
-            nc.AddMessageListener(24, OnRound);
-            nc.RemoveMessageListener(433, OnWho);
-            nc.AddMessageListener(433, OnWho);
-            nc.RemoveMessageListener(36, OnSwap);
-            nc.AddMessageListener(36, OnSwap);
-            nc.RemoveMessageListener(29, Drinks.OnAnimation);
-            nc.AddMessageListener(29, Drinks.OnAnimation);
-            nc.RemoveMessageListener(347, Drinks.OnButtons);
-            nc.AddMessageListener(347, Drinks.OnButtons);
-            nc.RemoveMessageListener(139, Drinks.OnUsed);
-            nc.AddMessageListener(139, Drinks.OnUsed);
+            nc.RemoveMessageListener(ResponseConsts.USER_ENCHANTMENT_RESPONCE, OnStates);
+            nc.AddMessageListener(ResponseConsts.USER_ENCHANTMENT_RESPONCE, OnStates);
+            nc.RemoveMessageListener(ResponseConsts.STATE_GROUPS_ON_USER_RESPONSE, OnGroups);
+            nc.AddMessageListener(ResponseConsts.STATE_GROUPS_ON_USER_RESPONSE, OnGroups);
+            nc.RemoveMessageListener(ResponseConsts.COMBAT_USERS_WITH_CHANGING_STATES_RESPONSE, OnChanging);
+            nc.AddMessageListener(ResponseConsts.COMBAT_USERS_WITH_CHANGING_STATES_RESPONSE, OnChanging);
+            nc.RemoveMessageListener(ResponseConsts.NEW_ROUND_RESPONCE, OnRound);
+            nc.AddMessageListener(ResponseConsts.NEW_ROUND_RESPONCE, OnRound);
+            nc.RemoveMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnWho);
+            nc.AddMessageListener(ResponseConsts.UNITY3D_USER_INFO_RESPONSE, OnWho);
+            nc.RemoveMessageListener(ResponseConsts.WEAR_RESPONCE, OnSwap);
+            nc.AddMessageListener(ResponseConsts.WEAR_RESPONCE, OnSwap);
+            nc.RemoveMessageListener(ResponseConsts.ANIMATION_RESPONCE, Drinks.OnAnimation);
+            nc.AddMessageListener(ResponseConsts.ANIMATION_RESPONCE, Drinks.OnAnimation);
+            nc.RemoveMessageListener(ResponseConsts.QUICK_SLOTS_RESPONSE, Drinks.OnButtons);
+            nc.AddMessageListener(ResponseConsts.QUICK_SLOTS_RESPONSE, Drinks.OnButtons);
+            nc.RemoveMessageListener(ResponseConsts.USE_BUTTON_RESPONCE, Drinks.OnUsed);
+            nc.AddMessageListener(ResponseConsts.USE_BUTTON_RESPONCE, Drinks.OnUsed);
             _on = nc;
         }
 
@@ -346,7 +346,7 @@ namespace NewAgeQoL
                 nc.SendRequest(new GetStateGroupsOnUserRequest(userId));
                 nc.SendRequest(new UserEnchantmentsRequest(userId));
             }
-            catch (Exception e) { Plugin.Trace("[fighter] nudge " + userId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] nudge " + userId + ": " + e.Message); }
         }
 
         private static void OnGroups(object m)
@@ -388,7 +388,7 @@ namespace NewAgeQoL
                 {
                     if (nc != null && nc.IsConnected()) nc.SendRequest(new UserInfoRequest(userId, null));
                 }
-                catch (Exception e) { Plugin.Trace("[fighter] rank " + userId + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[fighter] rank " + userId + ": " + e.Message); }
             }
         }
 
@@ -406,7 +406,7 @@ namespace NewAgeQoL
         {
             var info = m as Unity3DUserInfoResponseMessage;
             if (info == null || info.UserId <= 0) return;
-            try { Rerank(info); } catch (Exception e) { Plugin.Trace("[fighter] rank: " + e.Message); }
+            try { Rerank(info); } catch (Exception e) { Plugin.Caught("[fighter] rank: " + e.Message); }
             if (string.IsNullOrEmpty(info.Login)) return;
             string had;
             if (Names.TryGetValue(info.UserId, out had) && had == info.Login) return;
@@ -433,7 +433,7 @@ namespace NewAgeQoL
                 nc.SendRequest(new UserInfoRequest(userId, null));
                 AskedNames.Add(userId);
             }
-            catch (Exception e) { Plugin.Trace("[fighter] name " + userId + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] name " + userId + ": " + e.Message); }
         }
 
         internal static bool Silent(int userId)
@@ -455,7 +455,7 @@ namespace NewAgeQoL
                 NudgedAt[userId] = Time.unscaledTime;
                 nc.SendRequest(new GetStateGroupsOnUserRequest(userId));
             }
-            catch (Exception e) { Plugin.Trace("[fighter] state request: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] state request: " + e.Message); }
         }
 
         private static void Fill(AbstractCharacter ch, ICombatData cd)
@@ -548,7 +548,7 @@ namespace NewAgeQoL
             var mine = Body(cd);
             if (mine == null) return -1;
             try { return HexUtils.range(mine.HexGridPosition, ch.HexGridPosition); }
-            catch (Exception e) { Plugin.Trace("[fighter] distance: " + e.Message); return -1; }
+            catch (Exception e) { Plugin.Caught("[fighter] distance: " + e.Message); return -1; }
         }
 
         internal static string Steps(AbstractCharacter ch, ICombatData cd, bool me)
@@ -1057,14 +1057,14 @@ namespace NewAgeQoL
                 tex.filterMode = FilterMode.Bilinear;
                 _heart = Sprite.Create(tex, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
             }
-            catch (Exception e) { Plugin.Trace("[fighter] heart: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[fighter] heart: " + e.Message); }
             return _heart;
         }
 
         private static Sprite Icon(EActionParamIconType type)
         {
             try { return AtlasUtils.GetActionParamIcon(type); }
-            catch (Exception e) { Plugin.Trace("[fighter] icon: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[fighter] icon: " + e.Message); return null; }
         }
 
         private static void Rule(Transform host)

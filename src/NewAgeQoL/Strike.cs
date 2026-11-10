@@ -36,7 +36,7 @@ namespace NewAgeQoL
                 _byMouse = Time.unscaledTime;
                 Poke(id);
             }
-            catch (Exception e) { Plugin.Trace("[strike] mouse: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] mouse: " + e.Message); }
         }
 
         private static float _watchAt;
@@ -72,7 +72,7 @@ namespace NewAgeQoL
                 if (cd == null) return true;
                 return cd.RoundType != RoundType.COMBAT_ROUND;
             }
-            catch (Exception e) { Plugin.Trace("[strike] round type: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[strike] round type: " + e.Message); return false; }
         }
 
         private static int _chosenRound = -1;
@@ -99,7 +99,7 @@ namespace NewAgeQoL
                 _fight = cd;
                 _seenRound = cd.RoundNum;
             }
-            catch (Exception e) { Plugin.Trace("[strike] fight change: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] fight change: " + e.Message); }
         }
 
         private static void Forget(string why)
@@ -127,7 +127,7 @@ namespace NewAgeQoL
                 _chosenRound = cd.RoundNum;
                 _chosenWhat = what;
             }
-            catch (Exception e) { Plugin.Trace("[strike] strike choice: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] strike choice: " + e.Message); }
         }
 
         internal static bool AnyBlock(BlocksMessage blocks)
@@ -174,7 +174,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[strike] combat phase ended in round " + (cd != null ? cd.RoundNum : -1) + ", no more strikes");
                 Shut("phase ended, no strike chosen");
             }
-            catch (Exception e) { Plugin.Trace("[strike] phase end: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] phase end: " + e.Message); }
         }
 
         private static void Revive(ICombatData cd)
@@ -200,7 +200,7 @@ namespace NewAgeQoL
                 var button = ctrl != null ? AccessTools.Property(typeof(CombatButtonsController), "AttackButton")?.GetValue(ctrl) as AttackButton : null;
                 if (button != null && button.Activated) button.CloseMenu();
             }
-            catch (Exception e) { Plugin.Trace("[strike] strike button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] strike button: " + e.Message); }
         }
 
         internal static void Shut(string why)
@@ -216,7 +216,7 @@ namespace NewAgeQoL
                 close.Invoke(dialog, null);
                 Plugin.Trace("[strike] " + why + " - strike window closed");
             }
-            catch (Exception e) { Plugin.Trace("[strike] window close: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] window close: " + e.Message); }
         }
 
         private static bool OnUi()
@@ -253,7 +253,7 @@ namespace NewAgeQoL
                     return;
                 }
             }
-            catch (Exception e) { Plugin.Trace("[strike] cell: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] cell: " + e.Message); }
         }
 
         internal static void Body()
@@ -265,7 +265,7 @@ namespace NewAgeQoL
                 var picked = cd != null ? cd.SelectedCharacter : null;
                 if (picked != null) Poke(picked.UserId);
             }
-            catch (Exception e) { Plugin.Trace("[strike] fighter: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] fighter: " + e.Message); }
         }
 
         private static void Sync()
@@ -376,7 +376,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[strike] key: strike not assembled, the game decides, as with a button click");
                 click.Invoke(ctrl, null);
             }
-            catch (Exception e) { Plugin.Trace("[strike] key: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] key: " + e.Message); }
         }
 
         internal static bool Swing()
@@ -399,7 +399,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[strike] plain strike at " + target.UserId + ", distance " + distance);
                 return true;
             }
-            catch (Exception e) { Plugin.Trace("[strike] plain strike: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[strike] plain strike: " + e.Message); return false; }
         }
 
         private static void Quiet()
@@ -410,7 +410,7 @@ namespace NewAgeQoL
                 var button = ctrl != null ? AccessTools.Property(typeof(CombatButtonsController), "AttackButton")?.GetValue(ctrl) as AttackButton : null;
                 if (button != null) button.Disable();
             }
-            catch (Exception e) { Plugin.Trace("[strike] strike button: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[strike] strike button: " + e.Message); }
         }
     }
 
@@ -428,7 +428,7 @@ namespace NewAgeQoL
                 Strike.Release();
                 return false;
             }
-            catch (Exception e) { Plugin.Trace("[strike] attack button: " + e.Message); return true; }
+            catch (Exception e) { Plugin.Caught("[strike] attack button: " + e.Message); return true; }
         }
     }
 

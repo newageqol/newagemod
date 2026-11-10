@@ -46,13 +46,13 @@ namespace NewAgeQoL
                     if (w.GetComponent<ShopLift>() == null) w.gameObject.AddComponent<ShopLift>();
                 }
             }
-            catch (Exception e) { Plugin.Trace("[shop] above chat: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[shop] above chat: " + e.Message); }
         }
 
         internal static void Attach(BasePanelContentWindow w)
         {
             try { if (w != null && w.GetComponent<ShopLift>() == null) w.gameObject.AddComponent<ShopLift>(); }
-            catch (Exception e) { Plugin.Trace("[shop] lift: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[shop] lift: " + e.Message); }
         }
     }
 

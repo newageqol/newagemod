@@ -61,7 +61,7 @@ namespace NewAgeQoL
                 if ((Input.mousePosition - _mouse).sqrMagnitude > 64f) { Drop(); return; }
                 if (!Walkable(cd, _pick)) { Drop(); return; }
             }
-            catch (Exception e) { Plugin.Trace("[walk] hex pick: " + e.Message); Drop(); }
+            catch (Exception e) { Plugin.Caught("[walk] hex pick: " + e.Message); Drop(); }
         }
 
         private static void Keys()
@@ -81,7 +81,7 @@ namespace NewAgeQoL
                     + ", hex " + (_pick != null ? _pick.clientX + ";" + _pick.clientY : "not picked"));
                 Go();
             }
-            catch (Exception e) { Plugin.Trace("[walk] keys: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] keys: " + e.Message); }
         }
 
         private static bool Crlf()
@@ -167,7 +167,7 @@ namespace NewAgeQoL
                 _round = cd.RoundNum;
                 _mouse = Input.mousePosition;
             }
-            catch (Exception e) { Plugin.Trace("[walk] hex pick: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] hex pick: " + e.Message); }
         }
 
         internal static void Go()
@@ -186,7 +186,7 @@ namespace NewAgeQoL
                 Drop();
                 Ring(hex);
             }
-            catch (Exception e) { Plugin.Trace("[walk] step: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] step: " + e.Message); }
         }
 
         private static void Build(ICombatData cd, OffsetCoord centre)
@@ -244,7 +244,7 @@ namespace NewAgeQoL
         {
             if (_pad != null) return _pad;
             try { _pad = UnityEngine.Object.FindObjectOfType<HexGridControl>(); }
-            catch (Exception e) { Plugin.Trace("[walk] battlefield: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] battlefield: " + e.Message); }
             return _pad;
         }
 
@@ -258,7 +258,7 @@ namespace NewAgeQoL
                 if (_rig == null) _rig = UnityEngine.Object.FindObjectOfType<CameraControl>();
                 _grid = _rig != null ? AccessTools.Property(typeof(BaseUserInput), "gridTransform")?.GetValue(_rig) as Transform : null;
             }
-            catch (Exception e) { Plugin.Trace("[walk] combat grid: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] combat grid: " + e.Message); }
             return _grid;
         }
 
@@ -289,7 +289,7 @@ namespace NewAgeQoL
                     if (typeof(Action<HexClickInfo>).IsAssignableFrom(one.FieldType))
                         return one.GetValue(pad) as Action<HexClickInfo>;
             }
-            catch (Exception e) { Plugin.Trace("[walk] field handler: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[walk] field handler: " + e.Message); }
             return null;
         }
     }

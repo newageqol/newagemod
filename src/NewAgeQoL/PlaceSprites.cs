@@ -48,11 +48,11 @@ namespace NewAgeQoL
                 foreach (var p in lines)
                 {
                     try { c.Add(p); }
-                    catch (Exception e) { Plugin.Trace("[places] sprite line " + string.Join(" ", p) + ": " + e.Message); }
+                    catch (Exception e) { Plugin.Caught("[places] sprite line " + string.Join(" ", p) + ": " + e.Message); }
                 }
                 Plugin.Trace("[places] animated pieces: " + c._anims.Count + " from " + lines.Count + " lines");
             }
-            catch (Exception e) { Plugin.Trace("[places] sprites: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[places] sprites: " + e.Message); }
         }
 
         private static float F(string[] p, int i) => i < p.Length ? float.Parse(p[i], CultureInfo.InvariantCulture) : 0f;

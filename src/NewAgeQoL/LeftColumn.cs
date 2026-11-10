@@ -27,7 +27,7 @@ namespace NewAgeQoL
                 Top();
                 Keys();
             }
-            catch (Exception e) { Plugin.Trace("[column] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[column] " + e.Message); }
         }
 
         private static float _keysAt;
@@ -51,12 +51,12 @@ namespace NewAgeQoL
             {
                 Plugin.Trace("[column] bag by key " + _bagKey);
                 try { Spells.Menu(UserMenuController.ETabs.Inventory); }
-                catch (Exception e) { Plugin.Trace("[column] bag key: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[column] bag key: " + e.Message); }
             }
             if (_dailyKey != KeyCode.None && Input.GetKeyDown(_dailyKey))
             {
                 try { DependencyContainer.GetContainer()?.Resolve<DailyTasksWindowController>()?.OpenByButton(); }
-                catch (Exception e) { Plugin.Trace("[column] quests key: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[column] quests key: " + e.Message); }
             }
         }
 
@@ -79,7 +79,7 @@ namespace NewAgeQoL
                 if (got is KeyCode key) return key;
                 if (got is int code) return (KeyCode)code;
             }
-            catch (Exception e) { Plugin.Trace("[column] key " + action + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[column] key " + action + ": " + e.Message); }
             return KeyCode.None;
         }
 
@@ -90,7 +90,7 @@ namespace NewAgeQoL
                 Menu();
                 Top();
             }
-            catch (Exception e) { Plugin.Trace("[column] late frame: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[column] late frame: " + e.Message); }
         }
 
         internal static void Squash(LeftBottomMenuScript menu)
@@ -208,7 +208,7 @@ namespace NewAgeQoL
                 }
                 return best;
             }
-            catch (Exception e) { Plugin.Trace("[column] character block: " + e.Message); return null; }
+            catch (Exception e) { Plugin.Caught("[column] character block: " + e.Message); return null; }
         }
     }
 

@@ -42,14 +42,14 @@ namespace NewAgeQoL
             if (nc == null || !nc.IsConnected()) return;
             if (ReferenceEquals(_on, nc)) return;
             Shutdown();
-            nc.RemoveMessageListener(17, OnAnnounce);
-            nc.AddMessageListener(17, OnAnnounce);
+            nc.RemoveMessageListener(ResponseConsts.UPDATE_FIGHT_ANONCE, OnAnnounce);
+            nc.AddMessageListener(ResponseConsts.UPDATE_FIGHT_ANONCE, OnAnnounce);
             _on = nc;
         }
 
         internal static void Shutdown()
         {
-            try { if (_on != null) _on.RemoveMessageListener(17, OnAnnounce); }
+            try { if (_on != null) _on.RemoveMessageListener(ResponseConsts.UPDATE_FIGHT_ANONCE, OnAnnounce); }
             catch { }
             _on = null;
         }
@@ -76,7 +76,7 @@ namespace NewAgeQoL
                     + ", players up to " + one.MaxCount + ", levels " + one.MinLevel + "-" + one.MaxLevel
                     + ", wait " + one.Timeout / 1000 + " s, round " + one.RoundTimeout);
             }
-            catch (Exception e) { Plugin.Trace("[claims] announce: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] announce: " + e.Message); }
         }
 
         internal static void Note(BaseEnterfightView view, FightAnnounce one)
@@ -98,7 +98,7 @@ namespace NewAgeQoL
                     Who = one.LeaderLogin,
                 });
             }
-            catch (Exception e) { Plugin.Trace("[claims] record: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[claims] record: " + e.Message); }
         }
 
         internal static void Tick()
@@ -123,7 +123,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[claims] removed expired claim " + one.Id
                         + (string.IsNullOrEmpty(one.Who) ? "" : " from " + one.Who));
                 }
-                catch (Exception e) { Plugin.Trace("[claims] removal " + one.Id + ": " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[claims] removal " + one.Id + ": " + e.Message); }
             }
         }
 
@@ -152,7 +152,7 @@ namespace NewAgeQoL
             }
             catch (Exception e)
             {
-                Plugin.Trace("[claims] update: " + e.Message);
+                Plugin.Caught("[claims] update: " + e.Message);
                 return true;
             }
         }

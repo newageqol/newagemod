@@ -33,7 +33,7 @@ namespace NewAgeQoL
                 Plugin.Trace("[rise] own fighter came back to life in round " + cd.RoundNum + " (" + cd.RoundType + "), action points " + cd.TimeUnitsManager.ActionTimeUnits);
                 Unlock(cd);
             }
-            catch (Exception e) { Plugin.Trace("[rise] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[rise] " + e.Message); }
         }
 
         internal static void NewRound(ICombatData cd)
@@ -50,7 +50,7 @@ namespace NewAgeQoL
                 }
                 Unlock(cd);
             }
-            catch (Exception e) { Plugin.Trace("[rise] new round: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[rise] new round: " + e.Message); }
         }
 
         private static void Unlock(ICombatData cd)

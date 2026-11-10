@@ -159,7 +159,7 @@ namespace NewAgeQoL
                     _dirty = true;
                 });
             }
-            catch (Exception e) { Plugin.Trace("[itemtip] description " + thing + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[itemtip] description " + thing + ": " + e.Message); }
         }
 
         private static void AskWear(int inv)
@@ -175,7 +175,7 @@ namespace NewAgeQoL
                 var context = new ResponseCallbackContext();
                 Asked[inv] = Time.unscaledTime;
                 Pending[inv] = context;
-                nc.SendRequest(context, new ContextInventoryThingHintRequest(inv, EThingContextWindow.WINDOW_INVENTORY), 387, -1, msg =>
+                nc.SendRequest(context, new ContextInventoryThingHintRequest(inv, EThingContextWindow.WINDOW_INVENTORY), ResponseConsts.CONTEXT_INVENTORY_THING_HINT_RESPONSE, -1, msg =>
                 {
                     Asked.Remove(inv);
                     if (Pending.TryGetValue(inv, out var mine) && ReferenceEquals(mine, context)) Pending.Remove(inv);
@@ -186,7 +186,7 @@ namespace NewAgeQoL
                     if (inv == _shownInv) _dirty = true;
                 });
             }
-            catch (Exception e) { Plugin.Trace("[itemtip] wear " + inv + ": " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[itemtip] wear " + inv + ": " + e.Message); }
         }
 
         private static void Sweep()
@@ -207,7 +207,7 @@ namespace NewAgeQoL
             foreach (var context in Spent)
             {
                 try { context.Destroy(); }
-                catch (Exception e) { Plugin.Trace("[itemtip] reply context: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[itemtip] reply context: " + e.Message); }
             }
             Spent.Clear();
         }

@@ -63,7 +63,7 @@ namespace NewAgeQoL
             {
                 _looked = true;
                 try { _startTime = AccessTools.FieldRefAccess<ChangeLifeAnimationItem, float?>("_startTime"); }
-                catch (Exception e) { Plugin.Trace("[prediction] field _startTime not found: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[prediction] field _startTime not found: " + e.Message); }
             }
             if (_startTime == null || _startTime(item).HasValue) return false;
             _startTime(item) = 0f;
@@ -226,7 +226,7 @@ namespace NewAgeQoL
             {
                 string found = null;
                 try { found = Lang.Original(AbilityKey); }
-                catch (Exception e) { Plugin.Trace("[prediction] ability name: " + e.Message); }
+                catch (Exception e) { Plugin.Caught("[prediction] ability name: " + e.Message); }
                 if (string.IsNullOrEmpty(found) || found == AbilityKey) return false;
                 _name = Norm(found);
             }
@@ -245,7 +245,7 @@ namespace NewAgeQoL
         private static void Postfix(ChatResponseMessage message)
         {
             try { Prediction.Heard(message); }
-            catch (Exception e) { Plugin.Trace("[prediction] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[prediction] " + e.Message); }
         }
     }
 
@@ -259,7 +259,7 @@ namespace NewAgeQoL
         private static void Postfix(ChangeLifeAnimationItem __instance)
         {
             try { Prediction.Item(__instance); }
-            catch (Exception e) { Plugin.Trace("[prediction] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[prediction] " + e.Message); }
         }
     }
 
@@ -274,7 +274,7 @@ namespace NewAgeQoL
         private static void Postfix(CharacterIndicators __instance, CharacterIndicatorsMessage message, int __state)
         {
             try { Prediction.Assigned(__instance, message, __state); }
-            catch (Exception e) { Plugin.Trace("[prediction] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[prediction] " + e.Message); }
         }
     }
 }

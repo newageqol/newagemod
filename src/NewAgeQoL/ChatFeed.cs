@@ -96,7 +96,7 @@ namespace NewAgeQoL
                 if (_body != null) { _body.margin = _margin; _body.alignment = _align; }
                 if (_fit != null) _fit.enabled = true;
             }
-            catch (Exception e) { Plugin.Trace("[chat] feed release: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] feed release: " + e.Message); }
         }
 
         internal static void Watch(ChatPanelContent view)
@@ -120,7 +120,7 @@ namespace NewAgeQoL
                 ChatDock.Redraw();
                 _stuckAt = from == _from && to == _to ? at : -1f;
             }
-            catch (Exception e) { Plugin.Trace("[chat] feed scroll: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[chat] feed scroll: " + e.Message); }
         }
 
         private static bool Bind(ChatPanelContent panel)

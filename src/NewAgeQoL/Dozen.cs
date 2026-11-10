@@ -40,7 +40,7 @@ namespace NewAgeQoL
                 _inside = false;
                 Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - Dozen" : ""));
             }
-            catch (Exception e) { Plugin.Trace("[dozen] join: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dozen] join: " + e.Message); }
         }
 
         private static readonly System.Reflection.FieldInfo AnnounceField = AccessTools.Field(typeof(BaseEnterfightWidget), "_announce");
@@ -81,7 +81,7 @@ namespace NewAgeQoL
                 if (!_go.activeSelf) _go.SetActive(true);
                 Fill();
             }
-            catch (Exception e) { Plugin.Trace("[dozen] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[dozen] " + e.Message); }
         }
 
         private static void Hide()

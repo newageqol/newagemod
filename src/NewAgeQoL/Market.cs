@@ -54,10 +54,10 @@ namespace NewAgeQoL
             var nc = NetworkConnection.Instance;
             if (nc == null || !nc.IsConnected()) { _on = null; return; }
             if (ReferenceEquals(_on, nc)) return;
-            nc.RemoveMessageListener(416, OnResult);
-            nc.RemoveMessageListener(102, OnOffers);
-            nc.AddMessageListener(416, OnResult);
-            nc.AddMessageListener(102, OnOffers);
+            nc.RemoveMessageListener(ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, OnResult);
+            nc.RemoveMessageListener(ResponseConsts.MARKET_CONTENT_RESPONCE, OnOffers);
+            nc.AddMessageListener(ResponseConsts.THING_CONTEXT_ACTION_RESPONSE, OnResult);
+            nc.AddMessageListener(ResponseConsts.MARKET_CONTENT_RESPONCE, OnOffers);
             _on = nc;
         }
 
@@ -103,7 +103,7 @@ namespace NewAgeQoL
                     });
                 }
             }
-            catch (Exception e) { Plugin.Trace("[market] comma in price: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] comma in price: " + e.Message); }
         }
 
         internal static void Setup(PutOnMarketConfirmDialog dialog)
@@ -271,7 +271,7 @@ namespace NewAgeQoL
                     Plugin.Trace("[market] removal 1/" + _removeLots + ", still queued " + _rQueue.Count);
                 }
             }
-            catch (Exception e) { Plugin.Trace("[market] outgoing: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] outgoing: " + e.Message); }
         }
 
         private static void OnResult(object m)
@@ -366,7 +366,7 @@ namespace NewAgeQoL
                 AirMessageScript.ShowInformationNotification(text);
                 if (existing != null) Center(existing);
             }
-            catch (Exception e) { Plugin.Trace("[market] message: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] message: " + e.Message); }
         }
 
         internal static void Center(AirMessageScript air)
@@ -396,7 +396,7 @@ namespace NewAgeQoL
         private static void Refresh(int window, int tab)
         {
             try { NetworkConnection.Instance.SendRequest(new GetTabContentRequest(tab, window)); }
-            catch (Exception e) { Plugin.Trace("[market] tab refresh: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] tab refresh: " + e.Message); }
         }
 
         internal static void SetupRemove(ThingHintDialog dialog)
@@ -481,7 +481,7 @@ namespace NewAgeQoL
                 }
                 fit.Show(text);
             }
-            catch (Exception e) { Plugin.Trace("[market] price for 10, 50 and 100: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] price for 10, 50 and 100: " + e.Message); }
         }
 
         private static DialogPrice Price(MarketProposalListItemRowItemRenderer r, System.Reflection.FieldInfo field)
@@ -596,7 +596,7 @@ namespace NewAgeQoL
                 var layout = LayoutField != null ? LayoutField.GetValue(grid) as GridLayoutGroup : null;
                 if (layout != null) layout.cellSize = grid.ItemSize;
             }
-            catch (Exception e) { Plugin.Trace("[market] lot row height: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] lot row height: " + e.Message); }
         }
 
         private static void Postfix(MarketProposalListDialog __instance, MarketProposalListDialogParams dialogParams)
@@ -613,7 +613,7 @@ namespace NewAgeQoL
                 height.preferredHeight = Mathf.Min(count, Seen) * (Usual + Extra + gap);
                 Plugin.Trace("[market] lot rows taller by " + Extra + " px for prices per 10, 50 and 100 pcs, lots " + count);
             }
-            catch (Exception e) { Plugin.Trace("[market] lot window height: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[market] lot window height: " + e.Message); }
         }
     }
 

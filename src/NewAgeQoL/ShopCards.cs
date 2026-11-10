@@ -75,7 +75,7 @@ namespace NewAgeQoL
                 }
                 foreach (var grid in Grids) Fit(grid);
             }
-            catch (Exception e) { Plugin.Trace("[cards] " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[cards] " + e.Message); }
         }
 
         private static void Fit(Component grid)

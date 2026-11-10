@@ -17,7 +17,7 @@ namespace NewAgeQoL
                 if (who != "QoLSetupButton") Settings.Close();
                 if (who != Workshop.ButtonName) Workshop.Shut();
             }
-            catch (Exception e) { Plugin.Trace("[windows] closing neighbors: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] closing neighbors: " + e.Message); }
         }
 
         private static void CloseMenu()
@@ -31,7 +31,7 @@ namespace NewAgeQoL
                 call.Invoke(ctrl, null);
                 Plugin.Trace("[windows] character menu closed");
             }
-            catch (Exception e) { Plugin.Trace("[windows] character menu: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] character menu: " + e.Message); }
         }
 
         private static void CloseDaily()
@@ -42,7 +42,7 @@ namespace NewAgeQoL
                 if (ctrl == null) return;
                 ctrl.Clear();
             }
-            catch (Exception e) { Plugin.Trace("[windows] dailies: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[windows] dailies: " + e.Message); }
         }
     }
 }

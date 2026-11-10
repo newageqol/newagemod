@@ -75,7 +75,7 @@ namespace NewAgeQoL
             Hide();
             if (_dialog == null) return;
             try { _dialog.Close(); }
-            catch (Exception e) { Plugin.Trace("[workshop] window close: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[workshop] window close: " + e.Message); }
             _dialog = null;
             _mine = false;
         }
@@ -332,18 +332,18 @@ namespace NewAgeQoL
                 var nc = NetworkConnection.Instance;
                 if (nc == null || !nc.IsConnected()) { _on = null; return; }
                 if (ReferenceEquals(_on, nc)) return;
-                nc.RemoveMessageListener(394, OnInfo);
-                nc.RemoveMessageListener(395, OnDone);
-                nc.RemoveMessageListener(396, OnDone);
-                nc.RemoveMessageListener(397, OnDone);
-                nc.RemoveMessageListener(400, OnList);
-                nc.RemoveMessageListener(429, OnPoor);
-                nc.AddMessageListener(394, OnInfo);
-                nc.AddMessageListener(395, OnDone);
-                nc.AddMessageListener(396, OnDone);
-                nc.AddMessageListener(397, OnDone);
-                nc.AddMessageListener(400, OnList);
-                nc.AddMessageListener(429, OnPoor);
+                nc.RemoveMessageListener(ResponseConsts.ARTEFACT_INFO_RESPONSE, OnInfo);
+                nc.RemoveMessageListener(ResponseConsts.ARTEFACT_CREATE_RESPONSE, OnDone);
+                nc.RemoveMessageListener(ResponseConsts.ARTEFACT_RESHOE_RESPONSE, OnDone);
+                nc.RemoveMessageListener(ResponseConsts.ARTEFACT_UPDATE_RESPONSE, OnDone);
+                nc.RemoveMessageListener(ResponseConsts.ARTEFACT_LIST_FOR_OPERATION_RESPONSE, OnList);
+                nc.RemoveMessageListener(ResponseConsts.INSUFFICIENT_CASH_RESPONSE, OnPoor);
+                nc.AddMessageListener(ResponseConsts.ARTEFACT_INFO_RESPONSE, OnInfo);
+                nc.AddMessageListener(ResponseConsts.ARTEFACT_CREATE_RESPONSE, OnDone);
+                nc.AddMessageListener(ResponseConsts.ARTEFACT_RESHOE_RESPONSE, OnDone);
+                nc.AddMessageListener(ResponseConsts.ARTEFACT_UPDATE_RESPONSE, OnDone);
+                nc.AddMessageListener(ResponseConsts.ARTEFACT_LIST_FOR_OPERATION_RESPONSE, OnList);
+                nc.AddMessageListener(ResponseConsts.INSUFFICIENT_CASH_RESPONSE, OnPoor);
                 _on = nc;
             }
             catch { _on = null; }
@@ -394,7 +394,7 @@ namespace NewAgeQoL
                 if (done.Success)
                 {
                     try { DependencyContainer.GetContainer()?.Resolve<GeneralThingInfoDescriptionManager>()?.Clear(); }
-                    catch (Exception e) { Plugin.Trace("[workshop] descriptions reset: " + e.Message); }
+                    catch (Exception e) { Plugin.Caught("[workshop] descriptions reset: " + e.Message); }
                     _dialog.Close();
                 }
                 else _dialog.EnableButtons();
@@ -412,7 +412,7 @@ namespace NewAgeQoL
                 _dialog.EnableButtons();
                 Plugin.Trace("[workshop] server says payment is insufficient");
             }
-            catch (Exception e) { Plugin.Trace("[workshop] shortage: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[workshop] shortage: " + e.Message); }
         }
     }
 }
