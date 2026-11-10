@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Transport.Messages.Common.List;
+using Transport.Messages.Responses.Combat;
 using Transport.Messages.Responses.Combat.States;
 using Transport.Messages.Responses.User.Info;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace NewAgeQoL
         private const float Look = 0.08f;
         private const float Wait = 0.3f;
         private const float Fresh = 3f;
+        private const float RankDelay = 0.5f;
         private const float BoardW = 300f;
         private const float NameMax = 146f;
         private const float SrcMax = 92f;
@@ -51,6 +53,7 @@ namespace NewAgeQoL
         private static readonly Dictionary<int, float> FirstAsk = new Dictionary<int, float>();
         private static readonly Dictionary<int, float> NudgedAt = new Dictionary<int, float>();
         private static readonly HashSet<int> Swept = new HashSet<int>();
+        private static readonly Dictionary<int, float> RankAsk = new Dictionary<int, float>();
         internal static int NamesVersion;
         private static bool _wasFight;
         private static float _sweepAt;
@@ -66,6 +69,7 @@ namespace NewAgeQoL
                 bool fight = SideButtons.InCombat();
                 if (fight != _wasFight) { _wasFight = fight; Forget(); Branches.NewFight(); }
                 if (!fight) { Hide(); return; }
+                AskRanks();
                 Sweep(Cd());
                 if (SkillList.Armed) { Hide(); return; }
                 if (Time.unscaledTime < _lookAt) return;
@@ -247,6 +251,8 @@ namespace NewAgeQoL
             nc.AddMessageListener(24, OnRound);
             nc.RemoveMessageListener(433, OnWho);
             nc.AddMessageListener(433, OnWho);
+            nc.RemoveMessageListener(36, OnSwap);
+            nc.AddMessageListener(36, OnSwap);
             nc.RemoveMessageListener(29, Drinks.OnAnimation);
             nc.AddMessageListener(29, Drinks.OnAnimation);
             nc.RemoveMessageListener(347, Drinks.OnButtons);
@@ -279,6 +285,7 @@ namespace NewAgeQoL
             FirstAsk.Clear();
             NudgedAt.Clear();
             Swept.Clear();
+            RankAsk.Clear();
             _sweepAt = 0f;
             _rowsSig = "";
             Drinks.Forget();
@@ -359,10 +366,48 @@ namespace NewAgeQoL
                 Plugin.Trace("[fighter] state groups " + msg.UserId + ": " + list.Count);
         }
 
+        private static void OnSwap(object m)
+        {
+            var wear = m as WearResponseMessage;
+            if (wear == null || wear.UserId <= 0 || wear.ExchangeWeapon != true || !SideButtons.InCombat()) return;
+            RankAsk[wear.UserId] = Time.unscaledTime + RankDelay;
+        }
+
+        private static void AskRanks()
+        {
+            if (RankAsk.Count == 0) return;
+            List<int> due = null;
+            foreach (var pair in RankAsk)
+                if (Time.unscaledTime >= pair.Value) (due ?? (due = new List<int>())).Add(pair.Key);
+            if (due == null) return;
+            var nc = NetworkConnection.Instance;
+            foreach (int userId in due)
+            {
+                RankAsk.Remove(userId);
+                try
+                {
+                    if (nc != null && nc.IsConnected()) nc.SendRequest(new UserInfoRequest(userId, null));
+                }
+                catch (Exception e) { Plugin.Trace("[fighter] rank " + userId + ": " + e.Message); }
+            }
+        }
+
+        private static void Rerank(Unity3DUserInfoResponseMessage info)
+        {
+            if (info.Rank <= 0 || !SideButtons.InCombat()) return;
+            var cd = Cd();
+            var ch = cd != null ? cd.GetCharacter(info.UserId) : null;
+            if (ch == null || ch.IsBot || ch.Rank == info.Rank) return;
+            Plugin.Trace("[fighter] rank " + info.UserId + ": " + ch.Rank + " -> " + info.Rank);
+            ch.Rank = info.Rank;
+        }
+
         private static void OnWho(object m)
         {
             var info = m as Unity3DUserInfoResponseMessage;
-            if (info == null || info.UserId <= 0 || string.IsNullOrEmpty(info.Login)) return;
+            if (info == null || info.UserId <= 0) return;
+            try { Rerank(info); } catch (Exception e) { Plugin.Trace("[fighter] rank: " + e.Message); }
+            if (string.IsNullOrEmpty(info.Login)) return;
             string had;
             if (Names.TryGetValue(info.UserId, out had) && had == info.Login) return;
             Names[info.UserId] = info.Login;
