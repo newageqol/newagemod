@@ -72,7 +72,7 @@ internal sealed class ArenaCam
 
     internal void Focus(Vector3 gridLocal)
     {
-        _wantTarget = Clamp(new Vector3(gridLocal.x, 0f, -gridLocal.z));
+        _wantTarget = HomeTarget;
         _target = _wantTarget;
         _startTarget ??= _wantTarget;
         _homeLock = true;
