@@ -42,6 +42,9 @@ namespace NewAgeQoL
         private static readonly HashSet<int> Hidden = new HashSet<int>();
         private static readonly List<Row> Rows = new List<Row>();
         private static readonly List<Chip> Chips = new List<Chip>();
+        private static readonly List<Action> Pending = new List<Action>();
+        private static int _next;
+        private static readonly System.Diagnostics.Stopwatch Clock = new System.Diagnostics.Stopwatch();
 
         internal static bool IsOpen => _go != null;
 
@@ -184,6 +187,8 @@ namespace NewAgeQoL
             _refillAt = 0f;
             Rows.Clear();
             Chips.Clear();
+            Pending.Clear();
+            _next = 0;
         }
 
         internal static bool EscapeClose()
@@ -212,6 +217,7 @@ namespace NewAgeQoL
         {
             if (_go == null) return;
             if (_refillAt > 0f && Time.unscaledTime >= _refillAt) { _refillAt = 0f; Fill(); }
+            Pump(1, 6.0);
             if (Time.unscaledTime < _iconsAt) return;
             _iconsAt = Time.unscaledTime + 0.15f;
             int budget = 24;
@@ -280,6 +286,8 @@ namespace NewAgeQoL
             if (_content == null) return;
             for (int i = _content.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_content.GetChild(i).gameObject);
             Rows.Clear();
+            Pending.Clear();
+            _next = 0;
             var s = Wardrobe.S;
             if (_title != null) _title.text = WardrobeData.SlotName(_slot);
             string from = Math.Min(_from, s.Level).ToString();
@@ -319,11 +327,14 @@ namespace NewAgeQoL
                 if (now != group)
                 {
                     group = now;
-                    if (now == 0) Section(Lang.F("Для класса «{0}»: {1}", klass != null ? Lang.Game(klass.Name) : "?", groups[0]));
-                    else if (now == 1) Section(Lang.F("Для всех классов: {0}", groups[1]));
-                    else Section(Lang.F("Для других классов: {0}", groups[2]));
+                    string head = now == 0 ? Lang.F("Для класса «{0}»: {1}", klass != null ? Lang.Game(klass.Name) : "?", groups[0])
+                        : now == 1 ? Lang.F("Для всех классов: {0}", groups[1])
+                        : Lang.F("Для других классов: {0}", groups[2]);
+                    Pending.Add(() => Section(head));
                 }
-                Make(list[i], s, baseRating, worn == list[i]);
+                var thing = list[i];
+                bool isWorn = worn == thing;
+                Pending.Add(() => Make(thing, s, baseRating, isWorn));
                 shown++;
             }
             if (_count != null)
@@ -331,6 +342,22 @@ namespace NewAgeQoL
                     ? Lang.T("Подходящих вещей нет: включи другое качество или смени уровень.")
                     : Lang.F("Вещей: {0}{1}. Красные сейчас не надеть.", list.Count, list.Count > Limit ? Lang.F(", показаны первые {0}", Limit) : "");
             if (_scroll != null) _scroll.verticalNormalizedPosition = 1f;
+            Pump(14, 12.0);
+        }
+
+        private static void Pump(int least, double ms)
+        {
+            if (_content == null || _next >= Pending.Count) return;
+            Clock.Restart();
+            int made = 0;
+            while (_next < Pending.Count && (made < least || Clock.Elapsed.TotalMilliseconds < ms))
+            {
+                var step = Pending[_next++];
+                step();
+                made++;
+                if (_content == null) return;
+            }
+            if (_next >= Pending.Count) { Pending.Clear(); _next = 0; }
         }
 
         private static void Clear(string caption)

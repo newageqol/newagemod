@@ -9,8 +9,12 @@ namespace NewAgeQoL
 {
     internal static class Dozen
     {
-        private const int Kind = 4;
-        private const int Room = 335;
+        private static readonly Dictionary<int, int> Rooms = new Dictionary<int, int>
+        {
+            [(int)EClaimType.Dozen] = 335,
+            [(int)EClaimType.Chaotic] = 15,
+            [(int)EClaimType.EliteChaotic] = 15,
+        };
         private const int Each = 2;
         private const float Icon = 16f;
         private const float Row = 20f;
@@ -25,6 +29,7 @@ namespace NewAgeQoL
 
         private static bool _joined;
         private static bool _inside;
+        private static int _room;
         private static GameObject _go;
         private static readonly List<Slot> Slots = new List<Slot>();
         private static string _mark = "";
@@ -36,9 +41,9 @@ namespace NewAgeQoL
             {
                 int kind = KindOf(ctrl, announceId);
                 Spectate.Joined(kind);
-                _joined = kind == Kind;
+                _joined = Rooms.TryGetValue(kind, out _room);
                 _inside = false;
-                Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - Dozen" : ""));
+                Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - class counter in room " + _room : ""));
             }
             catch (Exception e) { Plugin.Caught("[dozen] join: " + e.Message); }
         }
@@ -62,9 +67,9 @@ namespace NewAgeQoL
         {
             if (_joined) Plugin.Trace("[dozen] map " + map + ", type " + type);
             bool was = _inside;
-            _inside = _joined && type <= 0 && map == Room;
+            _inside = _joined && map == _room;
             if (!_inside) _joined = false;
-            if (was != _inside) Plugin.Trace("[dozen] " + (_inside ? "in the Dozen waiting room" : "left the Dozen waiting room"));
+            if (was != _inside) Plugin.Trace("[dozen] " + (_inside ? "in the waiting room " + _room : "left the waiting room"));
             _mark = "";
             _next = 0f;
         }

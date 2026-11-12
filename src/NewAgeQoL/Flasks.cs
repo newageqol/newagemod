@@ -338,6 +338,15 @@ namespace NewAgeQoL
             return q;
         }
 
+        internal static int QtyOf(int thingId, HashSet<int> skipInv)
+        {
+            int q = 0;
+            lock (Scanned)
+                foreach (var s in Scanned)
+                    if (s.ThingId == thingId && (skipInv == null || !skipInv.Contains(s.Inv))) q += s.Qty;
+            return q;
+        }
+
         internal static string DisplayName(int thingId)
         {
             string n = NameOf(thingId);

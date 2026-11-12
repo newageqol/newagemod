@@ -13,7 +13,6 @@ namespace NewAgeQoL
         private static ConfirmMessageBox _box;
         private static int _bornFrame = -1;
         private static int _enterFrame = -1;
-        private static bool _auto;
         private static readonly System.Reflection.FieldInfo PositionField = AccessTools.Field(typeof(GlobalMapController), "_currentPosition");
 
         internal static bool Asking => _enterFrame == Time.frameCount || Open;
@@ -26,26 +25,24 @@ namespace NewAgeQoL
             _box = box;
             _bornFrame = Time.frameCount;
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
-            _auto = City(out int location);
-            if (_auto) { var veil = box.GetComponent<CanvasGroup>() ?? box.gameObject.AddComponent<CanvasGroup>(); veil.alpha = 0f; }
-            Plugin.Trace(_auto ? "[gate] gate window of town " + location + ", confirming by itself" : "[gate] gate window" + (location > 0 ? " of location " + location : "") + ", Enter will confirm");
+            var veil = box.GetComponent<CanvasGroup>() ?? box.gameObject.AddComponent<CanvasGroup>();
+            veil.alpha = 0f;
+            int location = Location();
+            Plugin.Trace("[gate] gate window" + (location > 0 ? " of location " + location : "") + ", confirming by itself");
         }
 
-        private static bool City(out int location)
+        private static int Location()
         {
-            location = 0;
             try
             {
                 var map = Controllers.Get<GlobalMapController>();
                 var all = map != null ? map.Vertices : null;
-                if (all == null || PositionField == null) return false;
+                if (all == null || PositionField == null) return 0;
                 int at = (int)PositionField.GetValue(map);
-                if (at < 0 || at >= all.Length || all[at] == null) return false;
-                var spot = all[at];
-                location = spot.LocationId;
-                return spot.VertexType == EGlobalMapVertexType.SavePoint && spot.IsRoot && spot.LocationId > 0 && spot.LocationId < 1000;
+                if (at < 0 || at >= all.Length || all[at] == null) return 0;
+                return all[at].LocationId;
             }
-            catch (Exception e) { Plugin.Caught("[gate] town check: " + e.Message); return false; }
+            catch (Exception e) { Plugin.Caught("[gate] location: " + e.Message); return 0; }
         }
 
         internal static void Tick()
@@ -54,21 +51,14 @@ namespace NewAgeQoL
             try
             {
                 if (!Open || Time.frameCount <= _bornFrame) return;
-                if (!_auto)
-                {
-                    if (!Input.GetKeyDown(KeyCode.Return) && !Input.GetKeyDown(KeyCode.KeypadEnter)) return;
-                    var picked = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-                    if (picked != null && picked.GetComponent<InputField>() != null) return;
-                }
                 var ok = AccessTools.Field(typeof(ConfirmMessageBox), "MbOkButton")?.GetValue(_box) as Button;
                 if (ok == null || !ok.isActiveAndEnabled || !ok.interactable) return;
                 _enterFrame = Time.frameCount;
                 _box = null;
-                Plugin.Trace(_auto ? "[gate] town entered without asking" : "[gate] confirmed by Enter");
-                _auto = false;
+                Plugin.Trace("[gate] passed without asking");
                 ok.onClick.Invoke();
             }
-            catch (Exception e) { Plugin.Caught("[gate] Enter: " + e.Message); }
+            catch (Exception e) { Plugin.Caught("[gate] confirm: " + e.Message); }
         }
     }
 

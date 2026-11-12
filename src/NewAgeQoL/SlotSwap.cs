@@ -85,7 +85,22 @@ namespace NewAgeQoL
         private static Text _note;
         private static float _noteUntil;
         private static bool _busy;
+        private static float _owedAt;
+        private static int _owedTries;
 
+        internal static bool Busy => _busy || Waiting.Count > 0 || Owed.Count > 0;
+
+        private static bool Fighting()
+        {
+            try
+            {
+                bool fight = SideButtons.InCombat() || (Controllers.User != null && Controllers.User.InCombat);
+                if (!fight) return false;
+                var cd = FighterHint.Cd();
+                return cd == null || cd.RoundType != RoundType.WALK_ROUND;
+            }
+            catch { return false; }
+        }
 
         internal static void Sync(UserMenuCharacterSlotsPanelContent panel,
                                   IDictionary<ESlots.SlotType, InventoryWearResponseMessageItem> worn)
@@ -145,6 +160,8 @@ namespace NewAgeQoL
                 try { Arrange(_panel); }
                 catch (System.Exception e) { Plugin.Fault("[slots] layout: " + e.Message); _panel = null; }
             }
+            if (Owed.Count > 0 && !_busy && Plugin.Instance != null && Time.unscaledTime >= _owedAt && !Fighting() && SideButtons.InWorld())
+                Plugin.Instance.StartCoroutine(Redress());
             if (_note == null || !_note.gameObject.activeSelf) return;
             if (Time.unscaledTime > _noteUntil) _note.gameObject.SetActive(false);
         }
@@ -175,11 +192,28 @@ namespace NewAgeQoL
             internal ESlots.SlotType[] Spare;
         }
 
+        private sealed class Debt
+        {
+            internal Piece Piece;
+            internal EThingActionButton Action;
+        }
+
         private static readonly List<Job> Waiting = new List<Job>();
+        private static readonly List<Debt> Owed = new List<Debt>();
 
         private static void Swap(string what, ESlots.SlotType[] main, ESlots.SlotType[] spare)
         {
             if (Plugin.Instance == null) return;
+            if (Fighting())
+            {
+                Note(Lang.T("в фазе боя менять нельзя"), 3f);
+                return;
+            }
+            if (Owed.Count > 0)
+            {
+                Note(Lang.T("сначала надеваю снятое"), 3f);
+                return;
+            }
             if (!_busy)
             {
                 Plugin.Instance.StartCoroutine(Run(what, main, spare));
@@ -204,6 +238,12 @@ namespace NewAgeQoL
             _busy = true;
             try
             {
+                if (Fighting() || Owed.Count > 0)
+                {
+                    Waiting.Clear();
+                    Note(Lang.T("в фазе боя менять нельзя"), 3f);
+                    yield break;
+                }
                 var dressed = Pieces(main);
                 var stash = Pieces(spare);
                 if (dressed.Count == 0 && stash.Count == 0)
@@ -216,16 +256,67 @@ namespace NewAgeQoL
                 Plugin.Trace("[slots] swapping " + what + ": worn " + dressed.Count + ", spare " + stash.Count);
                 _failed = null;
 
-                foreach (var piece in dressed) { if (_failed != null) break; yield return Strip(piece); }
-                foreach (var piece in stash) { if (_failed != null) break; yield return Strip(piece); }
+                var off = new List<Piece>();
+                foreach (var piece in dressed) { if (_failed != null) break; yield return Strip(piece); if (_failed == null) off.Add(piece); }
+                foreach (var piece in stash) { if (_failed != null) break; yield return Strip(piece); if (_failed == null) off.Add(piece); }
 
-                foreach (var piece in stash) { if (_failed != null) break; yield return Act(piece, EThingActionButton.DRESS); }
-                foreach (var piece in dressed) { if (_failed != null) break; yield return Act(piece, EThingActionButton.DRESS_ADDITIONAL_SLOT); }
+                bool swapped = _failed == null;
+                var plan = new List<Debt>();
+                foreach (var piece in stash)
+                    if (off.Contains(piece)) plan.Add(new Debt { Piece = piece, Action = swapped ? EThingActionButton.DRESS : EThingActionButton.DRESS_ADDITIONAL_SLOT });
+                foreach (var piece in dressed)
+                    if (off.Contains(piece)) plan.Add(new Debt { Piece = piece, Action = swapped ? EThingActionButton.DRESS_ADDITIONAL_SLOT : EThingActionButton.DRESS });
+
+                string failed = _failed;
+                _failed = null;
+                foreach (var debt in plan)
+                {
+                    if (_failed == null) yield return Act(debt.Piece, debt.Action);
+                    if (_failed != null) Owed.Add(debt);
+                }
+                if (failed == null) failed = _failed;
 
                 try { NetworkConnection.Instance?.SendRequest(new InventoryWearRequest()); }
                 catch { }
-                if (_failed != null) Note(Lang.F("{0}: не удалось — {1}", Lang.T(what), _failed), 6f);
+                if (Owed.Count > 0)
+                {
+                    _owedAt = Time.unscaledTime + 2f;
+                    _owedTries = 0;
+                    Plugin.Warn("[slots] swap of " + what + " broke (" + failed + "), " + Owed.Count + " items left in the bag, will dress them after the fight");
+                    Waiting.Clear();
+                    Note(Lang.F("{0}: не удалось — {1}. В сумке {2} шт., надену после боя", Lang.T(what), failed, Owed.Count), 8f);
+                }
+                else if (failed != null) Note(Lang.F("{0}: не удалось — {1}", Lang.T(what), failed), 6f);
                 else Note(Lang.F("{0}: готово", Lang.T(what)), 3f);
+            }
+            finally { _busy = false; Next(); }
+        }
+
+        private static IEnumerator Redress()
+        {
+            _busy = true;
+            try
+            {
+                _owedTries++;
+                var debts = new List<Debt>(Owed);
+                Owed.Clear();
+                Plugin.Trace("[slots] dressing back after the fight: " + debts.Count + " items, attempt " + _owedTries);
+                _failed = null;
+                foreach (var debt in debts)
+                {
+                    if (_failed == null && !Fighting()) yield return Act(debt.Piece, debt.Action);
+                    if (_failed != null || Fighting()) Owed.Add(debt);
+                }
+                try { NetworkConnection.Instance?.SendRequest(new InventoryWearRequest()); }
+                catch { }
+                if (Owed.Count == 0) Note(Lang.T("снятое надето обратно"), 4f);
+                else if (_owedTries >= 3)
+                {
+                    Plugin.Warn("[slots] could not dress back " + Owed.Count + " items: " + _failed);
+                    Note(Lang.F("не удалось надеть обратно {0} шт. — {1}", Owed.Count, _failed ?? Lang.T("бой")), 8f);
+                    Owed.Clear();
+                }
+                else _owedAt = Time.unscaledTime + 3f;
             }
             finally { _busy = false; Next(); }
         }

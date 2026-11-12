@@ -576,6 +576,24 @@ namespace NewAgeQoL
             return label;
         }
 
+        private static void Squeeze(Text label, float width)
+        {
+            if (label == null || string.IsNullOrEmpty(label.text)) return;
+            string text = label.text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+            while (text.Contains("  ")) text = text.Replace("  ", " ");
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.text = text;
+            while (label.preferredWidth > width && label.fontSize > 11) label.fontSize--;
+            if (label.preferredWidth <= width) return;
+            int keep = text.Length;
+            while (keep > 1)
+            {
+                keep--;
+                label.text = text.Substring(0, keep).TrimEnd() + "…";
+                if (label.preferredWidth <= width) return;
+            }
+        }
+
         private static readonly StringBuilder Stamp = new StringBuilder();
         private static readonly List<BaseEnterfightWidget> Waiting = new List<BaseEnterfightWidget>();
         private static readonly List<BaseEnterfightWidget> Going = new List<BaseEnterfightWidget>();
@@ -729,7 +747,7 @@ namespace NewAgeQoL
 
             Medal(go.transform, widget, started);
             var white = elite ? WardrobeLook.Accent : WardrobeLook.Body;
-            Cell(go.transform, Words(widget, "HeaderText"), Columns[0], 14, started ? WardrobeLook.Bad : elite ? WardrobeLook.Accent : WardrobeLook.Bright);
+            Squeeze(Cell(go.transform, Words(widget, "HeaderText"), Columns[0], 14, started ? WardrobeLook.Bad : elite ? WardrobeLook.Accent : WardrobeLook.Bright), Columns[0] - 8f);
             Cell(go.transform, Words(widget, "LevelsText"), Columns[1], 14, white);
             Cell(go.transform, Words(widget, "PhaseText"), Columns[2], 14, white);
             var players = Cell(go.transform, started ? Words(widget, "PlayersText") : Players(widget), Columns[3], 14, white);

@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using HarmonyLib;
 using Transport.Messages.Responses.User.Inventory;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace NewAgeQoL
 {
     internal static class Manikin
     {
-        private const float PanelW = 440f;
-        private const float PanelH = 600f;
+        private const float PanelW = 460f;
+        private const float PanelH = 680f;
+        private const float GridTop = 96f;
         private const float Cell = 58f;
         private const float Gap = 6f;
         private const int Cols = 6;
@@ -37,6 +39,7 @@ namespace NewAgeQoL
         private static GameObject _panelGo;
         private static GameObject _slotsGo;
         private static Text _status;
+        private static Text _count;
         private static GameObject _gridGo;
         private static bool _hooked;
         private static float _repaint;
@@ -213,6 +216,7 @@ namespace NewAgeQoL
             _slotsGo = null;
             _gridGo = null;
             _status = null;
+            _count = null;
             _hooked = false;
             _shownSeen = -1;
             _nextLook = 0f;
@@ -265,7 +269,11 @@ namespace NewAgeQoL
             string source = near
                 ? Lang.T("Нажми на слот и выбери вещь: сумка, хранилище, надетое.")
                 : Lang.T("Нажми на слот и выбери вещь: сумка и надетое. За вещами из хранилища зайди в него.");
-            return source + System.Environment.NewLine + Lang.T("Наденется само после сдачи вещей, снимется при возврате.");
+            string dot = "<color=#E2B85C>•</color>  ";
+            string br = System.Environment.NewLine;
+            return dot + source + br
+                   + dot + Lang.T("Правая кнопка мыши по слоту — снять вещь из набора.") + br
+                   + dot + Lang.T("Наденется само после сдачи вещей, снимется при возврате.");
         }
 
         private static void Hook()
@@ -312,6 +320,10 @@ namespace NewAgeQoL
                     button.onClick.AddListener(() => Choose(slot));
                 }
                 else icon.ButtonClickEvent += ignored => Choose(slot);
+                var host = button != null ? button.gameObject : icon.gameObject;
+                var right = host.GetComponent<ManikinRightClick>();
+                if (right == null) right = host.AddComponent<ManikinRightClick>();
+                right.Act = () => Unwear(slot);
             }
             _hooked = true;
             Plugin.Trace("[kit] slots hooked up: " + Icons.Count);
@@ -381,6 +393,7 @@ namespace NewAgeQoL
 
         private static void Paint()
         {
+            Count();
             foreach (var pair in Icons)
             {
                 var icon = pair.Value;
@@ -428,7 +441,7 @@ namespace NewAgeQoL
             grt.anchorMin = grt.anchorMax = new Vector2(0.5f, 1f);
             grt.pivot = new Vector2(0.5f, 1f);
             grt.sizeDelta = new Vector2(wide, high);
-            grt.anchoredPosition = new Vector2(0f, -58f);
+            grt.anchoredPosition = new Vector2(0f, -GridTop);
 
             if (left.Count > 0 || right.Count > 0)
             {
@@ -483,15 +496,38 @@ namespace NewAgeQoL
                                               -Cell * 0.5f - row * (Cell + Gap));
         }
 
-        private static Sprite SlotSprite(int slot)
+        internal static Sprite SlotSprite(int slot)
         {
             try { return AtlasUtils.getSlotIconSprite((ESlots.SlotType)slot); }
             catch { return null; }
         }
 
+        private static void Count()
+        {
+            if (_count == null) return;
+            int n = 0;
+            foreach (var pair in Wear) if (pair.Value > 0) n++;
+            _count.text = n > 0 ? Lang.F("Вещей в наборе: {0}", n) : Lang.T("Набор пуст");
+        }
+
+        private static void Unwear(int slot)
+        {
+            ManikinPicker.Close();
+            int thing;
+            if (!Wear.TryGetValue(slot, out thing) || thing <= 0) return;
+            Wear.Remove(slot);
+            Pack(Wear);
+            Keep();
+            _shownSeen = -1;
+            Paint();
+            Plugin.Trace("[kit] " + SlotName(slot) + " emptied by right click");
+        }
+
         private static void Choose(int slot)
         {
-            ManikinPicker.Open(slot, thing =>
+            int current;
+            Wear.TryGetValue(slot, out current);
+            ManikinPicker.Open(slot, current, thing =>
             {
                 if (thing > 0) Pick(slot, thing);
                 else Wear.Remove(slot);
@@ -533,6 +569,18 @@ namespace NewAgeQoL
             backGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
             backGo.GetComponent<Button>().onClick.AddListener(Close);
 
+            var shadowGo = new GameObject("shadow", typeof(RectTransform), typeof(Image));
+            shadowGo.transform.SetParent(go.transform, false);
+            var shrt = (RectTransform)shadowGo.transform;
+            shrt.anchorMin = shrt.anchorMax = new Vector2(0.5f, 0.5f);
+            shrt.sizeDelta = new Vector2(PanelW + 28f, PanelH + 28f);
+            shrt.anchoredPosition = new Vector2(0f, -8f);
+            var shadow = shadowGo.GetComponent<Image>();
+            shadow.sprite = OnlineWindow.Rounded(16);
+            shadow.type = Image.Type.Sliced;
+            shadow.color = new Color(0f, 0f, 0f, 0.45f);
+            shadow.raycastTarget = false;
+
             _panelGo = new GameObject("panel", typeof(RectTransform), typeof(Image), typeof(Outline));
             _panelGo.transform.SetParent(go.transform, false);
             var prt = (RectTransform)_panelGo.transform;
@@ -549,15 +597,46 @@ namespace NewAgeQoL
             outline.effectColor = WardrobeLook.Edge;
             outline.effectDistance = new Vector2(1f, -1f);
 
-            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Запасной набор"), 20, FontStyle.Bold, WardrobeLook.Bright);
-            OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(18f, -46f), new Vector2(-70f, -10f));
+            var title = OnlineWindow.Label(_panelGo.transform, Lang.T("Запасной набор"), 21, FontStyle.Bold, WardrobeLook.Bright);
+            OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(22f, -44f), new Vector2(-70f, -12f));
             title.alignment = TextAnchor.MiddleLeft;
+
+            var sub = OnlineWindow.Label(_panelGo.transform, Lang.T("Во что переодеться, когда вещи сданы"), 12, FontStyle.Normal, WardrobeLook.Faint);
+            OnlineWindow.Place(sub.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(22f, -64f), new Vector2(-70f, -44f));
+            sub.alignment = TextAnchor.MiddleLeft;
+
+            Strip(_panelGo.transform, -74f, 22f, 22f, WardrobeLook.Edge, 1f);
 
             OnlineWindow.MakeCloseButton(_panelGo.transform, Close);
 
+            float wide = Cols * Cell + (Cols - 1) * Gap;
+            float high = Rows * Cell + (Rows - 1) * Gap;
+            var stageGo = new GameObject("stage", typeof(RectTransform), typeof(Image), typeof(Outline));
+            stageGo.transform.SetParent(_panelGo.transform, false);
+            var strt = (RectTransform)stageGo.transform;
+            strt.anchorMin = strt.anchorMax = new Vector2(0.5f, 1f);
+            strt.pivot = new Vector2(0.5f, 1f);
+            strt.sizeDelta = new Vector2(wide + 28f, high + 28f);
+            strt.anchoredPosition = new Vector2(0f, -GridTop + 14f);
+            var stage = stageGo.GetComponent<Image>();
+            stage.sprite = OnlineWindow.Rounded(10);
+            stage.type = Image.Type.Sliced;
+            stage.color = WardrobeLook.Field;
+            stage.raycastTarget = false;
+            var stageEdge = stageGo.GetComponent<Outline>();
+            stageEdge.effectColor = new Color(1f, 1f, 1f, 0.05f);
+            stageEdge.effectDistance = new Vector2(1f, -1f);
+
+            float mid = -GridTop - 3.5f * Cell - 3f * Gap;
+            _count = OnlineWindow.Label(_panelGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
+            OnlineWindow.Place(_count.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
+                new Vector2(-110f, mid + 26f), new Vector2(110f, mid + 50f));
+            _count.raycastTarget = false;
+            Count();
+
             var wipe = OnlineWindow.MakeGameButton(_panelGo.transform, Lang.T("Очистить"), 150f, 36f, Wipe);
             OnlineWindow.Place((RectTransform)wipe.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
-                new Vector2(-75f, -58f - 3.5f * Cell - 3f * Gap - 18f), new Vector2(75f, -58f - 3.5f * Cell - 3f * Gap + 18f));
+                new Vector2(-75f, mid - 18f), new Vector2(75f, mid + 18f));
 
             var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.UserMenuCharacterSlotsPanelContentPrefab : null;
             if (prefab == null) throw new Exception("game equipment window not found");
@@ -577,10 +656,37 @@ namespace NewAgeQoL
                 srt.localScale = Vector3.one;
             }
 
-            _status = OnlineWindow.Label(_panelGo.transform, Note(), 11, FontStyle.Normal, WardrobeLook.Label);
-            OnlineWindow.Place(_status.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(14f, 8f), new Vector2(-14f, 86f));
+            float foot = -GridTop - high - 14f - 12f;
+            Strip(_panelGo.transform, foot, 22f, 22f, WardrobeLook.Edge, 1f);
+            _status = OnlineWindow.Label(_panelGo.transform, Note(), 12, FontStyle.Normal, WardrobeLook.Label);
+            OnlineWindow.Place(_status.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0f), new Vector2(22f, 12f), new Vector2(-22f, foot - 10f));
             _status.alignment = TextAnchor.UpperLeft;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _status.supportRichText = true;
+            _status.lineSpacing = 1.15f;
+        }
+
+        private static void Strip(Transform host, float y, float left, float right, Color color, float thick)
+        {
+            var go = new GameObject("line", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(host, false);
+            OnlineWindow.Place((RectTransform)go.transform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(left, y - thick), new Vector2(-right, y));
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+        }
+    }
+
+    internal sealed class ManikinRightClick : MonoBehaviour, IPointerClickHandler
+    {
+        internal Action Act;
+
+        public void OnPointerClick(PointerEventData e)
+        {
+            if (e == null || e.button != PointerEventData.InputButton.Right) return;
+            try { if (Act != null) Act(); }
+            catch (Exception ex) { Plugin.Caught("[kit] right click: " + ex.Message); }
         }
     }
 }

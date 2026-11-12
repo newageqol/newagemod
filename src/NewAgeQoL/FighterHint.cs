@@ -710,7 +710,7 @@ namespace NewAgeQoL
             return best;
         }
 
-        private static void Width()
+        internal static void Width()
         {
             if (_board == null || _ble == null) return;
             float w = _tableW;
@@ -730,7 +730,7 @@ namespace NewAgeQoL
             _board.sizeDelta = new Vector2(w, _board.sizeDelta.y);
         }
 
-        private static void Snug(Text t)
+        internal static void Snug(Text t)
         {
             var le = t != null ? t.GetComponent<LayoutElement>() : null;
             if (le == null) return;
