@@ -550,7 +550,7 @@ namespace NewAgeQoL
             var data = Data(p);
             string sign = Sign(data);
             bool retry = slot.Hidden && Time.unscaledTime < _retryUntil;
-            if (sign == slot.Sign && !retry) return false;
+            if (sign == slot.Sign && !retry && !Broken(slot)) return false;
             Paint(slot, data, sign);
             return true;
         }
@@ -569,6 +569,14 @@ namespace NewAgeQoL
             slot.Widget.Data = data;
             OnlineWindow.Flatten(slot.Widget, false);
             Mute(slot);
+        }
+
+        private static bool Broken(Slot slot)
+        {
+            if (slot.Holder == null) return false;
+            foreach (var image in slot.Holder.GetComponentsInChildren<Image>(true))
+                if (image.enabled && Dead(image.sprite)) return true;
+            return false;
         }
 
         private static void Mute(Slot slot)

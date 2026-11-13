@@ -590,6 +590,9 @@ namespace NewAgeQoL
             }
             float room = (right - Gap * scale - left) / scale - StripWide - StripGap;
             if (room < Least) return false;
+            float wall = Wall(left, dockBottom + Gap * scale, dockTop);
+            float snug = (wall - Gap * scale - left) / scale - StripWide - StripGap;
+            if (wall < right && snug >= Least) room = snug;
             float wide = Mathf.Min(Wide, room);
             float span = _folded ? StripWide : StripWide + StripGap + wide;
 
@@ -601,9 +604,34 @@ namespace NewAgeQoL
             return true;
         }
 
-        private static float Floor(float from, float to, float low, float top)
+        private static float Wall(float from, float low, float top)
         {
-            float best = low;
+            float best = Screen.width;
+            foreach (var rt in Obstacles())
+            {
+                Span(rt, out float xMin, out float xMax, out float yMin, out float yMax);
+                if (xMax <= from || yMax <= low || yMin >= top) continue;
+                if (xMin <= from) continue;
+                if (xMin < best) best = xMin;
+            }
+            return best;
+        }
+
+        private static void Span(RectTransform rt, out float xMin, out float xMax, out float yMin, out float yMax)
+        {
+            var root = rt.GetComponentInParent<Canvas>().rootCanvas;
+            var cam = root.renderMode != RenderMode.ScreenSpaceOverlay ? root.worldCamera : null;
+            rt.GetWorldCorners(Corners);
+            Vector2 a = RectTransformUtility.WorldToScreenPoint(cam, Corners[0]);
+            Vector2 b = RectTransformUtility.WorldToScreenPoint(cam, Corners[2]);
+            xMin = Mathf.Min(a.x, b.x);
+            xMax = Mathf.Max(a.x, b.x);
+            yMin = Mathf.Min(a.y, b.y);
+            yMax = Mathf.Max(a.y, b.y);
+        }
+
+        private static IEnumerable<RectTransform> Obstacles()
+        {
             float tallest = Screen.height * 0.4f;
             float widest = Screen.width * 0.5f;
             foreach (var one in Selectable.allSelectablesArray)
@@ -615,17 +643,22 @@ namespace NewAgeQoL
                 if (one.GetComponentInParent<ScrollRect>() != null) continue;
                 var canvas = one.GetComponentInParent<Canvas>();
                 if (canvas == null || !canvas.enabled) continue;
-                var root = canvas.rootCanvas;
-                if (root.sortingOrder >= WindowLayer) continue;
-                var cam = root.renderMode != RenderMode.ScreenSpaceOverlay ? root.worldCamera : null;
-                rt.GetWorldCorners(Corners);
-                Vector2 a = RectTransformUtility.WorldToScreenPoint(cam, Corners[0]);
-                Vector2 b = RectTransformUtility.WorldToScreenPoint(cam, Corners[2]);
-                float xMin = Mathf.Min(a.x, b.x), xMax = Mathf.Max(a.x, b.x);
-                float yMin = Mathf.Min(a.y, b.y), yMax = Mathf.Max(a.y, b.y);
+                if (canvas.rootCanvas.sortingOrder >= WindowLayer) continue;
+                Span(rt, out float xMin, out float xMax, out float yMin, out float yMax);
                 if (yMax - yMin > tallest || xMax - xMin > widest) continue;
+                if (yMin > Screen.height * 0.5f) continue;
+                yield return rt;
+            }
+        }
+
+        private static float Floor(float from, float to, float low, float top)
+        {
+            float best = low;
+            foreach (var rt in Obstacles())
+            {
+                Span(rt, out float xMin, out float xMax, out float yMin, out float yMax);
                 if (xMax <= from || xMin >= to) continue;
-                if (yMin > Screen.height * 0.5f || yMin >= top) continue;
+                if (yMin >= top) continue;
                 if (yMax + Rise > best) best = yMax + Rise;
             }
             return best;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
@@ -45,47 +45,50 @@ namespace NewAgeQoL
             if (first == int.MaxValue) return;
 
             Canvas.ForceUpdateCanvases();
-            var stack = column.GetComponent<VerticalLayoutGroup>();
-            float floor = Bottom(column) + (stack != null ? stack.padding.bottom : 0f);
-            float lowest = float.MaxValue;
-            for (int i = 0; i < column.childCount; i++)
+            RectTransform above = null;
+            for (int i = first - 1; i >= 0; i--)
             {
                 var child = column.GetChild(i) as RectTransform;
-                if (child == null || !child.gameObject.activeSelf) continue;
-                lowest = Mathf.Min(lowest, Bottom(child));
+                if (child != null && child.gameObject.activeSelf) { above = child; break; }
             }
-            float free = (lowest - floor) / Mathf.Max(0.0001f, column.lossyScale.y);
-            Plugin.Trace("[settings] column " + column.name + " (" + (stack != null ? "vertical layout" : "free layout") + "): " + Names(column) + "; free below " + free.ToString("0.#"));
-            if (free < 4f) return;
+            if (above == null) return;
+            float floor = Edge(above, true);
+            float roof = float.MinValue;
+            for (int i = first; i < column.childCount; i++)
+            {
+                var child = column.GetChild(i) as RectTransform;
+                if (child != null && child.gameObject.activeSelf) roof = Mathf.Max(roof, Edge(child, false));
+            }
+            if (floor == float.MaxValue || roof == float.MinValue) return;
+            var stack = column.GetComponent<VerticalLayoutGroup>();
+            float scale = Mathf.Max(0.0001f, column.lossyScale.y);
+            float gap = stack != null ? Mathf.Max(stack.spacing, 10f) : 10f;
+            float lift = (floor - roof) / scale - gap;
+            Plugin.Trace("[settings] column " + column.name + " (" + (stack != null ? "vertical layout" : "free layout") + "): " + Names(column) + "; lift under " + above.name + " " + lift.ToString("0.#"));
+            if (lift < 4f) return;
 
-            if (stack != null)
+            if (stack != null) stack.enabled = false;
+            for (int i = first; i < column.childCount; i++)
             {
-                var go = new GameObject(SpacerName, typeof(RectTransform), typeof(LayoutElement));
-                go.transform.SetParent(column, false);
-                go.transform.SetSiblingIndex(first);
-                var fit = go.GetComponent<LayoutElement>();
-                fit.minHeight = free;
-                fit.preferredHeight = free;
-                fit.flexibleHeight = 0f;
-                ((RectTransform)go.transform).sizeDelta = new Vector2(0f, free);
-                LayoutRebuilder.MarkLayoutForRebuild(column);
+                var child = column.GetChild(i) as RectTransform;
+                if (child != null) child.anchoredPosition += new Vector2(0f, lift);
             }
-            else
-            {
-                for (int i = first; i < column.childCount; i++)
-                {
-                    var child = column.GetChild(i) as RectTransform;
-                    if (child != null) child.anchoredPosition -= new Vector2(0f, free);
-                }
-                new GameObject(SpacerName, typeof(RectTransform)).transform.SetParent(column, false);
-            }
-            Plugin.Trace("[settings] hotkeys, report and language lowered by " + free.ToString("0.#"));
+            new GameObject(SpacerName, typeof(RectTransform)).transform.SetParent(column, false);
+            Plugin.Trace("[settings] hotkeys, report and language raised by " + lift.ToString("0.#"));
         }
 
-        private static float Bottom(RectTransform rect)
+        private static float Edge(RectTransform part, bool low)
         {
-            rect.GetWorldCorners(Corners);
-            return Corners[0].y;
+            float best = low ? float.MaxValue : float.MinValue;
+            foreach (var g in part.GetComponentsInChildren<Graphic>(false))
+            {
+                if (g.transform == part || !g.enabled || !g.gameObject.activeInHierarchy || g.color.a <= 0.01f) continue;
+                var text = g as Text;
+                if (text != null && string.IsNullOrEmpty(text.text)) continue;
+                g.rectTransform.GetWorldCorners(Corners);
+                best = low ? Mathf.Min(best, Corners[0].y) : Mathf.Max(best, Corners[1].y);
+            }
+            return best;
         }
 
         private static Transform Common(Transform a, Transform b)
