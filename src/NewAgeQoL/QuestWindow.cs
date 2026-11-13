@@ -16,7 +16,7 @@ namespace NewAgeQoL
         private const float Gap = 10f;
         private const float GripH = 14f;
         private const float RowH = 34f;
-        private const float Split = 0.38f;
+        private const float DeskH = 180f;
         private const float StarSide = 20f;
 
         private static GameObject _canvasGo;
@@ -243,10 +243,10 @@ namespace NewAgeQoL
             var listGo = new GameObject("list", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             listGo.transform.SetParent(_panelGo.transform, false);
             var lrt = (RectTransform)listGo.transform;
-            lrt.anchorMin = new Vector2(0f, Split);
+            lrt.anchorMin = new Vector2(0f, 0f);
             lrt.anchorMax = new Vector2(1f, 1f);
             lrt.pivot = new Vector2(0.5f, 0.5f);
-            lrt.offsetMin = new Vector2(14f, 4f);
+            lrt.offsetMin = new Vector2(14f, DeskH + 4f);
             lrt.offsetMax = new Vector2(-30f, -head);
             var limg = listGo.GetComponent<Image>();
             limg.color = new Color(0f, 0f, 0f, 0.18f);
@@ -258,26 +258,26 @@ namespace NewAgeQoL
             _scroll.scrollSensitivity = 30f;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
             _rows = Content(listGo.transform, _scroll, lrt, 3f);
-            Bar(_panelGo.transform, _scroll, new Vector2(1f, Split), new Vector2(1f, 1f), new Vector2(-26f, 4f), new Vector2(-14f, -head));
+            Bar(_panelGo.transform, _scroll, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-26f, DeskH + 4f), new Vector2(-14f, -head));
 
             var deskTitle = OnlineWindow.Label(_panelGo.transform, Lang.T("Описание"), 15, FontStyle.Bold, WardrobeLook.Accent);
             deskTitle.alignment = TextAnchor.MiddleLeft;
             deskTitle.raycastTarget = false;
             var drt = deskTitle.rectTransform;
-            drt.anchorMin = new Vector2(0f, Split);
-            drt.anchorMax = new Vector2(1f, Split);
+            drt.anchorMin = new Vector2(0f, 0f);
+            drt.anchorMax = new Vector2(1f, 0f);
             drt.pivot = new Vector2(0.5f, 1f);
-            drt.offsetMin = new Vector2(16f, -22f);
-            drt.offsetMax = new Vector2(-16f, 0f);
+            drt.offsetMin = new Vector2(16f, DeskH - 22f);
+            drt.offsetMax = new Vector2(-16f, DeskH);
 
             var deskGo = new GameObject("desk", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             deskGo.transform.SetParent(_panelGo.transform, false);
             var brt = (RectTransform)deskGo.transform;
             brt.anchorMin = new Vector2(0f, 0f);
-            brt.anchorMax = new Vector2(1f, Split);
+            brt.anchorMax = new Vector2(1f, 0f);
             brt.pivot = new Vector2(0.5f, 0.5f);
             brt.offsetMin = new Vector2(14f, GripH + 6f);
-            brt.offsetMax = new Vector2(-30f, -24f);
+            brt.offsetMax = new Vector2(-30f, DeskH - 24f);
             var bimg = deskGo.GetComponent<Image>();
             bimg.color = new Color(0f, 0f, 0f, 0.18f);
             bimg.sprite = OnlineWindow.Rounded(8);
@@ -297,7 +297,7 @@ namespace NewAgeQoL
             _desk.raycastTarget = false;
             var dle = _desk.gameObject.AddComponent<LayoutElement>();
             dle.flexibleWidth = 1f;
-            Bar(_panelGo.transform, _deskScroll, new Vector2(1f, 0f), new Vector2(1f, Split), new Vector2(-26f, GripH + 6f), new Vector2(-14f, -24f));
+            Bar(_panelGo.transform, _deskScroll, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-26f, GripH + 6f), new Vector2(-14f, DeskH - 24f));
         }
 
         private static Transform Content(Transform host, ScrollRect scroll, RectTransform viewport, float spacing)

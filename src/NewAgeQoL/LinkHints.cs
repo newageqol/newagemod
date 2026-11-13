@@ -12,6 +12,7 @@ namespace NewAgeQoL
         {
             try
             {
+                if (__result != null && __result.EndsWith("[None]")) __result = __result.Substring(0, __result.Length - 6);
                 if (gameObject == null) return;
                 var holder = gameObject.GetComponent<HintHolder>();
                 if (holder == null || holder.Id != ReturnHint) return;
@@ -22,6 +23,16 @@ namespace NewAgeQoL
                 __result = Lang.F("   Перейти: {0}", label.Trim());
             }
             catch { }
+        }
+
+        internal static void Drop()
+        {
+            try
+            {
+                foreach (var h in Object.FindObjectsByType<HintHolder>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (h != null) h.OnPointerExit(null);
+            }
+            catch (System.Exception e) { Plugin.Caught("[hints] drop: " + e.Message); }
         }
     }
 }

@@ -232,11 +232,42 @@ namespace NewAgeQoL
             return list;
         }
 
+        private static bool IsArea(int id) => id >= 1000;
+
+        private static List<Gate> Doors(int place) => Doors(LastMap, place);
+
+        private static List<Gate> Doors(LocationMap map, int place)
+        {
+            var list = new List<Gate>();
+            try
+            {
+                if (map == null || map.MapType != 0 || map.MapId != place || map.SceneObjects == null) return list;
+                foreach (var one in map.SceneObjects)
+                {
+                    if (one == null || one.Id <= 0 || one.Id == place) continue;
+                    if (one.ObjectType != EObjectType.LeaveTown && one.ObjectType != EObjectType.Link) continue;
+                    list.Add(new Gate { From = place, To = one.Id, Vertex = 0 });
+                }
+            }
+            catch (Exception e) { Plugin.Caught("[travel] location doors: " + e.Message); }
+            return list;
+        }
+
+        private static bool Leads(LocationMap map, int from, int to)
+        {
+            if (map == null || map.MapType != 0 || map.MapId != from) return false;
+            foreach (var gate in Doors(map, from))
+                if (gate.To == to) return true;
+            return false;
+        }
+
         private static List<Gate> GateRoute(int from, int to)
         {
             if (from <= 0 || to <= 0) return null;
             if (from == to) return new List<Gate>();
 
+            var all = new List<Gate>(Doors(from));
+            all.AddRange(Gates());
             var seen = new HashSet<int> { from };
             var queue = new Queue<List<Gate>>();
             queue.Enqueue(new List<Gate>());
@@ -244,9 +275,11 @@ namespace NewAgeQoL
             {
                 var road = queue.Dequeue();
                 int at = road.Count == 0 ? from : road[road.Count - 1].To;
-                foreach (var gate in Gates())
+                foreach (var gate in all)
                 {
                     if (gate.From != at || seen.Contains(gate.To)) continue;
+                    if (!Allowed(gate.From, gate.To)) continue;
+                    if (at == from && IsArea(from) && !Passage(gate.Vertex)) continue;
                     var next = new List<Gate>(road) { gate };
                     if (gate.To == to) return next;
                     seen.Add(gate.To);
@@ -288,31 +321,33 @@ namespace NewAgeQoL
 
                 if (spot.Area > 0)
                 {
-                    for (int guard = 0; guard < 8 && Area != spot.Area; guard++)
+                    bool teleported = false;
+                    for (int guard = 0; guard < 16 && Node() != spot.Area; guard++)
                     {
                         if (_abort) yield break;
 
-                        var road = MapReady() ? GateRoute(Area, spot.Area) : null;
+                        int at = Node();
+                        var road = at > 0 ? GateRoute(at, spot.Area) : null;
                         if (road == null || road.Count == 0)
                         {
-                            if (MapReady() && Area == Outer)
+                            if (at == Town || teleported)
                             {
-                                Plugin.Trace("[travel] no road from area " + Area + " to " + spot.Area);
-                                RouteLog.Note("нет дороги " + Area + ">" + spot.Area, "travel knows no road from area " + Area + " to " + spot.Area + " ('" + spot.Name + "')");
+                                Plugin.Trace("[travel] no road from " + at + " to area " + spot.Area);
+                                RouteLog.Note("нет дороги " + at + ">" + spot.Area, "travel knows no road from " + at + " to area " + spot.Area + " ('" + spot.Name + "')");
                                 Fail(Lang.T("не знаю дороги туда"));
                                 yield break;
                             }
-                            int gate = MapReady() ? -1 : Exit(spot.Area);
-                            if (gate > 0) yield return Leave(spot, gate);
-                            else yield return GoTown(spot);
+                            teleported = true;
+                            yield return GoTown(spot, false);
                             if (!_ok) yield break;
                             continue;
                         }
 
-                        yield return Step(spot, road[0].Vertex, true);
+                        Plugin.Trace("[travel] road " + Road(at, road));
+                        yield return Hop(spot, road[0]);
                         if (!_ok) yield break;
                     }
-                    if (Area != spot.Area) { Fail(Lang.T("не добрался до места")); yield break; }
+                    if (Node() != spot.Area) { Fail(Lang.T("не добрался до места")); yield break; }
 
                     yield return Step(spot, spot.Target, false);
                     if (!_ok) yield break;
@@ -321,7 +356,7 @@ namespace NewAgeQoL
                 {
                     if (!HasVertex(spot.Path[0]))
                     {
-                        yield return GoTown(spot);
+                        yield return GoTown(spot, true);
                         if (!_ok) yield break;
                     }
                     for (int i = 0; i < spot.Path.Length; i++)
@@ -337,7 +372,43 @@ namespace NewAgeQoL
             finally { _running = null; AutoConfirm = false; }
         }
 
-        private static IEnumerator Step(Spot spot, int vertex, bool enter)
+        private static string Road(int from, List<Gate> road)
+        {
+            var text = new System.Text.StringBuilder(from.ToString());
+            foreach (var gate in road) text.Append(" > ").Append(gate.To);
+            return text.ToString();
+        }
+
+        private static int Node()
+        {
+            if (_mapType == 2) return MapReady() ? _area : -1;
+            if (_mapType == 0) { int loc = Loc; return loc > 0 ? loc : -1; }
+            return -1;
+        }
+
+        private static IEnumerator Hop(Spot spot, Gate gate)
+        {
+            if (IsArea(gate.From) && IsArea(gate.To)) yield return Step(spot, gate.Vertex, true, -1);
+            else if (IsArea(gate.From)) yield return Step(spot, gate.Vertex, true, gate.To);
+            else if (IsArea(gate.To)) yield return Leave(spot, gate.To);
+            else yield return Door(spot, gate.To);
+        }
+
+        private static IEnumerator Door(Spot spot, int place)
+        {
+            Say(Lang.F("«{0}»: иду в локацию {1}…", spot.Name, place));
+            Plugin.Trace("[travel] '" + spot.Name + "' → location " + place);
+            int load = LoadStamp;
+            if (!Send(new ChangeMapRequest(place))) { _ok = false; yield break; }
+            yield return WaitFor(() => LoadStamp != load && Loc == place, 60f);
+            if (!_ok) { Stop(Lang.F("не пустили в локацию {0}", place)); yield break; }
+            yield return Settle();
+            _ok = true;
+        }
+
+        private static IEnumerator Step(Spot spot, int vertex, bool enter) => Step(spot, vertex, enter, -1);
+
+        private static IEnumerator Step(Spot spot, int vertex, bool enter, int place)
         {
             if (Locked(vertex))
             {
@@ -374,33 +445,12 @@ namespace NewAgeQoL
             if (!enter) { _ok = true; yield break; }
 
             Say(Lang.F("«{0}»: перехожу дальше…", spot.Name));
-            yield return WaitFor(() => LoadStamp != load && MapReady(), 120f);
-            if (!_ok) { Stop(Lang.T("переход не открылся")); yield break; }
+            if (place > 0) yield return WaitFor(() => LoadStamp != load && Loc == place, 120f);
+            else yield return WaitFor(() => LoadStamp != load && MapReady(), 120f);
+            if (!_ok) { Stop(place > 0 ? Lang.F("не вошёл в локацию {0}", place) : Lang.T("переход не открылся")); yield break; }
             AutoConfirm = false;
             yield return Settle();
             _ok = true;
-        }
-
-        private static int Exit(int target)
-        {
-            try
-            {
-                var map = LastMap;
-                if (map == null || map.MapType != 0 || map.SceneObjects == null) return -1;
-                int best = -1, length = int.MaxValue;
-                foreach (var one in map.SceneObjects)
-                {
-                    if (one == null || one.ObjectType != EObjectType.LeaveTown || one.Id <= 0) continue;
-                    if (!Allowed(map.MapId, one.Id)) continue;
-                    var road = GateRoute(one.Id, target);
-                    if (road == null || road.Count >= length) continue;
-                    best = one.Id;
-                    length = road.Count;
-                }
-                if (best > 0) Plugin.Trace("[travel] location " + map.MapId + " has its own exit to area " + best + ", gates to target " + length);
-                return best;
-            }
-            catch (Exception e) { Plugin.Caught("[travel] location exits: " + e.Message); return -1; }
         }
 
         private static bool Allowed(int place, int area)
@@ -429,7 +479,7 @@ namespace NewAgeQoL
             _ok = true;
         }
 
-        private static IEnumerator GoTown(Spot spot)
+        private static IEnumerator GoTown(Spot spot, bool outside)
         {
             if (!InTown())
             {
@@ -440,6 +490,7 @@ namespace NewAgeQoL
                 if (!_ok) { Stop(Lang.T("не дождался города")); yield break; }
                 yield return Settle();
             }
+            if (!outside) { _ok = true; yield break; }
 
             Say(Lang.F("«{0}»: выхожу из города…", spot.Name));
             int leave = LoadStamp;
@@ -508,6 +559,12 @@ namespace NewAgeQoL
         }
 
         private static bool HasVertex(int id) => Vertex(id) != null;
+
+        private static bool Passage(int id)
+        {
+            var vertex = Vertex(id);
+            return vertex == null || vertex.VertexType == EGlobalMapVertexType.SavePoint;
+        }
 
         private static GlobalMapVertex Vertex(int id)
         {
@@ -621,6 +678,8 @@ namespace NewAgeQoL
         private static int _viaVertex = -1;
         private static int _viaLocation = -1;
         private static int _lastPlace = -1;
+        private static int _seenLid = -1;
+        private static readonly List<Gate> _chain = new List<Gate>();
 
         internal static void Watch()
         {
@@ -631,11 +690,14 @@ namespace NewAgeQoL
             if (vertex < 0) return;
             _seenArea = _area;
             _seenVertex = vertex;
+            var at = Vertex(vertex);
+            _seenLid = at != null && at.VertexType == EGlobalMapVertexType.SavePoint ? at.LocationId : -1;
         }
 
         internal static void NotifyMap(LocationMap map)
         {
             if (map == null) return;
+            var before = LastMap;
             LastMap = map;
             int area = map.RootLocation > 0 ? map.RootLocation : map.MapId;
             int type = map.MapType;
@@ -643,28 +705,45 @@ namespace NewAgeQoL
             {
                 if (type == 2)
                 {
-                    if (_mapType == 2 && _seenArea > 0 && area != _seenArea && _seenVertex >= 0)
+                    if (_mapType == 2 && _seenArea > 0 && area != _seenArea && _seenVertex >= 0 && _seenLid == area)
                         Learn(_seenArea, area, _seenVertex);
-                    else if (_mapType == 0 && _viaArea > 0 && area != _viaArea)
+                    else if (_mapType == 0 && _viaArea > 0 && area != _viaArea && Leads(before, _lastPlace, area))
+                    {
                         RouteLog.Note("через " + _viaArea + ":" + _viaVertex + ">" + _viaLocation + ">" + area,
                             "from area " + _viaArea + " (point v" + _viaVertex + ") through location " + _viaLocation + " reached area " + area);
+                        Learn(_viaArea, _viaLocation, _viaVertex);
+                        foreach (var link in _chain) Learn(link.From, link.To, 0);
+                        Learn(_lastPlace, area, 0);
+                    }
                     if (_mapType == 0 && _lastPlace > 0)
                         RouteLog.Note("выход " + _lastPlace + ">" + area, "exited location " + _lastPlace + " to area " + area);
                     Plugin.Trace("[travel] world map loaded, area " + area);
                     _viaArea = -1;
+                    _chain.Clear();
                 }
                 else
                 {
-                    if (_mapType == 2 && _seenArea > 0)
+                    if (_mapType == 2 && _seenArea > 0 && _seenLid == map.MapId)
                     {
+                        _chain.Clear();
                         _viaArea = _seenArea;
                         _viaVertex = _seenVertex;
                         _viaLocation = map.MapId;
                         Plugin.Trace("[travel] from area " + _seenArea + " at point v" + _seenVertex + " entered location " + map.MapId);
                     }
+                    else if (_mapType == 0 && _lastPlace == map.MapId)
+                    {
+                        Plugin.Trace("[travel] location loaded again " + map.MapId);
+                    }
+                    else if (_mapType == 0 && _viaArea > 0 && _lastPlace > 0 && Leads(before, _lastPlace, map.MapId))
+                    {
+                        _chain.Add(new Gate { From = _lastPlace, To = map.MapId });
+                        Plugin.Trace("[travel] location " + _lastPlace + " led to location " + map.MapId);
+                    }
                     else
                     {
-                        if (_mapType == 0 && _lastPlace > 0 && _lastPlace != map.MapId) _viaArea = -1;
+                        _viaArea = -1;
+                        _chain.Clear();
                         Plugin.Trace("[travel] location loaded " + map.MapId);
                     }
                 }
@@ -679,7 +758,7 @@ namespace NewAgeQoL
             foreach (var gate in Gates())
                 if (gate.From == from && gate.To == to) return;
             string line = from + ">" + to + ":" + vertex;
-            RouteLog.Note("переход " + line, "found a gate from area " + from + " to " + to + " through point v" + vertex);
+            RouteLog.Note("переход " + line, "found a passage from " + from + " to " + to + (IsArea(from) ? " through point v" + vertex : ""));
             try
             {
                 string shared = Shared().Trim();

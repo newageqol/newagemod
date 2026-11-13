@@ -99,10 +99,40 @@ namespace NewAgeQoL
 
         private static List<RowDef> Tints()
         {
-            var rows = new List<RowDef> { new Header { Title = Lang.T("Цвета чата") } };
+            var rows = new List<RowDef>
+            {
+                new Header { Title = Lang.T("Цвета чата") },
+                new ActionRow
+                {
+                    Title = Lang.T("Цвета по видам сообщений"),
+                    ButtonText = TintsButton(),
+                    Do = ToggleTints,
+                    TitleNow = () => Lang.T("Цвета по видам сообщений"),
+                    ButtonNow = TintsButton,
+                },
+            };
             foreach (var kind in ChatColors.All)
                 if (kind.Cfg != null) rows.Add(new ColorRow { Title = Lang.T(kind.Title), Kind = kind });
             return rows;
+        }
+
+        private static bool _tintsOpen;
+        private static readonly List<GameObject> TintRows = new List<GameObject>();
+
+        private static string TintsButton() => _tintsOpen ? Lang.T("Скрыть") : Lang.T("Показать");
+
+        private static void ToggleTints()
+        {
+            _tintsOpen = !_tintsOpen;
+            Transform list = null;
+            foreach (var go in TintRows)
+            {
+                if (go == null) continue;
+                go.SetActive(_tintsOpen);
+                list = go.transform.parent;
+            }
+            if (list is RectTransform rt) LayoutRebuilder.MarkLayoutForRebuild(rt);
+            if (_tintsOpen && Plugin.Instance != null) Plugin.Instance.StartCoroutine(EvenButtons());
         }
 
         private static List<RowDef> KeyRows()
@@ -247,6 +277,7 @@ namespace NewAgeQoL
             _placed = false;
             _undo.Clear();
             Lives.Clear();
+            TintRows.Clear();
         }
 
         private static void Remember<T>(ConfigEntry<T> cfg)
@@ -309,6 +340,8 @@ namespace NewAgeQoL
             _undo.Clear();
             Slots.Clear();
             Lives.Clear();
+            TintRows.Clear();
+            _tintsOpen = false;
             foreach (var row in Rows())
             {
                 try { AddRow(rowPrefab, container, row); }
@@ -797,6 +830,8 @@ namespace NewAgeQoL
             if (def is ColorRow tone)
             {
                 Remember(tone.Kind.Cfg);
+                TintRows.Add(go);
+                go.SetActive(_tintsOpen);
                 if (value == null) return;
                 ChatColors.Show(value, tone.Kind);
                 if (background != null) background.color = WardrobeLook.Field;

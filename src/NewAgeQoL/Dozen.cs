@@ -12,8 +12,6 @@ namespace NewAgeQoL
         private static readonly Dictionary<int, int> Rooms = new Dictionary<int, int>
         {
             [(int)EClaimType.Dozen] = 335,
-            [(int)EClaimType.Chaotic] = 15,
-            [(int)EClaimType.EliteChaotic] = 15,
         };
         private const int Each = 2;
         private const float Icon = 16f;
