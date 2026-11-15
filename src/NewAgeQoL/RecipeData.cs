@@ -244,7 +244,6 @@ namespace NewAgeQoL
                 var find = new StringBuilder();
                 Seek(find, NameIn(pack, recipe.Result, recipe.Name));
                 Seek(find, recipe.Name);
-                foreach (var part in recipe.Parts) Seek(find, NameIn(pack, part.Id, ""));
                 recipe.Find = find.ToString().ToLowerInvariant();
             }
             pack.Crafts.Sort();

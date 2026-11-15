@@ -325,7 +325,7 @@ namespace NewAgeQoL
 
         private static void BuildList(RectTransform box)
         {
-            _search = OnlineWindow.MakeInput(box, ListW - 24f, global::NewAgeQoL.Lang.T("Поиск: вещь или компонент"));
+            _search = OnlineWindow.MakeInput(box, ListW - 24f, global::NewAgeQoL.Lang.T("Поиск: вещь"));
             Wardrobe.At((RectTransform)_search.transform, 12f, 12f, ListW - 24f, 36f);
             WardrobeLook.Style(_search);
             _search.characterLimit = 40;
