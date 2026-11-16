@@ -560,7 +560,6 @@ internal static class Fighters
         }
         if (Alive.Count > 0 || _emptySince <= 0f || Time.unscaledTime - _emptySince < 180f) return;
         _emptySince = 0f;
-        FrameCache.Trim();
         SpellFx.Reset();
         Summoned.Clear();
     }
@@ -871,7 +870,24 @@ internal static class FrameCache
     internal static void EndSequence(string sequence, bool ready)
     {
         Pending.Remove(sequence);
-        if (ready) Ready.Add(sequence);
+        if (!ready) return;
+        Ready.Add(sequence);
+        _setsDrawn++;
+        if (Gone.Remove(sequence)) _setsAgain++;
+    }
+
+    private static readonly HashSet<string> Gone = new();
+    private static int _setsDrawn;
+    private static int _setsAgain;
+    private static int _framesPut;
+    private static int _setsSpilled;
+    private static int _framesSpilled;
+
+    internal static string Totals()
+    {
+        string line = $"sets drawn {_setsDrawn} (again after eviction {_setsAgain}), frames uploaded {_framesPut}, evicted sets {_setsSpilled}, frames {_framesSpilled}, video memory {_bytes / 1048576.0:0} of {Plugin.FrameMemory / 1048576L} MB";
+        _setsDrawn = _setsAgain = _framesPut = _setsSpilled = _framesSpilled = 0;
+        return line;
     }
 
     internal static void SetCount(string sequence, int count) => Counts[sequence] = count;
@@ -1054,6 +1070,7 @@ internal static class FrameCache
 
     internal static Sprite Put(string key, string sequence, DollPicture picture, float pixelsPerUnit)
     {
+        _framesPut++;
         bool packed = picture.Dxt != null;
         bool raw = !packed && picture.Raw;
         bool mips = packed ? picture.Mips > 1 : raw;
@@ -1102,14 +1119,6 @@ internal static class FrameCache
 
     private static readonly HashSet<string> Hot = new();
 
-    internal static void Trim()
-    {
-        long half = Plugin.FrameMemory / 2;
-        long before = _bytes;
-        if (before > half) Spill(half);
-        if (Plugin.CfgVerbose.Value) Plugin.Log.LogInfo($"[frames] no fights for a long time, doll frames kept {_bytes / 1048576.0:0} of {before / 1048576.0:0} MB, sprites {Sprites.Count}");
-    }
-
     private static void Spill(long budget)
     {
         long room = budget - budget / 10;
@@ -1127,6 +1136,9 @@ internal static class FrameCache
             bool needed = Hot.Contains(victim);
             int dropped = DropSequence(victim);
             if (dropped == 0) break;
+            if (Gone.Count >= 50000) Gone.Clear();
+            Gone.Add(victim);
+            _setsSpilled++;
             if (needed) forced++;
             spilled += dropped;
             series++;
@@ -1136,6 +1148,7 @@ internal static class FrameCache
             Drop(Order.First.Value);
             spilled++;
         }
+        _framesSpilled += spilled;
         if (spilled > 0 && Trace.On && Time.unscaledTime - _spilledAt > 1f)
         {
             _spilledAt = Time.unscaledTime;
@@ -2476,9 +2489,6 @@ internal sealed class FighterDoll : MonoBehaviour
         if (_labels.ContainsKey("move")) Need("move", false, true, !Fighters.Crowd, Fighters.Crowd);
         if (strike != null) Need(strike, false, true, Mine, !Mine);
         if (second != null) Need(second, false, true, Mine, !Mine);
-        foreach (string label in new[] { "cast", "healing" })
-            if (_labels.ContainsKey(label)) Need(label, false, true, !Fighters.Crowd, Fighters.Crowd);
-        Need("stop" + Fighters.Living, false, true, false, true);
     }
 
     private readonly List<string> _warm = new();

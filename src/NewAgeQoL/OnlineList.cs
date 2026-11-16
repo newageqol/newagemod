@@ -407,7 +407,7 @@ namespace NewAgeQoL
                     Vip = Attr(a, "vip") == "1",
                     Dealer = Attr(a, "dealer") == "1",
                     Rights = Attr(a, "admin"),
-                    Away = Yes(a, "afk") || Yes(a, "away") || Yes(a, "idle") || Yes(a, "sleep"),
+                    Away = Yes(a, "a") || Yes(a, "afk") || Yes(a, "away") || Yes(a, "idle") || Yes(a, "sleep"),
                 };
                 p.Admin = p.Rights.Length > 0;
                 if (p.Login.Length > 0) list.Add(p);

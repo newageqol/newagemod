@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.48.0";
+        public const string Version = "0.49.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -474,6 +474,7 @@ namespace NewAgeQoL
                 Counter.Wake();
                 Contracts.Wake();
                 CombatCam.Wake();
+                ClassIcons.Wake();
             }
             catch (System.Exception e) { Caught("[scene] awake: " + e.Message); }
         }
@@ -511,6 +512,7 @@ namespace NewAgeQoL
                 new Part { Name = "SlotSwap.Tick", Do = SlotSwap.Tick },
                 new Part { Name = "ContractNumbers.Tick", Do = ContractNumbers.Tick },
                 new Part { Name = "Counter.Tick", Do = Counter.Tick },
+                new Part { Name = "AnimAck.Tick", Do = AnimAck.Tick },
                 new Part { Name = "Market.Tick", Do = Market.Tick },
                 new Part { Name = "SkillList.Tick", Do = SkillList.Tick },
                 new Part { Name = "SkillList.Aim", Do = SkillList.Aim },

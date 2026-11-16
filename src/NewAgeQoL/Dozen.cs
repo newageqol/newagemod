@@ -110,7 +110,7 @@ namespace NewAgeQoL
                 if (slot.Pic != null && (slot.Pic.sprite == null || slot.Pic.sprite.texture == null))
                 {
                     Sprite art = null;
-                    try { art = AtlasUtils.GetSmallClassIcon((ERPGClass)slot.Class); } catch { art = null; }
+                    try { art = ClassIcons.Get(slot.Class); } catch { art = null; }
                     if (art != null) slot.Pic.sprite = art;
                     mark.Append('+');
                 }

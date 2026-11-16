@@ -299,7 +299,7 @@ namespace NewAgeQoL
             if (face.Pic.sprite == null)
             {
                 Sprite art = null;
-                try { art = AtlasUtils.GetSmallClassIcon((ERPGClass)face.ClassId); }
+                try { art = ClassIcons.Get(face.ClassId); }
                 catch { art = null; }
                 if (art != null)
                 {

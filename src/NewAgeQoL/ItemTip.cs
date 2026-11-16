@@ -238,11 +238,19 @@ namespace NewAgeQoL
         private static void Fill(IGeneralThingInfoDescription about, int inv, int canUse)
         {
             int? wear = null;
+            long? left = null;
+            int? personal = null;
+            long? personalLeft = null;
             if (inv > 0 && Wear.TryGetValue(inv, out var known) && known.Reply != null)
             {
                 wear = known.Reply.Wear;
                 canUse = known.Reply.CanUseMask;
+                long passed = (long)((Time.unscaledTime - known.At) * 1000f);
+                if (known.Reply.RemoveTime.HasValue) left = known.Reply.RemoveTime.Value - passed;
+                personal = known.Reply.PersonalStatus;
+                if (known.Reply.PersonalStatusRemoveIntervalInSeconds.HasValue) personalLeft = known.Reply.PersonalStatusRemoveIntervalInSeconds.Value - passed;
             }
+            else if (inv <= 0 && about is GeneralThingInfoDescription plain) left = plain.RemoveTime;
             Clear();
             bool any = false;
 
@@ -264,6 +272,15 @@ namespace NewAgeQoL
                 if (wear.HasValue && wear.Value <= 0) color = WardrobeLook.Bad;
                 else if (wear.HasValue && max > 0 && wear.Value * 4 < max) color = WardrobeLook.Accent;
                 Row(Lang("things.durability") ?? NewAgeQoL.Lang.T("Прочность"), value, color);
+            }
+            if (left.HasValue)
+                Line(_body, left.Value > 0 ? (Lang("things.expiringtimespan") ?? NewAgeQoL.Lang.T("Предмет будет разрушен через")) + " " + Span(left.Value) : NewAgeQoL.Lang.T("Срок предмета вышел"),
+                    13, FontStyle.Bold, WardrobeLook.Bad);
+            if (personal == 1) Line(_body, Lang("things.personal.status") ?? NewAgeQoL.Lang.T("Личная вещь"), 13, FontStyle.Bold, WardrobeLook.Accent);
+            else if (personal == 2)
+            {
+                string text = SafeFormat("things.personal.status.removed", Span(Math.Max(0L, personalLeft ?? 0L)));
+                Line(_body, text ?? NewAgeQoL.Lang.T("Личная вещь"), 13, FontStyle.Bold, WardrobeLook.Accent);
             }
             any |= _body.childCount > start;
 
@@ -300,6 +317,27 @@ namespace NewAgeQoL
                 var text = Line(_body, desc, 13, FontStyle.Italic, WardrobeLook.Label);
                 text.lineSpacing = 1.05f;
             }
+        }
+
+        private static string Span(long ms)
+        {
+            try
+            {
+                string text = StringUtils.GetTimeSpanMessage(ms);
+                if (!string.IsNullOrEmpty(text) && text.Trim().Length > 0) return text.Trim();
+            }
+            catch { }
+            return NewAgeQoL.Lang.T("меньше минуты");
+        }
+
+        private static string SafeFormat(string key, string value)
+        {
+            try
+            {
+                string text = ResourceStrings.GetString(key, value);
+                return string.IsNullOrEmpty(text) || text == key ? null : text;
+            }
+            catch { return null; }
         }
 
         private static void Stat(string key, int? value)

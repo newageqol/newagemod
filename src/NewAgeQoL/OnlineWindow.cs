@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Collections.Generic;
 using HarmonyLib;
 using Transport.Messages.Common.User;
@@ -28,7 +29,8 @@ namespace NewAgeQoL
         private static Text _title;
         private static Text _status;
         private static CanvasGroup _rowsFade;
-        private static Button _refresh;
+        private static float _autoAt;
+        private static bool _keepScroll;
         private static InputField _filter;
         private static Text _modeText;
         private static Button _mode;
@@ -122,7 +124,6 @@ namespace NewAgeQoL
             _scroll = null;
             _title = null;
             _status = null;
-            _refresh = null;
             _filter = null;
             _modeText = null;
             _mode = null;
@@ -160,13 +161,16 @@ namespace NewAgeQoL
             }
             if (Time.unscaledTime < _pollAt) return;
             _pollAt = Time.unscaledTime + 0.2f;
+            Auto();
             int v = OnlineList.Version;
             if (v != _seenVersion || (_friends && Friends.Version != _seenFriends))
             {
                 _seenVersion = v;
                 _seenFriends = Friends.Version;
                 _seenCharms = OnlineCharms.Version;
+                _keepScroll = true;
                 Rebuild();
+                _keepScroll = false;
                 return;
             }
             if (OnlineCharms.Version != _seenCharms)
@@ -177,16 +181,65 @@ namespace NewAgeQoL
             Pace();
         }
 
+        private static void Auto()
+        {
+            if (Time.unscaledTime < _autoAt || OnlineList.Busy || OnlineList.Wait > 0) return;
+            _autoAt = Time.unscaledTime + 3f;
+            if (_friends) Friends.Ask();
+            OnlineList.Refresh();
+        }
+
         private static void Pace()
         {
-            if (_refresh != null)
-            {
-                bool can = _friends || (!OnlineList.Busy && OnlineList.Wait == 0);
-                if (_refresh.interactable != can) _refresh.interactable = can;
-            }
             if (_status == null) return;
-            string text = StatusText(Shown.Count);
+            Say(StatusText(Shown.Count));
+        }
+
+        private static string _statusShape;
+        private static Vector2 _statusBox;
+
+        private static void Say(string text)
+        {
+            if (_status == null) return;
             if (_status.text != text) _status.text = text;
+            string shape = Shape(text);
+            var box = _status.rectTransform.rect.size;
+            if (shape == _statusShape && box == _statusBox) return;
+            _statusShape = shape;
+            _statusBox = box;
+            int size = Fit(_status, shape, box, 13, 9);
+            if (_status.fontSize != size) _status.fontSize = size;
+        }
+
+        private static readonly StringBuilder ShapeText = new StringBuilder();
+
+        private static string Shape(string text)
+        {
+            ShapeText.Length = 0;
+            int run = 0;
+            foreach (char c in text)
+            {
+                if (char.IsDigit(c)) { run++; continue; }
+                if (run > 0) { ShapeText.Append('8', Math.Max(run, 2)); run = 0; }
+                ShapeText.Append(c);
+            }
+            if (run > 0) ShapeText.Append('8', Math.Max(run, 2));
+            return ShapeText.ToString();
+        }
+
+        private static int Fit(Text label, string sample, Vector2 box, int max, int min)
+        {
+            if (box.x <= 0f || box.y <= 0f || label.font == null) return max;
+            var maker = label.cachedTextGeneratorForLayout;
+            float unit = label.pixelsPerUnit > 0f ? label.pixelsPerUnit : 1f;
+            for (int size = max; size > min; size--)
+            {
+                var settings = label.GetGenerationSettings(box);
+                settings.resizeTextForBestFit = false;
+                settings.fontSize = size;
+                if (maker.GetPreferredHeight(sample, settings) / unit <= box.y) return size;
+            }
+            return min;
         }
 
         private static void Dress()
@@ -199,7 +252,7 @@ namespace NewAgeQoL
                 row.Shape = shape;
                 OnlineCharms.Redress(row.Widget, row.Player);
             }
-            if (_status != null) _status.text = StatusText(Shown.Count);
+            Say(StatusText(Shown.Count));
         }
 
         private static string StatusText(int shown)
@@ -209,7 +262,7 @@ namespace NewAgeQoL
             if (age >= 0 && !OnlineList.Busy && !st.StartsWith(Lang.T("Ошибка"), StringComparison.Ordinal))
             {
                 int wait = OnlineList.Wait;
-                st = (st.Length > 0 ? st + " · " : "") + Lang.F("обновлено {0} с назад", age) + " · " + (wait > 0 ? Lang.F("новый список через {0} с", wait) : Lang.T("можно обновить"));
+                st = (st.Length > 0 ? st + " · " : "") + (wait > 0 ? Lang.F("обновление через {0} с", wait) : Lang.T("обновляю…"));
             }
             if (OnlineCharms.Gathering && st.Length > 0) st += Lang.T(" · заклятия загружаются…");
             if (_friends && !Friends.Loaded) st = Lang.T("список друзей загружается…") + (st.Length > 0 ? " · " + st : "");
@@ -331,18 +384,12 @@ namespace NewAgeQoL
             _filter = MakeInput(barGo.transform, 168f, Lang.T("поиск по нику"));
             _filter.text = _query;
             _filter.onValueChanged.AddListener(v => { _query = Norm(v); Rebuild(); });
-            _refresh = MakeGameButton(barGo.transform, Lang.T("Обновить"), 118f, BarH, () =>
-            {
-                if (_friends) Friends.Ask();
-                if (!OnlineList.Busy && OnlineList.Wait == 0) OnlineList.Refresh();
-            });
             _status = Label(barGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Label);
             _status.alignment = TextAnchor.MiddleLeft;
             _status.horizontalOverflow = HorizontalWrapMode.Wrap;
             _status.verticalOverflow = VerticalWrapMode.Truncate;
-            _status.resizeTextForBestFit = true;
-            _status.resizeTextMinSize = 9;
-            _status.resizeTextMaxSize = 13;
+            _status.resizeTextForBestFit = false;
+            _statusShape = null;
             var sle = _status.gameObject.AddComponent<LayoutElement>();
             sle.flexibleWidth = 1f; sle.preferredHeight = BarH; sle.minWidth = 70f;
 
@@ -493,10 +540,9 @@ namespace NewAgeQoL
             }
 
             bool busy = OnlineList.Busy;
-            if (_rowsFade != null) _rowsFade.alpha = busy && !_friends ? 0.4f : 1f;
-            if (_status != null) _status.text = StatusText(shown.Count);
-            if (_refresh != null) _refresh.interactable = _friends || (!busy && OnlineList.Wait == 0);
-            if (_scroll != null) _scroll.verticalNormalizedPosition = 1f;
+            if (_rowsFade != null) _rowsFade.alpha = busy && !_friends && OnlineList.Age < 0 ? 0.4f : 1f;
+            Say(StatusText(shown.Count));
+            if (_scroll != null && !_keepScroll) _scroll.verticalNormalizedPosition = 1f;
         }
 
         private static int ByLevel(OnlinePlayer a, OnlinePlayer b)
