@@ -42,6 +42,8 @@ namespace NewAgeQoL
         private static int _seenVersion = -1;
         private static int _seenCharms = -1;
         private static float _pollAt;
+        private static string _drawn;
+        private static readonly StringBuilder DrawnText = new StringBuilder();
 
         private sealed class Dressed
         {
@@ -124,6 +126,7 @@ namespace NewAgeQoL
             _scroll = null;
             _title = null;
             _status = null;
+            _drawn = null;
             _filter = null;
             _modeText = null;
             _mode = null;
@@ -514,7 +517,23 @@ namespace NewAgeQoL
             players.Sort(ByLevel);
             OnlineList.AskClanCodes(players);
 
-            for (int i = _rows.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
+            string drawn = Drawn(players);
+            if (drawn == _drawn)
+            {
+                Carry();
+                Dress();
+                if (_rowsFade != null) _rowsFade.alpha = OnlineList.Busy && !_friends && OnlineList.Age < 0 ? 0.4f : 1f;
+                Say(StatusText(Shown.Count));
+                return;
+            }
+            _drawn = drawn;
+
+            for (int i = _rows.childCount - 1; i >= 0; i--)
+            {
+                var old = _rows.GetChild(i).gameObject;
+                old.SetActive(false);
+                UnityEngine.Object.Destroy(old);
+            }
             Pending.Clear();
             Dressing.Clear();
             OnlineCharms.Clear();
@@ -543,6 +562,41 @@ namespace NewAgeQoL
             if (_rowsFade != null) _rowsFade.alpha = busy && !_friends && OnlineList.Age < 0 ? 0.4f : 1f;
             Say(StatusText(shown.Count));
             if (_scroll != null && !_keepScroll) _scroll.verticalNormalizedPosition = 1f;
+        }
+
+        private static string Drawn(List<OnlinePlayer> players)
+        {
+            var sb = DrawnText;
+            sb.Length = 0;
+            sb.Append(_friends ? 'f' : 'o').Append(_byClan ? 'c' : 'l').Append('\u001f').Append(_query).Append('\u001f');
+            foreach (var p in players) Put(sb, p);
+            if (_friends)
+                foreach (var f in Friends.List)
+                    sb.Append('\u001e').Append(f.UserId).Append(',').Append(f.Login).Append(',').Append(f.Level)
+                      .Append(',').Append(f.PromptId.HasValue ? f.PromptId.Value.ToString() : "-");
+            return sb.ToString();
+        }
+
+        private static void Put(StringBuilder sb, OnlinePlayer p)
+        {
+            string sprite;
+            int code;
+            sb.Append('\u001e').Append(p.Id).Append(',').Append(p.Login).Append(',').Append(p.Level).Append(',').Append(p.Class)
+              .Append(',').Append(p.Clan).Append(',').Append(p.Rank).Append(',').Append(p.Rights)
+              .Append(p.Vip ? 'v' : '-').Append(p.Admin ? 'a' : '-').Append(p.Dealer ? 'd' : '-').Append(p.Away ? 'z' : '-');
+            if (OnlineList.ClanSprite(p.Clan, out sprite)) sb.Append(',').Append(sprite);
+            if (OnlineList.ClanCode(p.Clan, out code)) sb.Append(',').Append(code);
+            if (_byClan && !string.IsNullOrEmpty(p.Clan)) sb.Append(',').Append(OnlineList.ClanName(p.Clan));
+        }
+
+        private static void Carry()
+        {
+            foreach (var row in Dressing)
+            {
+                if (row.Player == null) continue;
+                var now = OnlineList.ById(row.Player.Id);
+                if (now != null) row.Player = now;
+            }
         }
 
         private static int ByLevel(OnlinePlayer a, OnlinePlayer b)
