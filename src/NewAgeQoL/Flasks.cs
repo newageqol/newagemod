@@ -180,7 +180,7 @@ namespace NewAgeQoL
 
             string name = NameOf(id);
             string head = !string.IsNullOrEmpty(name) ? name : Lang.T(Titles[row]);
-            bool wantFill = Plugin.CfgFlaskFillToMax == null || Plugin.CfgFlaskFillToMax.Value;
+            bool wantFill = true;
             return head + " — " + (wantFill ? Lang.T("до полного") : Lang.T("не до полного")) + Hotkeys.Tail("flask:" + row);
         }
 
@@ -280,6 +280,8 @@ namespace NewAgeQoL
         }
 
         internal static bool Scanning => _scanBusy;
+
+        internal static float ScannedAt => _scanAt;
 
         internal static bool Picking;
 
@@ -521,7 +523,12 @@ namespace NewAgeQoL
             }
 
             bool combat = SideButtons.InCombat();
-            if (_wasCombat && !combat) Forget();
+            if (_wasCombat && !combat)
+            {
+                Forget();
+                _refillAt = On(Plugin.CfgFlaskAfterFight) || On(Plugin.CfgChargesAfterFight) ? RealTime.Now + RefillDelay : 0f;
+            }
+            if (combat) _refillAt = 0f;
             _wasCombat = combat;
 
             for (int row = 0; row < Rows; row++)
@@ -548,6 +555,11 @@ namespace NewAgeQoL
                 return;
             }
             Purse();
+            if (_refillAt > 0f && RealTime.Now >= _refillAt && !AnyBusy && !_scanBusy)
+            {
+                _refillAt = 0f;
+                Refill();
+            }
             if (_chestAgain > 0f && RealTime.Now >= _chestAgain)
             {
                 _chestAgain = 0f;
@@ -570,7 +582,7 @@ namespace NewAgeQoL
                 return;
             }
 
-            bool any = (Picking && !Fresh) || _wanted;
+            bool any = (Picking && !Fresh) || _wanted || Teleports.Want;
             for (int row = 0; row < Rows; row++) if (Shown(row)) any = true;
             if (!any)
             {
@@ -675,7 +687,9 @@ namespace NewAgeQoL
             UpdateCounts();
         }
 
-        internal static void Use(int row)
+        internal static void Use(int row) => Use(row, null);
+
+        internal static void Use(int row, System.Action<int, bool> done)
         {
             if (Plugin.Instance == null || row < 0 || row >= Rows) return;
             if (RowBusy[row])
@@ -688,7 +702,59 @@ namespace NewAgeQoL
                 Tell(Titles[row] + ": press skipped - no flask chosen for this button in settings");
                 return;
             }
-            Plugin.Instance.StartCoroutine(UseRoutine(row, -1, null));
+            Plugin.Instance.StartCoroutine(UseRoutine(row, -1, done));
+        }
+
+        private const float RefillDelay = 2.5f;
+        private static float _refillAt;
+
+        private static bool On(ConfigEntry<bool> cfg) => cfg != null && cfg.Value;
+
+        private static bool _refilling;
+
+        private static void Refill()
+        {
+            if (Plugin.Instance == null || _refilling) return;
+            bool vitals = On(Plugin.CfgFlaskAfterFight);
+            bool charges = On(Plugin.CfgChargesAfterFight);
+            if (!vitals && !charges) return;
+            Plugin.Instance.StartCoroutine(RefillRoutine(vitals, charges));
+        }
+
+        private static IEnumerator RefillRoutine(bool vitals, bool charges)
+        {
+            _refilling = true;
+            var lines = new List<string>();
+            try
+            {
+                for (int row = 0; row < Rows; row++)
+                {
+                    if (row < 3 ? !vitals : !charges) continue;
+                    if (SideButtons.InCombat()) yield break;
+                    if (!Gauge(row, out int cur, out int max) || cur >= max) continue;
+                    string title = Lang.T(Titles[row]);
+                    if (!Shown(row))
+                    {
+                        lines.Add(Lang.F("{0}: банка не выбрана — правый щелчок по банке в настройках игры.", title));
+                        Tell("after fight: no flask chosen for " + Titles[row]);
+                        continue;
+                    }
+                    if (RowBusy[row]) continue;
+                    Tell("after fight: refilling " + Titles[row] + " from " + cur + " / " + max);
+                    int drunk = 0;
+                    bool empty = false;
+                    yield return Plugin.Instance.StartCoroutine(UseRoutine(row, 0, (used, ranOut) => { drunk = used; empty = ranOut; }));
+                    if (empty)
+                        lines.Add(drunk > 0
+                            ? Lang.F("{0}: банки кончились — выпито {1} шт.", title, drunk)
+                            : Lang.F("{0}: банок в сумке нет.", title));
+                }
+            }
+            finally
+            {
+                _refilling = false;
+                if (lines.Count > 0) Notice.Show(Lang.T("Пополнение после боя") + System.Environment.NewLine + string.Join(System.Environment.NewLine, lines), 7f);
+            }
         }
 
         private static void Tell(string text)
@@ -755,7 +821,7 @@ namespace NewAgeQoL
                 }
 
                 float pause = Pause;
-                bool wantFill = want < 0 ? (Plugin.CfgFlaskFillToMax == null || Plugin.CfgFlaskFillToMax.Value) : want == 0;
+                bool wantFill = want <= 0;
 
                 int cur = 0, max = 0;
                 bool known = Gauge(row, out cur, out max);
@@ -961,6 +1027,7 @@ namespace NewAgeQoL
                     case 0: cur = indicators.CurrentLife; max = indicators.MaxLife; break;
                     case 1: cur = indicators.CurrentMana; max = indicators.MaxMana; break;
                     case 2: cur = indicators.CurrentStamina; max = indicators.MaxStamina; break;
+                    case 3: cur = indicators.CurrentExpower; max = indicators.MaxExpower; break;
                     default: return false;
                 }
                 return max > 0;
@@ -1217,6 +1284,14 @@ namespace NewAgeQoL
                 }
             }
             if (r.Success) Bought(r);
+            if (r.Success && r.ChangesInTab != null)
+                foreach (var ch in r.ChangesInTab)
+                    if (ch != null && Teleports.Watched(ch.ThingId))
+                    {
+                        RequestScanNow();
+                        Plugin.Trace("[flasks] rune " + ch.ThingId + " moved: recounting bag");
+                        break;
+                    }
         }
 
         private static void Bought(ThingContextActionResponseMessage r)

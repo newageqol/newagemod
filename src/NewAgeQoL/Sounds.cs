@@ -25,8 +25,6 @@ namespace NewAgeQoL
 
         internal static bool Active => Volume > 0.001f;
 
-        internal static bool PmActive => PmVolume > 0.001f;
-
         private static object _chatOn;
         private static string _lastKey = "";
         private static float _lastAt;
@@ -222,7 +220,7 @@ namespace NewAgeQoL
             {
                 if (audioClip == null) return true;
                 var holder = VisualPrefabsHolder.Instance;
-                if (holder != null && holder.PrivateMessageSound != null && audioClip == holder.PrivateMessageSound) return !Sounds.PmActive;
+                if (holder != null && holder.PrivateMessageSound != null && audioClip == holder.PrivateMessageSound) return false;
                 if (!Sounds.Active) return true;
                 if (holder != null && holder.MercenaryInvitationSound != null && audioClip == holder.MercenaryInvitationSound)
                 {

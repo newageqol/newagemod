@@ -140,7 +140,7 @@ namespace NewAgeQoL
                              ? Lang.T("В город, потом на арену и к турнирам")
                              : Lang.T("Вернуться в Иллениум"),
                 Enabled = () => !ClaimLocked(),
-                Usable = () => !Artifacts.Busy && !TownWalk.Busy,
+                Usable = () => !Artifacts.Busy && !TownWalk.Busy && !Teleports.Busy,
                 Sprite = () => Pick("toTheCity", 4),
                 Click = GoHome,
             },
@@ -192,22 +192,21 @@ namespace NewAgeQoL
 
         static SideButtons()
         {
-            for (int i = 0; i < Flasks.Rows; i++)
+            foreach (int one in Teleports.Runes)
             {
-                int row = i;
+                int rune = one;
                 Buttons.Add(new Entry
                 {
-                    Name = "QoLFlaskButton" + row,
+                    Name = "QoLRuneButton" + rune,
                     Right = true,
                     Col = 1,
-                    Hint = () => Flasks.Hint(row),
-                    Badge = () => Flasks.Badge(row),
+                    Hint = () => Teleports.Hint(rune),
+                    Badge = () => Teleports.Running(rune) ? "▶" : "",
                     WhiteBadge = true,
-                    Usable = () => !Flasks.Busy(row) && !Artifacts.Busy,
-                    Enabled = () => Flasks.Shown(row),
-                    Sprite = () => Flasks.Icon(row),
-                    Click = () => Flasks.Use(row),
-                    RightClick = at => FlaskPicker.Near(row, at),
+                    Usable = () => !Teleports.Busy,
+                    Enabled = () => Teleports.Has(rune) && !ClaimLocked(),
+                    Sprite = () => Teleports.Icon(rune),
+                    Click = () => Teleports.Click(rune),
                 });
             }
             for (int i = 0; i < Buttons.Count; i++) Buttons[i].Seat = i;
@@ -914,7 +913,7 @@ namespace NewAgeQoL
                 else if (!string.IsNullOrEmpty(Flasks.Status))
                 {
                     line = Flasks.Status;
-                    owner = Named("QoLFlaskButton" + Flasks.StatusRow);
+                    owner = Named("QoLTownButton");
                 }
                 if (owner == null || owner.Go == null || !Shown(owner)) owner = Anchor();
                 var host = owner != null ? owner.Go : null;

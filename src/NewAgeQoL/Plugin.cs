@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.51.0";
+        public const string Version = "0.52.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -36,6 +36,9 @@ namespace NewAgeQoL
         internal static ConfigEntry<string> CfgContractCache;
         internal static ConfigEntry<string> CfgRecipeIconTabs;
         internal static ConfigEntry<bool> CfgFlaskFillToMax;
+        internal static ConfigEntry<bool> CfgFlaskAfterFight;
+        internal static ConfigEntry<bool> CfgChargesAfterFight;
+        internal static ConfigEntry<string> CfgPortalForwards;
         internal static ConfigEntry<int> CfgFlaskHpId;
         internal static ConfigEntry<int> CfgFlaskManaId;
         internal static ConfigEntry<int> CfgFlaskEnergyId;
@@ -145,6 +148,12 @@ namespace NewAgeQoL
 
             Chars.Own("Flasks", "FillToMax", true,
                 "ВКЛ: жизнь/мана/энергия — пить до ПОЛНОГО (после каждого глотка мод ждёт обновления полосы и останавливается, как только она заполнилась); грибы — пока сервер даёт, но не больше 20 штук за нажатие. ВЫКЛ: любая кнопка использует ровно ОДНУ штуку за нажатие.", e => CfgFlaskFillToMax = e);
+            Chars.Own("Flasks", "RefillAfterFight", true,
+                "ВКЛ: после выхода из любого боя мод сам пьёт выбранные банки жизни, маны и энергии до полного. Если банка не выбрана или кончилась — пишет об этом на экране.", e => CfgFlaskAfterFight = e);
+            Chars.Own("Flasks", "RefillChargesAfterFight", true,
+                "ВКЛ: после выхода из любого боя мод сам восполняет заряды выбранными грибами до полного. Если грибы не выбраны или кончились — пишет об этом на экране.", e => CfgChargesAfterFight = e);
+            CfgPortalForwards = Config.Bind("Portals", "RuneOptions", "",
+                "Узнанные пункты портала для рун в виде «id руны:номер пункта» через запятую. Заполняется сама, когда мод однозначно видит, какой пункт портала относится к руне.");
             Chars.Fresh("Flasks", "HpThingId", 0,
                 "thingId внебоевой банки ЖИЗНИ, выбирается в настройках мода. 0 — кнопки нет.", e => CfgFlaskHpId = e);
             Chars.Fresh("Flasks", "ManaThingId", 0,
@@ -249,7 +258,7 @@ namespace NewAgeQoL
             Chars.Own("Sounds", "FlashVolume", 1f,
                 "Громкость звуков боя из старого клиента (начало боя, конец раунда, рог приглашения), от 0 (тишина) до 1. Звук личных сообщений настраивается отдельно. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат, пока этот звук мода включён.", e => CfgSoundVolume = e);
             Chars.Own("Sounds", "PrivateVolume", 1f,
-                "Громкость звука личных сообщений и сообщений команды, от 0 (тишина) до 1. Не зависит от громкости звуков боя: можно выключить звуки боя и слышать приват. Пока этот звук включён, свой звук привата игры молчит.", e => CfgPmVolume = e);
+                "Громкость звука личных сообщений и сообщений команды, от 0 (тишина) до 1. Не зависит от громкости звуков боя: можно выключить звуки боя и слышать приват. Свой звук привата игры молчит всегда, поэтому 0 — полная тишина.", e => CfgPmVolume = e);
             Chars.Own("Sounds", "CombatMusicVolume", 0.5f,
                 "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков: каждый бой свой трек, когда трек кончается, плавно начинается следующий. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
             CfgNewPlaces = Config.Bind("Interface", "NewLocations", false,
@@ -549,6 +558,7 @@ namespace NewAgeQoL
                 new Part { Name = "BankHall.Tick", Do = BankHall.Tick },
                 new Part { Name = "Locations.Tick", Do = Locations.Tick },
                 new Part { Name = "DistanceTag.Tick", Do = DistanceTag.Tick },
+                new Part { Name = "ModMark.Tick", Do = ModMark.Tick },
                 new Part { Name = "HexRange.Tick", Do = HexRange.Tick },
                 new Part { Name = "Pointer.Tick", Do = Pointer.Tick },
                 new Part { Name = "CombatCam.Tick", Do = CombatCam.Tick },
@@ -563,6 +573,7 @@ namespace NewAgeQoL
                 new Part { Name = "Ingots.Tick", Do = Ingots.Tick },
                 new Part { Name = "StoragePick.Tick", Do = StoragePick.Tick },
                 new Part { Name = "Portals.Tick", Do = Portals.Tick },
+                new Part { Name = "Teleports.Tick", Do = Teleports.Tick },
                 new Part { Name = "TravelEnter.Tick", Do = TravelEnter.Tick },
                 new Part { Name = "ScoutEnter.Tick", Do = ScoutEnter.Tick },
                 new Part { Name = "MovePace.Tick", Do = MovePace.Tick },

@@ -30,7 +30,31 @@ namespace NewAgeQoL
         private static int[] _tabs;
         private static string _tabsRaw;
 
-        internal static bool SwapHere()
+        internal static object Put, Take;
+
+        private static readonly Dictionary<Type, PropertyInfo[]> Props = new Dictionary<Type, PropertyInfo[]>();
+
+        private static bool Opened(object resolver, out int tab)
+        {
+            tab = -1;
+            if (resolver == null) return false;
+            try
+            {
+                var type = resolver.GetType();
+                if (!Props.TryGetValue(type, out var pair))
+                {
+                    pair = new[] { AccessTools.Property(type, "PanelActive"), AccessTools.Property(type, "CurrentTab") };
+                    Props[type] = pair;
+                }
+                if (pair[0] == null || pair[1] == null) return false;
+                if (!(bool)pair[0].GetValue(resolver, null)) return false;
+                tab = (int)pair[1].GetValue(resolver, null);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static bool Listed(int tab)
         {
             string raw = Plugin.CfgRecipeIconTabs != null ? Plugin.CfgRecipeIconTabs.Value : "5,15,17,22";
             if (_tabs == null || raw != _tabsRaw)
@@ -39,7 +63,48 @@ namespace NewAgeQoL
                 _tabs = raw.Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries)
                            .Select(x => int.TryParse(x.Trim(), out int v) ? v : -1).Where(v => v > 0).ToArray();
             }
-            return Array.IndexOf(_tabs, CurrentTab) >= 0;
+            return Array.IndexOf(_tabs, tab) >= 0;
+        }
+
+        internal static bool SwapHere() => Listed(Opened(Put, out int tab) ? tab : CurrentTab);
+
+        private static bool TakeHere() => Opened(Take, out int tab) && Listed(tab);
+
+        private static readonly List<ShopThingItemRenderer> Shops = new List<ShopThingItemRenderer>();
+
+        private static readonly AccessTools.FieldRef<AbstractShopItemRenderer<IThingTradeItem>, InteractiveIcon> ShopIconRef =
+            AccessTools.FieldRefAccess<AbstractShopItemRenderer<IThingTradeItem>, InteractiveIcon>("Icon");
+
+        private static readonly AccessTools.FieldRef<InteractiveIcon, Image> IconImageRef =
+            AccessTools.FieldRefAccess<InteractiveIcon, Image>("IconImage");
+
+        private static readonly AccessTools.FieldRef<InteractiveIcon, Text> CounterRef =
+            AccessTools.FieldRefAccess<InteractiveIcon, Text>("CounterText");
+
+        internal static void SyncTake(ShopThingItemRenderer r)
+        {
+            try
+            {
+                var icon = r != null ? ShopIconRef(r) : null;
+                if (icon == null) return;
+                var info = r.Data?.ThingInfo;
+                bool on = info != null && TakeHere() && IsRecipe((int)info.ThingSubType);
+                if (on && !Shops.Contains(r)) Shops.Add(r);
+                Mark(icon.transform as RectTransform, CounterRef(icon), on, on ? info.Image : null);
+                string img = on ? ResultImage(info.ThingId) : null;
+                bool swap = !string.IsNullOrEmpty(img);
+                Scale(IconImageRef(icon), swap);
+                if (swap) icon.LoadThingImage(img, null, null);
+            }
+            catch (Exception e) { Plugin.Fault("[recipes] storage take: " + e.Message); }
+        }
+
+        private static void Scale(Image img, bool on)
+        {
+            if (img == null) return;
+            float scale = on ? 0.78f : 1f;
+            var t = img.transform;
+            if (Mathf.Abs(t.localScale.x - scale) > 0.01f) t.localScale = new Vector3(scale, scale, 1f);
         }
 
         internal static string ResultImage(int recipeThingId)
@@ -61,7 +126,7 @@ namespace NewAgeQoL
             if (r == null) return;
             var d = SwapHere() ? r.Data : null;
             bool on = d != null && IsRecipe((int)d.SubType);
-            Mark(r, on, on ? d.Image : null);
+            Mark(r.transform as RectTransform, CountRef(r), on, on ? d.Image : null);
             if (!on) { Shrink(r, false); return; }
             Redraw(r);
         }
@@ -81,15 +146,14 @@ namespace NewAgeQoL
         private static readonly AccessTools.FieldRef<InventoryThingItemRenderer, Image> ThingImageRef =
             AccessTools.FieldRefAccess<InventoryThingItemRenderer, Image>("ThingImage");
 
+        private static readonly AccessTools.FieldRef<InventoryThingItemRenderer, Text> CountRef =
+            AccessTools.FieldRefAccess<InventoryThingItemRenderer, Text>("CountText");
+
         internal static void Shrink(InventoryThingItemRenderer r, bool on)
         {
             try
             {
-                var img = ThingImageRef(r);
-                if (img == null) return;
-                float scale = on ? 0.78f : 1f;
-                var t = img.transform;
-                if (Mathf.Abs(t.localScale.x - scale) > 0.01f) t.localScale = new Vector3(scale, scale, 1f);
+                Scale(ThingImageRef(r), on);
             }
             catch { }
         }
@@ -172,19 +236,27 @@ namespace NewAgeQoL
                 }
                 catch { }
             }
+            for (int i = Shops.Count - 1; i >= 0; i--)
+            {
+                var r = Shops[i];
+                if (r == null) { Shops.RemoveAt(i); continue; }
+                var info = r.Data?.ThingInfo;
+                if (info != null && info.ThingId == recipeThingId) SyncTake(r);
+            }
         }
 
         private const string MarkName = "MvlRecipeMark";
 
-        private static void Mark(InventoryThingItemRenderer r, bool on, string recipeImage)
+        private static void Mark(RectTransform cell, Text countText, bool on, string recipeImage)
         {
             try
             {
-                var t = r.transform.Find(MarkName);
+                if (cell == null) return;
+                var t = cell.Find(MarkName);
                 if (t == null)
                 {
                     if (!on) return;
-                    t = BuildMark(r);
+                    t = BuildMark(cell, countText);
                     if (t == null) return;
                 }
 
@@ -201,10 +273,8 @@ namespace NewAgeQoL
             catch { }
         }
 
-        private static Transform BuildMark(InventoryThingItemRenderer r)
+        private static Transform BuildMark(RectTransform cell, Text countText)
         {
-            var cell = r.transform as RectTransform;
-            if (cell == null) return null;
 
             var go = new GameObject(MarkName, typeof(RectTransform));
             go.transform.SetParent(cell, worldPositionStays: false);
@@ -220,7 +290,6 @@ namespace NewAgeQoL
             img.preserveAspect = true;
             img.enabled = false;
 
-            var countText = AccessTools.Field(typeof(InventoryThingItemRenderer), "CountText")?.GetValue(r) as Text;
             var font = countText != null ? countText.font : null;
             if (font != null)
             {
@@ -276,6 +345,24 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Fault("[recipes] UpdateImage: " + e.Message); return true; }
         }
+    }
+
+    [HarmonyPatch(typeof(StoragePutSelectThingsDialogPanelContentResolver), "IsCanPanelActivate")]
+    public static class StoragePutRecipePatch
+    {
+        private static void Postfix(StoragePutSelectThingsDialogPanelContentResolver __instance) => RecipeIcons.Put = __instance;
+    }
+
+    [HarmonyPatch(typeof(StorageGetThingContentResolver), "GetResponse")]
+    public static class StorageTakeRecipePatch
+    {
+        private static void Postfix(StorageGetThingContentResolver __instance) => RecipeIcons.Take = __instance;
+    }
+
+    [HarmonyPatch(typeof(ShopThingItemRenderer), "UpdateView")]
+    public static class StorageTakeCellPatch
+    {
+        private static void Postfix(ShopThingItemRenderer __instance) => RecipeIcons.SyncTake(__instance);
     }
 
     [HarmonyPatch(typeof(InventoryThingItemRenderer), "Data", MethodType.Setter)]

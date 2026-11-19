@@ -24,6 +24,8 @@ namespace NewAgeQoL
         private static bool _touched;
         private static ScrollRect _watched;
         private static bool _force;
+        private static bool _follow = true;
+        private static float _handAt = -10f;
         private static readonly Dictionary<ChatContentHolder, List<ITextScrollerContent>> Seen = new Dictionary<ChatContentHolder, List<ITextScrollerContent>>();
         private static readonly StringBuilder Pen = new StringBuilder();
 
@@ -71,8 +73,11 @@ namespace NewAgeQoL
             _wasTop = 0f;
             if (scroll == null) return;
             Watch(scroll);
-            _wasBottom = AtBottom(scroll);
+            _wasBottom = _follow || AtBottom(scroll);
             _wasTop = FromTop(scroll);
+            if (!_wasBottom) return;
+            _follow = true;
+            _handAt = -10f;
         }
 
         internal static bool Freeze(ChatPanelContent panel)
@@ -81,7 +86,7 @@ namespace NewAgeQoL
             var holder = Holder(panel);
             if (holder == null || !ReferenceEquals(holder, ChatDock.Board())) return false;
             var scroll = Of(panel);
-            if (scroll == null || AtBottom(scroll)) return false;
+            if (scroll == null || _follow || AtBottom(scroll)) return false;
             List<ITextScrollerContent> before;
             if (!Seen.TryGetValue(holder, out before) || before.Count == 0) return false;
             if (!holder.Content.Contains(before[before.Count - 1])) return false;
@@ -176,11 +181,25 @@ namespace NewAgeQoL
         {
             if (where == null || where.GetComponent<ChatHand>() != null) return;
             where.AddComponent<ChatHand>();
+            var scroll = where.GetComponent<ScrollRect>();
+            if (scroll != null) scroll.onValueChanged.AddListener(v => Moved(scroll));
+        }
+
+        private static void Moved(ScrollRect scroll)
+        {
+            if (scroll == null || Time.unscaledTime - _handAt > 0.6f) return;
+            _follow = AtBottom(scroll);
         }
 
         internal static void Hand()
         {
             _touched = true;
+            _handAt = Time.unscaledTime;
+        }
+
+        internal static bool Following
+        {
+            get { return _follow; }
         }
 
         internal static bool Held
@@ -198,6 +217,8 @@ namespace NewAgeQoL
             _touched = false;
             _wasBottom = true;
             _wasTop = 0f;
+            _follow = true;
+            _handAt = -10f;
         }
 
         internal static void ToBottom(ScrollRect scroll)

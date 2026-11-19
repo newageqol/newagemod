@@ -44,6 +44,30 @@ namespace NewAgeQoL
 
         internal static bool Mine(int npcId) => _npc > 0 && npcId == _npc;
 
+        internal static int Here => _npc > 0 ? _map : 0;
+
+        internal static QuestDialogResponseMessage Page => _page;
+
+        internal static bool Going => _going;
+
+        internal static bool Offers(int fid) => Find(fid) != null;
+
+        internal static bool Choose(int fid)
+        {
+            var pick = Find(fid);
+            if (pick == null || _going) return false;
+            Go(pick);
+            return _going;
+        }
+
+        private static QuestForward Find(int fid)
+        {
+            if (_page == null || _page.Forwards == null || fid <= 0) return null;
+            foreach (var f in _page.Forwards)
+                if (f != null && f.ForwardId == fid) return f;
+            return null;
+        }
+
         internal static void Tick()
         {
             try
@@ -148,6 +172,7 @@ namespace NewAgeQoL
             _tries = 0;
             if (!_clicked) _said = "";
             if (changed || _clicked) Tell(reply);
+            Teleports.Heard(reply);
         }
 
         private static string Sig(QuestDialogResponseMessage page)
@@ -270,7 +295,12 @@ namespace NewAgeQoL
                 if (f == null || f.ForwardId < 0) continue;
                 var pick = f;
                 string text = (f.ForwardText ?? "").Trim().TrimEnd('.');
-                var button = OnlineWindow.MakeGameButton(_list, text, Wide - 20f, RowHigh, () => Go(pick));
+                var button = OnlineWindow.MakeGameButton(_list, text, Wide - 20f, RowHigh, () =>
+                {
+                    if (_going) return;
+                    Go(pick);
+                    if (_going) Teleports.Picked(pick.ForwardId);
+                });
                 foreach (var label in button.GetComponentsInChildren<Text>(true))
                 {
                     label.resizeTextMaxSize = 13;

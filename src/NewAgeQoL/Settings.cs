@@ -65,12 +65,9 @@ namespace NewAgeQoL
                     : null,
 
                 new Header { Title = Lang.T("Банки") },
-                B(Lang.T("Пить до полного"), Plugin.CfgFlaskFillToMax),
+                B(Lang.T("После боя пополнять жизнь, ману и энергию"), Plugin.CfgFlaskAfterFight),
+                B(Lang.T("После боя пополнять заряды"), Plugin.CfgChargesAfterFight),
                 Sl(Lang.T("Размер панели банок в бою"), Plugin.CfgPotionScale, 0.7f, 1.6f),
-                Pick(Lang.T("Жизнь"), Plugin.CfgFlaskHpName, Plugin.CfgFlaskHpId),
-                Pick(Lang.T("Мана"), Plugin.CfgFlaskManaName, Plugin.CfgFlaskManaId),
-                Pick(Lang.T("Энергия"), Plugin.CfgFlaskEnergyName, Plugin.CfgFlaskEnergyId),
-                Pick(Lang.T("Грибы"), Plugin.CfgFlaskMushroomName, Plugin.CfgFlaskMushroomId),
 
                 new Header { Title = Lang.T("Бой") },
                 B(Lang.T("Контрприём на себя в первой фазе"), Plugin.CfgCounterAuto),
@@ -133,7 +130,6 @@ namespace NewAgeQoL
                 list = go.transform.parent;
             }
             if (list is RectTransform rt) LayoutRebuilder.MarkLayoutForRebuild(rt);
-            if (_tintsOpen && Plugin.Instance != null) Plugin.Instance.StartCoroutine(EvenButtons());
         }
 
         private static List<RowDef> KeyRows()
@@ -272,10 +268,15 @@ namespace NewAgeQoL
             ChatColors.Close();
             if (revert) foreach (var u in _undo.Values) { try { u(); } catch (Exception e) { Plugin.Caught("[settings] revert: " + e.Message); } }
             if (_win != null) UnityEngine.Object.Destroy(_win);
+            if (_ownCanvas != null)
+            {
+                try { CanvasFactory.ReleaseCanvas(ECanvasType.ModalWindow, _ownCanvas); }
+                catch { UnityEngine.Object.Destroy(_ownCanvas); }
+            }
+            _ownCanvas = null;
             _win = null;
             _frame = null;
             _canvas = null;
-            _placed = false;
             _undo.Clear();
             Lives.Clear();
             TintRows.Clear();
@@ -295,117 +296,292 @@ namespace NewAgeQoL
 
         private static void Open()
         {
-            var prefab = VisualPrefabsHolder.Instance != null ? VisualPrefabsHolder.Instance.HotkeytsDialog : null;
-            if (prefab == null) { Plugin.Warn("[settings] hotkeys window not found."); return; }
+            OpenOwn();
+        }
 
-            _win = UnityEngine.Object.Instantiate(prefab);
-            Clones.StripHotkeys(_win, prefab);
-            var dlg = _win.GetComponent<HotkeysDialog>();
-            if (dlg == null) { Plugin.Warn("[settings] no HotkeysDialog in the window."); Close(); return; }
+        private static GameObject _ownCanvas;
+        private static RectTransform _body;
+        private static RectTransform _area;
+        private static RectTransform[] _columns;
+        private static Vector2 _fitSize = new Vector2(-1f, -1f);
+        private static float _fitAt;
 
-            dlg.ShowDialog(null, ECanvasType.ModalWindow);
+        private const float MostW = 1640f;
+        private const float MostH = 980f;
+        private const float Margin = 40f;
+        private const float RowH = 30f;
+        private const float HeadH = 26f;
+        private const float CtrlW = 138f;
+        private const float CtrlH = 24f;
+        private const float Gutter = 14f;
+        private const float BottomH = 58f;
+        private const float TopH = 52f;
 
-            var caption = Field<Text>(dlg, "CaptionText");
-            var okButton = Field<Button>(dlg, "OkButton");
-            var resetButton = Field<Button>(dlg, "ResetToDefaultButton");
-            var resetText = Field<Text>(dlg, "ResetToDefaultButtonText");
-            var manager = Field<MonoBehaviour>(dlg, "widgetManager");
-            if (manager == null) { Plugin.Warn("[settings] window row list not found."); Close(); return; }
+        internal static bool EscapeClose()
+        {
+            if (_win == null) return false;
+            Close(revert: false);
+            return true;
+        }
 
-            var rowPrefab = Field<GameObject>(manager, "WidgetPrefab");
-            var container = manager.transform;
-            if (rowPrefab == null) { Plugin.Warn("[settings] row template not found."); Close(); return; }
-
-            manager.enabled = false;
-            for (int i = container.childCount - 1; i >= 0; i--)
-                UnityEngine.Object.Destroy(container.GetChild(i).gameObject);
-
-            if (caption != null) caption.text = _keysMode ? Lang.T("Горячие клавиши") : Lang.T("Настройки мода");
-
-            Widen(dlg, 380f);
-            Sketch();
-            Indent(container as RectTransform, 20f);
-
-            if (okButton != null)
-            {
-                okButton.onClick.RemoveAllListeners();
-                okButton.onClick.AddListener(() => Close(revert: false));
-            }
-            if (resetButton != null) resetButton.gameObject.SetActive(false);
-            if (dlg.CloseButton != null)
-            {
-                dlg.CloseButton.onClick.RemoveAllListeners();
-                dlg.CloseButton.onClick.AddListener(() => Close(revert: true));
-            }
-
+        private static void OpenOwn()
+        {
+            var canvas = CanvasFactory.GenerateCanvas(ECanvasType.ModalWindow);
+            _ownCanvas = canvas.gameObject;
+            _canvas = canvas;
             _undo.Clear();
-            Slots.Clear();
             Lives.Clear();
             TintRows.Clear();
             _tintsOpen = false;
-            foreach (var row in Rows())
+            _fitSize = new Vector2(-1f, -1f);
+            _fitAt = 0f;
+
+            _win = new GameObject("QoLSettings", typeof(RectTransform));
+            _win.transform.SetParent(canvas.transform, false);
+            OnlineWindow.Place((RectTransform)_win.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+            var dim = new GameObject("dim", typeof(RectTransform), typeof(Image));
+            dim.transform.SetParent(_win.transform, false);
+            OnlineWindow.Place((RectTransform)dim.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            dim.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
+
+            var panelGo = new GameObject("panel", typeof(RectTransform), typeof(Image), typeof(Outline));
+            panelGo.transform.SetParent(_win.transform, false);
+            _frame = (RectTransform)panelGo.transform;
+            _frame.anchorMin = _frame.anchorMax = new Vector2(0.5f, 0.5f);
+            _frame.pivot = new Vector2(0.5f, 0.5f);
+            _frame.anchoredPosition = Vector2.zero;
+            _frame.sizeDelta = new Vector2(1200f, 800f);
+            var pimg = panelGo.GetComponent<Image>();
+            pimg.color = WardrobeLook.Window;
+            pimg.sprite = OnlineWindow.Rounded(16);
+            pimg.type = Image.Type.Sliced;
+            var outline = panelGo.GetComponent<Outline>();
+            outline.effectColor = WardrobeLook.Edge;
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            var title = OnlineWindow.Label(_frame, _keysMode ? Lang.T("Горячие клавиши") : Lang.T("Настройки мода"), 22, FontStyle.Bold, WardrobeLook.Bright);
+            OnlineWindow.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(20f, -TopH + 6f), new Vector2(-70f, -8f));
+            title.alignment = TextAnchor.MiddleLeft;
+            title.raycastTarget = false;
+            OnlineWindow.MakeCloseButton(_frame, () => Close(revert: false));
+
+            var areaGo = new GameObject("area", typeof(RectTransform), typeof(RectMask2D));
+            areaGo.transform.SetParent(_frame, false);
+            _area = (RectTransform)areaGo.transform;
+            OnlineWindow.Place(_area, Vector2.zero, Vector2.one, new Vector2(0.5f, 1f), new Vector2(16f, BottomH), new Vector2(-16f, -TopH));
+
+            var bodyGo = new GameObject("body", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            bodyGo.transform.SetParent(_area, false);
+            _body = (RectTransform)bodyGo.transform;
+            _body.anchorMin = _body.anchorMax = new Vector2(0.5f, 1f);
+            _body.pivot = new Vector2(0.5f, 1f);
+            _body.anchoredPosition = Vector2.zero;
+            var across = bodyGo.GetComponent<HorizontalLayoutGroup>();
+            across.spacing = Gutter;
+            across.childAlignment = TextAnchor.UpperLeft;
+            across.childControlWidth = true;
+            across.childControlHeight = true;
+            across.childForceExpandWidth = true;
+            across.childForceExpandHeight = false;
+
+            var all = Rows();
+            _columns = new RectTransform[Columns(all)];
+            for (int i = 0; i < _columns.Length; i++)
             {
-                try { AddRow(rowPrefab, container, row); }
+                var go = new GameObject("column" + i, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+                go.transform.SetParent(_body, false);
+                var down = go.GetComponent<VerticalLayoutGroup>();
+                down.spacing = 10f;
+                down.childAlignment = TextAnchor.UpperLeft;
+                down.childControlWidth = true;
+                down.childControlHeight = true;
+                down.childForceExpandWidth = true;
+                down.childForceExpandHeight = false;
+                var le = go.GetComponent<LayoutElement>();
+                le.flexibleWidth = 1f;
+                le.minWidth = 0f;
+                _columns[i] = (RectTransform)go.transform;
+            }
+
+            var close = Pill(_frame, Lang.T("Закрыть"), WardrobeLook.Accent, WardrobeLook.OnAccent, () => Close(revert: false));
+            var crt = (RectTransform)close.transform;
+            crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0f);
+            crt.pivot = new Vector2(0.5f, 0f);
+            crt.sizeDelta = new Vector2(200f, 38f);
+            crt.anchoredPosition = new Vector2(0f, 12f);
+
+            var place = new List<Transform>();
+            Spread(all, place);
+            for (int i = 0; i < all.Count; i++)
+            {
+                var row = all[i];
+                try { AddRow(null, place[i], row); }
                 catch (Exception e) { Plugin.Fault("[settings] row '" + (row.Title ?? "?") + "': " + e); }
             }
-
-            var scroll = Field<ScrollRect>(manager, "ParentScrollRect");
-            ScrollTop(scroll);
-            if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(ScrollTopNextFrame(scroll));
-            if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(EvenButtons());
+            Fit();
         }
 
-        private static readonly List<(RectTransform row, RectTransform slot, Text label)> Slots = new List<(RectTransform, RectTransform, Text)>();
-
-        private static IEnumerator EvenButtons()
+        private static int Columns(List<RowDef> all)
         {
-            yield return null;
-            yield return null;
-            try
+            if (!_keysMode) return 3;
+            int rows = 0;
+            foreach (var row in all) rows += row is Header ? 2 : 1;
+            return Mathf.Clamp(Mathf.CeilToInt(rows / 26f), 3, 5);
+        }
+
+        private static void Spread(List<RowDef> all, List<Transform> place)
+        {
+            var sections = new List<List<RowDef>>();
+            foreach (var row in all)
             {
-                Canvas.ForceUpdateCanvases();
-                float widest = 0f;
-                foreach (var (row, slot, _) in Slots)
-                    if (row != null && slot != null && slot.gameObject.activeInHierarchy) widest = Mathf.Max(widest, slot.rect.width);
-                if (widest < 10f) yield break;
-                int fixedCount = 0;
-                foreach (var (row, slot, label) in Slots)
-                {
-                    if (row == null || slot == null || !slot.gameObject.activeInHierarchy) continue;
-                    float add = widest - slot.rect.width;
-                    if (add < 1f) continue;
-                    var group = row.GetComponent<HorizontalLayoutGroup>();
-                    if (group != null)
-                    {
-                        var le = slot.GetComponent<LayoutElement>() ?? slot.gameObject.AddComponent<LayoutElement>();
-                        le.minWidth = widest;
-                        le.preferredWidth = widest;
-                        le.flexibleWidth = 0f;
-                        if (label != null && label.transform.parent == row)
-                        {
-                            var ll = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
-                            ll.preferredWidth = 0f;
-                            ll.minWidth = 0f;
-                            ll.flexibleWidth = 1f;
-                        }
-                        LayoutRebuilder.ForceRebuildLayoutImmediate(row);
-                    }
-                    else if (Mathf.Abs(slot.anchorMax.x - slot.anchorMin.x) > 0.01f)
-                    {
-                        slot.offsetMin = new Vector2(slot.offsetMin.x - add, slot.offsetMin.y);
-                        Squeeze(label, add);
-                    }
-                    else
-                    {
-                        slot.sizeDelta = new Vector2(slot.sizeDelta.x + add, slot.sizeDelta.y);
-                        slot.anchoredPosition = new Vector2(slot.anchoredPosition.x - add * (1f - slot.pivot.x), slot.anchoredPosition.y);
-                        Squeeze(label, add);
-                    }
-                    fixedCount++;
-                }
-                Plugin.Trace("[settings] buttons widened to " + widest.ToString("0") + ": " + fixedCount);
+                if (row is Header || sections.Count == 0) sections.Add(new List<RowDef>());
+                sections[sections.Count - 1].Add(row);
             }
-            catch (Exception e) { Plugin.Fault("[settings] button width: " + e.Message); }
+            float total = 0f;
+            foreach (var section in sections) total += Weight(section);
+            int count = _columns.Length;
+            float share = total / count;
+            float filled = 0f;
+            int column = 0;
+            foreach (var section in sections)
+            {
+                float weight = Weight(section);
+                if (column < count - 1 && filled > 0f && filled + weight * 0.5f > share * (column + 1)) column++;
+                filled += weight;
+                bool empty = section.Count == 1 && section[0] is Header && string.IsNullOrEmpty(section[0].Title);
+                Transform host = empty ? (Transform)_columns[column] : Card(_columns[column]);
+                foreach (var row in section) place.Add(host);
+            }
+        }
+
+        private static float Weight(List<RowDef> section)
+        {
+            float n = 1.2f;
+            foreach (var row in section) if (!(row is ColorRow)) n += 1f;
+            return n;
+        }
+
+        private static Transform Card(RectTransform column)
+        {
+            var go = new GameObject("card", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
+            go.transform.SetParent(column, false);
+            var back = go.GetComponent<Image>();
+            back.sprite = OnlineWindow.Rounded(12);
+            back.type = Image.Type.Sliced;
+            back.color = WardrobeLook.Card;
+            back.raycastTarget = false;
+            var edge = go.AddComponent<Outline>();
+            edge.effectColor = WardrobeLook.Edge;
+            edge.effectDistance = new Vector2(1f, -1f);
+            var down = go.GetComponent<VerticalLayoutGroup>();
+            down.padding = new RectOffset(12, 10, 6, 8);
+            down.spacing = 2f;
+            down.childAlignment = TextAnchor.UpperLeft;
+            down.childControlWidth = true;
+            down.childControlHeight = true;
+            down.childForceExpandWidth = true;
+            down.childForceExpandHeight = false;
+            return go.transform;
+        }
+
+        private static void OwnRow(Transform container, RowDef def)
+        {
+            var go = new GameObject("MvlRow", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(container, false);
+            var le = go.GetComponent<LayoutElement>();
+            if (def is Header)
+            {
+                bool blank = string.IsNullOrEmpty(def.Title);
+                le.minHeight = le.preferredHeight = blank ? 0f : HeadH;
+                if (blank) return;
+                var head = OnlineWindow.Label(go.transform, def.Title.ToUpperInvariant(), 14, FontStyle.Bold, WardrobeLook.Accent);
+                OnlineWindow.Place(head.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 0f), new Vector2(-2f, 0f));
+                head.alignment = TextAnchor.MiddleLeft;
+                head.raycastTarget = false;
+                return;
+            }
+            le.minHeight = le.preferredHeight = RowH;
+
+            var label = OnlineWindow.Label(go.transform, def.Title, 13, FontStyle.Normal, WardrobeLook.Body);
+            OnlineWindow.Place(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 0f), new Vector2(-(CtrlW + 10f), 0f));
+            label.alignment = TextAnchor.MiddleLeft;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 9;
+            label.resizeTextMaxSize = 13;
+            label.raycastTarget = false;
+
+            var ctrlGo = new GameObject("KeyBackground", typeof(RectTransform), typeof(Image), typeof(Button));
+            ctrlGo.transform.SetParent(go.transform, false);
+            var crt = (RectTransform)ctrlGo.transform;
+            crt.anchorMin = crt.anchorMax = new Vector2(1f, 0.5f);
+            crt.pivot = new Vector2(1f, 0.5f);
+            crt.sizeDelta = new Vector2(CtrlW, CtrlH);
+            crt.anchoredPosition = Vector2.zero;
+            var background = ctrlGo.GetComponent<Image>();
+            background.sprite = OnlineWindow.Rounded(8);
+            background.type = Image.Type.Sliced;
+            background.color = WardrobeLook.Button;
+            var button = ctrlGo.GetComponent<Button>();
+            button.targetGraphic = background;
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            button.colors = colors;
+
+            var value = OnlineWindow.Label(ctrlGo.transform, "", 13, FontStyle.Bold, WardrobeLook.Bright);
+            OnlineWindow.Place(value.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(4f, 0f), new Vector2(-4f, 0f));
+            value.alignment = TextAnchor.MiddleCenter;
+            value.raycastTarget = false;
+
+            Fill(go, label, value, background, button, def);
+        }
+
+        private static Button Pill(Transform host, string text, Color back, Color ink, Action act)
+        {
+            var go = new GameObject("close", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(host, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = OnlineWindow.Rounded(10);
+            img.type = Image.Type.Sliced;
+            img.color = back;
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = img;
+            button.onClick.AddListener(() => act());
+            var t = OnlineWindow.Label(go.transform, text, 16, FontStyle.Bold, ink);
+            OnlineWindow.Place(t.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            t.alignment = TextAnchor.MiddleCenter;
+            t.raycastTarget = false;
+            return button;
+        }
+
+        private static void Fit()
+        {
+            if (_frame == null || _body == null || _area == null || _ownCanvas == null) return;
+            var root = _ownCanvas.transform as RectTransform;
+            if (root == null || root.rect.width < 50f) return;
+            if (Time.unscaledTime < _fitAt) return;
+            _fitAt = Time.unscaledTime + 0.2f;
+            var size = new Vector2(Mathf.Min(MostW, root.rect.width - Margin * 2f), Mathf.Min(MostH, root.rect.height - Margin * 2f));
+            if ((_frame.sizeDelta - size).sqrMagnitude > 0.25f) _frame.sizeDelta = size;
+            float wide = _area.rect.width;
+            float room = _area.rect.height;
+            if (wide < 10f || room < 10f) return;
+            float scale = _body.localScale.x > 0.01f ? _body.localScale.x : 1f;
+            if (Mathf.Abs(_body.sizeDelta.x - wide / scale) > 0.5f)
+                _body.sizeDelta = new Vector2(wide / scale, _body.sizeDelta.y);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_body);
+            float tall = LayoutUtility.GetPreferredHeight(_body);
+            var key = new Vector2(wide * 10000f + room, tall);
+            if ((key - _fitSize).sqrMagnitude < 0.25f) return;
+            _fitSize = key;
+            float want = tall > 1f ? Mathf.Min(1f, room / tall) : 1f;
+            _body.localScale = new Vector3(want, want, 1f);
+            _body.sizeDelta = new Vector2(wide / want, tall);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_body);
+            if (want < 0.999f) Plugin.Trace("[settings] content scaled to " + want.ToString("0.00") + " to fit " + room.ToString("0") + " px");
         }
 
         private static void SpellIcon(Text label, string key)
@@ -425,7 +601,7 @@ namespace NewAgeQoL
             try { sprite = AtlasUtils.GetQuickButtonSprite(type, id, 0); }
             catch (System.Exception e) { Plugin.Caught("[settings] icon for " + key + ": " + e.Message); }
             if (sprite == null) return;
-            const float size = 30f;
+            const float size = 26f;
             var go = new GameObject("QoLSpellIcon", typeof(RectTransform), typeof(Image));
             var rt = (RectTransform)go.transform;
             var row = label.transform.parent;
@@ -452,7 +628,9 @@ namespace NewAgeQoL
                 go.transform.SetParent(label.transform, false);
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
                 rt.pivot = new Vector2(1f, 0.5f);
-                rt.anchoredPosition = new Vector2(-3f, 0f);
+                rt.anchoredPosition = new Vector2(-4f, 0f);
+                var lrt = label.rectTransform;
+                lrt.offsetMin = new Vector2(lrt.offsetMin.x + size + 6f, lrt.offsetMin.y);
             }
             rt.sizeDelta = new Vector2(size, size);
             var image = go.GetComponent<Image>();
@@ -461,263 +639,15 @@ namespace NewAgeQoL
             image.raycastTarget = false;
         }
 
-        private static void Squeeze(Text label, float by)
-        {
-            if (label == null) return;
-            var rt = label.rectTransform;
-            if (Mathf.Abs(rt.anchorMax.x - rt.anchorMin.x) > 0.01f)
-                rt.offsetMax = new Vector2(rt.offsetMax.x - by, rt.offsetMax.y);
-            else
-            {
-                rt.sizeDelta = new Vector2(Mathf.Max(20f, rt.sizeDelta.x - by), rt.sizeDelta.y);
-                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x - by * rt.pivot.x, rt.anchoredPosition.y);
-            }
-        }
-
-        private static RectTransform SlotOf(Transform row, Component part)
-        {
-            if (row == null || part == null) return null;
-            var t = part.transform;
-            while (t != null && t.parent != row) t = t.parent;
-            return t as RectTransform;
-        }
-
-        private static void Indent(RectTransform list, float pad)
-        {
-            try
-            {
-                if (list == null) return;
-                var layout = list.GetComponent<HorizontalOrVerticalLayoutGroup>();
-                if (layout != null)
-                {
-                    layout.padding.left += Mathf.RoundToInt(pad);
-                    Plugin.Trace("[settings] list left padding: " + layout.padding.left);
-                    return;
-                }
-                list.offsetMin = new Vector2(list.offsetMin.x + pad, list.offsetMin.y);
-                Plugin.Trace("[settings] list padding by offset: " + list.offsetMin.x);
-            }
-            catch (Exception e) { Plugin.Fault("[settings] list padding: " + e.Message); }
-        }
-
         private static RectTransform _frame;
-        private static float _extra, _wantWidth;
         private static Canvas _canvas;
-        private static bool _placed;
-        private static float _placedFrameW, _placedAreaW, _placedX;
-
-        private static void Widen(HotkeysDialog dlg, float extra)
-        {
-            _frame = dlg.transform as RectTransform;
-            _canvas = null;
-            _placed = false;
-            _extra = extra;
-            _wantWidth = 0f;
-            Stretch();
-        }
-
-        private static void Stretch()
-        {
-            try
-            {
-                if (_frame == null) return;
-                float now = _frame.rect.width;
-                if (now < 50f) return;
-                if (_wantWidth <= 0f) _wantWidth = now + _extra;
-
-                float need = _wantWidth - now;
-                if (Mathf.Abs(need) < 1f) return;
-
-                var fitter = _frame.GetComponent<ContentSizeFitter>();
-                if (fitter != null) fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-                var element = _frame.GetComponent<LayoutElement>();
-                if (element != null) { element.preferredWidth = _wantWidth; element.minWidth = _wantWidth; }
-
-                Grow(_frame, need, self: true);
-                foreach (RectTransform child in _frame) Grow(child, need, self: false);
-                Center();
-                Plugin.Trace("[settings] window width " + now + " → " + _frame.rect.width
-                             + " (want " + _wantWidth + ")");
-            }
-            catch (Exception e) { Plugin.Fault("[settings] window width: " + e.Message); }
-        }
-
-        private static void Center()
-        {
-            if (_frame == null) return;
-            if (_canvas == null) _canvas = _frame.GetComponentInParent<Canvas>();
-            var area = _canvas != null ? _canvas.transform as RectTransform : _frame.parent as RectTransform;
-            if (area == null || area.rect.width < 50f) return;
-
-            float frameW = _frame.rect.width;
-            float areaW = area.rect.width;
-            float atX = _frame.position.x;
-            if (_placed && frameW == _placedFrameW && areaW == _placedAreaW && atX == _placedX) return;
-
-            float left, right;
-            if (!Span(area, out left, out right)) return;
-
-            float shift = area.rect.center.x - (left + right) * 0.5f;
-            if (Mathf.Abs(shift) < 0.5f) { Settled(frameW, areaW, atX); return; }
-            _frame.position += area.TransformVector(new Vector3(shift, 0f, 0f));
-            Settled(frameW, areaW, _frame.position.x);
-            Plugin.Trace("[settings] shifting window horizontally by " + shift.ToString("0")
-                                + " (window " + left.ToString("0") + ".." + right.ToString("0")
-                                + ", canvas " + area.rect.xMin.ToString("0") + ".." + area.rect.xMax.ToString("0") + ")");
-        }
-
-        private static void Settled(float frameW, float areaW, float atX)
-        {
-            _placed = true;
-            _placedFrameW = frameW;
-            _placedAreaW = areaW;
-            _placedX = atX;
-        }
-
-        private static readonly Vector3[] Corners = new Vector3[4];
-        private static readonly List<Graphic> Arts = new List<Graphic>();
-
-        private static bool Span(RectTransform area, out float left, out float right)
-        {
-            left = float.MaxValue;
-            right = float.MinValue;
-            var corners = Corners;
-            Arts.Clear();
-            _frame.GetComponentsInChildren(false, Arts);
-            foreach (var art in Arts)
-            {
-                if (art == null || !art.isActiveAndEnabled) continue;
-                var rt = art.rectTransform;
-                if (rt.rect.width < 4f || rt.rect.height < 4f) continue;
-                if (rt.rect.width >= area.rect.width - 1f) continue;
-                rt.GetWorldCorners(corners);
-                for (int i = 0; i < 4; i++)
-                {
-                    float x = area.InverseTransformPoint(corners[i]).x;
-                    if (x < left) left = x;
-                    if (x > right) right = x;
-                }
-            }
-            return right > left;
-        }
-
-        private static void Sketch()
-        {
-            if (_frame == null || Plugin.CfgVerbose == null || !Plugin.CfgVerbose.Value) return;
-            try
-            {
-                var canvas = _frame.GetComponentInParent<Canvas>();
-                var area = canvas != null ? canvas.transform as RectTransform : null;
-                Plugin.Trace("[settings] canvas " + (area != null ? area.name + " " + area.rect.width.ToString("0") + "x" + area.rect.height.ToString("0") : "none")
-                    + ", window " + _frame.name + " " + _frame.rect.width.ToString("0") + "x" + _frame.rect.height.ToString("0")
-                    + " pivot " + _frame.pivot.x.ToString("0.00") + ", anchors " + _frame.anchorMin.x.ToString("0.00") + ".." + _frame.anchorMax.x.ToString("0.00"));
-                foreach (RectTransform child in _frame)
-                {
-                    if (child == null) continue;
-                    Plugin.Trace("[settings]   " + child.name + " " + child.rect.width.ToString("0") + "x" + child.rect.height.ToString("0")
-                        + (child.gameObject.activeSelf ? "" : " (inactive)"));
-                }
-            }
-            catch (Exception e) { Plugin.Caught("[settings] window dump: " + e.Message); }
-        }
-
-        private static void Grow(RectTransform rt, float extra, bool self)
-        {
-            bool stretched = Mathf.Abs(rt.anchorMax.x - rt.anchorMin.x) > 0.01f;
-            if (stretched)
-            {
-                if (!self) return;
-                rt.offsetMin = new Vector2(rt.offsetMin.x - extra * 0.5f, rt.offsetMin.y);
-                rt.offsetMax = new Vector2(rt.offsetMax.x + extra * 0.5f, rt.offsetMax.y);
-                return;
-            }
-            rt.sizeDelta = new Vector2(rt.sizeDelta.x + extra, rt.sizeDelta.y);
-            if (!self) return;
-            float slide = extra * (0.5f - rt.pivot.x);
-            if (Mathf.Abs(slide) > 0.01f)
-                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x - slide, rt.anchoredPosition.y);
-        }
-
         private static void AddRow(GameObject rowPrefab, Transform container, RowDef def)
         {
-            var go = UnityEngine.Object.Instantiate(rowPrefab, container, worldPositionStays: false);
-            go.name = "MvlRow";
-            var widget = go.GetComponent<HotkeyWidget>();
+            OwnRow(container, def);
+        }
 
-            Text label = null, value = null;
-            Image background = null;
-            Button button = null;
-            if (widget != null)
-            {
-                label = Field<Text>(widget, "LabelText");
-                value = Field<Text>(widget, "KeyText");
-                background = Field<Image>(widget, "KeyBackground");
-                button = Field<Button>(widget, "Button");
-                UnityEngine.Object.Destroy(widget);
-            }
-            if (label == null) label = go.GetComponentInChildren<Text>(true);
-            if (label != null)
-            {
-                label.text = def.Title;
-                if (!(def is Header))
-                {
-                    label.resizeTextForBestFit = true;
-                    label.resizeTextMaxSize = label.fontSize;
-                    label.resizeTextMinSize = 8;
-
-                    label.alignment = TextAnchor.MiddleLeft;
-                    var lrt = label.rectTransform;
-                    const float pad = 34f;
-                    if (Mathf.Abs(lrt.anchorMax.x - lrt.anchorMin.x) > 0.01f)
-                    {
-                        lrt.offsetMin = new Vector2(lrt.offsetMin.x + pad, lrt.offsetMin.y);
-                        lrt.offsetMax = new Vector2(lrt.offsetMax.x + pad * 0.25f, lrt.offsetMax.y);
-                    }
-                    else
-                    {
-                        lrt.anchoredPosition = new Vector2(lrt.anchoredPosition.x + pad, lrt.anchoredPosition.y);
-                    }
-                    if (Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                        Plugin.Trace("[settings] caption '" + def.Title + "' anchors "
-                                     + lrt.anchorMin.x + ".." + lrt.anchorMax.x
-                                     + " offsets " + lrt.offsetMin.x + ".." + lrt.offsetMax.x
-                                     + " position " + lrt.anchoredPosition.x);
-                }
-            }
-
-            if (!(def is Header))
-            {
-                var slot = SlotOf(go.transform, (Component)background ?? (Component)button ?? value);
-                if (slot != null && (label == null || !label.transform.IsChildOf(slot)))
-                {
-                    Slots.Add((go.transform as RectTransform, slot, label));
-                    if (Slots.Count == 1 && Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value)
-                        Plugin.Trace("[settings] row layout: group " + (go.GetComponent<HorizontalLayoutGroup>() != null) + ", slot " + slot.name
-                                     + " anchors " + slot.anchorMin.x + ".." + slot.anchorMax.x + " pivot " + slot.pivot.x
-                                     + ", label parent " + (label != null ? label.transform.parent.name : "-"));
-                }
-            }
-
-            if (def is Header)
-            {
-                if (background != null) background.gameObject.SetActive(false);
-                else if (value != null) value.gameObject.SetActive(false);
-                if (label != null)
-                {
-                    label.text = def.Title.ToUpperInvariant();
-                    label.fontStyle = FontStyle.Bold;
-                    label.fontSize = Mathf.RoundToInt(label.fontSize * 1.25f);
-                    label.alignment = TextAnchor.MiddleCenter;
-                    label.color = new Color(0.45f, 0.12f, 0.06f);
-                    var rt = label.rectTransform;
-                    rt.anchorMin = new Vector2(0f, rt.anchorMin.y);
-                    rt.anchorMax = new Vector2(1f, rt.anchorMax.y);
-                    rt.offsetMin = new Vector2(6f, rt.offsetMin.y);
-                    rt.offsetMax = new Vector2(-6f, rt.offsetMax.y);
-                }
-                return;
-            }
-
+        private static void Fill(GameObject go, Text label, Text value, Image background, Button button, RowDef def)
+        {
             if (def is BoolRow b)
             {
                 Remember(b.Cfg);
@@ -1050,47 +980,15 @@ namespace NewAgeQoL
         {
             CaptureTick();
             if (_win == null) return;
-            Stretch();
-            Center();
+            Fit();
             Relive();
-        }
-
-        private static void ScrollTop(ScrollRect scroll)
-        {
-            if (scroll == null) return;
-            try
-            {
-                Canvas.ForceUpdateCanvases();
-                scroll.StopMovement();
-                scroll.verticalNormalizedPosition = 1f;
-                Canvas.ForceUpdateCanvases();
-            }
-            catch { }
-        }
-
-        private static System.Collections.IEnumerator ScrollTopNextFrame(ScrollRect scroll)
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                yield return null;
-                if (scroll == null) yield break;
-                var content = scroll.content;
-                if (content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-                ScrollTop(scroll);
-            }
         }
 
         private static void SetSwitch(Text value, bool on)
         {
             if (value == null) return;
             value.text = on ? Lang.T("ВКЛ") : Lang.T("ВЫКЛ");
-            value.color = on ? new Color(0.05f, 0.42f, 0.08f) : new Color(0.62f, 0.08f, 0.06f);
-        }
-
-        private static T Field<T>(object obj, string name) where T : class
-        {
-            try { return AccessTools.Field(obj.GetType(), name)?.GetValue(obj) as T; }
-            catch { return null; }
+            value.color = on ? WardrobeLook.Good : WardrobeLook.Bad;
         }
     }
 
@@ -1113,6 +1011,7 @@ namespace NewAgeQoL
                     if (ManikinPicker.EscapeClose()) return false;
                     if (Manikin.EscapeClose()) return false;
                     if (Changelog.EscapeClose()) return false;
+                    if (Settings.EscapeClose()) return false;
                     if (Chaotic.EscapeClose()) return false;
                     if (Mail.EscapeClose()) return false;
                     if (Report.EscapeClose()) return false;

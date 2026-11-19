@@ -52,6 +52,10 @@ namespace NewAgeQoL
         private static RectTransform _panel;
         private static int _rowsShown = -1;
         private static int _bornFrame = -1;
+        private static CanvasGroup _veil;
+        private static float _bornAt;
+        private const float FreshScan = 30f;
+        private const float ReadyWait = 1.5f;
 
         internal static void Open(ConfigEntry<string> byName, ConfigEntry<int> byId, string title, Action onPicked)
         {
@@ -68,6 +72,7 @@ namespace NewAgeQoL
             _near = true;
             _anchor = anchor;
             _bornFrame = Time.frameCount;
+            _bornAt = RealTime.Now;
             string title = Flasks.Title(row);
             Show(Flasks.NameEntry(row), byId, title, () => Plugin.Trace("[flasks] slot '" + title + "' changed from the button list"));
         }
@@ -82,7 +87,7 @@ namespace NewAgeQoL
                          + ", in world " + SideButtons.InWorld() + ", " + Flasks.State());
             try
             {
-                Flasks.RequestScanNow();
+                if (!_near || RealTime.Now - Flasks.ScannedAt > FreshScan) Flasks.RequestScanNow();
                 Flasks.RequestNames();
                 _retryAt = RealTime.Now + 5f;
                 Look();
@@ -102,6 +107,7 @@ namespace NewAgeQoL
             _note = null;
             _empty = null;
             _panel = null;
+            _veil = null;
             _rowsShown = -1;
             _cells.Clear();
             _shown.Clear();
@@ -122,6 +128,7 @@ namespace NewAgeQoL
                 return;
             }
             if (_near && (_anchor == null || !_anchor.gameObject.activeInHierarchy)) { Close(); return; }
+            if (_near && _veil != null && Time.frameCount > _bornFrame) Reveal();
             if (_near && _panel != null && Time.frameCount > _bornFrame && Missed()) { Close(); return; }
             if (Time.unscaledTime < _refreshAt) return;
             _refreshAt = Time.unscaledTime + 0.3f;
@@ -204,6 +211,12 @@ namespace NewAgeQoL
             prt.sizeDelta = _near ? new Vector2(NearW, NearHead + NearRow + 24f) : new Vector2(PanelW, PanelH);
             prt.anchoredPosition = Vector2.zero;
             _panel = prt;
+            if (_near)
+            {
+                _veil = panelGo.AddComponent<CanvasGroup>();
+                _veil.alpha = 0f;
+                _veil.blocksRaycasts = false;
+            }
             var panel = panelGo.GetComponent<Image>();
             panel.color = WardrobeLook.Window;
             panel.sprite = OnlineWindow.Rounded(16);
@@ -277,6 +290,22 @@ namespace NewAgeQoL
             if (_near) Place();
         }
 
+        private static bool Ready => !Flasks.Scanning && _waiting <= 0;
+
+        private static void Reveal()
+        {
+            if (_canvas == null || _panel == null) return;
+            var root = (RectTransform)_canvas.transform;
+            if (root.rect.width < 2f || root.rect.height < 2f) return;
+            Look();
+            if (!Ready && RealTime.Now - _bornAt < ReadyWait) return;
+            Apply(Filtered());
+            if (_grid != null) LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)_grid);
+            Place();
+            UnityEngine.Object.Destroy(_veil);
+            _veil = null;
+        }
+
         private static bool Missed()
         {
             bool left = Input.GetMouseButtonDown(0);
@@ -299,6 +328,7 @@ namespace NewAgeQoL
             if (!_near || _panel == null) return;
             int rows = Mathf.Clamp(count, 1, NearRows);
             if (rows == _rowsShown) return;
+            if (_veil == null && rows < _rowsShown) return;
             _rowsShown = rows;
             _panel.sizeDelta = new Vector2(NearW, NearHead + 24f + rows * NearRow + (rows - 1) * 4f);
             Place();
@@ -443,10 +473,11 @@ namespace NewAgeQoL
 
             var iconGo = new GameObject("icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             iconGo.transform.SetParent(cellGo.transform, false);
+            ((RectTransform)iconGo.transform).sizeDelta = _near ? new Vector2(NearRow - 4f, NearRow - 4f) : new Vector2(Icon, Icon);
             var iconImg = iconGo.GetComponent<Image>();
             iconImg.preserveAspect = true;
             var isz = iconGo.GetComponent<LayoutElement>();
-            if (_near) { isz.minWidth = NearRow - 4f; isz.preferredWidth = NearRow - 4f; }
+            if (_near) { isz.minWidth = NearRow - 4f; isz.preferredWidth = NearRow - 4f; isz.flexibleWidth = 0f; }
             else { isz.minHeight = Icon; isz.preferredHeight = Icon; }
 
             var cap = Line(cellGo.transform, "", 13, FontStyle.Normal, WardrobeLook.Bright);

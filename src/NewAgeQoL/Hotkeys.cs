@@ -1034,6 +1034,23 @@ namespace NewAgeQoL
         }
     }
 
+    [HarmonyLib.HarmonyPatch(typeof(SetupDialog), "Start")]
+    internal static class HotkeysCaptionPatch
+    {
+        private static void Postfix(SetupDialog __instance)
+        {
+            try
+            {
+                var head = HarmonyLib.AccessTools.Field(typeof(SetupDialog), "HotkeysCaptionText")?.GetValue(__instance) as UnityEngine.UI.Text;
+                var caption = HarmonyLib.AccessTools.Field(typeof(SetupDialog), "HotkeysButtonCaption")?.GetValue(__instance) as UnityEngine.UI.Text;
+                if (head == null || caption == null) return;
+                head.gameObject.SetActive(false);
+                caption.text = Lang.T("Горячие клавиши");
+            }
+            catch (Exception e) { Plugin.Caught("[hotkeys] settings caption: " + e.Message); }
+        }
+    }
+
     [HarmonyLib.HarmonyPatch(typeof(SetupDialogController), "OnHotkeysButtonClick")]
     internal static class HotkeysButtonPatch
     {
