@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.50.0";
+        public const string Version = "0.51.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -65,6 +65,7 @@ namespace NewAgeQoL
         internal static ConfigEntry<bool> CfgWalkKeys;
         internal static ConfigEntry<bool> CfgWalkGlow;
         internal static ConfigEntry<float> CfgSoundVolume;
+        internal static ConfigEntry<float> CfgPmVolume;
         internal static ConfigEntry<float> CfgMusicVolume;
         internal static ConfigEntry<float> CfgSmallScreen;
         internal static ConfigEntry<float> CfgPotionScale;
@@ -246,7 +247,9 @@ namespace NewAgeQoL
             Chars.Own("Help", "Folded", false,
                 "Столбец «Помощь» справа свёрнут. Меняется кнопкой со стрелкой над столбцом, состояние сохраняется между боями и входами в игру.", e => CfgHelpFolded = e);
             Chars.Own("Sounds", "FlashVolume", 1f,
-                "Громкость звуков из старого клиента, от 0 (тишина) до 1. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат в любом случае, пока включён звук мода.", e => CfgSoundVolume = e);
+                "Громкость звуков боя из старого клиента (начало боя, конец раунда, рог приглашения), от 0 (тишина) до 1. Звук личных сообщений настраивается отдельно. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат, пока этот звук мода включён.", e => CfgSoundVolume = e);
+            Chars.Own("Sounds", "PrivateVolume", 1f,
+                "Громкость звука личных сообщений и сообщений команды, от 0 (тишина) до 1. Не зависит от громкости звуков боя: можно выключить звуки боя и слышать приват. Пока этот звук включён, свой звук привата игры молчит.", e => CfgPmVolume = e);
             Chars.Own("Sounds", "CombatMusicVolume", 0.5f,
                 "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков: каждый бой свой трек, когда трек кончается, плавно начинается следующий. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
             CfgNewPlaces = Config.Bind("Interface", "NewLocations", false,
@@ -263,6 +266,7 @@ namespace NewAgeQoL
                 "Размер панели банок справа от чата в бою: 1 — как раньше, по месту рядом с чатом; больше — ячейки крупнее, панель при нехватке места растёт вверх над чатом; меньше — мельче. От 0.7 до 1.6.");
             CfgPotionScale.Value = UnityEngine.Mathf.Clamp(CfgPotionScale.Value, 0.7f, 1.6f);
             CfgSoundVolume.Value = UnityEngine.Mathf.Clamp01(CfgSoundVolume.Value);
+            CfgPmVolume.Value = UnityEngine.Mathf.Clamp01(CfgPmVolume.Value);
             CfgMusicVolume.Value = UnityEngine.Mathf.Clamp01(CfgMusicVolume.Value);
             Chars.Own("Combat", "CameraPanExtra", 0.5f,
                 "Небольшой запас в единицах поля сверх того, что нужно, чтобы показать клетки под панелью чата: мод сам считает высоту панели в единицах поля и раздвигает границу камеры ровно на неё, а это число добавляется сверху (0 — ровно, до 20).", e => CfgCamPanExtra = e);

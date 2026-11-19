@@ -20,7 +20,12 @@ namespace NewAgeQoL
         private static float Volume =>
             Plugin.CfgSoundVolume == null ? 1f : Mathf.Clamp01(Plugin.CfgSoundVolume.Value);
 
+        private static float PmVolume =>
+            Plugin.CfgPmVolume == null ? 1f : Mathf.Clamp01(Plugin.CfgPmVolume.Value);
+
         internal static bool Active => Volume > 0.001f;
+
+        internal static bool PmActive => PmVolume > 0.001f;
 
         private static object _chatOn;
         private static string _lastKey = "";
@@ -93,37 +98,36 @@ namespace NewAgeQoL
 
         internal static void Pm()
         {
-            Play("pm");
+            Fire(Clip("pm"), PmVolume);
         }
 
-        internal static void Sample()
+        internal static void Sample(bool pm)
         {
             if (Time.unscaledTime < _sampleAt) return;
             _sampleAt = Time.unscaledTime + 0.25f;
-            Play("pm");
+            if (pm) Pm(); else Play("fight_start");
         }
 
         internal static void Team()
         {
-            Play("pm");
+            Pm();
         }
 
         private static void Play(string name)
         {
-            Fire(Clip(name));
+            Fire(Clip(name), Volume);
         }
 
         internal static void Horn(AudioClip clip)
         {
-            Fire(clip);
+            Fire(clip, Volume);
         }
 
-        private static void Fire(AudioClip clip)
+        private static void Fire(AudioClip clip, float volume)
         {
             try
             {
                 if (clip == null) return;
-                float volume = Volume;
                 if (volume <= 0.001f) return;
                 if (_own == null)
                 {
@@ -216,10 +220,10 @@ namespace NewAgeQoL
         {
             try
             {
-                if (!Sounds.Active) return true;
                 if (audioClip == null) return true;
                 var holder = VisualPrefabsHolder.Instance;
-                if (holder != null && holder.PrivateMessageSound != null && audioClip == holder.PrivateMessageSound) return false;
+                if (holder != null && holder.PrivateMessageSound != null && audioClip == holder.PrivateMessageSound) return !Sounds.PmActive;
+                if (!Sounds.Active) return true;
                 if (holder != null && holder.MercenaryInvitationSound != null && audioClip == holder.MercenaryInvitationSound)
                 {
                     Sounds.Horn(audioClip);

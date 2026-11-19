@@ -77,7 +77,8 @@ namespace NewAgeQoL
 
 
                 new Header { Title = Lang.T("Звуки") },
-                Sl(Lang.T("Громкость звуков мода"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample()),
+                Sl(Lang.T("Громкость звуков боя"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample(false)),
+                Sl(Lang.T("Громкость звука привата"), Plugin.CfgPmVolume, 0f, 1f, v => Sounds.Sample(true)),
                 Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f),
                 A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя: Cold Stone Reverb, Procession of Ashes, Heartbeat Groove, Pulse of the Void, Menacing Waltz, Stone Room Reverb, Dripping in the Dark, The Viol's Warning. Треки сделал автор мода."), 10f)),
 
@@ -1115,13 +1116,11 @@ namespace NewAgeQoL
                     if (Chaotic.EscapeClose()) return false;
                     if (Mail.EscapeClose()) return false;
                     if (Report.EscapeClose()) return false;
-                    if (ModalDialogList.IsEmpty())
-                    {
-                        if (OnlineWindow.EscapeClose()) return false;
-                        if (QuestWindow.EscapeClose()) return false;
-                        if (EffectsWindow.EscapeClose()) return false;
-                        if (WalkKeys.EscapeClose()) return false;
-                    }
+                    int modals = ModalDialogList.GetCount();
+                    if (modals <= QuestWindow.Under && QuestWindow.EscapeClose()) return false;
+                    if (modals <= OnlineWindow.Under && OnlineWindow.EscapeClose()) return false;
+                    if (modals <= EffectsWindow.Under && EffectsWindow.EscapeClose()) return false;
+                    if (modals == 0 && WalkKeys.EscapeClose()) return false;
                 }
             }
             catch (Exception e) { Plugin.Caught("[settings] escape: " + e.Message); }

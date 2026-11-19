@@ -27,9 +27,12 @@ namespace NewAgeQoL
 
     internal static class AnimAck
     {
-        private const float FirstWait = 2.5f;
+        private const float FirstWait = 1.5f;
         private const float NextWait = 4f;
         private const int MostTries = 2;
+        private const float QuickWait = 1f;
+        private const float QuietWait = 0.7f;
+        private const int MostQuick = 3;
 
         private static object _fight;
         private static bool _rivals;
@@ -42,6 +45,9 @@ namespace NewAgeQoL
         private static float _triedAt = -1f;
         private static int _tries;
         private static bool _sending;
+        private static float _overAt = -1f;
+        private static float _heardAt = -1f;
+        private static int _quick;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static bool Waits() => false;
@@ -70,6 +76,9 @@ namespace NewAgeQoL
                     _heard = 0;
                     _answered = 0;
                     _over = false;
+                    _overAt = -1f;
+                    _heardAt = -1f;
+                    _quick = 0;
                 }
             }
             return cd;
@@ -85,6 +94,7 @@ namespace NewAgeQoL
             _idleAt = -1f;
             if (msg.Groups == null || msg.Groups.Count <= 0) return;
             _heard++;
+            _heardAt = RealTime.Now;
         }
 
         internal static void Sent(BaseRequest request)
@@ -117,9 +127,11 @@ namespace NewAgeQoL
             bool calc = cd.RoundType == RoundType.CALCULATING_COMBAT;
             if (cd.RoundType != RoundType.COMBAT_ROUND && !calc) return;
             if (!calc && !_over) return;
+            float now = RealTime.Now;
+            if (_overAt < 0f) _overAt = now;
+            if (Quick(cd, now)) return;
             var ap = cd.AnimationProcessor;
             if (ap == null || ap.Active) { _idleAt = -1f; return; }
-            float now = RealTime.Now;
             if (_idleAt < 0f) { _idleAt = now; return; }
             if (_tries >= MostTries) return;
             float due = _tries == 0 ? _idleAt + FirstWait : _triedAt + NextWait;
@@ -140,6 +152,27 @@ namespace NewAgeQoL
             _answered += times;
             Plugin.Warn("[anim ack] round " + cd.RoundNum + " (" + cd.RoundType + ") stuck after the animations, answered " + times
                         + " (animations " + _heard + "), try " + _tries + " of " + MostTries);
+        }
+
+        private static bool Quick(ICombatData cd, float now)
+        {
+            if (_quick >= MostQuick || _heard <= _answered) return false;
+            if (now < _overAt + QuickWait || now < _heardAt + QuietWait) return false;
+            if (!Rivals(cd) || Waits()) return false;
+            var conn = NetworkConnection.Instance;
+            if (conn == null || !conn.IsConnected()) return false;
+            int times = _heard - _answered;
+            _quick++;
+            _sending = true;
+            try
+            {
+                for (int i = 0; i < times; i++) conn.SendRequest(new EndCombatAnimationRequest(cd.RoundNum));
+            }
+            finally { _sending = false; }
+            _answered += times;
+            Plugin.Trace("[anim ack] round " + cd.RoundNum + " (" + cd.RoundType + ") over, answered " + times
+                         + " animations without waiting for them to play (animations " + _heard + ")");
+            return true;
         }
     }
 }

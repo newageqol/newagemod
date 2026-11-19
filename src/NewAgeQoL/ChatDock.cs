@@ -812,7 +812,7 @@ namespace NewAgeQoL
         private static void Bottom()
         {
             if (_view == null || Time.unscaledTime > _bottomAt) { _urgent = false; return; }
-            if (!_urgent && (ChatStay.Held || ChatStay.Touched)) { _bottomAt = 0f; return; }
+            if (ChatStay.Held || ChatStay.Touched) { _bottomAt = 0f; _urgent = false; return; }
             try
             {
                 ChatStay.ToBottom(ChatStay.Of(_view));

@@ -68,6 +68,8 @@ namespace NewAgeQoL
             Open();
         }
 
+        internal static int Under;
+
         internal static bool EscapeClose()
         {
             if (_canvasGo == null) return false;
@@ -79,6 +81,7 @@ namespace NewAgeQoL
         {
             try
             {
+                Under = ModalDialogList.GetCount();
                 _query = "";
                 Build();
                 _wantOpen = true;
