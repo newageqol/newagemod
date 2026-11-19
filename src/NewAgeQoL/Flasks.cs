@@ -735,6 +735,7 @@ namespace NewAgeQoL
                     string title = Lang.T(Titles[row]);
                     if (!Shown(row))
                     {
+                        if (Id(row) < 0) continue;
                         lines.Add(row < 3
                             ? Lang.F("{0}: банка не выбрана — правый щелчок по банке в настройках игры.", title)
                             : Lang.F("{0}: заряд не выбран — правый щелчок по заряду в настройках игры.", title));

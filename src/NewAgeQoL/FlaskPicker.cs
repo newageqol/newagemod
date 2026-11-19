@@ -147,7 +147,7 @@ namespace NewAgeQoL
             for (int i = 0; i < _cells.Count; i++)
             {
                 var cell = _cells[i];
-                if (cell.Icon == null || !cell.Go.activeSelf) continue;
+                if (cell.Icon == null || !cell.Go.activeSelf || cell.ThingId <= 0) continue;
                 var sprite = Flasks.IconFor(cell.ThingId);
                 if (cell.Icon.sprite != sprite) cell.Icon.sprite = sprite;
             }
@@ -401,15 +401,27 @@ namespace NewAgeQoL
             if (_grid == null) return;
             _shown.Clear();
             bool loud = Plugin.CfgVerbose != null && Plugin.CfgVerbose.Value;
+            const int lead = 1;
+
+            var none = _cells.Count > 0 ? _cells[0] : Make();
+            if (none != null)
+            {
+                none.ThingId = 0;
+                if (!none.Go.activeSelf) none.Go.SetActive(true);
+                if (none.Icon.enabled) none.Icon.enabled = false;
+                string blank = Lang.T("Пусто");
+                if (none.Caption.text != blank) none.Caption.text = blank;
+            }
 
             for (int i = 0; i < things.Count; i++)
             {
                 int thingId = things[i];
                 _shown.Add(thingId);
-                var cell = i < _cells.Count ? _cells[i] : Make();
+                var cell = i + lead < _cells.Count ? _cells[i + lead] : Make();
                 if (cell == null) continue;
                 cell.ThingId = thingId;
                 if (!cell.Go.activeSelf) cell.Go.SetActive(true);
+                if (!cell.Icon.enabled) cell.Icon.enabled = true;
 
                 var sprite = Flasks.IconFor(thingId);
                 if (cell.Icon.sprite != sprite) cell.Icon.sprite = sprite;
@@ -426,12 +438,12 @@ namespace NewAgeQoL
                 Plugin.Trace("[flasks] pick: " + thingId + " '" + name + "' subtype " + sub);
             }
 
-            for (int i = things.Count; i < _cells.Count; i++)
+            for (int i = things.Count + lead; i < _cells.Count; i++)
                 if (_cells[i].Go != null && _cells[i].Go.activeSelf) _cells[i].Go.SetActive(false);
 
             Empty(things.Count == 0);
             Note();
-            Fit(things.Count);
+            Fit(things.Count + lead + (things.Count == 0 ? 1 : 0));
         }
 
         private static Slot Make()
@@ -522,7 +534,7 @@ namespace NewAgeQoL
         {
             try
             {
-                if (_byId != null) _byId.Value = thingId;
+                if (_byId != null) _byId.Value = thingId > 0 ? thingId : -1;
                 if (_byName != null) _byName.Value = "";
                 Settings.Keep(_byId);
                 Settings.Keep(_byName);

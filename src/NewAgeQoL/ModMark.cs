@@ -19,6 +19,7 @@ namespace NewAgeQoL
         private const float Retry = 90f;
         private const float LookEvery = 0.3f;
         private const int Side = 32;
+        private const string Pad = "   ";
 
         private sealed class Seen
         {
@@ -132,6 +133,14 @@ namespace NewAgeQoL
         private static void Apply(Text label, Seen seen)
         {
             string text = label.text ?? "";
+            bool padded = text.StartsWith(Pad, StringComparison.Ordinal);
+            string bare = padded ? text.Substring(Pad.Length) : text;
+            bool on = Has(seen.Id) && bare.Trim().Length > 0;
+            if (on != padded)
+            {
+                text = on ? Pad + bare : bare;
+                label.text = text;
+            }
             int size = label.fontSize;
             var box = label.rectTransform.rect;
             float wide = label.preferredWidth;
@@ -143,7 +152,6 @@ namespace NewAgeQoL
             seen.Wide = wide;
 
             var t = label.transform.Find(BadgeName);
-            bool on = Has(seen.Id) && text.Length > 0;
             if (!on)
             {
                 if (t != null && t.gameObject.activeSelf) t.gameObject.SetActive(false);
@@ -152,16 +160,20 @@ namespace NewAgeQoL
             var go = t != null ? t.gameObject : Build(label);
             if (go == null) return;
             var rt = (RectTransform)go.transform;
-            if (label.horizontalOverflow == HorizontalWrapMode.Wrap) wide = Mathf.Min(wide, box.width);
-            float tall = Mathf.Min(label.preferredHeight, Mathf.Max(box.height, size));
+            if (label.horizontalOverflow == HorizontalWrapMode.Wrap && box.width > 1f) wide = Mathf.Min(wide, box.width);
+            float tall = Mathf.Max(label.preferredHeight > 1f ? Mathf.Min(label.preferredHeight, size * 1.4f) : size, 1f);
             float side = Mathf.Clamp(size * 0.6f, 7f, 18f);
             int across = (int)label.alignment % 3;
             int down = (int)label.alignment / 3;
-            float end = across == 0 ? box.xMin + wide : across == 1 ? box.center.x + wide * 0.5f : box.xMax;
-            float top = down == 0 ? box.yMax : down == 1 ? box.center.y + tall * 0.5f : box.yMin + tall;
-            rt.anchorMin = rt.anchorMax = label.rectTransform.pivot;
+            float ax = across * 0.5f;
+            float ay = 1f - down * 0.5f;
+            float x = across == 0 ? 0f : across == 1 ? -wide * 0.5f : -wide;
+            float y = down == 0 ? -tall * 0.5f : down == 1 ? 0f : tall * 0.5f;
+            var anchor = new Vector2(ax, ay);
+            if (rt.anchorMin != anchor) rt.anchorMin = anchor;
+            if (rt.anchorMax != anchor) rt.anchorMax = anchor;
             rt.sizeDelta = new Vector2(side, side);
-            rt.anchoredPosition = new Vector2(end + side * 0.55f + 1f, top - side * 0.45f);
+            rt.anchoredPosition = new Vector2(x + side * 0.5f + 1f, y);
             if (!go.activeSelf) go.SetActive(true);
         }
 
