@@ -885,7 +885,7 @@ namespace NewAgeQoL
                 new Act { Key = "flask:0", Group = "Банки", Title = Lang.T("Банка жизни"), Do = () => Flasks.Use(0) },
                 new Act { Key = "flask:1", Group = "Банки", Title = Lang.T("Банка маны"), Do = () => Flasks.Use(1) },
                 new Act { Key = "flask:2", Group = "Банки", Title = Lang.T("Банка энергии"), Do = () => Flasks.Use(2) },
-                new Act { Key = "flask:3", Group = "Банки", Title = Lang.T("Грибы"), Do = () => Flasks.Use(3) },
+                new Act { Key = "flask:3", Group = "Банки", Title = Lang.T("Заряды"), Do = () => Flasks.Use(3) },
             };
         }
 

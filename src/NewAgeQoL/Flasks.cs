@@ -24,7 +24,7 @@ namespace NewAgeQoL
         private const int Batch = 20;
         private const float Pause = 0.15f;
 
-        private static readonly string[] Titles = { "Жизнь", "Мана", "Энергия", "Грибы" };
+        private static readonly string[] Titles = { "Жизнь", "Мана", "Энергия", "Заряды" };
 
         private static readonly int[][] Kin =
         {
@@ -735,7 +735,9 @@ namespace NewAgeQoL
                     string title = Lang.T(Titles[row]);
                     if (!Shown(row))
                     {
-                        lines.Add(Lang.F("{0}: банка не выбрана — правый щелчок по банке в настройках игры.", title));
+                        lines.Add(row < 3
+                            ? Lang.F("{0}: банка не выбрана — правый щелчок по банке в настройках игры.", title)
+                            : Lang.F("{0}: заряд не выбран — правый щелчок по заряду в настройках игры.", title));
                         Tell("after fight: no flask chosen for " + Titles[row]);
                         continue;
                     }
@@ -745,9 +747,13 @@ namespace NewAgeQoL
                     bool empty = false;
                     yield return Plugin.Instance.StartCoroutine(UseRoutine(row, 0, (used, ranOut) => { drunk = used; empty = ranOut; }));
                     if (empty)
-                        lines.Add(drunk > 0
-                            ? Lang.F("{0}: банки кончились — выпито {1} шт.", title, drunk)
-                            : Lang.F("{0}: банок в сумке нет.", title));
+                        lines.Add(row < 3
+                            ? (drunk > 0
+                                ? Lang.F("{0}: банки кончились — выпито {1} шт.", title, drunk)
+                                : Lang.F("{0}: банок в сумке нет.", title))
+                            : (drunk > 0
+                                ? Lang.F("{0}: заряды кончились — использовано {1} шт.", title, drunk)
+                                : Lang.F("{0}: зарядов в сумке нет.", title)));
                 }
             }
             finally
@@ -784,7 +790,7 @@ namespace NewAgeQoL
             bool counted = false;
             try
             {
-                if (SideButtons.InCombat()) { Say(row, Lang.F("{0}: в бою эти банки не пьются", Lang.T(title))); yield break; }
+                if (SideButtons.InCombat()) { Say(row, row < 3 ? Lang.F("{0}: в бою эти банки не пьются", Lang.T(title)) : Lang.F("{0}: в бою эти заряды не используются", Lang.T(title))); yield break; }
                 if (!Connected()) { Say(row, Lang.F("{0}: нет соединения", Lang.T(title))); yield break; }
 
                 Step(row, "…");

@@ -28,6 +28,7 @@ namespace NewAgeQoL
         private static bool _joined;
         private static bool _inside;
         private static int _room;
+        private static int _claim;
         private static GameObject _go;
         private static readonly List<Slot> Slots = new List<Slot>();
         private static string _mark = "";
@@ -37,13 +38,19 @@ namespace NewAgeQoL
         {
             try
             {
-                int kind = KindOf(ctrl, announceId);
-                Spectate.Joined(kind);
-                _joined = Rooms.TryGetValue(kind, out _room);
-                _inside = false;
-                Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - class counter in room " + _room : ""));
+                Joining(announceId, KindOf(ctrl, announceId));
             }
             catch (Exception e) { Plugin.Caught("[dozen] join: " + e.Message); }
+        }
+
+        internal static void Joining(int announceId, int kind)
+        {
+            if (_inside || (_joined && announceId == _claim)) return;
+            _claim = announceId;
+            Spectate.Joined(kind);
+            _joined = Rooms.TryGetValue(kind, out _room);
+            _inside = false;
+            Plugin.Trace("[dozen] joining claim " + announceId + ", kind " + kind + (_joined ? " - class counter in room " + _room : ""));
         }
 
         private static readonly System.Reflection.FieldInfo AnnounceField = AccessTools.Field(typeof(BaseEnterfightWidget), "_announce");

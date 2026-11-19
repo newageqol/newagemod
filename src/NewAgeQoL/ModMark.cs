@@ -26,6 +26,8 @@ namespace NewAgeQoL
             internal string Text;
             internal int Version = -1;
             internal int Size;
+            internal Rect Box;
+            internal float Wide;
         }
 
         private static readonly HashSet<int> Ids = new HashSet<int>();
@@ -131,10 +133,14 @@ namespace NewAgeQoL
         {
             string text = label.text ?? "";
             int size = label.fontSize;
-            if (seen.Version == _version && seen.Text == text && seen.Size == size) return;
+            var box = label.rectTransform.rect;
+            float wide = label.preferredWidth;
+            if (seen.Version == _version && seen.Text == text && seen.Size == size && seen.Box == box && Mathf.Abs(seen.Wide - wide) < 0.5f) return;
             seen.Version = _version;
             seen.Text = text;
             seen.Size = size;
+            seen.Box = box;
+            seen.Wide = wide;
 
             var t = label.transform.Find(BadgeName);
             bool on = Has(seen.Id) && text.Length > 0;
@@ -146,8 +152,6 @@ namespace NewAgeQoL
             var go = t != null ? t.gameObject : Build(label);
             if (go == null) return;
             var rt = (RectTransform)go.transform;
-            var box = label.rectTransform.rect;
-            float wide = label.preferredWidth;
             if (label.horizontalOverflow == HorizontalWrapMode.Wrap) wide = Mathf.Min(wide, box.width);
             float tall = Mathf.Min(label.preferredHeight, Mathf.Max(box.height, size));
             float side = Mathf.Clamp(size * 0.6f, 7f, 18f);
