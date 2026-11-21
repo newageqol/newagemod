@@ -266,7 +266,7 @@ internal static class HexLook
     private static void Index(CombatData cd)
     {
         var cells = cd.Cells;
-        if (ReferenceEquals(cells, _indexed) && Time.unscaledTime < _countAt) return;
+        if (ReferenceEquals(cells, _indexed) && Time.unscaledTime < _countAt && _ring == Arena3D.EdgeRing) return;
         _countAt = Time.unscaledTime + 1f;
         int open = 0;
         foreach (var cell in cells)

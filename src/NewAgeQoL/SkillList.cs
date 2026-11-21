@@ -768,7 +768,7 @@ namespace NewAgeQoL
             float side = strip ? Squeeze() : Side;
             var cell = new Vector2(side, side);
             if (grid.cellSize != cell) grid.cellSize = cell;
-            int fit = strip ? Mathf.Max(1, Mathf.FloorToInt((CombatBar.SkillsWide + Gap) / (side + Gap) + 0.01f)) : _things ? 1 : _spells ? Mathf.Clamp(Live.Count, 1, 8) : Columns;
+            int fit = strip ? Mathf.Max(1, Mathf.FloorToInt((CombatBar.SkillsWide + Gap) / (side + Gap) + 0.01f)) : _things ? 1 : _spells ? Mathf.Clamp(Live.Count, 1, 9) : Columns;
             var corner = strip ? GridLayoutGroup.Corner.LowerLeft : GridLayoutGroup.Corner.UpperLeft;
             if (grid.constraintCount != fit) grid.constraintCount = fit;
             if (grid.startCorner != corner) grid.startCorner = corner;
@@ -844,6 +844,32 @@ namespace NewAgeQoL
             return school;
         }
 
+        private string _rankText;
+        private readonly Dictionary<int, int> Placed = new Dictionary<int, int>();
+
+        private void Ranks()
+        {
+            string text = Plugin.CfgSpellOrder != null ? Plugin.CfgSpellOrder.Value ?? "" : "";
+            if (text == _rankText) return;
+            _rankText = text;
+            Placed.Clear();
+            foreach (var part in text.Split(','))
+            {
+                int id;
+                if (int.TryParse(part.Trim(), out id) && id > 0 && !Placed.ContainsKey(id)) Placed[id] = Placed.Count;
+            }
+        }
+
+        private int Arranged(IQuickButton a, IQuickButton b)
+        {
+            Ranks();
+            int x, y;
+            if (!Placed.TryGetValue(a.Id, out x)) x = int.MaxValue;
+            if (!Placed.TryGetValue(b.Id, out y)) y = int.MaxValue;
+            if (x != y) return x.CompareTo(y);
+            return Order(a, b);
+        }
+
         private int Order(IQuickButton a, IQuickButton b)
         {
             int bySchool = Grade(a).CompareTo(Grade(b));
@@ -857,6 +883,252 @@ namespace NewAgeQoL
             var spot = new Vector2(0f, -8f);
             if (prt.anchoredPosition != spot) prt.anchoredPosition = spot;
             if (_stopGo != null && _stopGo.activeSelf) _stopGo.SetActive(false);
+            if (_editGo == null) return;
+            bool show = Live.Count > 0;
+            if (_editGo.activeSelf != show) _editGo.SetActive(show);
+            var ert = (RectTransform)_editGo.transform;
+            var at = new Vector2(-prt.rect.width * 0.5f - 8f, spot.y - (Side - EditSide) * 0.5f);
+            if (ert.anchoredPosition != at) ert.anchoredPosition = at;
+        }
+
+        private const float EditSide = 26f;
+        private bool _arrange;
+        private GameObject _editGo;
+        private GameObject _editTick;
+        private Text _editNote;
+        private bool _editHover;
+        private int _dragId;
+        private GameObject _ghost;
+        private readonly Dictionary<Transform, int> Spots = new Dictionary<Transform, int>();
+
+        private void EditBox(GameObject canvas)
+        {
+            var go = new GameObject("arrange", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(Button));
+            go.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.sizeDelta = new Vector2(EditSide, EditSide);
+            var back = go.GetComponent<Image>();
+            back.color = WardrobeLook.Card;
+            back.sprite = OnlineWindow.Rounded(6);
+            back.type = Image.Type.Sliced;
+            var edge = go.GetComponent<Outline>();
+            edge.effectColor = WardrobeLook.FieldEdge;
+            edge.effectDistance = new Vector2(2f, -2f);
+
+            _editTick = new GameObject("tick", typeof(RectTransform));
+            _editTick.transform.SetParent(go.transform, false);
+            OnlineWindow.Place((RectTransform)_editTick.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            Bar(_editTick.transform, new Vector2(-4.5f, -1.5f), 8f, -45f);
+            Bar(_editTick.transform, new Vector2(2.5f, 0.5f), 14f, 50f);
+            _editTick.SetActive(_arrange);
+
+            _editNote = OnlineWindow.Label(go.transform, "", 13, FontStyle.Normal, WardrobeLook.Bright);
+            _editNote.alignment = TextAnchor.MiddleRight;
+            _editNote.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _editNote.raycastTarget = false;
+            var noteEdge = _editNote.gameObject.AddComponent<Outline>();
+            noteEdge.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            noteEdge.effectDistance = new Vector2(1f, -1f);
+            var nrt = _editNote.rectTransform;
+            nrt.anchorMin = nrt.anchorMax = new Vector2(0f, 0.5f);
+            nrt.pivot = new Vector2(1f, 0.5f);
+            nrt.sizeDelta = new Vector2(10f, EditSide);
+            nrt.anchoredPosition = new Vector2(-8f, 0f);
+            Note();
+
+            var watch = go.AddComponent<HoverWatch>();
+            watch.OnEnter = () => { _editHover = true; Note(); };
+            watch.OnExit = () => { _editHover = false; Note(); };
+
+            go.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                _arrange = !_arrange;
+                if (_editTick != null) _editTick.SetActive(_arrange);
+                if (!_arrange) Drop();
+                if (_arrange && _armed != null) Disarm();
+                if (_arrange) HideTip();
+                Note();
+                Plugin.Trace(_tag + " arranging " + (_arrange ? "on" : "off"));
+            });
+            _editGo = go;
+            go.SetActive(false);
+        }
+
+        private void Note()
+        {
+            if (_editNote == null) return;
+            string text = _arrange ? Lang.T("Перестановка включена — перетаскивай мышью")
+                : _editHover ? Lang.T("Переставить заклинания") : "";
+            if (_editNote.text != text) _editNote.text = text;
+            _editNote.enabled = text.Length > 0;
+        }
+
+        private static void Bar(Transform host, Vector2 at, float length, float angle)
+        {
+            var go = new GameObject("bar", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(host, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(length, 3f);
+            rt.anchoredPosition = at;
+            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            var pic = go.GetComponent<Image>();
+            pic.color = WardrobeLook.Accent;
+            pic.raycastTarget = false;
+        }
+
+        private GameObject _gap;
+        private CanvasGroup _liftedFade;
+        private int _gapAt = -1;
+
+        private void Lift(int id, Sprite sprite, PointerEventData point)
+        {
+            if (!_arrange || _canvasGo == null) return;
+            Drop();
+            HideTip();
+            _dragId = id;
+            _ghost = new GameObject("dragged", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            _ghost.transform.SetParent(_canvasGo.transform, false);
+            var rt = (RectTransform)_ghost.transform;
+            rt.sizeDelta = new Vector2(Side, Side);
+            var pic = _ghost.GetComponent<Image>();
+            pic.sprite = sprite;
+            pic.preserveAspect = true;
+            pic.raycastTarget = false;
+            var group = _ghost.GetComponent<CanvasGroup>();
+            group.alpha = 0.85f;
+            group.blocksRaycasts = false;
+
+            _gap = new GameObject("insert", typeof(RectTransform), typeof(Image));
+            _gap.transform.SetParent(_canvasGo.transform, false);
+            var grt = (RectTransform)_gap.transform;
+            grt.sizeDelta = new Vector2(4f, Side + 6f);
+            var bar = _gap.GetComponent<Image>();
+            bar.color = WardrobeLook.Accent;
+            bar.raycastTarget = false;
+            _gap.SetActive(false);
+
+            foreach (var pair in Spots)
+            {
+                if (pair.Value != id || pair.Key == null) continue;
+                _liftedFade = pair.Key.GetComponent<CanvasGroup>() ?? pair.Key.gameObject.AddComponent<CanvasGroup>();
+                _liftedFade.alpha = 0.3f;
+                break;
+            }
+            Carry(point);
+        }
+
+        private List<RectTransform> Ordered()
+        {
+            var list = new List<RectTransform>();
+            if (_cells == null) return list;
+            for (int i = 0; i < _cells.childCount; i++)
+            {
+                var child = _cells.GetChild(i) as RectTransform;
+                if (child != null && Spots.ContainsKey(child)) list.Add(child);
+            }
+            return list;
+        }
+
+        private void Carry(PointerEventData point)
+        {
+            if (_ghost == null || point == null) return;
+            _ghost.transform.position = point.position;
+            _gapAt = InsertAt(point.position);
+            if (_gap == null) return;
+            if (_gapAt < 0) { if (_gap.activeSelf) _gap.SetActive(false); return; }
+            var cells = Ordered();
+            float scale = _cells.lossyScale.x;
+            float half = Side * 0.5f * scale;
+            float space = Gap * 0.5f * scale;
+            Vector3 at;
+            if (_gapAt < cells.Count)
+            {
+                var c = cells[_gapAt].position;
+                bool rowStart = _gapAt == 0 || Mathf.Abs(cells[_gapAt - 1].position.y - c.y) > half;
+                at = rowStart ? new Vector3(c.x - half - space, c.y, 0f) : new Vector3((cells[_gapAt - 1].position.x + c.x) * 0.5f, c.y, 0f);
+            }
+            else
+            {
+                var c = cells[cells.Count - 1].position;
+                at = new Vector3(c.x + half + space, c.y, 0f);
+            }
+            _gap.transform.position = at;
+            if (!_gap.activeSelf) _gap.SetActive(true);
+        }
+
+        private int InsertAt(Vector2 pointer)
+        {
+            var cells = Ordered();
+            if (cells.Count == 0) return -1;
+            float scale = _cells.lossyScale.x;
+            float half = Side * 0.5f * scale;
+            float reach = Side * scale;
+            float left = float.MaxValue, right = float.MinValue, top = float.MinValue, bottom = float.MaxValue;
+            foreach (var c in cells)
+            {
+                left = Mathf.Min(left, c.position.x - half);
+                right = Mathf.Max(right, c.position.x + half);
+                top = Mathf.Max(top, c.position.y + half);
+                bottom = Mathf.Min(bottom, c.position.y - half);
+            }
+            if (pointer.x < left - reach || pointer.x > right + reach || pointer.y > top + reach || pointer.y < bottom - reach) return -1;
+            float rowY = cells[0].position.y;
+            float best = float.MaxValue;
+            foreach (var c in cells)
+            {
+                float d = Mathf.Abs(c.position.y - pointer.y);
+                if (d < best) { best = d; rowY = c.position.y; }
+            }
+            int first = -1, last = -1;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (Mathf.Abs(cells[i].position.y - rowY) > half) continue;
+                if (first < 0) first = i;
+                last = i;
+            }
+            if (first < 0) return -1;
+            for (int i = first; i <= last; i++)
+                if (pointer.x < cells[i].position.x) return i;
+            return last + 1;
+        }
+
+        private void Land(PointerEventData point)
+        {
+            int moved = _dragId;
+            int at = point != null ? InsertAt(point.position) : -1;
+            Drop();
+            if (!_arrange || moved == 0 || at < 0 || _cells == null) return;
+            var ids = new List<int>(Sig);
+            int from = ids.IndexOf(moved);
+            if (from < 0) return;
+            int to = at > from ? at - 1 : at;
+            if (to == from) return;
+            ids.RemoveAt(from);
+            ids.Insert(Mathf.Clamp(to, 0, ids.Count), moved);
+            Ranks();
+            var kept = new List<int>(Placed.Keys);
+            kept.Sort((x, y) => Placed[x].CompareTo(Placed[y]));
+            foreach (int id in kept) if (!ids.Contains(id)) ids.Add(id);
+            var names = new List<string>();
+            foreach (int id in ids) names.Add(id.ToString());
+            if (Plugin.CfgSpellOrder != null) Plugin.CfgSpellOrder.Value = string.Join(",", names.ToArray());
+            Plugin.Trace(_tag + " spell " + moved + " moved from place " + (from + 1) + " to " + (to + 1));
+        }
+
+        private void Drop()
+        {
+            _dragId = 0;
+            _gapAt = -1;
+            if (_ghost != null) UnityEngine.Object.Destroy(_ghost);
+            _ghost = null;
+            if (_gap != null) UnityEngine.Object.Destroy(_gap);
+            _gap = null;
+            if (_liftedFade != null) _liftedFade.alpha = 1f;
+            _liftedFade = null;
         }
 
         private void Column(RectTransform prt)
@@ -1093,7 +1365,7 @@ namespace NewAgeQoL
                     foreach (var one in part)
                         if (one != null && Seen.Add(one.Id)) into.Add(one);
                 }
-                if (_order == null) _order = Order;
+                if (_order == null) _order = Arranged;
                 into.Sort(_order);
                 return into;
             }
@@ -1160,6 +1432,13 @@ namespace NewAgeQoL
             _downGo = null;
             _upPic = null;
             _downPic = null;
+            Drop();
+            _editGo = null;
+            _editTick = null;
+            _editNote = null;
+            _editHover = false;
+            _arrange = false;
+            Spots.Clear();
             Live.Clear();
             Marks.Clear();
             if (_canvasGo != null) UnityEngine.Object.Destroy(_canvasGo);
@@ -1223,6 +1502,7 @@ namespace NewAgeQoL
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             _cells = _panelGo.transform;
+            if (_spells) EditBox(go);
         }
 
         private void Repaint()
@@ -1302,6 +1582,8 @@ namespace NewAgeQoL
         {
             HideTip();
             for (int i = _cells.childCount - 1; i >= 0; i--) UnityEngine.Object.Destroy(_cells.GetChild(i).gameObject);
+            Drop();
+            Spots.Clear();
             Live.Clear();
             Marks.Clear();
             foreach (var one in all) Slot(one);
@@ -1458,7 +1740,7 @@ namespace NewAgeQoL
                 }
                 if (cell.Edge != null)
                 {
-                    var edge = bright ? WardrobeLook.FieldEdge : new Color(WardrobeLook.Edge.r, WardrobeLook.Edge.g, WardrobeLook.Edge.b, 0.7f);
+                    var edge = _arrange ? WardrobeLook.Accent : bright ? WardrobeLook.FieldEdge : new Color(WardrobeLook.Edge.r, WardrobeLook.Edge.g, WardrobeLook.Edge.b, 0.7f);
                     if (cell.Edge.effectColor != edge) cell.Edge.effectColor = edge;
                 }
                 if (cell.Lit != null)
@@ -2203,7 +2485,7 @@ namespace NewAgeQoL
             var watch = go.AddComponent<HoverWatch>();
             int who = skill.Id;
             var where = (RectTransform)go.transform;
-            watch.OnEnter = () => ShowTip(who, where);
+            watch.OnEnter = () => { if (!_arrange) ShowTip(who, where); };
             watch.OnExit = HideTip;
 
             var markGo = new GameObject("armed", typeof(RectTransform), typeof(Image), typeof(Outline));
@@ -2234,11 +2516,26 @@ namespace NewAgeQoL
             {
                 var point = data as PointerEventData;
                 if (point != null && point.button != PointerEventData.InputButton.Left) return;
+                if (_arrange) return;
                 if (Focused(shot)) return;
                 if (!button.interactable) return;
                 Pick(shot);
             });
             quick.triggers.Add(tap);
+            if (_spells)
+            {
+                Spots[go.transform] = skill.Id;
+                var sprite = icon.sprite;
+                var lift = new EventTrigger.Entry { eventID = EventTriggerType.BeginDrag };
+                lift.callback.AddListener(data => Lift(shot.Id, sprite, data as PointerEventData));
+                quick.triggers.Add(lift);
+                var carry = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
+                carry.callback.AddListener(data => Carry(data as PointerEventData));
+                quick.triggers.Add(carry);
+                var land = new EventTrigger.Entry { eventID = EventTriggerType.EndDrag };
+                land.callback.AddListener(data => Land(data as PointerEventData));
+                quick.triggers.Add(land);
+            }
 
             var left = OnlineWindow.Label(go.transform, "", 16, FontStyle.Bold, WardrobeLook.Bright);
             left.alignment = TextAnchor.MiddleCenter;

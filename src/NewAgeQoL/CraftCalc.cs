@@ -52,6 +52,8 @@ namespace NewAgeQoL
         private static Text _craftText;
         private static InputField _fromField;
         private static InputField _toField;
+        private static InputField _skillFromField;
+        private static InputField _skillToField;
         private static InputField _search;
         private static InputField _qtyField;
         private static readonly List<Pic> Pics = new List<Pic>();
@@ -67,6 +69,8 @@ namespace NewAgeQoL
         private static int _craft;
         private static int _from;
         private static int _to;
+        private static int _skillFrom;
+        private static int _skillTo;
         private static int _picked;
         private static int _qty = 1;
         private static string _query = "";
@@ -132,6 +136,8 @@ namespace NewAgeQoL
             _craft = 0;
             _from = 0;
             _to = 0;
+            _skillFrom = 0;
+            _skillTo = 0;
             _picked = thing;
             Show();
             if (_canvasGo == null) return;
@@ -164,6 +170,8 @@ namespace NewAgeQoL
             _craftText = null;
             _fromField = null;
             _toField = null;
+            _skillFromField = null;
+            _skillToField = null;
             _search = null;
             _qtyField = null;
             Pics.Clear();
@@ -187,11 +195,15 @@ namespace NewAgeQoL
                 string query = (_typed ?? "").Trim().ToLowerInvariant();
                 int from = Typed(_fromField);
                 int to = Typed(_toField);
-                if (query != _query || from != _from || to != _to)
+                int skillFrom = Typed(_skillFromField);
+                int skillTo = Typed(_skillToField);
+                if (query != _query || from != _from || to != _to || skillFrom != _skillFrom || skillTo != _skillTo)
                 {
                     _query = query;
                     _from = from;
                     _to = to;
+                    _skillFrom = skillFrom;
+                    _skillTo = skillTo;
                     Refilter();
                 }
             }
@@ -344,7 +356,7 @@ namespace NewAgeQoL
             _craftText.resizeTextMaxSize = 14;
             Wardrobe.At((RectTransform)Wardrobe.Arrow(box, "›", () => Step(1)).transform, ListW - 12f - 34f, 56f, 34f, 32f);
 
-            var levelLabel = Say(box, global::NewAgeQoL.Lang.T("Уровень от"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            var levelLabel = Say(box, global::NewAgeQoL.Lang.T("Вещь, ур. от"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
             Wardrobe.At(levelLabel.rectTransform, 14f, 94f, 90f, 32f);
             _fromField = LevelInput(box, _from);
             Wardrobe.At((RectTransform)_fromField.transform, 106f, 94f, 70f, 32f);
@@ -353,11 +365,21 @@ namespace NewAgeQoL
             _toField = LevelInput(box, _to);
             Wardrobe.At((RectTransform)_toField.transform, 218f, 94f, 70f, 32f);
 
+            var skillLabel = Say(box, global::NewAgeQoL.Lang.T("Профессия от"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleLeft);
+            Wardrobe.At(skillLabel.rectTransform, 14f, 132f, 90f, 32f);
+            Fit(skillLabel, 10, 14);
+            _skillFromField = LevelInput(box, _skillFrom);
+            Wardrobe.At((RectTransform)_skillFromField.transform, 106f, 132f, 70f, 32f);
+            var skillToLabel = Say(box, global::NewAgeQoL.Lang.T("до"), 14, FontStyle.Normal, WardrobeLook.Label, TextAnchor.MiddleCenter);
+            Wardrobe.At(skillToLabel.rectTransform, 180f, 132f, 34f, 32f);
+            _skillToField = LevelInput(box, _skillTo);
+            Wardrobe.At((RectTransform)_skillToField.transform, 218f, 132f, 70f, 32f);
+
             _found = Say(box, "", 12, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.MiddleLeft);
-            Wardrobe.At(_found.rectTransform, 14f, 130f, ListW - 28f, 20f);
+            Wardrobe.At(_found.rectTransform, 14f, 168f, ListW - 28f, 20f);
             Fit(_found, 9, 12);
 
-            _itemsScroll = Scroller(box, 8f, 154f, ListW - 16f, BodyH - 162f, 2f, out _items);
+            _itemsScroll = Scroller(box, 8f, 192f, ListW - 16f, BodyH - 200f, 2f, out _items);
 
             var up = Wardrobe.GameButton(box, "↑", ToTop, false);
             Wardrobe.At(up, ListW - 20f - 44f, BodyH - 20f - 44f, 44f, 44f);
@@ -531,6 +553,8 @@ namespace NewAgeQoL
             foreach (var recipe in list)
             {
                 if (_craft != 0 && recipe.Profession != _craft) continue;
+                if (_skillFrom > 0 && recipe.Skill < _skillFrom) continue;
+                if (_skillTo > 0 && recipe.Skill > _skillTo) continue;
                 if (_query.Length == 0 || recipe.Find.Contains(_query)) return true;
             }
             return false;
@@ -553,7 +577,7 @@ namespace NewAgeQoL
             {
                 string many = Wardrobe.Plural(total, global::NewAgeQoL.Lang.T("вещь"), global::NewAgeQoL.Lang.T("вещи"), global::NewAgeQoL.Lang.T("вещей"));
                 if (_query.Length > 0) _found.text = global::NewAgeQoL.Lang.F("Найдено: {0} {1}", total, many);
-                else if (_from > 0 || _to > 0) _found.text = global::NewAgeQoL.Lang.F("Подходит {0} {1}", total, many);
+                else if (_from > 0 || _to > 0 || _skillFrom > 0 || _skillTo > 0) _found.text = global::NewAgeQoL.Lang.F("Подходит {0} {1}", total, many);
                 else if (_craft != 0) _found.text = global::NewAgeQoL.Lang.F("В этой профессии {0} {1}", total, many);
                 else _found.text = global::NewAgeQoL.Lang.F("Всего {0} {1}, многие крафтятся в нескольких профессиях", total, many);
             }

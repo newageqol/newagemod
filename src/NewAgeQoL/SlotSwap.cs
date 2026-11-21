@@ -133,8 +133,10 @@ namespace NewAgeQoL
                 _panel = panel;
                 Arrange(panel);
 
-                Show(_weapons, Any(MainWeapons) || Any(SpareWeapons));
-                Show(_relics, Any(MainRelics) || Any(SpareRelics));
+                Show(_weapons, true);
+                Show(_relics, true);
+                Allow(_weapons, Any(MainWeapons) || Any(SpareWeapons));
+                Allow(_relics, Any(MainRelics) || Any(SpareRelics));
                 Show(_kit, true);
             }
             catch (System.Exception e) { Plugin.Fault("[slots] gear window: " + e.Message); }
@@ -176,6 +178,17 @@ namespace NewAgeQoL
         private static void Show(Button button, bool on)
         {
             if (button != null && button.gameObject.activeSelf != on) button.gameObject.SetActive(on);
+        }
+
+        private static void Allow(Button button, bool on)
+        {
+            if (button == null) return;
+            if (button.interactable != on) button.interactable = on;
+            var mark = button.transform.Find("arrows");
+            var art = mark != null ? mark.GetComponent<Image>() : null;
+            if (art == null) return;
+            var tint = on ? WardrobeLook.Accent : new Color(0.45f, 0.45f, 0.45f, 0.6f);
+            if (art.color != tint) art.color = tint;
         }
 
         private sealed class Piece

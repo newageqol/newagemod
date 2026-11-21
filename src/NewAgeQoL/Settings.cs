@@ -73,9 +73,11 @@ namespace NewAgeQoL
                 B(Lang.T("Контрприём на себя в первой фазе"), Plugin.CfgCounterAuto),
 
 
-                new Header { Title = Lang.T("Звуки") },
+                new Header { Title = Lang.T("Звуки и уведомления") },
                 Sl(Lang.T("Громкость звуков боя"), Plugin.CfgSoundVolume, 0f, 1f, v => Sounds.Sample(false)),
                 Sl(Lang.T("Громкость звука привата"), Plugin.CfgPmVolume, 0f, 1f, v => Sounds.Sample(true)),
+                B(Lang.T("Мигать значком на панели задач"), Plugin.CfgTaskbarBlink),
+                B(Lang.T("Уведомления Windows, когда игра не в фокусе"), Plugin.CfgDesktopToasts),
                 Sl(Lang.T("Громкость музыки боя"), Plugin.CfgMusicVolume, 0f, 1f),
                 A(Lang.T("Авторы музыки боя"), Lang.T("Показать"), () => Notice.Show(Lang.T("Музыка боя: Cold Stone Reverb, Procession of Ashes, Heartbeat Groove, Pulse of the Void, Menacing Waltz, Stone Room Reverb, Dripping in the Dark, The Viol's Warning. Треки сделал автор мода."), 10f)),
 
@@ -89,7 +91,7 @@ namespace NewAgeQoL
                     A(Lang.T("Кэш вещей Flash, как у нового игрока"), Lang.T("Сбросить"), () => Notice.Show(FlashLook.ResetCache() ?? Lang.T("Кэш вещей Flash сбросить не удалось"), 6f)),
                 });
             }
-            int sounds = rows.FindIndex(r => r is Header && r.Title == Lang.T("Звуки"));
+            int sounds = rows.FindIndex(r => r is Header && r.Title == Lang.T("Звуки и уведомления"));
             rows.InsertRange(sounds >= 0 ? sounds : rows.Count - 1, Tints());
             rows.RemoveAll(r => r == null);
             return rows;

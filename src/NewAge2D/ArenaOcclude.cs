@@ -25,6 +25,20 @@ namespace NewAge2D
         PhysicsScene _physics;
         float _next;
 
+        static readonly string[] Groups = { "Castle", "Skyline" };
+
+        internal static IEnumerable<MeshFilter> Filters(Transform root)
+        {
+            foreach (var group in Groups)
+            {
+                var g = root.Find(group);
+                if (g == null) continue;
+                foreach (Transform child in g)
+                    foreach (var r in child.GetComponentsInChildren<Renderer>(true))
+                        if (r.TryGetComponent<MeshFilter>(out var mf)) yield return mf;
+            }
+        }
+
         public void Init(Transform root, Camera eye, ArenaCfg cfg)
         {
             _root = root;
@@ -32,7 +46,7 @@ namespace NewAge2D
             _scene = SceneManager.CreateScene("arena3d_occlude_" + GetInstanceID(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             _physics = _scene.GetPhysicsScene();
             int meshes = 0, boxes = 0;
-            foreach (var group in new[] { "Castle", "Skyline" })
+            foreach (var group in Groups)
             {
                 var g = root.Find(group);
                 if (g == null) continue;

@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 namespace NewAge2D;
 
-internal sealed class Arena3D
+internal sealed partial class Arena3D
 {
     private static readonly (string Map, string Bundle)[] Maps = { ("arenaCombatMap1", "arena1"), ("arenaCombatMap2", "arena2"), ("arenaCombatMap3", "arena3"), ("arenaCombatMap4", "arena4"), ("arenaCombatMap5", "arena5"), ("arenaCombatMap6", "arena6"), ("arenaCombatMap8", "arena8"), ("arenaCombatMap9", "arena9"), ("arenaCombatMap7", "arena7"), ("21x21_arena", "arena21"), ("Bugurt", "arenabugurt") };
 
@@ -14,6 +14,8 @@ internal sealed class Arena3D
         public GameObject Prefab;
         public ArenaCfg Cfg;
         public long Stamp;
+        public GameObject Ready;
+        public readonly Dictionary<string, ArenaBake> Bakes = new();
     }
 
     private static readonly Dictionary<string, Scene> Scenes = new();
@@ -40,6 +42,9 @@ internal sealed class Arena3D
     private ShadowResolution _shadowResolution;
     private float _lodBias;
     private AnisotropicFiltering _aniso;
+    private int _frameRate;
+    private ArenaBake.Applied _bakeOn;
+    private const int FrameCap = 60;
 
     internal Arena3D(string bundle) { _bundle = bundle; }
 
@@ -114,11 +119,183 @@ internal sealed class Arena3D
         catch { return 0L; }
     }
 
-    private static IEnumerator Load(string bundle)
+    private static Loader _host;
+    private static GameObject _shelf;
+    private static int _upSlice, _upBuffer;
+    private static bool _upKeep;
+
+    private static Loader Host()
+    {
+        if (_host != null) return _host;
+        var go = new GameObject("NewAge2D.Arena3DLoader");
+        UnityEngine.Object.DontDestroyOnLoad(go);
+        go.hideFlags = HideFlags.HideAndDontSave;
+        _host = go.AddComponent<Loader>();
+        return _host;
+    }
+
+    private static GameObject Shelf()
+    {
+        if (_shelf != null) return _shelf;
+        _shelf = new GameObject("NewAge2D.Arena3DShelf");
+        UnityEngine.Object.DontDestroyOnLoad(_shelf);
+        _shelf.hideFlags = HideFlags.HideAndDontSave;
+        _shelf.SetActive(false);
+        return _shelf;
+    }
+
+    internal static void Preload(Field.Ground ground)
+    {
+        if (_loading) return;
+        string bundle;
+        try { bundle = For(ground); }
+        catch (Exception e) { Plugin.Log.LogWarning("[arena3d] preload: " + e.Message); return; }
+        if (bundle == null || Ready(bundle)) return;
+        Host().StartCoroutine(Prepare(bundle));
+    }
+
+    private static bool Ready(string bundle) =>
+        Scenes.TryGetValue(bundle, out var scene) && scene.Stamp == Stamp(bundle) && scene.Prefab != null && scene.Ready != null && LightReady(bundle, scene);
+
+    private static float HourNow(ArenaCfg cfg)
+    {
+        float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
+        if (cfg != null && cfg.dusk >= 0f) hour = cfg.dusk;
+        return hour;
+    }
+
+    private static bool LightReady(string bundle, Scene scene)
+    {
+        string preset = ArenaBake.Preset(HourNow(scene.Cfg));
+        return scene.Bakes.ContainsKey(preset) || !File.Exists(ArenaBake.File(Dir, bundle, preset));
+    }
+
+    private static IEnumerator LoadLight(string bundle, Scene scene)
+    {
+        string preset = ArenaBake.Preset(HourNow(scene.Cfg));
+        if (scene.Bakes.ContainsKey(preset)) yield break;
+        ArenaBake got = null;
+        yield return ArenaBake.Load(ArenaBake.File(Dir, bundle, preset), b => got = b);
+        if (got != null) scene.Bakes[preset] = got;
+    }
+
+    private static void Drop(string bundle)
+    {
+        if (!Scenes.TryGetValue(bundle, out var scene)) return;
+        if (scene.Ready != null) UnityEngine.Object.Destroy(scene.Ready);
+        foreach (var bake in scene.Bakes.Values) bake.Unload();
+        if (scene.Bundle != null) scene.Bundle.Unload(true);
+        Scenes.Remove(bundle);
+    }
+
+    private static IEnumerator Prepare(string bundle)
     {
         _loading = true;
+        try
+        {
+            if (Scenes.TryGetValue(bundle, out var old) && old.Stamp != Stamp(bundle))
+            {
+                Drop(bundle);
+                Plugin.Log.LogInfo($"[arena3d] {bundle} changed on disk, reloading");
+            }
+            if (!Scenes.ContainsKey(bundle)) yield return Load(bundle);
+            if (Scenes.TryGetValue(bundle, out var scene) && scene.Prefab != null)
+            {
+                if (scene.Ready == null) Stock(bundle, scene);
+                yield return LoadLight(bundle, scene);
+            }
+        }
+        finally { _loading = false; }
+    }
+
+    private static void FastUpload(bool on)
+    {
+        if (on)
+        {
+            _upSlice = QualitySettings.asyncUploadTimeSlice;
+            _upBuffer = QualitySettings.asyncUploadBufferSize;
+            _upKeep = QualitySettings.asyncUploadPersistentBuffer;
+            QualitySettings.asyncUploadTimeSlice = Math.Max(_upSlice, 8);
+            QualitySettings.asyncUploadBufferSize = Math.Max(_upBuffer, SystemInfo.graphicsMemorySize >= 2000 ? 64 : 16);
+            QualitySettings.asyncUploadPersistentBuffer = true;
+            return;
+        }
+        QualitySettings.asyncUploadTimeSlice = _upSlice;
+        QualitySettings.asyncUploadBufferSize = _upBuffer;
+        QualitySettings.asyncUploadPersistentBuffer = _upKeep;
+    }
+
+    private static IEnumerator Lean(string bundle, GameObject prefab)
+    {
+        int colliders = 0;
+        foreach (var c in prefab.GetComponentsInChildren<Collider>(true))
+        {
+            UnityEngine.Object.DestroyImmediate(c, true);
+            colliders++;
+        }
+        var keep = new HashSet<Mesh>();
+        foreach (var ps in prefab.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var shape = ps.shape;
+            if (shape.mesh != null) keep.Add(shape.mesh);
+            if (ps.TryGetComponent<ParticleSystemRenderer>(out var pr) && pr.mesh != null) keep.Add(pr.mesh);
+        }
+        var solid = new List<Mesh>();
+        foreach (var mf in ArenaOcclude.Filters(prefab.transform))
+            if (mf.sharedMesh != null && mf.sharedMesh.isReadable && keep.Add(mf.sharedMesh)) solid.Add(mf.sharedMesh);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        if (solid.Count > 0)
+        {
+            var probe = new GameObject("NewAge2D.ArenaProbe");
+            var options = probe.AddComponent<MeshCollider>().cookingOptions;
+            UnityEngine.Object.DestroyImmediate(probe);
+            var ids = solid.Select(m => m.GetInstanceID()).ToArray();
+            var job = System.Threading.Tasks.Task.Run(() =>
+            {
+                foreach (var id in ids) Physics.BakeMesh(id, false, options);
+            });
+            while (!job.IsCompleted) yield return null;
+            if (job.Exception != null) Plugin.Log.LogWarning("[arena3d] occluder bake: " + job.Exception.GetBaseException().Message);
+        }
+        long baked = clock.ElapsedMilliseconds;
+        int unread = 0;
+        var seen = new HashSet<Mesh>();
+        var slice = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var mf in prefab.GetComponentsInChildren<MeshFilter>(true))
+        {
+            var mesh = mf.sharedMesh;
+            if (mesh == null || !mesh.isReadable || keep.Contains(mesh) || !seen.Add(mesh)) continue;
+            mesh.UploadMeshData(true);
+            unread++;
+            if (slice.ElapsedMilliseconds > 6)
+            {
+                yield return null;
+                slice.Restart();
+            }
+        }
+        Plugin.Log.LogInfo($"[arena3d] {bundle} lean: colliders removed {colliders}, occluders baked {solid.Count} in {baked} ms, meshes unread {unread}");
+    }
+
+    private static void Stock(string bundle, Scene scene)
+    {
+        foreach (var other in Scenes.Values)
+            if (other != scene && other.Ready != null)
+            {
+                UnityEngine.Object.Destroy(other.Ready);
+                other.Ready = null;
+            }
+        var shelf = Shelf();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var copy = UnityEngine.Object.Instantiate(scene.Prefab, shelf.transform, false);
+        scene.Ready = copy;
+        Plugin.Log.LogInfo($"[arena3d] {bundle} ready: copy {clock.ElapsedMilliseconds} ms");
+    }
+
+    private static IEnumerator Load(string bundle)
+    {
         float t0 = Time.realtimeSinceStartup;
         var scene = new Scene();
+        FastUpload(true);
         try
         {
             var sceneReq = AssetBundle.LoadFromFileAsync(Path.Combine(Dir, bundle));
@@ -151,42 +328,58 @@ internal sealed class Arena3D
                     try { JsonUtility.FromJsonOverwrite(File.ReadAllText(camPath), scene.Cfg); }
                     catch (Exception e) { Plugin.Log.LogWarning("[arena3d] camera file: " + e.Message); }
                 }
+                if (scene.Prefab != null) yield return Lean(bundle, scene.Prefab);
             }
             scene.Stamp = Stamp(bundle);
             Scenes[bundle] = scene;
         }
-        finally { _loading = false; }
+        finally
+        {
+            FastUpload(false);
+        }
         Plugin.Log.LogInfo($"[arena3d] {bundle} loaded in {Time.realtimeSinceStartup - t0:0.00} s, model {(scene.Prefab != null ? "ok" : "missing")}");
     }
 
     internal IEnumerator Attach(Transform grid, Camera eye, Func<bool> alive, Action shown)
     {
+        EdgeRing = Scenes.TryGetValue(_bundle, out var known) && known.Cfg != null && known.Cfg.edgeRing;
         while (_loading) yield return null;
-        if (Scenes.TryGetValue(_bundle, out var old) && old.Stamp != Stamp(_bundle))
+        if (!Ready(_bundle))
         {
-            if (old.Bundle != null) old.Bundle.Unload(true);
-            Scenes.Remove(_bundle);
-            Plugin.Log.LogInfo($"[arena3d] {_bundle} changed on disk, reloading");
-        }
-        if (!Scenes.ContainsKey(_bundle))
-        {
-            var host = new GameObject("NewAge2D.Arena3DLoader");
-            UnityEngine.Object.DontDestroyOnLoad(host);
-            host.hideFlags = HideFlags.HideAndDontSave;
-            _loading = true;
-            host.AddComponent<Loader>().StartCoroutine(Load(_bundle));
+            Host().StartCoroutine(Prepare(_bundle));
             while (_loading) yield return null;
         }
-        if (!Scenes.TryGetValue(_bundle, out var scene) || scene.Prefab == null || grid == null || !alive()) yield break;
+        if (!Scenes.TryGetValue(_bundle, out var scene) || scene.Prefab == null || grid == null || !alive())
+        {
+            EdgeRing = true;
+            yield break;
+        }
         Cfg = scene.Cfg ?? new ArenaCfg();
+        EdgeRing = Cfg.edgeRing;
 
         Save();
-        _root = UnityEngine.Object.Instantiate(scene.Prefab, grid, false);
+        var steps = new System.Text.StringBuilder();
+        var step = System.Diagnostics.Stopwatch.StartNew();
+        void Mark(string name)
+        {
+            steps.Append(' ').Append(name).Append(' ').Append(step.ElapsedMilliseconds);
+            step.Restart();
+        }
+        bool reused = scene.Ready != null;
+        if (scene.Ready != null)
+        {
+            _root = scene.Ready;
+            scene.Ready = null;
+            _root.transform.SetParent(grid, false);
+        }
+        else _root = UnityEngine.Object.Instantiate(scene.Prefab, grid, false);
         _root.name = "NewAge2D.Arena3D";
         _root.layer = grid.gameObject.layer;
         _root.transform.localPosition = Vector3.zero;
         _root.transform.localRotation = Quaternion.identity;
         _root.transform.localScale = Vector3.one;
+        Mark(reused ? "activate" : "instantiate");
+        var views = _root.GetComponentsInChildren<Renderer>(true);
         DimMapLights();
         QualitySettings.shadowDistance = 120f;
         QualitySettings.shadowCascades = 4;
@@ -195,12 +388,15 @@ internal sealed class Arena3D
         QualitySettings.pixelLightCount = Mathf.Max(QualitySettings.pixelLightCount, 32);
         QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
         QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
-        float hour = TestHour >= 0f ? TestHour : (float)Kyiv.Now.TimeOfDay.TotalHours;
-        if (Cfg.dusk >= 0f) hour = Cfg.dusk;
+        if (Application.targetFrameRate <= 0 || Application.targetFrameRate > FrameCap) Application.targetFrameRate = FrameCap;
+        float hour = HourNow(Cfg);
+        scene.Bakes.TryGetValue(ArenaBake.Preset(hour), out var bake);
+        if (bake != null) hour = ArenaBake.Hour(bake.Name);
         bool night = ArenaLook.IsNight(hour);
         ArenaLook.Use(Cfg);
         var look = _root.AddComponent<ArenaLook>();
         look.Apply(_root.transform, hour, _flame);
+        Mark("look");
         float ground = _root.transform.position.y;
         var mid = _root.transform.position;
         if (eye != null)
@@ -224,13 +420,17 @@ internal sealed class Arena3D
             glow.renderMode = LightRenderMode.ForcePixel;
         }
         _root.AddComponent<ArenaNight>().Init(_root.transform, eye, Cfg, look.NightGrade, night, mid);
+        Mark("night");
         int vertexLights = LightBudget(_root.transform, mid);
         _root.AddComponent<ArenaLite>().Init(_root.transform, mid);
+        Mark("lights");
         if (_fxBundle != null) _root.AddComponent<ArenaFx>().Init(_root.transform, _fxBundle, Cfg, look.SunDir, night, look.SunColor);
         if (_fxBundle != null && Cfg.storm)
             _root.AddComponent<ArenaStorm>().Init(_root.transform, Cfg, _fxBundle.LoadAsset<Material>("storm_streak"), _fxBundle.LoadAsset<Material>("storm_cloud"), night, look.SunColor);
+        Mark("fx");
         if (eye != null) eye.backgroundColor = ArenaCfg.Hex(night ? Cfg.bgNight : Cfg.bgDay);
         if (eye != null) _root.AddComponent<ArenaOcclude>().Init(_root.transform, eye, Cfg);
+        Mark("occlude");
         if (eye != null && _post != null)
         {
             _eye = eye;
@@ -249,10 +449,12 @@ internal sealed class Arena3D
         int lowered = BelowDolls(_root);
         float doll = Mathf.Lerp(1f, Mathf.Clamp(Cfg.nightDoll, 0.2f, 1.5f), look.NightGrade);
         DollTint = new Color(DollTint.r * doll, DollTint.g * doll, DollTint.b * doll, DollTint.a);
+        if (bake != null) _bakeOn = bake.Apply(views, _root.transform);
+        Mark("rest");
         Any = true;
         EdgeRing = Cfg.edgeRing;
         shown?.Invoke();
-        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}, vertex lights {vertexLights}");
+        Plugin.Log.LogInfo($"[arena3d] {_bundle} shown, storm {Cfg.storm}, game hour {hour:0.0}, night grade {look.NightGrade:0.00}, post {(_postOn != null ? "on" : "off")}, map lights dimmed {_lights.Count}, effects under dolls {lowered}, vertex lights {vertexLights}, ms:{steps}");
     }
 
     private const int PixelLights = 8;
@@ -331,10 +533,13 @@ internal sealed class Arena3D
         _shadowResolution = QualitySettings.shadowResolution;
         _lodBias = QualitySettings.lodBias;
         _aniso = QualitySettings.anisotropicFiltering;
+        _frameRate = Application.targetFrameRate;
     }
 
     internal void Detach()
     {
+        ArenaBake.Undo(_bakeOn);
+        _bakeOn = null;
         Any = false;
         EdgeRing = true;
         DollTint = Color.white;
@@ -366,5 +571,6 @@ internal sealed class Arena3D
         QualitySettings.shadowResolution = _shadowResolution;
         QualitySettings.lodBias = _lodBias;
         QualitySettings.anisotropicFiltering = _aniso;
+        Application.targetFrameRate = _frameRate;
     }
 }

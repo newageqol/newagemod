@@ -25,6 +25,8 @@ namespace NewAgeQoL
         private const int Most = 1000;
         private const long Fresh = 7L * 24L * 3600L;
 
+        internal static string Version = Plugin.Version;
+
         private sealed class Letter
         {
             internal int Id;
@@ -177,7 +179,7 @@ namespace NewAgeQoL
             try { who = Controllers.User?.UserInfo?.Login ?? ""; }
             catch { }
             int read = _seen != null ? _seen.Value : 0;
-            var req = UnityWebRequest.Get(url + "?box=" + box + "&after=" + _last + "&read=" + read + "&who=" + Uri.EscapeDataString(who) + "&v=" + Plugin.Version + (Chars.Who > 0 ? "&id=" + Chars.Who : ""));
+            var req = UnityWebRequest.Get(url + "?box=" + box + "&after=" + _last + "&read=" + read + "&who=" + Uri.EscapeDataString(who) + "&v=" + Version +(Chars.Who > 0 ? "&id=" + Chars.Who : ""));
             req.timeout = 15;
             req.redirectLimit = 0;
             req.SetRequestHeader("User-Agent", "NewAgeQoL");

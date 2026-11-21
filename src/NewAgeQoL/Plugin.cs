@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.54.0";
+        public const string Version = "0.55.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -69,6 +69,10 @@ namespace NewAgeQoL
         internal static ConfigEntry<bool> CfgWalkGlow;
         internal static ConfigEntry<float> CfgSoundVolume;
         internal static ConfigEntry<float> CfgPmVolume;
+        internal static ConfigEntry<bool> CfgTaskbarBlink;
+        internal static ConfigEntry<bool> CfgDesktopToasts;
+        internal static ConfigEntry<bool> CfgQuickExit;
+        internal static ConfigEntry<string> CfgSpellOrder;
         internal static ConfigEntry<float> CfgMusicVolume;
         internal static ConfigEntry<float> CfgSmallScreen;
         internal static ConfigEntry<float> CfgPotionScale;
@@ -118,6 +122,7 @@ namespace NewAgeQoL
             }
             Health.Listen();
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
+            QuickExit.Arm();
             Chars.Home(Config);
             Lang.Bind(Config);
             AssetSync.Boot();
@@ -236,6 +241,8 @@ namespace NewAgeQoL
                 "Что запасной набор взял из хранилища, пары «номер вещи:количество». При возврате эти вещи уезжают обратно в хранилище, остальные остаются в сумке. Заполняется само.", e => CfgManikinTaken = e);
             Chars.Fresh("Artifacts", "StorageCache", "",
                 "Что мод в последний раз видел в хранилище, пары «номер вещи:количество». Нужно, чтобы окно запасного набора показывало вещи из хранилища, когда ты не в нём. Заполняется само.", e => CfgStorageCache = e);
+            CfgQuickExit = Config.Bind("Mod", "QuickExit", true,
+                "Быстрый выход: когда игра всё сохранила и Unity дописала лог, процесс завершается сразу, а не освобождает память ещё 10–20 секунд. Иначе повторный запуск пишет, что игра ещё запущена.");
             CfgOnlineClanCache = Config.Bind("Online", "ClanIconCache", "",
                 "Узнанные коды значков кланов для окна «Кто в игре» в виде «значок:код» через запятую. Заполняется само, чтобы значки появлялись сразу.");
             CfgOnlineClanNames = Config.Bind("Online", "ClanNameCache", "",
@@ -253,12 +260,18 @@ namespace NewAgeQoL
                 "Убирать залипшую подсветку клеток: в фазе боя снимаются остатки зоны ходьбы, в фазе ходьбы подсвечены только клетки, куда можно дойти с текущими очками хода. Круг вокруг монолитов, мемориалов и призванных существ мод переставляет следом за хозяином, если того перенесло по полю (например, «Изгибом реальности»), и снимает круг, когда хозяина не стало. Любая другая заливка клеток снимается как забытая: остаются только своё выделение, круги живых хозяев, прицел мода и метка открытого окна выбора действия. Заодно мод возвращает свой цвет клеткам, на которых краска осталась от выделения, которое игра забыла снять.", e => CfgWalkGlow = e);
             Chars.Own("Combat", "EffectsWindow", "",
                 "Положение окна «Эффекты» в виде «x;y». Заполняется само при перетаскивании.", e => CfgEffectsWindow = e);
+            Chars.Fresh("Combat", "SpellOrder", "",
+                "Порядок заклинаний на панели в бою, номера через запятую. Заполняется само, когда переставляешь заклинания мышью после галочки слева от панели. Заклинания, которых тут нет, идут в конце в обычном порядке. Пусто — обычный порядок.", e => CfgSpellOrder = e);
             Chars.Own("Help", "Folded", false,
                 "Столбец «Помощь» справа свёрнут. Меняется кнопкой со стрелкой над столбцом, состояние сохраняется между боями и входами в игру.", e => CfgHelpFolded = e);
             Chars.Own("Sounds", "FlashVolume", 1f,
                 "Громкость звуков боя из старого клиента (начало боя, конец раунда, рог приглашения), от 0 (тишина) до 1. Звук личных сообщений настраивается отдельно. Не зависит от громкости в настройках игры: та остаётся для звуков самой игры. Заменённые звуки игры молчат, пока этот звук мода включён.", e => CfgSoundVolume = e);
             Chars.Own("Sounds", "PrivateVolume", 1f,
                 "Громкость звука личных сообщений и сообщений команды, от 0 (тишина) до 1. Не зависит от громкости звуков боя: можно выключить звуки боя и слышать приват. Свой звук привата игры молчит всегда, поэтому 0 — полная тишина.", e => CfgPmVolume = e);
+            Chars.Own("Sounds", "TaskbarBlink", true,
+                "Мигать значком игры на панели задач, когда игра свёрнута или не в фокусе, а начался твой бой, пришло личное сообщение, к тебе обратились в общем, клановом, альянсовом или командном чате, пришло объявление администрации или приглашение на ивент (кроме турниров). Вход друзей, созданные хаотические бои, контракты и журнал боя не в счёт. Мигание кончается, когда переключишься на игру.", e => CfgTaskbarBlink = e);
+            Chars.Own("Sounds", "DesktopToasts", true,
+                "Показывать уведомление Windows внизу справа, когда игра свёрнута или не в фокусе: текст личного сообщения, кто и где к тебе обратился, начало твоего боя, объявление или приглашение на ивент по твоему уровню. Длинный текст Windows обрезает на 255 знаках.", e => CfgDesktopToasts = e);
             Chars.Own("Sounds", "CombatMusicVolume", 0.5f,
                 "Громкость музыки боя, от 0 (выключена) до 1. Музыка играет только в своём бою против живых игроков: каждый бой свой трек, когда трек кончается, плавно начинается следующий. Фоновая музыка игры при включённом моде всегда молчит.", e => CfgMusicVolume = e);
             CfgNewPlaces = Config.Bind("Interface", "NewLocations", false,
@@ -597,6 +610,9 @@ namespace NewAgeQoL
                 new Part { Name = "Chaotic.Tick", Do = Chaotic.Tick },
                 new Part { Name = "ClaimRoster.Tick", Do = ClaimRoster.Tick },
                 new Part { Name = "Sounds.Tick", Do = Sounds.Tick },
+                new Part { Name = "Blink.Tick", Do = Blink.Tick },
+                new Part { Name = "MapCenter.Tick", Do = MapCenter.Tick },
+                new Part { Name = "RangeSync.Tick", Do = RangeSync.Tick },
                 new Part { Name = "CombatMusic.Tick", Do = CombatMusic.Tick },
                 new Part { Name = "AssetSync.ArenaTick", Do = AssetSync.ArenaTick },
                 new Part { Name = "Curtain.Tick", Do = Curtain.Tick },
@@ -653,6 +669,7 @@ namespace NewAgeQoL
             DressDrag.Shutdown();
             CardAsk.Shutdown();
             Claims.Shutdown();
+            Blink.Shutdown();
             DiskJournal.Detach(Logger);
         }
 

@@ -162,9 +162,21 @@ namespace NewAgeQoL
             Remember(rune, fid, "chosen by hand after the rune button");
         }
 
+        private static float _warmAt;
+
+        private static void Warm()
+        {
+            if (Time.unscaledTime < _warmAt) return;
+            _warmAt = Time.unscaledTime + 2f;
+            if (!SideButtons.InWorld()) return;
+            foreach (int rune in Runes)
+                if (Has(rune)) Flasks.Exact(rune);
+        }
+
         internal static void Tick()
         {
             Watch();
+            Warm();
             if (_offered == null || _heardAt <= 0f) return;
             if (Flasks.Scanning || Flasks.ScannedAt <= _heardAt) return;
             if (RealTime.Now - _heardAt > 30f) { _offered = null; return; }

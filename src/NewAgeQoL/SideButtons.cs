@@ -28,6 +28,7 @@ namespace NewAgeQoL
             internal float PressAt;
             internal int Col;
             internal bool Right;
+            internal bool Pop;
             internal bool Fight;
             internal int Order;
             internal int Seat;
@@ -188,6 +189,18 @@ namespace NewAgeQoL
                 Badge = () => Travel.Busy ? "▶" : "",
                 Click = TravelMenu.Toggle,
             },
+            new Entry
+            {
+                Name = GoName,
+                Right = true,
+                Col = 1,
+                Hint = () => Lang.T("Руны портала"),
+                Enabled = () => !ClaimLocked() && PopCount() > 0,
+                Sprite = GoIcon,
+                Badge = () => Teleports.Busy ? "▶" : "",
+                WhiteBadge = true,
+                Click = TogglePop,
+            },
         };
 
         static SideButtons()
@@ -198,7 +211,7 @@ namespace NewAgeQoL
                 Buttons.Add(new Entry
                 {
                     Name = "QoLRuneButton" + rune,
-                    Right = true,
+                    Pop = true,
                     Col = 1,
                     Hint = () => Teleports.Hint(rune),
                     Badge = () => Teleports.Running(rune) ? "▶" : "",
@@ -210,6 +223,79 @@ namespace NewAgeQoL
                 });
             }
             for (int i = 0; i < Buttons.Count; i++) Buttons[i].Seat = i;
+        }
+
+        private const string GoName = "QoLGoButton";
+        private const int PopColumns = 4;
+        private const string PortalFace = "Portal_ava_small";
+
+        private static bool _popOpen;
+        private static RectTransform _panelPop;
+
+        private static int PopCount()
+        {
+            int count = 0;
+            foreach (var b in Buttons) if (b.Pop && Alive(b)) count++;
+            return count;
+        }
+
+        private static Sprite _portal;
+
+        private static Sprite GoIcon()
+        {
+            if (_portal == null || _portal.texture == null)
+            {
+                Sprite face = null;
+                try { face = AtlasUtils.GetNpcAvatar(PortalFace); }
+                catch { }
+                if (Ok(face)) _portal = face;
+            }
+            if (_portal != null && _portal.texture != null) return _portal;
+            foreach (int rune in Teleports.Runes)
+                if (Teleports.Has(rune))
+                {
+                    var icon = Teleports.Icon(rune);
+                    if (icon != null && icon.texture != null) return icon;
+                }
+            return null;
+        }
+
+        private static void TogglePop()
+        {
+            if (_popOpen) { ClosePop(); return; }
+            _popOpen = true;
+            _next = 0f;
+            HideHint();
+        }
+
+        internal static void ClosePop()
+        {
+            if (!_popOpen) return;
+            _popOpen = false;
+            _next = 0f;
+            HideHint();
+            if (_panelPop != null && _panelPop.gameObject.activeSelf) _panelPop.gameObject.SetActive(false);
+            foreach (var b in Buttons)
+                if (b.Pop && b.Go != null && b.Go.activeSelf) b.Go.SetActive(false);
+        }
+
+        private static bool Over(RectTransform rect)
+        {
+            if (rect == null || !rect.gameObject.activeInHierarchy) return false;
+            var canvas = rect.GetComponentInParent<Canvas>();
+            var root = canvas != null && canvas.rootCanvas != null ? canvas.rootCanvas : canvas;
+            var eye = root != null && root.renderMode != RenderMode.ScreenSpaceOverlay ? root.worldCamera : null;
+            return RectTransformUtility.RectangleContainsScreenPoint(rect, Input.mousePosition, eye);
+        }
+
+        private static void PopInput()
+        {
+            if (!_popOpen) return;
+            if (!InWorld() || InCombat() || ClaimLocked() || PopCount() == 0) { ClosePop(); return; }
+            if (Input.GetKeyDown(KeyCode.Escape)) { ClosePop(); return; }
+            if (!Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1)) return;
+            if (Over(_panelPop) || Over(ButtonRect(GoName))) return;
+            ClosePop();
         }
 
         internal static float LeftWidth => _panel != null && _panel.gameObject.activeSelf ? _panel.sizeDelta.x : 0f;
@@ -281,6 +367,7 @@ namespace NewAgeQoL
         internal static void Tick()
         {
             Slide();
+            PopInput();
             TravelMenu.Hover();
             Workshop.Hover();
             Flashes();
@@ -336,6 +423,7 @@ namespace NewAgeQoL
             {
                 if (_panel != null && _panel.gameObject.activeSelf) _panel.gameObject.SetActive(false);
                 if (_panelRight != null && _panelRight.gameObject.activeSelf) _panelRight.gameObject.SetActive(false);
+                if (_panelPop != null && _panelPop.gameObject.activeSelf) _panelPop.gameObject.SetActive(false);
             }
             TravelMenu.Tick(ready);
             Workshop.Tick(ready);
@@ -614,20 +702,22 @@ namespace NewAgeQoL
             Plugin.Trace("[buttons] button layer: " + order);
         }
 
-        private static int Side(Entry entry) => entry.Right ? 1 : 0;
+        private static int Side(Entry entry) => entry.Pop ? 2 : entry.Right ? 1 : 0;
 
         private static int SeatOf(Entry entry, bool fight) => fight && entry.FightSeat >= 0 ? entry.FightSeat : entry.Seat;
 
-        private static bool Docked(RectTransform panel) => panel != null && panel == _panelRight;
+        private static bool Docked(RectTransform panel) => panel != null && (panel == _panelRight || panel == _panelPop);
+
+        private static RectTransform PanelNo(int which) => which == 2 ? _panelPop : which == 1 ? _panelRight : _panel;
 
         private static RectTransform Panel(RectTransform parent, int which)
         {
-            if (which == 1 && _panelRight != null) return _panelRight;
-            if (which == 0 && _panel != null) return _panel;
+            var had = PanelNo(which);
+            if (had != null) return had;
             if (parent == null) return null;
 
-            var go = new GameObject(which == 1 ? "QoLPanelRight" : "QoLPanel", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(Slider(parent, which), false);
+            var go = new GameObject(which == 2 ? "QoLPanelPop" : which == 1 ? "QoLPanelRight" : "QoLPanel", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(Slider(parent, which == 2 ? 1 : which), false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -639,9 +729,11 @@ namespace NewAgeQoL
             back.sprite = OnlineWindow.Rounded(16);
             back.type = Image.Type.Sliced;
             WardrobeLook.Frame(go, WardrobeLook.Edge);
-            back.raycastTarget = false;
+            back.raycastTarget = which == 2;
 
-            if (which == 1) _panelRight = rt; else _panel = rt;
+            if (which == 2) { _panelPop = rt; rt.SetAsLastSibling(); }
+            else if (which == 1) _panelRight = rt;
+            else _panel = rt;
             return rt;
         }
 
@@ -658,15 +750,17 @@ namespace NewAgeQoL
             }
             if (_panel != null) Object.Destroy(_panel.gameObject);
             if (_panelRight != null) Object.Destroy(_panelRight.gameObject);
+            if (_panelPop != null) Object.Destroy(_panelPop.gameObject);
             _panel = null;
             _panelRight = null;
+            _panelPop = null;
             if (_status != null) { Object.Destroy(_status.gameObject); _status = null; }
             if (_hint != null) { Object.Destroy(_hint.gameObject); _hint = null; }
         }
 
         private static void LayoutSide(int which, float side, float step)
         {
-            var panel = which == 1 ? _panelRight : _panel;
+            var panel = PanelNo(which);
             if (panel == null) return;
             bool fixedSeats = which >= 1;
 
@@ -685,7 +779,8 @@ namespace NewAgeQoL
             }
             if (!panel.gameObject.activeSelf) panel.gameObject.SetActive(true);
 
-            int perColumn = which >= 1 ? Stack(shown, step)
+            int perColumn = which == 2 ? Mathf.Max(1, Mathf.CeilToInt(shown / (float)PopColumns))
+                : which == 1 ? Stack(shown, step)
                 : InCombat() ? 1
                 : Mathf.Max(1, Mathf.FloorToInt((Space() - Pad * 2f + Gap) / step));
             int columns = (shown + perColumn - 1) / perColumn;
@@ -756,7 +851,15 @@ namespace NewAgeQoL
             Vector2 size = panel.sizeDelta;
             Rect area = parent.rect;
             float x, y;
-            if (which >= 1)
+            if (which == 2)
+            {
+                var dock = _panelRight;
+                if (dock == null) return;
+                Vector2 low = dock.anchoredPosition;
+                x = Mathf.Max(area.xMin + Gap, low.x + dock.sizeDelta.x - size.x);
+                y = Mathf.Min(low.y + dock.sizeDelta.y + Gap, area.yMax - Gap - size.y);
+            }
+            else if (which >= 1)
             {
                 var canvas = parent.GetComponentInParent<Canvas>();
                 float scale = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
@@ -837,6 +940,7 @@ namespace NewAgeQoL
             float step = side + Gap;
             LayoutSide(0, side, step);
             LayoutSide(1, side, step);
+            LayoutSide(2, side, step);
         }
 
         private static bool Alive(Entry entry)
@@ -847,6 +951,7 @@ namespace NewAgeQoL
         private static bool Shown(Entry entry)
         {
             if (!Alive(entry)) return false;
+            if (entry.Pop && !_popOpen) return false;
             return entry.Fight || !InCombat();
         }
 
@@ -1037,7 +1142,7 @@ namespace NewAgeQoL
 
         private static bool ToLeft(RectTransform panel)
         {
-            return panel != null && panel == _panelRight;
+            return panel != null && (panel == _panelRight || panel == _panelPop);
         }
 
         private static void ShowHint(RectTransform near, string text)
@@ -1340,6 +1445,7 @@ namespace NewAgeQoL
                     if (pressed.Usable != null && !pressed.Usable()) return;
                     Windows.Shut(pressed.Name);
                     clickAction();
+                    if (pressed.Pop) ClosePop();
                 });
 
                 var trigger = go.GetComponent<EventTrigger>();

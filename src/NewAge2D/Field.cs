@@ -71,7 +71,11 @@ internal static class Field
         try
         {
             _parsed = Parse(locationXml);
-            if (_parsed != null && _parsed.Combat && Plugin.FlashField) Fetch(_parsed, null);
+            if (_parsed != null && _parsed.Combat && Plugin.FlashField)
+            {
+                Fetch(_parsed, null);
+                Arena3D.Preload(_parsed);
+            }
         }
         catch (Exception ex)
         {
