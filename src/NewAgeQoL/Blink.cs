@@ -80,7 +80,18 @@ namespace NewAgeQoL
         private static extern IntPtr LoadIcon(IntPtr instance, IntPtr name);
 
         private static readonly Regex Tags = new Regex("<[^>]*>", RegexOptions.Compiled);
-        private static readonly Regex Levels = new Regex(@"(\d{1,3})\s*[-–—]\s*(\d{1,3})", RegexOptions.Compiled);
+        private static readonly Regex Levels = new Regex(@"(?<![\d:])(\d{1,3})\s*[-–—]\s*(\d{1,3})(?![\d:])", RegexOptions.Compiled);
+        private static readonly Regex LevelsFrom = new Regex(@"(?<![\d:])(\d{1,3})\s*\+", RegexOptions.Compiled);
+
+        private static readonly string[] Invites = { "Приглашаем", "Запрошуємо", "We invite", "Invit" };
+
+        private static readonly string[] NotEvents =
+        {
+            "турнир", "турнір", "tournament",
+            "Ваш друг", "Your friend",
+            "хаотический бой", "хаотичний бій", "хаотичному бою", "chaotic",
+            "получил Контракт", "получил Договор", "отримав Контракт", "отримав Договір", "received Contract", "received a Contract"
+        };
 
         private static IntPtr _window;
         private static IntPtr _icon;
@@ -331,12 +342,12 @@ namespace NewAgeQoL
         private static bool Event(EChatMessageType kind, string text)
         {
             if (text.Length == 0) return false;
-            if (text.IndexOf("турнир", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            if (text.IndexOf("Ваш друг", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            if (text.IndexOf("хаотический бой", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            if (text.IndexOf("получил Контракт", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            if (text.IndexOf("получил Договор", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            bool invite = text.StartsWith("Приглашаем", StringComparison.OrdinalIgnoreCase);
+            foreach (var word in NotEvents)
+                if (text.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            bool invite = false;
+            foreach (var word in Invites)
+                if (text.StartsWith(word, StringComparison.OrdinalIgnoreCase)) { invite = true; break; }
+            if (!invite && kind == EChatMessageType.MSG_INFO) invite = Levels.IsMatch(text) || LevelsFrom.IsMatch(text);
             if (invite) return Fits(text);
             return kind == EChatMessageType.MSG_ADMIN;
         }
@@ -347,11 +358,16 @@ namespace NewAgeQoL
             try { level = Controllers.User.UserInfo.Level; } catch { }
             if (level <= 0) return true;
             var range = Levels.Match(text);
-            if (!range.Success) return true;
-            int low = int.Parse(range.Groups[1].Value);
-            int high = int.Parse(range.Groups[2].Value);
-            if (low > high) { int t = low; low = high; high = t; }
-            return level >= low && level <= high;
+            if (range.Success)
+            {
+                int low = int.Parse(range.Groups[1].Value);
+                int high = int.Parse(range.Groups[2].Value);
+                if (low > high) { int t = low; low = high; high = t; }
+                return level >= low && level <= high;
+            }
+            var from = LevelsFrom.Match(text);
+            if (from.Success) return level >= int.Parse(from.Groups[1].Value);
+            return true;
         }
 
         private static bool Named(string text)
