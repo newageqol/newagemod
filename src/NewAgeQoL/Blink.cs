@@ -317,12 +317,15 @@ namespace NewAgeQoL
             var parts = time.Trim().Split(':');
             int h, mi;
             if (parts.Length < 2 || !int.TryParse(parts[0], out h) || !int.TryParse(parts[1], out mi)) return false;
-            var game = DateTime.UtcNow.AddHours(3);
-            int now = game.Hour * 60 + game.Minute;
             int then = h * 60 + mi;
-            int gap = Math.Abs(now - then);
-            gap = Math.Min(gap, 1440 - gap);
-            return gap > 3;
+            var utc = DateTime.UtcNow;
+            return Gap(utc.AddHours(2), then) > 3 && Gap(utc.AddHours(3), then) > 3;
+        }
+
+        private static int Gap(DateTime clock, int then)
+        {
+            int gap = Math.Abs(clock.Hour * 60 + clock.Minute - then);
+            return Math.Min(gap, 1440 - gap);
         }
 
         private static bool Event(EChatMessageType kind, string text)

@@ -780,7 +780,6 @@ namespace NewAgeQoL
             row.childControlHeight = true;
             row.childForceExpandWidth = false;
             row.childForceExpandHeight = false;
-            if (Mail.Any) Fixed(Wardrobe.GameButton(rowGo.transform, Lang.T("Переписка"), Mail.Open, false));
             Fixed(Wardrobe.GameButton(rowGo.transform, Lang.T("Выбрать файлы"), Choose, false));
             var send = Wardrobe.GameButton(rowGo.transform, Lang.T("Отправить"), Go, false);
             Fixed(send);

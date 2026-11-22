@@ -101,8 +101,6 @@ namespace NewAgeQoL
             }
         }
 
-        internal static bool Any => Letters.Count > 0;
-
         internal static void Wake() => _askAt = 0f;
 
         private static string Where()
