@@ -21,6 +21,8 @@ namespace NewAgeQoL
             internal System.Func<string> Art;
             internal Image Back;
             internal System.Func<string> Badge;
+            internal System.Func<string> Word;
+            internal Text Said;
             internal bool WhiteBadge;
             internal System.Action Click;
             internal System.Action<RectTransform> RightClick;
@@ -205,6 +207,29 @@ namespace NewAgeQoL
 
         static SideButtons()
         {
+            int at = Buttons.FindIndex(b => b.Name == GoName);
+            for (int i = 0; i < Flasks.Rows; i++)
+            {
+                int row = i;
+                Buttons.Insert(at + i, new Entry
+                {
+                    Name = "QoLFlaskButton" + row,
+                    Right = true,
+                    Col = 1,
+                    Hint = () => Flasks.Shown(row) ? Flasks.Hint(row) : Lang.F(row < 3 ? "{0}: банка не выбрана — щёлкни, чтобы выбрать" : "{0}: заряд не выбран — щёлкни, чтобы выбрать", Flasks.Title(row)),
+                    Badge = () => Flasks.Busy(row) ? "…" : Flasks.Shown(row) ? Flasks.Badge(row) : "",
+                    Word = () => Flasks.Shown(row) ? null : Flasks.Word(row),
+                    WhiteBadge = true,
+                    Usable = () => !Flasks.Busy(row) && !Artifacts.Busy,
+                    Sprite = () => Flasks.Icon(row),
+                    Click = () =>
+                    {
+                        if (Flasks.Shown(row)) Flasks.Use(row);
+                        else FlaskPicker.Near(row, ButtonRect("QoLFlaskButton" + row));
+                    },
+                    RightClick = r => FlaskPicker.Near(row, r),
+                });
+            }
             foreach (int one in Teleports.Runes)
             {
                 int rune = one;
@@ -391,12 +416,19 @@ namespace NewAgeQoL
                 }
                 if (b.Go == null) Create(b);
                 if (b.Go == null) continue;
-                var sprite = Tile(b) ?? b.Sprite();
+                string word = b.Word != null ? b.Word() : null;
+                bool worded = !string.IsNullOrEmpty(word);
+                var sprite = worded ? null : Tile(b) ?? b.Sprite();
                 if (b.Icon != null)
                 {
                     if (sprite != null && b.Icon.sprite != sprite) b.Icon.sprite = sprite;
-                    bool drawn = b.Icon.sprite != null && b.Icon.sprite.texture != null;
+                    bool drawn = !worded && b.Icon.sprite != null && b.Icon.sprite.texture != null;
                     if (b.Icon.enabled != drawn) b.Icon.enabled = drawn;
+                }
+                if (b.Said != null)
+                {
+                    if (b.Said.text != (word ?? "")) b.Said.text = word ?? "";
+                    if (b.Said.enabled != worded) b.Said.enabled = worded;
                 }
                 if (b.Frame != null && b.Frame.enabled) b.Frame.enabled = false;
 
@@ -747,6 +779,7 @@ namespace NewAgeQoL
                 b.Frame = null;
                 b.Back = null;
                 b.Count = null;
+                b.Said = null;
             }
             if (_panel != null) Object.Destroy(_panel.gameObject);
             if (_panelRight != null) Object.Destroy(_panelRight.gameObject);
@@ -1018,7 +1051,7 @@ namespace NewAgeQoL
                 else if (!string.IsNullOrEmpty(Flasks.Status))
                 {
                     line = Flasks.Status;
-                    owner = Named("QoLTownButton");
+                    owner = Named("QoLFlaskButton" + Flasks.StatusRow);
                 }
                 if (owner == null || owner.Go == null || !Shown(owner)) owner = Anchor();
                 var host = owner != null ? owner.Go : null;
@@ -1431,6 +1464,7 @@ namespace NewAgeQoL
                 if (frame != null) frame.enabled = false;
 
                 if (entry.Badge != null) entry.Count = Badge(rt, side, entry.Badge(), entry.WhiteBadge);
+                if (entry.Word != null) entry.Said = Said(rt, side);
 
                 var button = go.GetComponent<Button>();
                 if (button == null) button = go.AddComponent<Button>();
@@ -1476,6 +1510,33 @@ namespace NewAgeQoL
                 if (go != null) UnityEngine.Object.Destroy(go);
                 Plugin.Fault("[buttons] " + e);
             }
+        }
+
+        private static Text Said(RectTransform host, float side)
+        {
+            var go = new GameObject("word", typeof(RectTransform), typeof(Text), typeof(Outline));
+            go.transform.SetParent(host, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(side * 0.06f, 0f);
+            rt.offsetMax = new Vector2(-side * 0.06f, 0f);
+            rt.localScale = Vector3.one;
+            var label = go.GetComponent<Text>();
+            label.font = GameFont();
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = WardrobeLook.Bright;
+            label.raycastTarget = false;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 9;
+            label.resizeTextMaxSize = Mathf.Max(11, Mathf.RoundToInt(side * 0.26f));
+            label.enabled = false;
+            go.GetComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+            return label;
         }
 
         private static Text Badge(RectTransform host, float side, string text, bool white)

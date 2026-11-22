@@ -59,6 +59,8 @@ namespace NewAgeQoL
                 B(Lang.T("Новые 3D-арены в боях"), Plugin.CfgNewArenas),
                 new Header { Title = Lang.T("Кнопки") },
                 B(Lang.T("Возврат в Иллениум ведёт на арену, к турнирам"), Plugin.CfgTownTournament),
+                B(Lang.T(NuarmarRush.Title), NuarmarRush.Enabled()),
+                B(Lang.T(DozenRush.Title), DozenRush.Enabled()),
                 B(Lang.T("Кнопка запасного набора"), Plugin.CfgArtifactButtons),
                 Artifacts.Pending > 0
                     ? A(Lang.F("Ждут возврата: {0}", Artifacts.Pending), Lang.T("Забыть"), Artifacts.ForgetStash)

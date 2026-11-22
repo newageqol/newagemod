@@ -398,7 +398,7 @@ namespace NewAgeQoL
                     + "; removed fights " + fights.Count + " [" + string.Join(",", fights) + "], claims " + claims.Count + " [" + string.Join(",", claims) + "]");
         }
 
-        private static int Map()
+        internal static int Map()
         {
             try
             {

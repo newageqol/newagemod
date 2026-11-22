@@ -35,9 +35,70 @@ namespace NewAgeQoL
             internal string Body = "";
         }
 
+        internal sealed class Mark
+        {
+            internal Func<bool> On;
+            internal Func<Sprite> Icon;
+            internal Func<string> Title;
+            internal Func<string> Text;
+        }
+
+        private static readonly List<Mark> Marks = new List<Mark>();
+
+        internal static void Add(Func<bool> on, Func<Sprite> icon, Func<string> title, Func<string> text)
+        {
+            Marks.Add(new Mark { On = on, Icon = icon, Title = title, Text = text });
+            _sig = "";
+        }
+
+        private static bool Lit(Mark mark)
+        {
+            try { return mark.On != null && mark.On(); }
+            catch { return false; }
+        }
+
+        private static Mark MarkOf(int id) => id < 0 && -id - 1 < Marks.Count ? Marks[-id - 1] : null;
+
+        static Enchantments()
+        {
+            Add(() => Plugin.CfgFlaskAfterFight != null && Plugin.CfgFlaskAfterFight.Value, () => Flasks.IconFor(LifeFlask),
+                () => Lang.T("Пополнение после боя"),
+                () => Lang.T("После каждого боя мод сам пьёт выбранные банки жизни, маны и энергии до полного.\nВыключается в «Настройках мода», блок «Банки»."));
+            Add(() => Plugin.CfgChargesAfterFight != null && Plugin.CfgChargesAfterFight.Value, () => Flasks.IconFor(Mushroom),
+                () => Lang.T("Пополнение зарядов после боя"),
+                () => Lang.T("После каждого боя мод сам восполняет заряды выбранными грибами до полного.\nВыключается в «Настройках мода», блок «Банки»."));
+            Add(() => NuarmarRush.Enabled() != null && NuarmarRush.Enabled().Value, Admiral,
+                () => Lang.T("Автовход в Нуармар"),
+                () => Lang.T("По объявлению о Нуармаре сразу иду в турниры и вхожу в заявку.\nЕсли в этот момент ты в бою или в другой заявке — объявление пропускается.\nВыключается в «Настройках мода»."));
+            Add(() => DozenRush.Enabled() != null && DozenRush.Enabled().Value, Medal,
+                () => Lang.T("Автовход в Дюжину клинков"),
+                () => Lang.T("По объявлению о Дюжине клинков для моего уровня иду в турниры и вхожу в заявку.\nЕсли в этот момент ты в бою или в другой заявке — объявление пропускается.\nВыключается в «Настройках мода»."));
+        }
+
+        private const int LifeFlask = 426;
+        private const int Mushroom = 16852;
+        private const int GoldLevel = 17;
+
+        private static Sprite Admiral() => Icons.Flash("nuarmar");
+
+        private static Sprite Medal()
+        {
+            try { return AtlasUtils.GetTournamentImage(GoldLevel); } catch { return null; }
+        }
+
+        private static Sprite _lit;
+
+        private static Sprite LitFrame()
+        {
+            if (_lit != null && _lit.texture != null) return _lit;
+            try { _lit = AtlasUtils.GetStateHighlightingSprite(EHighlightingType.Positive); } catch { _lit = null; }
+            return _lit;
+        }
+
         private static GameObject _canvasGo;
         private static Canvas _canvas;
         private static RectTransform _root;
+        private static RectTransform _marks;
         private static readonly List<Cell> Cells = new List<Cell>();
         private static readonly Dictionary<int, Known> Times = new Dictionary<int, Known>();
         private sealed class Owed
@@ -55,7 +116,7 @@ namespace NewAgeQoL
         private static double _heldAt;
         private static GameObject _tipGo;
         private static Text _tipText;
-        private static int _tipFor = -1;
+        private static int _tipFor;
         private static bool _tipAsked;
 
 
@@ -89,17 +150,16 @@ namespace NewAgeQoL
                 _next = Time.unscaledTime + 0.25f;
 
                 Owner();
-                var list = Mine();
-                if (list == null || list.Count == 0) { Hide(); return; }
-
+                var list = Mine() ?? new List<IEnchantmentData>();
                 var sb = new StringBuilder();
                 foreach (var one in list) if (one != null) sb.Append(one.Id).Append(',');
+                for (int i = 0; i < Marks.Count; i++) if (Lit(Marks[i])) sb.Append('m').Append(i).Append(',');
                 string sig = sb.ToString();
+                if (sig.Length == 0) { Hide(); return; }
 
                 if (_canvasGo == null) Build();
                 if (_root == null) return;
                 if (sig != _sig) { _sig = sig; Fill(list); }
-                if (!_root.gameObject.activeSelf) _root.gameObject.SetActive(true);
 
                 Stale();
                 Refresh();
@@ -158,8 +218,9 @@ namespace NewAgeQoL
         private static void Hide()
         {
             if (_root != null && _root.gameObject.activeSelf) _root.gameObject.SetActive(false);
+            if (_marks != null && _marks.gameObject.activeSelf) _marks.gameObject.SetActive(false);
             if (_tipGo != null && _tipGo.activeSelf) _tipGo.SetActive(false);
-            _tipFor = -1;
+            _tipFor = 0;
         }
 
         private static void Listen()
@@ -317,6 +378,26 @@ namespace NewAgeQoL
             foreach (var cell in Cells)
             {
                 if (cell.Go == null) continue;
+                if (cell.Id < 0)
+                {
+                    var mark = MarkOf(cell.Id);
+                    Sprite face = null;
+                    try { face = mark != null && mark.Icon != null ? mark.Icon() : null; } catch { }
+                    if (cell.Icon != null)
+                    {
+                        if (face != null && cell.Icon.sprite != face) cell.Icon.sprite = face;
+                        bool shown = cell.Icon.sprite != null && cell.Icon.sprite.texture != null;
+                        if (cell.Icon.enabled != shown) cell.Icon.enabled = shown;
+                    }
+                    if (cell.Frame != null && (cell.Frame.sprite == null || cell.Frame.sprite.texture == null))
+                    {
+                        var lit = LitFrame();
+                        if (lit != null) cell.Frame.sprite = lit;
+                        bool edged = cell.Frame.sprite != null && cell.Frame.sprite.texture != null;
+                        if (cell.Frame.enabled != edged) cell.Frame.enabled = edged;
+                    }
+                    continue;
+                }
                 Known known;
                 bool have = Times.TryGetValue(cell.Id, out known);
 
@@ -432,43 +513,54 @@ namespace NewAgeQoL
             scaler.matchWidthOrHeight = 1f;
             UiScale.Own(scaler);
 
-            var panel = new GameObject("row", typeof(RectTransform), typeof(Image));
+            _root = Plank("row");
+            _marks = Plank("marks");
+            Plugin.Trace("[states] own icon row built");
+        }
+
+        private static RectTransform Plank(string name)
+        {
+            var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(_canvasGo.transform, false);
-            _root = (RectTransform)panel.transform;
-            _root.anchorMin = _root.anchorMax = new Vector2(0f, 1f);
-            _root.pivot = new Vector2(0f, 1f);
+            var rt = (RectTransform)panel.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
             var back = panel.GetComponent<Image>();
             back.color = new Color(WardrobeLook.Card.r, WardrobeLook.Card.g, WardrobeLook.Card.b, 0.55f);
             back.sprite = OnlineWindow.Rounded(8);
             back.type = Image.Type.Sliced;
             back.raycastTarget = false;
-            Plugin.Trace("[states] own icon row built");
+            return rt;
         }
 
         private static void Fill(List<IEnchantmentData> list)
         {
             foreach (var cell in Cells) if (cell.Go != null) UnityEngine.Object.Destroy(cell.Go);
             Cells.Clear();
-            _tipFor = -1;
+            _tipFor = 0;
 
             var seen = new HashSet<int>();
             foreach (var one in list)
             {
                 if (one == null || !seen.Add(one.Id)) continue;
-                Cells.Add(Make(one));
+                Sprite image = null;
+                try { image = one.Image; } catch { }
+                Cells.Add(Make(one.Id, image, Border(one.Id)));
             }
+            for (int i = 0; i < Marks.Count; i++)
+                if (Lit(Marks[i])) Cells.Add(Make(-i - 1, null, LitFrame()));
             Plugin.Trace("[states] icons: " + Cells.Count);
         }
 
-        private static Cell Make(IEnchantmentData data)
+        private static Cell Make(int id, Sprite image, Sprite border)
         {
-            var cell = new Cell { Id = data.Id };
+            var cell = new Cell { Id = id };
             var go = new GameObject("cell", typeof(RectTransform), typeof(Image), typeof(Button), typeof(EventTrigger));
-            go.transform.SetParent(_root, false);
+            go.transform.SetParent(id < 0 ? _marks : _root, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
-            rt.sizeDelta = new Vector2(Side, Side + TextH);
+            rt.sizeDelta = new Vector2(Side, id < 0 ? Side : Side + TextH);
             var back = go.GetComponent<Image>();
             back.color = new Color(0f, 0f, 0f, 0.35f);
             back.sprite = OnlineWindow.Rounded(8);
@@ -481,7 +573,7 @@ namespace NewAgeQoL
             cell.Icon = iconGo.GetComponent<Image>();
             cell.Icon.preserveAspect = true;
             cell.Icon.raycastTarget = false;
-            try { cell.Icon.sprite = data.Image; } catch { }
+            cell.Icon.sprite = image;
 
             var frameGo = new GameObject("frame", typeof(RectTransform), typeof(Image));
             frameGo.transform.SetParent(go.transform, false);
@@ -490,9 +582,20 @@ namespace NewAgeQoL
             cell.Frame = frameGo.GetComponent<Image>();
             cell.Frame.preserveAspect = true;
             cell.Frame.raycastTarget = false;
-            var border = Border(data.Id);
             cell.Frame.sprite = border;
             cell.Frame.enabled = border != null && border.texture != null;
+
+            if (id < 0)
+            {
+                OnlineWindow.Place(cell.Icon.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 2f), new Vector2(-2f, -2f));
+                OnlineWindow.Place(cell.Frame.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+                go.GetComponent<Button>().targetGraphic = back;
+                var markTrigger = go.GetComponent<EventTrigger>();
+                Watch(markTrigger, EventTriggerType.PointerEnter, e => { _tipFor = id; _tipAsked = false; });
+                Watch(markTrigger, EventTriggerType.PointerExit, e => { if (_tipFor == id) _tipFor = 0; });
+                cell.Go = go;
+                return cell;
+            }
 
             cell.Rest = OnlineWindow.Label(go.transform, "…", 10, FontStyle.Bold, WardrobeLook.Body);
             cell.Rest.raycastTarget = false;
@@ -502,14 +605,13 @@ namespace NewAgeQoL
             OnlineWindow.Place(cell.Rest.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(-4f, 0f), new Vector2(4f, TextH));
 
-            int id = data.Id;
             var button = go.GetComponent<Button>();
             button.targetGraphic = back;
-            button.onClick.AddListener(() => Query(id, false));
+            if (id > 0) button.onClick.AddListener(() => Query(id, false));
 
             var trigger = go.GetComponent<EventTrigger>();
             Watch(trigger, EventTriggerType.PointerEnter, e => { _tipFor = id; _tipAsked = false; });
-            Watch(trigger, EventTriggerType.PointerExit, e => { if (_tipFor == id) _tipFor = -1; });
+            Watch(trigger, EventTriggerType.PointerExit, e => { if (_tipFor == id) _tipFor = 0; });
 
             cell.Go = go;
             return cell;
@@ -524,30 +626,56 @@ namespace NewAgeQoL
 
         private static void Stand()
         {
-            int count = Cells.Count;
-            if (count == 0) { Hide(); return; }
-            float wide = Pad * 2f + count * Side + (count - 1) * (Step - Side);
-            float high = Pad * 2f + Side + TextH;
-            if (_root.sizeDelta.x != wide || _root.sizeDelta.y != high) _root.sizeDelta = new Vector2(wide, high);
+            int game = 0, own = 0;
+            foreach (var cell in Cells) if (cell.Go != null) { if (cell.Id < 0) own++; else game++; }
+            if (game + own == 0) { Hide(); return; }
 
-            for (int i = 0; i < count; i++)
+            bool freed = LeftColumn.TopBlockHidden;
+            float high = Pad * 2f + Side + TextH;
+            float x = freed ? 14f : 14f + SideButtons.LeftWidth + 10f;
+            float y = freed ? Mathf.Max(3f, (LeftColumn.TopHeight() - high) * 0.5f) : LeftColumn.TopHeight() + 10f;
+
+            int gi = 0, oi = 0;
+            foreach (var cell in Cells)
             {
-                var rt = (RectTransform)Cells[i].Go.transform;
-                var want = new Vector2(Pad + i * Step, -Pad);
+                if (cell.Go == null) continue;
+                var rt = (RectTransform)cell.Go.transform;
+                var want = new Vector2(Pad + (cell.Id < 0 ? oi++ : gi++) * Step, -Pad);
                 if (rt.anchoredPosition != want) rt.anchoredPosition = want;
             }
 
-            bool freed = LeftColumn.TopBlockHidden;
-            float x = freed ? 14f : 14f + SideButtons.LeftWidth + 10f;
-            float y = freed ? Mathf.Max(3f, (LeftColumn.TopHeight() - high) * 0.5f) : LeftColumn.TopHeight() + 10f;
-            var place = new Vector2(x, -y);
-            if (_root.anchoredPosition != place) _root.anchoredPosition = place;
+            float next = x;
+            if (Show(_root, game > 0))
+            {
+                Fit(_root, Pad * 2f + game * Side + (game - 1) * (Step - Side), high, new Vector2(x, -y));
+                next = x + _root.sizeDelta.x + 8f;
+            }
+            if (Show(_marks, own > 0))
+            {
+                float low = Pad * 2f + Side;
+                Fit(_marks, Pad * 2f + own * Side + (own - 1) * (Step - Side), low, new Vector2(next, -y));
+            }
+        }
+
+        private static bool Show(RectTransform plank, bool on)
+        {
+            if (plank == null) return false;
+            if (plank.gameObject.activeSelf != on) plank.gameObject.SetActive(on);
+            return on;
+        }
+
+        private static void Fit(RectTransform plank, float wide, float high, Vector2 place)
+        {
+            var size = new Vector2(wide, high);
+            if (plank.sizeDelta != size) plank.sizeDelta = size;
+            if (plank.anchoredPosition != place) plank.anchoredPosition = place;
         }
 
         internal static Vector2 NextTo()
         {
-            if (_root != null && _root.gameObject.activeInHierarchy)
-                return new Vector2(_root.anchoredPosition.x + _root.sizeDelta.x + 10f, _root.anchoredPosition.y);
+            var last = _marks != null && _marks.gameObject.activeInHierarchy ? _marks : _root;
+            if (last != null && last.gameObject.activeInHierarchy)
+                return new Vector2(last.anchoredPosition.x + last.sizeDelta.x + 10f, _root.gameObject.activeInHierarchy ? _root.anchoredPosition.y : last.anchoredPosition.y);
             float x = 14f + SideButtons.LeftWidth + 10f;
             float y = LeftColumn.TopBlockHidden ? 10f : LeftColumn.TopHeight() + 10f;
             return new Vector2(x, -y);
@@ -555,7 +683,7 @@ namespace NewAgeQoL
 
         private static void Tip()
         {
-            if (_tipFor <= 0)
+            if (_tipFor == 0)
             {
                 if (_tipGo != null && _tipGo.activeSelf) _tipGo.SetActive(false);
                 return;
@@ -572,8 +700,15 @@ namespace NewAgeQoL
             Known known;
             bool have = Times.TryGetValue(_tipFor, out known);
             var text = new StringBuilder();
-            text.Append("<size=12><b><color=#eceef1>").Append(Title(_tipFor)).Append("</color></b></size>");
-            if (!have) { text.Append(Lang.T("\n<color=#acb3bd>спрашиваю сервер…</color>")); Wake(_tipFor); }
+            var tipMark = MarkOf(_tipFor);
+            string head = _tipFor > 0 ? Title(_tipFor) : tipMark != null && tipMark.Title != null ? tipMark.Title() : "";
+            text.Append("<size=12><b><color=#eceef1>").Append(head).Append("</color></b></size>");
+            if (_tipFor < 0)
+            {
+                string body = tipMark != null && tipMark.Text != null ? tipMark.Text() : "";
+                if (!string.IsNullOrEmpty(body)) text.Append("\n<color=#d6dae0>").Append(body).Append("</color>");
+            }
+            else if (!have) { text.Append(Lang.T("\n<color=#acb3bd>спрашиваю сервер…</color>")); Wake(_tipFor); }
             else if (!_tipAsked && RealTime.Now - known.At >= 2d) { _tipAsked = true; Wake(_tipFor); }
             else
             {
@@ -592,10 +727,11 @@ namespace NewAgeQoL
             var rt = (RectTransform)_tipGo.transform;
             LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
             var cellRt = (RectTransform)owner.Go.transform;
-            float x = _root.anchoredPosition.x + cellRt.anchoredPosition.x;
+            var plank = _tipFor < 0 ? _marks : _root;
+            float x = plank.anchoredPosition.x + cellRt.anchoredPosition.x;
             float wide = _canvas != null ? ((RectTransform)_canvas.transform).rect.width : 1920f;
             if (x + rt.rect.width > wide - 8f) x = Mathf.Max(8f, wide - 8f - rt.rect.width);
-            float y = -(-_root.anchoredPosition.y + _root.sizeDelta.y + 6f);
+            float y = -(-plank.anchoredPosition.y + plank.sizeDelta.y + 6f);
             var want = new Vector2(x, y);
             if (rt.anchoredPosition != want) rt.anchoredPosition = want;
         }

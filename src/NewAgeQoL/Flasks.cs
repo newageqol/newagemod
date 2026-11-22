@@ -153,6 +153,18 @@ namespace NewAgeQoL
 
         internal static bool Shown(int row) => Id(row) > 0 || Wish(row).Length > 0;
 
+        internal static string Word(int row)
+        {
+            switch (row)
+            {
+                case 0: return Lang.T("ХП");
+                case 1: return Lang.T("Мана");
+                case 2: return Lang.T("Энка");
+                case 3: return Lang.T("Заряды");
+                default: return "";
+            }
+        }
+
         internal static bool Busy(int row) => row >= 0 && row < Rows && RowBusy[row];
 
         private static readonly int[] BadgeOf = { int.MinValue, int.MinValue, int.MinValue, int.MinValue };
@@ -737,8 +749,8 @@ namespace NewAgeQoL
                     {
                         if (Id(row) < 0) continue;
                         lines.Add(row < 3
-                            ? Lang.F("{0}: банка не выбрана — правый щелчок по банке в настройках игры.", title)
-                            : Lang.F("{0}: заряд не выбран — правый щелчок по заряду в настройках игры.", title));
+                            ? Lang.F("{0}: банка не выбрана — щёлкни по банке на боковой панели.", title)
+                            : Lang.F("{0}: заряд не выбран — щёлкни по заряду на боковой панели.", title));
                         Tell("after fight: no flask chosen for " + Titles[row]);
                         continue;
                     }

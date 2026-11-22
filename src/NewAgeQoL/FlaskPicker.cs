@@ -408,7 +408,8 @@ namespace NewAgeQoL
             {
                 none.ThingId = 0;
                 if (!none.Go.activeSelf) none.Go.SetActive(true);
-                if (none.Icon.enabled) none.Icon.enabled = false;
+                if (none.Icon.gameObject.activeSelf) none.Icon.gameObject.SetActive(false);
+                if (none.Caption.alignment != TextAnchor.MiddleCenter) none.Caption.alignment = TextAnchor.MiddleCenter;
                 string blank = Lang.T("Пусто");
                 if (none.Caption.text != blank) none.Caption.text = blank;
             }

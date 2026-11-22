@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.55.0";
+        public const string Version = "0.56.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -130,6 +130,7 @@ namespace NewAgeQoL
 
             Chars.Own("Town", "ButtonGoesToTournament", false,
                 "Кнопка возврата ведёт дальше города: сама зайдёт на арену и оттуда к турнирам. Это поведение ТОЛЬКО у кнопки: сдача вещей и поход, когда им нужен город, возвращаются просто в город.", e => CfgTownTournament = e);
+            Rushes.Bind();
             Chars.Own("Town", "ArenaDoorId", 0,
                 "id двери арены в городе. 0 — искать дверь по ArenaDoorWords.", e => CfgTownArenaId = e);
             Chars.Own("Town", "TournamentDoorId", 0,
@@ -153,9 +154,9 @@ namespace NewAgeQoL
 
             Chars.Own("Flasks", "FillToMax", true,
                 "ВКЛ: жизнь/мана/энергия — пить до ПОЛНОГО (после каждого глотка мод ждёт обновления полосы и останавливается, как только она заполнилась); грибы — пока сервер даёт, но не больше 20 штук за нажатие. ВЫКЛ: любая кнопка использует ровно ОДНУ штуку за нажатие.", e => CfgFlaskFillToMax = e);
-            Chars.Own("Flasks", "RefillAfterFight", true,
+            Chars.Own("Flasks", "RefillAfterFight", false,
                 "ВКЛ: после выхода из любого боя мод сам пьёт выбранные банки жизни, маны и энергии до полного. Если банка не выбрана или кончилась — пишет об этом на экране.", e => CfgFlaskAfterFight = e);
-            Chars.Own("Flasks", "RefillChargesAfterFight", true,
+            Chars.Own("Flasks", "RefillChargesAfterFight", false,
                 "ВКЛ: после выхода из любого боя мод сам восполняет заряды выбранными грибами до полного. Если грибы не выбраны или кончились — пишет об этом на экране.", e => CfgChargesAfterFight = e);
             CfgPortalForwards = Config.Bind("Portals", "RuneOptions", "",
                 "Узнанные пункты портала для рун в виде «id руны:номер пункта» через запятую. Заполняется сама, когда мод однозначно видит, какой пункт портала относится к руне.");
@@ -551,6 +552,7 @@ namespace NewAgeQoL
                 new Part { Name = "Dialogs.Tick", Do = Dialogs.Tick },
                 new Part { Name = "Claims.Tick", Do = Claims.Tick },
                 new Part { Name = "Dozen.Tick", Do = Dozen.Tick },
+                new Part { Name = "Rushes.Tick", Do = Rushes.Tick },
                 new Part { Name = "Outcome.Tick", Do = Outcome.Tick },
                 new Part { Name = "ClanMark.Tick", Do = ClanMark.Tick },
                 new Part { Name = "TabPanelFitPatch.Tick", Do = TabPanelFitPatch.Tick },
@@ -669,6 +671,7 @@ namespace NewAgeQoL
             DressDrag.Shutdown();
             CardAsk.Shutdown();
             Claims.Shutdown();
+            Rushes.Shutdown();
             Blink.Shutdown();
             DiskJournal.Detach(Logger);
         }

@@ -72,7 +72,7 @@ namespace NewAgeQoL
             _ok = true;
         }
 
-        private static int Door(BepInEx.Configuration.ConfigEntry<string> byWords)
+        internal static int Door(BepInEx.Configuration.ConfigEntry<string> byWords)
         {
             var map = Travel.LastMap;
             if (map == null || map.SceneObjects == null) return 0;
@@ -114,7 +114,7 @@ namespace NewAgeQoL
         private static bool Has(string text, string word) =>
             !string.IsNullOrEmpty(text) && text.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0;
 
-        private static bool Send(BaseRequest request)
+        internal static bool Send(BaseRequest request)
         {
             try
             {

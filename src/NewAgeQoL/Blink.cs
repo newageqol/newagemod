@@ -394,6 +394,12 @@ namespace NewAgeQoL
             if (Toasts) Toast(title, body);
         }
 
+        internal static void Notify(string title, string body)
+        {
+            if (_broken || _trayBroken || !Windows || !Toasts) return;
+            Toast(title, body);
+        }
+
         private static TrayData Data(uint flags)
         {
             return new TrayData

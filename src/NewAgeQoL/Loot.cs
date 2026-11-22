@@ -58,6 +58,7 @@ namespace NewAgeQoL
 
         private static GameObject _canvasGo;
         private static RectTransform _stack;
+        private static RectTransform _tab;
         private static readonly List<Plate> Plates = new List<Plate>();
         private static readonly List<Result> Waiting = new List<Result>();
         private static float _leaveAt;
@@ -259,6 +260,14 @@ namespace NewAgeQoL
             float y = below > 0f ? -(below + 10f) : -HelpColumn.Head;
             var want = new Vector2(x, y);
             if ((_stack.anchoredPosition - want).sqrMagnitude > 0.25f) _stack.anchoredPosition = want;
+            Plate shut = null;
+            foreach (var plate in Plates) if (plate.Go != null && plate.Shut) { shut = plate; break; }
+            bool tabbed = shut != null && _tab != null;
+            if (_tab != null)
+            {
+                if (_tab.gameObject.activeSelf != tabbed) _tab.gameObject.SetActive(tabbed);
+                if (tabbed && (_tab.anchoredPosition - want).sqrMagnitude > 0.25f) _tab.anchoredPosition = want;
+            }
             Fit(-y);
         }
 
@@ -267,7 +276,7 @@ namespace NewAgeQoL
             float high = ((RectTransform)_canvasGo.transform).rect.height;
             foreach (var plate in Plates)
             {
-                if (plate.Go == null) continue;
+                if (plate.Go == null || !plate.Go.activeSelf) continue;
                 float tall = plate.Rt.rect.height;
                 if (plate.Room != null && !plate.Shut)
                 {
@@ -286,6 +295,7 @@ namespace NewAgeQoL
         {
             if (plate.Go == null || plate.Shut == shut) return;
             plate.Shut = shut;
+            plate.Go.SetActive(!shut);
             foreach (var part in plate.Body) if (part != null) part.SetActive(!shut);
             plate.Size.preferredWidth = shut ? Folded : Wide;
             plate.Title.fontSize = shut ? 14 : 16;
@@ -381,6 +391,62 @@ namespace NewAgeQoL
             open.transition = Selectable.Transition.None;
             open.onClick.AddListener(() => { if (plate.Shut) Fold(plate, false); });
             return plate;
+        }
+
+        private static RectTransform Tab(Transform host)
+        {
+            var go = new GameObject("lootFold", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(Button));
+            go.transform.SetParent(host, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            var back = go.GetComponent<Image>();
+            back.color = WardrobeLook.Window;
+            back.sprite = OnlineWindow.Rounded(6);
+            back.type = Image.Type.Sliced;
+            var edge = go.GetComponent<Outline>();
+            edge.effectColor = WardrobeLook.Edge;
+            edge.effectDistance = new Vector2(1f, -1f);
+            var press = go.GetComponent<Button>();
+            press.targetGraphic = back;
+            var colors = press.colors;
+            colors.highlightedColor = new Color(1.4f, 1.4f, 1.4f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            press.colors = colors;
+            press.onClick.AddListener(() =>
+            {
+                foreach (var plate in Plates.ToArray()) if (plate.Go != null && plate.Shut) Fold(plate, false);
+            });
+
+            var markGo = new GameObject("mark", typeof(RectTransform), typeof(Image));
+            markGo.transform.SetParent(go.transform, false);
+            var mark = markGo.GetComponent<Image>();
+            mark.sprite = Icons.Chevron();
+            mark.color = WardrobeLook.Label;
+            mark.preserveAspect = true;
+            mark.raycastTarget = false;
+            var mrt = mark.rectTransform;
+            mrt.anchorMin = mrt.anchorMax = new Vector2(0.5f, 1f);
+            mrt.pivot = new Vector2(0.5f, 0.5f);
+            mrt.sizeDelta = new Vector2(9f, 9f);
+            mrt.anchoredPosition = new Vector2(0f, -12f);
+            mrt.localRotation = Quaternion.Euler(0f, 0f, 180f);
+
+            var name = OnlineWindow.Label(go.transform, global::NewAgeQoL.Lang.T("Добыча"), 12, FontStyle.Bold, WardrobeLook.Label);
+            name.raycastTarget = false;
+            name.horizontalOverflow = HorizontalWrapMode.Overflow;
+            name.verticalOverflow = VerticalWrapMode.Overflow;
+            float len = Mathf.Ceil(name.preferredWidth) + 8f;
+            var nrt = name.rectTransform;
+            nrt.anchorMin = nrt.anchorMax = new Vector2(0.5f, 1f);
+            nrt.pivot = new Vector2(0.5f, 0.5f);
+            nrt.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            nrt.sizeDelta = new Vector2(len, 18f);
+            nrt.anchoredPosition = new Vector2(0f, -(20f + len * 0.5f));
+
+            rt.sizeDelta = new Vector2(18f, 24f + len);
+            go.SetActive(false);
+            return rt;
         }
 
         private static GameObject Shut(Transform host, Plate plate)
@@ -696,6 +762,8 @@ namespace NewAgeQoL
             var fit = stackGo.GetComponent<ContentSizeFitter>();
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            _tab = Tab(_canvasGo.transform);
 
             _canvasGo.SetActive(false);
             Plugin.Trace("[loot] result plates built at top right");
