@@ -222,28 +222,9 @@ namespace NewAgeQoL
             try
             {
                 const int side = 64;
-                const int ss = 4;
-                var tex = new Texture2D(side, side, TextureFormat.RGBA32, false);
-                Color liquid = Tints[kind];
-                var px = new Color[side * side];
-                for (int py = 0; py < side; py++)
-                    for (int qx = 0; qx < side; qx++)
-                    {
-                        Color sum = new Color(0f, 0f, 0f, 0f);
-                        for (int sy = 0; sy < ss; sy++)
-                            for (int sx = 0; sx < ss; sx++)
-                            {
-                                float x = (qx + (sx + 0.5f) / ss) / side;
-                                float y = (py + (sy + 0.5f) / ss) / side;
-                                var c = Paint(x, y, liquid);
-                                sum.r += c.r * c.a; sum.g += c.g * c.a; sum.b += c.b * c.a; sum.a += c.a;
-                            }
-                        px[py * side + qx] = sum.a > 0f
-                            ? new Color(sum.r / sum.a, sum.g / sum.a, sum.b / sum.a, sum.a / (ss * ss))
-                            : new Color(1f, 1f, 1f, 0f);
-                    }
-                tex.SetPixels(px);
-                tex.Apply();
+                int which = kind;
+                var tex = Baked.Get("flask_" + kind, Baked.Build, () => Draw(which, side));
+                if (tex == null) return null;
                 tex.filterMode = FilterMode.Bilinear;
                 tex.wrapMode = TextureWrapMode.Clamp;
                 have = Sprite.Create(tex, new Rect(0f, 0f, side, side), new Vector2(0.5f, 0.5f), 100f);
@@ -251,6 +232,33 @@ namespace NewAgeQoL
             }
             catch (Exception e) { Plugin.Caught("[drinks] flask: " + e.Message); }
             return have;
+        }
+
+        private static Texture2D Draw(int kind, int side)
+        {
+            const int ss = 4;
+            var tex = new Texture2D(side, side, TextureFormat.RGBA32, false);
+            Color liquid = Tints[kind];
+            var px = new Color[side * side];
+            for (int py = 0; py < side; py++)
+                for (int qx = 0; qx < side; qx++)
+                {
+                    Color sum = new Color(0f, 0f, 0f, 0f);
+                    for (int sy = 0; sy < ss; sy++)
+                        for (int sx = 0; sx < ss; sx++)
+                        {
+                            float x = (qx + (sx + 0.5f) / ss) / side;
+                            float y = (py + (sy + 0.5f) / ss) / side;
+                            var c = Paint(x, y, liquid);
+                            sum.r += c.r * c.a; sum.g += c.g * c.a; sum.b += c.b * c.a; sum.a += c.a;
+                        }
+                    px[py * side + qx] = sum.a > 0f
+                        ? new Color(sum.r / sum.a, sum.g / sum.a, sum.b / sum.a, sum.a / (ss * ss))
+                        : new Color(1f, 1f, 1f, 0f);
+                }
+            tex.SetPixels(px);
+            tex.Apply();
+            return tex;
         }
 
         private static Color Paint(float x, float y, Color liquid)

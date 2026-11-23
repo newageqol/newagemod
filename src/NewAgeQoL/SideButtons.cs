@@ -268,13 +268,7 @@ namespace NewAgeQoL
 
         private static Sprite GoIcon()
         {
-            if (_portal == null || _portal.texture == null)
-            {
-                Sprite face = null;
-                try { face = AtlasUtils.GetNpcAvatar(PortalFace); }
-                catch { }
-                if (Ok(face)) _portal = face;
-            }
+            if (_portal == null || _portal.texture == null) _portal = OwnPortal();
             if (_portal != null && _portal.texture != null) return _portal;
             foreach (int rune in Teleports.Runes)
                 if (Teleports.Has(rune))
@@ -283,6 +277,54 @@ namespace NewAgeQoL
                     if (icon != null && icon.texture != null) return icon;
                 }
             return null;
+        }
+
+        private static Sprite OwnPortal()
+        {
+            try
+            {
+                var tex = Baked.Get("portal_face", Application.version + "|" + PortalFace, () =>
+                {
+                    Sprite face = null;
+                    try { face = AtlasUtils.GetNpcAvatar(PortalFace); }
+                    catch { }
+                    return Ok(face) && face.texture != null ? Copy(face) : null;
+                });
+                if (tex == null) return null;
+                tex.name = "QoLPortalFace";
+                tex.filterMode = FilterMode.Bilinear;
+                tex.wrapMode = TextureWrapMode.Clamp;
+                tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                var art = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+                art.name = PortalFace;
+                art.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                return art;
+            }
+            catch (System.Exception e) { Plugin.Caught("[side] portal icon: " + e.Message); return null; }
+        }
+
+        private static Texture2D Copy(Sprite game)
+        {
+            Rect box = game.textureRect;
+            var source = game.texture;
+            int w = Mathf.Max(1, Mathf.RoundToInt(box.width));
+            int h = Mathf.Max(1, Mathf.RoundToInt(box.height));
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var was = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(source, rt, new Vector2(box.width / source.width, box.height / source.height), new Vector2(box.x / source.width, box.y / source.height));
+                RenderTexture.active = rt;
+                var copy = new Texture2D(w, h, TextureFormat.RGBA32, false, false);
+                copy.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                copy.Apply(false, false);
+                return copy;
+            }
+            finally
+            {
+                RenderTexture.active = was;
+                RenderTexture.ReleaseTemporary(rt);
+            }
         }
 
         private static void TogglePop()

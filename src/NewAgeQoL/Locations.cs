@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -118,10 +118,17 @@ namespace NewAgeQoL
 
         private static IEnumerator LoadTextures(Desc d)
         {
-            if (d.Base == null) { d.Base = Load(d, "bank_base.png", false, false); yield return null; }
-            if (d.Delta == null) { d.Delta = Load(d, "bank_delta.png", false, true); yield return null; }
-            if (d.Fx2 == null) { d.Fx2 = Load(d, "bank_fx2.png", false, true); yield return null; }
-            if (d.Depth == null) { d.Depth = Load(d, "bank_depth.png", true, false); yield return null; }
+            if (d.Base == null) yield return TexCache.Load(PathOf(d, "bank_base.png"), d.Name + "_bank_base.png", false, false, t => d.Base = Keep(d.Base, t));
+            if (d.Delta == null) yield return TexCache.Load(PathOf(d, "bank_delta.png"), d.Name + "_bank_delta.png", false, true, t => d.Delta = Keep(d.Delta, t));
+            if (d.Fx2 == null) yield return TexCache.Load(PathOf(d, "bank_fx2.png"), d.Name + "_bank_fx2.png", false, true, t => d.Fx2 = Keep(d.Fx2, t));
+            if (d.Depth == null) yield return TexCache.Load(PathOf(d, "bank_depth.png"), d.Name + "_bank_depth.png", true, false, t => d.Depth = Keep(d.Depth, t));
+        }
+
+        private static Texture2D Keep(Texture2D had, Texture2D got)
+        {
+            if (had == null) return got;
+            if (got != null && got != had) UnityEngine.Object.Destroy(got);
+            return had;
         }
 
         private static void HideOld(GameObject old)
@@ -262,28 +269,6 @@ namespace NewAgeQoL
                 d.Busy = false;
                 if (!shown) ShowOld(old);
             }
-        }
-
-        private static Texture2D Load(Desc d, string file, bool linear, bool compress)
-        {
-            var path = PathOf(d, file);
-            if (!File.Exists(path)) return null;
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true, linear) { name = d.Name + "_" + file, hideFlags = HideFlags.DontUnloadUnusedAsset };
-            if (!tex.LoadImage(File.ReadAllBytes(path), false))
-            {
-                UnityEngine.Object.Destroy(tex);
-                return null;
-            }
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Trilinear;
-            tex.anisoLevel = 4;
-            if (compress && tex.width % 4 == 0 && tex.height % 4 == 0)
-            {
-                try { tex.Compress(true); }
-                catch (Exception e) { Plugin.Caught("[places] compress " + file + ": " + e.Message); }
-            }
-            tex.Apply(!compress, true);
-            return tex;
         }
 
         private static void ApplyPrerender(Desc d, GameObject old)

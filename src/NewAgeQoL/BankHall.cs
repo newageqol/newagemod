@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -158,33 +158,18 @@ namespace NewAgeQoL
                 if (_fx == null) { Plugin.Warn("[bank] effects bundle failed to load"); yield break; }
                 yield return null;
             }
-            if (_baseTex == null) { _baseTex = Load("bank_base.png", false, false); yield return null; }
-            if (_deltaTex == null) { _deltaTex = Load("bank_delta.png", false, true); yield return null; }
-            if (_fx2Tex == null) { _fx2Tex = Load("bank_fx2.png", false, true); yield return null; }
-            if (_depthTex == null) { _depthTex = Load("bank_depth.png", true, false); yield return null; }
-            if (_idsTex == null) _idsTex = Load("bank_ids.png", false, false);
+            if (_baseTex == null) yield return TexCache.Load(Path.Combine(Folder, "bank_base.png"), "bank_bank_base.png", false, false, t => _baseTex = Keep(_baseTex, t));
+            if (_deltaTex == null) yield return TexCache.Load(Path.Combine(Folder, "bank_delta.png"), "bank_bank_delta.png", false, true, t => _deltaTex = Keep(_deltaTex, t));
+            if (_fx2Tex == null) yield return TexCache.Load(Path.Combine(Folder, "bank_fx2.png"), "bank_bank_fx2.png", false, true, t => _fx2Tex = Keep(_fx2Tex, t));
+            if (_depthTex == null) yield return TexCache.Load(Path.Combine(Folder, "bank_depth.png"), "bank_bank_depth.png", true, false, t => _depthTex = Keep(_depthTex, t));
+            if (_idsTex == null) yield return TexCache.Load(Path.Combine(Folder, "bank_ids.png"), "bank_bank_ids.png", false, false, t => _idsTex = Keep(_idsTex, t));
         }
 
-        private static Texture2D Load(string file, bool linear, bool compress)
+        private static Texture2D Keep(Texture2D had, Texture2D got)
         {
-            var path = Path.Combine(Folder, file);
-            if (!File.Exists(path)) return null;
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true, linear) { name = "bank_" + file, hideFlags = HideFlags.DontUnloadUnusedAsset };
-            if (!tex.LoadImage(File.ReadAllBytes(path), false))
-            {
-                UnityEngine.Object.Destroy(tex);
-                return null;
-            }
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Trilinear;
-            tex.anisoLevel = 4;
-            if (compress && tex.width % 4 == 0 && tex.height % 4 == 0)
-            {
-                try { tex.Compress(true); }
-                catch (Exception e) { Plugin.Caught("[bank] compress " + file + ": " + e.Message); }
-            }
-            tex.Apply(!compress, true);
-            return tex;
+            if (had == null) return got;
+            if (got != null && got != had) Drop(got);
+            return had;
         }
 
         internal static void Drop(UnityEngine.Object o)

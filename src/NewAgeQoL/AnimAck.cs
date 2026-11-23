@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Transport.Messages.Responses.Combat;
@@ -48,9 +49,24 @@ namespace NewAgeQoL
         private static float _overAt = -1f;
         private static float _heardAt = -1f;
         private static int _quick;
+        private static bool _final;
+        private static readonly Dictionary<int, int> Pending = new Dictionary<int, int>();
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static bool Waits() => false;
+
+        internal static bool Final
+        {
+            get
+            {
+                try
+                {
+                    var cd = FighterHint.Cd();
+                    return _final && cd != null && ReferenceEquals(cd, _fight) && cd.RoundNum == _round;
+                }
+                catch { return false; }
+            }
+        }
 
         private static ICombatData Mine()
         {
@@ -79,6 +95,8 @@ namespace NewAgeQoL
                     _overAt = -1f;
                     _heardAt = -1f;
                     _quick = 0;
+                    _final = false;
+                    Pending.Clear();
                 }
             }
             return cd;
@@ -95,6 +113,48 @@ namespace NewAgeQoL
             if (msg.Groups == null || msg.Groups.Count <= 0) return;
             _heard++;
             _heardAt = RealTime.Now;
+            foreach (var group in msg.Groups)
+                if (group != null) Count(group.Items);
+            if (!_final && Wiped(cd))
+            {
+                _final = true;
+                Plugin.Trace("[anim ack] round " + cd.RoundNum + " ends the fight, letting the animations play out");
+            }
+        }
+
+        private static void Count(List<AnimationItemMessage> items)
+        {
+            if (items == null) return;
+            foreach (var item in items)
+            {
+                if (item == null) continue;
+                if (item.Animation == "change_life")
+                {
+                    Pending.TryGetValue(item.TargetUserId, out int sum);
+                    Pending[item.TargetUserId] = sum + item.Value;
+                }
+                Count(item.Items);
+            }
+        }
+
+        private static bool Wiped(ICombatData cd)
+        {
+            if (cd.Characters == null || Pending.Count == 0) return false;
+            var alive = new Dictionary<int, int>();
+            foreach (var pair in cd.Characters)
+            {
+                var one = pair.Value as AbstractCharacter;
+                if (one == null || one.IsBot || one.Indicators == null) continue;
+                if (!alive.ContainsKey(one.Team)) alive[one.Team] = 0;
+                Pending.TryGetValue(one.UserId, out int change);
+                bool dead = one.Indicators.IsDead && change <= 0;
+                if (!dead && one.Indicators.CurrentLife + change > 0) alive[one.Team]++;
+            }
+            if (alive.Count < 2) return false;
+            int standing = 0;
+            foreach (var team in alive)
+                if (team.Value > 0) standing++;
+            return standing <= 1;
         }
 
         internal static void Sent(BaseRequest request)
@@ -124,6 +184,7 @@ namespace NewAgeQoL
         {
             var cd = Mine();
             if (cd == null) return;
+            if (Pending.Count > 0 && cd.AnimationProcessor != null && !cd.AnimationProcessor.Active) Pending.Clear();
             bool calc = cd.RoundType == RoundType.CALCULATING_COMBAT;
             if (cd.RoundType != RoundType.COMBAT_ROUND && !calc) return;
             if (!calc && !_over) return;
@@ -156,7 +217,7 @@ namespace NewAgeQoL
 
         private static bool Quick(ICombatData cd, float now)
         {
-            if (_quick >= MostQuick || _heard <= _answered) return false;
+            if (_final || _quick >= MostQuick || _heard <= _answered) return false;
             if (now < _overAt + QuickWait || now < _heardAt + QuietWait) return false;
             if (!Rivals(cd) || Waits()) return false;
             var conn = NetworkConnection.Instance;

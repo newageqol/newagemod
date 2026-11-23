@@ -14,14 +14,21 @@ namespace NewAgeQoL
         private const double Window = 4d;
         private const double Tail = 0.6d;
         private const float Gap = 2.5f;
+        private const short FullMeters = 353;
 
         private static readonly object Gate = new object();
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
-        private static readonly HashSet<int> States = new HashSet<int>();
+        private static readonly HashSet<long> States = new HashSet<long>();
         private static readonly HashSet<int> Roster = new HashSet<int>();
         private static readonly HashSet<string> SystemLines = new HashSet<string>();
         private static readonly Dictionary<int, string> LastWear = new Dictionary<int, string>();
         private static readonly HashSet<short> Snapshot = new HashSet<short> { 169, 231, 434 };
+        private static readonly HashSet<long> RangeStates = new HashSet<long>
+        {
+            Key(1, 10018), Key(1, 10026), Key(1, 120), Key(2, 162), Key(2, 86), Key(2, 61)
+        };
+
+        private static long Key(int type, int id) => ((long)type << 32) | (uint)id;
 
         private static int _me;
         private static int _base;
@@ -172,18 +179,18 @@ namespace NewAgeQoL
                 if (states != null)
                 {
                     if (states.UserId != _me) return true;
-                    var fresh = new HashSet<int>();
+                    var fresh = new HashSet<long>();
                     if (states.Groups != null)
                         foreach (var g in states.Groups)
-                            if (g != null) fresh.Add(g.StateId);
+                            if (g != null) fresh.Add(Key(g.StateType, g.StateId));
                     bool lost = false;
                     if (_statesKnown)
-                        foreach (int id in States)
-                            if (!fresh.Contains(id)) { lost = true; break; }
+                        foreach (long id in States)
+                            if (RangeStates.Contains(id) && !fresh.Contains(id)) { lost = true; break; }
                     States.Clear();
                     States.UnionWith(fresh);
                     _statesKnown = true;
-                    if (lost && !open && _base > 0 && _now > 0 && _now < _base) _want = true;
+                    if (lost && !open && _base > 0 && _now > 0 && _now != _base) _want = true;
                     return true;
                 }
 
@@ -225,6 +232,7 @@ namespace NewAgeQoL
                 var meters = message as IndicatorsResponseMessage;
                 if (meters != null)
                 {
+                    if (op == FullMeters) { _held++; return false; }
                     if (meters.Indicators != null) meters.Indicators.RemoveAll(one => one == null || one.UserId != _me);
                     if (meters.Indicators == null || meters.Indicators.Count == 0) { _held++; return false; }
                     return true;

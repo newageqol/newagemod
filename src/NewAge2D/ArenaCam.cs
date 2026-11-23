@@ -213,20 +213,60 @@ internal sealed class ArenaCam
         return Mathf.Lerp(c0, c1, b);
     }
 
+    private static readonly float[] RingCos = Ring(true);
+    private static readonly float[] RingSin = Ring(false);
+
+    private static float[] Ring(bool cos)
+    {
+        var ring = new float[8];
+        for (int k = 0; k < 8; k++)
+        {
+            float a = k * Mathf.PI / 4f;
+            ring[k] = cos ? Mathf.Cos(a) : Mathf.Sin(a);
+        }
+        return ring;
+    }
+
     private float Around(float x, float z, float r)
     {
         float g = Ground(x, z);
         for (int k = 0; k < 8; k++)
         {
-            float a = k * Mathf.PI / 4f;
-            g = Mathf.Max(g, (Ground(x + Mathf.Cos(a) * r, z + Mathf.Sin(a) * r)));
-            g = Mathf.Max(g, (Ground(x + Mathf.Cos(a) * r * 0.5f, z + Mathf.Sin(a) * r * 0.5f)));
+            float c = RingCos[k], s = RingSin[k];
+            g = Mathf.Max(g, (Ground(x + c * r, z + s * r)));
+            g = Mathf.Max(g, (Ground(x + c * r * 0.5f, z + s * r * 0.5f)));
         }
         return g;
     }
 
+    private const int Memo = 64;
+    private readonly float[] _memoYaw = new float[Memo];
+    private readonly float[] _memoPitch = new float[Memo];
+    private readonly float[] _memoDist = new float[Memo];
+    private readonly Vector3[] _memoT = new Vector3[Memo];
+    private readonly float[] _memoReach = new float[Memo];
+    private int _memoCount, _memoNext;
 
     private float Reach(float yaw, float pitch, float dist, Vector3 t)
+    {
+        for (int i = 0; i < _memoCount; i++)
+        {
+            if (_memoYaw[i] == yaw && _memoPitch[i] == pitch && _memoDist[i] == dist && _memoT[i].x == t.x && _memoT[i].y == t.y && _memoT[i].z == t.z)
+                return _memoReach[i];
+        }
+        float reach = Trace(yaw, pitch, dist, t);
+        int slot = _memoNext;
+        _memoNext = (_memoNext + 1) % Memo;
+        if (_memoCount < Memo) _memoCount++;
+        _memoYaw[slot] = yaw;
+        _memoPitch[slot] = pitch;
+        _memoDist[slot] = dist;
+        _memoT[slot] = t;
+        _memoReach[slot] = reach;
+        return reach;
+    }
+
+    private float Trace(float yaw, float pitch, float dist, Vector3 t)
     {
         var from = t + Vector3.up * 1.2f;
         var dir = At(yaw, pitch, dist, t) - from;

@@ -784,9 +784,17 @@ internal sealed class FieldView : MonoBehaviour
         catch { return false; }
     }
 
+    private static bool Touched()
+    {
+        if (Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f) return true;
+        for (int button = 0; button < 3; button++)
+            if (Input.GetMouseButtonDown(button)) return true;
+        return false;
+    }
+
     private void Steer()
     {
-        bool overUi = Unity3DHelper.IsOverInterface() || OverMod() || ArenaHome.Over();
+        bool overUi = Touched() && (Unity3DHelper.IsOverInterface() || OverMod() || ArenaHome.Over());
         if (_arenaCam != null)
         {
             _arenaCam.Steer(_eye, _grid, overUi);

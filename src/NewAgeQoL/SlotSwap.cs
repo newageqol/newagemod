@@ -599,7 +599,7 @@ namespace NewAgeQoL
 
         private static Sprite Cycle()
         {
-            if (_cycle == null || _cycle.texture == null) _cycle = Paint(Arrows);
+            if (_cycle == null || _cycle.texture == null) _cycle = Paint("slots_cycle", Arrows);
             return _cycle;
         }
 
@@ -613,7 +613,7 @@ namespace NewAgeQoL
 
         private static Sprite Shirt()
         {
-            if (_shirt == null || _shirt.texture == null) _shirt = Paint(Clothed);
+            if (_shirt == null || _shirt.texture == null) _shirt = Paint("slots_shirt", Clothed);
             return _shirt;
         }
 
@@ -630,15 +630,22 @@ namespace NewAgeQoL
             return hit;
         }
 
-        private static Sprite Paint(System.Func<float, float, bool> inside)
+        private static Sprite Paint(string key, System.Func<float, float, bool> inside)
         {
             const int size = 128;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-                hideFlags = HideFlags.DontUnloadUnusedAsset,
-            };
+            var tex = Baked.Get(key, Baked.Build, () => Draw(size, inside));
+            if (tex == null) return null;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return sprite;
+        }
+
+        private static Texture2D Draw(int size, System.Func<float, float, bool> inside)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             var px = new Color32[size * size];
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
@@ -651,29 +658,39 @@ namespace NewAgeQoL
                 }
             tex.SetPixels32(px);
             tex.Apply();
-            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            return sprite;
+            return tex;
+        }
+
+        private static readonly Vector2[] HeadA = Tip(40f), HeadB = Tip(220f);
+
+        private static Vector2[] Tip(float end)
+        {
+            float e = end * Mathf.Deg2Rad, t = (end - 34f) * Mathf.Deg2Rad;
+            return new[]
+            {
+                new Vector2(64f + 26f * Mathf.Cos(e), 64f + 26f * Mathf.Sin(e)),
+                new Vector2(64f + 58f * Mathf.Cos(e), 64f + 58f * Mathf.Sin(e)),
+                new Vector2(64f + 42f * Mathf.Cos(t), 64f + 42f * Mathf.Sin(t)),
+            };
         }
 
         private static bool Arrows(float x, float y)
         {
             float dx = x - 64f, dy = y - 64f;
-            float r = Mathf.Sqrt(dx * dx + dy * dy);
-            float a = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
-            if (a < 0f) a += 360f;
-            if (r >= 36f && r <= 48f && ((a >= 40f && a <= 170f) || (a >= 220f && a <= 350f))) return true;
-            return Head(x, y, 40f) || Head(x, y, 220f);
+            float rr = dx * dx + dy * dy;
+            if (rr >= 36f * 36f && rr <= 48f * 48f)
+            {
+                float a = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                if (a < 0f) a += 360f;
+                if ((a >= 40f && a <= 170f) || (a >= 220f && a <= 350f)) return true;
+            }
+            return Head(x, y, HeadA) || Head(x, y, HeadB);
         }
 
-        private static bool Head(float x, float y, float end)
+        private static bool Head(float x, float y, Vector2[] tri)
         {
-            float e = end * Mathf.Deg2Rad, t = (end - 34f) * Mathf.Deg2Rad;
-            var a = new Vector2(64f + 26f * Mathf.Cos(e), 64f + 26f * Mathf.Sin(e));
-            var b = new Vector2(64f + 58f * Mathf.Cos(e), 64f + 58f * Mathf.Sin(e));
-            var c = new Vector2(64f + 42f * Mathf.Cos(t), 64f + 42f * Mathf.Sin(t));
             var p = new Vector2(x, y);
-            float d1 = Cross(p, a, b), d2 = Cross(p, b, c), d3 = Cross(p, c, a);
+            float d1 = Cross(p, tri[0], tri[1]), d2 = Cross(p, tri[1], tri[2]), d3 = Cross(p, tri[2], tri[0]);
             bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
             bool pos = d1 > 0f || d2 > 0f || d3 > 0f;
             return !(neg && pos);
