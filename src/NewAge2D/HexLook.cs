@@ -427,6 +427,7 @@ internal static class HexLook
                 Set.Clear();
                 Set.UnionWith(Other);
                 Plug(cd);
+                Other.Remove(from);
                 Contour(_zone, Set, Other, ZoneTint, 0.1f, 0.85f, 0.32f, 0.2f);
             }
             _zone.End();

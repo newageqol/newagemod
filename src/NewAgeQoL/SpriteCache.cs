@@ -33,6 +33,7 @@ namespace NewAgeQoL
             __state = false;
             _fresh = null;
             if (spriteName == null || customSpriteInfo == null) return true;
+            Heal(__instance, customSpriteInfo);
             if (Sprites.TryGetValue(customSpriteInfo, out var made) && made.Name == spriteName && made.Sprite != null && made.Sprite.texture != null)
             {
                 __result = made.Sprite;
@@ -59,6 +60,62 @@ namespace NewAgeQoL
         {
             if (made == null || !made.Mine || made.Sprite == null) return;
             UnityEngine.Object.Destroy(made.Sprite);
+        }
+
+        private static HashSet<string> _things;
+
+        private static HashSet<string> ThingAtlases()
+        {
+            if (_things != null) return _things;
+            var names = new HashSet<string>();
+            if (Database != null && Database.GetValue(AtlasesDatabase.Instance) is IDictionary all)
+                foreach (var value in all.Values)
+                    if (value is CustomSpriteInfo info && info.AtlasType == (int)EAtlasType.THINGS && info.AtlasName != null)
+                        names.Add(info.AtlasName);
+            if (names.Count > 0) _things = names;
+            return names;
+        }
+
+        internal static bool Keep(SpriteManager manager)
+        {
+            if (Atlases == null || !(Atlases.GetValue(manager) is IDictionary loaded)) return false;
+            var things = ThingAtlases();
+            if (things.Count == 0) return false;
+            var gone = new List<object>();
+            int kept = 0;
+            foreach (DictionaryEntry pair in loaded)
+            {
+                if (pair.Key is string name && things.Contains(name) && Alive(pair.Value)) { kept++; continue; }
+                gone.Add(pair.Key);
+            }
+            foreach (var key in gone)
+            {
+                try { (loaded[key] as IDisposable)?.Dispose(); }
+                catch (Exception e) { Plugin.Caught("[icons] atlas unload " + key + ": " + e.Message); }
+                loaded.Remove(key);
+            }
+            if (kept > 0) Plugin.Trace("[icons] scene change: kept " + kept + " thing atlases, unloaded " + gone.Count);
+            return true;
+        }
+
+        private static bool Alive(object bundle)
+        {
+            if (bundle == null || Picture == null || Dynamic == null || !Dynamic.IsInstanceOfType(bundle)) return false;
+            var texture = Picture.GetValue(bundle) as Texture2D;
+            return texture != null;
+        }
+
+        private static void Heal(SpriteManager manager, CustomSpriteInfo info)
+        {
+            if (info.AtlasType != (int)EAtlasType.THINGS || Atlases == null) return;
+            if (!(Atlases.GetValue(manager) is IDictionary loaded)) return;
+            string atlas = info.AtlasName;
+            if (atlas == null || !loaded.Contains(atlas) || Alive(loaded[atlas])) return;
+            try { (loaded[atlas] as IDisposable)?.Dispose(); }
+            catch { }
+            loaded.Remove(atlas);
+            if (Sprites.TryGetValue(info, out var had)) { Drop(had); Sprites.Remove(info); }
+            Plugin.Trace("[icons] kept atlas " + atlas + " lost its texture, loading again");
         }
 
         internal static void Forget()
@@ -131,6 +188,12 @@ namespace NewAgeQoL
     [HarmonyPatch(typeof(SpriteManager), nameof(SpriteManager.Clear))]
     internal static class SpriteCacheClear
     {
+        private static bool Prefix(SpriteManager __instance)
+        {
+            try { return !SpriteCache.Keep(__instance); }
+            catch (Exception e) { Plugin.Caught("[icons] keep thing atlases: " + e.Message); return true; }
+        }
+
         private static void Postfix() => SpriteCache.Forget();
     }
 }

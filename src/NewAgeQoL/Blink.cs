@@ -90,8 +90,12 @@ namespace NewAgeQoL
             "турнир", "турнір", "tournament",
             "Ваш друг", "Your friend",
             "хаотический бой", "хаотичний бій", "хаотичному бою", "chaotic",
-            "получил Контракт", "получил Договор", "отримав Контракт", "отримав Договір", "received Contract", "received a Contract"
+            "получил Контракт", "получил Договор", "отримав Контракт", "отримав Договір", "received Contract", "received a Contract",
+            "Бойня", "Бійня", "Slaughter",
+            "Разведка доложила", "Розвідка доповіла", "будет атакована точка влияния", "буде атакована точка впливу", "influence point will be attacked"
         };
+
+        private static readonly string[] NotEventStarts = { "Победител", "Перемож", "Winner", "The winner" };
 
         private static IntPtr _window;
         private static IntPtr _icon;
@@ -344,6 +348,8 @@ namespace NewAgeQoL
             if (text.Length == 0) return false;
             foreach (var word in NotEvents)
                 if (text.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            foreach (var word in NotEventStarts)
+                if (text.StartsWith(word, StringComparison.OrdinalIgnoreCase)) return false;
             bool invite = false;
             foreach (var word in Invites)
                 if (text.StartsWith(word, StringComparison.OrdinalIgnoreCase)) { invite = true; break; }

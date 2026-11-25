@@ -41,13 +41,15 @@ namespace NewAgeQoL
             internal Func<Sprite> Icon;
             internal Func<string> Title;
             internal Func<string> Text;
+            internal Func<long> Left;
+            internal string Word;
         }
 
         private static readonly List<Mark> Marks = new List<Mark>();
 
-        internal static void Add(Func<bool> on, Func<Sprite> icon, Func<string> title, Func<string> text)
+        internal static void Add(Func<bool> on, Func<Sprite> icon, Func<string> title, Func<string> text, Func<long> left = null, string word = null)
         {
-            Marks.Add(new Mark { On = on, Icon = icon, Title = title, Text = text });
+            Marks.Add(new Mark { On = on, Icon = icon, Title = title, Text = text, Left = left, Word = word });
             _sig = "";
         }
 
@@ -70,21 +72,16 @@ namespace NewAgeQoL
             Add(() => NuarmarRush.Enabled() != null && NuarmarRush.Enabled().Value, Admiral,
                 () => Lang.T("Автовход в Нуармар"),
                 () => Lang.T("По объявлению о Нуармаре сразу иду в турниры и вхожу в заявку.\nЕсли в этот момент ты в бою или в другой заявке — объявление пропускается.\nВыключается в «Настройках мода»."));
-            Add(() => DozenRush.Enabled() != null && DozenRush.Enabled().Value, Medal,
+            Add(() => DozenRush.Enabled() != null && DozenRush.Enabled().Value, null,
                 () => Lang.T("Автовход в Дюжину клинков"),
-                () => Lang.T("По объявлению о Дюжине клинков для моего уровня иду в турниры и вхожу в заявку.\nЕсли в этот момент ты в бою или в другой заявке — объявление пропускается.\nВыключается в «Настройках мода»."));
+                () => Lang.T("По объявлению о Дюжине клинков для моего уровня иду в турниры и вхожу в заявку.\nЕсли в этот момент ты в бою или в другой заявке — объявление пропускается.\nВыключается в «Настройках мода»."), null, "XII");
+            QuestNotes.Register();
         }
 
         private const int LifeFlask = 426;
         private const int Mushroom = 16852;
-        private const int GoldLevel = 17;
 
         private static Sprite Admiral() => Icons.Flash("nuarmar");
-
-        private static Sprite Medal()
-        {
-            try { return AtlasUtils.GetTournamentImage(GoldLevel); } catch { return null; }
-        }
 
         private static Sprite _lit;
 
@@ -396,6 +393,15 @@ namespace NewAgeQoL
                         bool edged = cell.Frame.sprite != null && cell.Frame.sprite.texture != null;
                         if (cell.Frame.enabled != edged) cell.Frame.enabled = edged;
                     }
+                    if (cell.Rest != null && mark != null && mark.Left != null)
+                    {
+                        long until = -1;
+                        try { until = mark.Left(); } catch { }
+                        string stamp = until < 0 ? "…" : Brief(until);
+                        if (cell.Rest.text != stamp) cell.Rest.text = stamp;
+                        var tint = until < 0 ? (Color32)WardrobeLook.Body : Paint(until);
+                        if (!cell.Rest.color.Equals((Color)tint)) cell.Rest.color = tint;
+                    }
                     continue;
                 }
                 Known known;
@@ -480,7 +486,7 @@ namespace NewAgeQoL
             return m > 0 ? Lang.F("{0}м", m) : Lang.T("<1м");
         }
 
-        private static string Full(long sec)
+        internal static string Full(long sec)
         {
             if (sec <= 0) return Lang.T("меньше минуты");
             long d = sec / 86400;
@@ -555,12 +561,14 @@ namespace NewAgeQoL
         private static Cell Make(int id, Sprite image, Sprite border)
         {
             var cell = new Cell { Id = id };
+            var own = id < 0 ? MarkOf(id) : null;
+            bool tall = id >= 0 || own != null && own.Left != null;
             var go = new GameObject("cell", typeof(RectTransform), typeof(Image), typeof(Button), typeof(EventTrigger));
             go.transform.SetParent(id < 0 ? _marks : _root, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
-            rt.sizeDelta = new Vector2(Side, id < 0 ? Side : Side + TextH);
+            rt.sizeDelta = new Vector2(Side, tall ? Side + TextH : Side);
             var back = go.GetComponent<Image>();
             back.color = new Color(0f, 0f, 0f, 0.35f);
             back.sprite = OnlineWindow.Rounded(8);
@@ -587,8 +595,22 @@ namespace NewAgeQoL
 
             if (id < 0)
             {
-                OnlineWindow.Place(cell.Icon.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 2f), new Vector2(-2f, -2f));
-                OnlineWindow.Place(cell.Frame.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+                if (tall) Stamp(cell, go);
+                else
+                {
+                    OnlineWindow.Place(cell.Icon.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 2f), new Vector2(-2f, -2f));
+                    OnlineWindow.Place(cell.Frame.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+                }
+                if (own != null && !string.IsNullOrEmpty(own.Word))
+                {
+                    var word = OnlineWindow.Label(go.transform, own.Word, 13, FontStyle.Bold, WardrobeLook.Accent);
+                    word.raycastTarget = false;
+                    word.alignment = TextAnchor.MiddleCenter;
+                    var edge = word.gameObject.AddComponent<Shadow>();
+                    edge.effectColor = new Color(0f, 0f, 0f, 0.9f);
+                    edge.effectDistance = new Vector2(1f, -1f);
+                    OnlineWindow.Place(word.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+                }
                 go.GetComponent<Button>().targetGraphic = back;
                 var markTrigger = go.GetComponent<EventTrigger>();
                 Watch(markTrigger, EventTriggerType.PointerEnter, e => { _tipFor = id; _tipAsked = false; });
@@ -597,13 +619,7 @@ namespace NewAgeQoL
                 return cell;
             }
 
-            cell.Rest = OnlineWindow.Label(go.transform, "…", 10, FontStyle.Bold, WardrobeLook.Body);
-            cell.Rest.raycastTarget = false;
-            var shadow = cell.Rest.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            shadow.effectDistance = new Vector2(1f, -1f);
-            OnlineWindow.Place(cell.Rest.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(-4f, 0f), new Vector2(4f, TextH));
+            Stamp(cell, go);
 
             var button = go.GetComponent<Button>();
             button.targetGraphic = back;
@@ -617,6 +633,17 @@ namespace NewAgeQoL
             return cell;
         }
 
+        private static void Stamp(Cell cell, GameObject go)
+        {
+            cell.Rest = OnlineWindow.Label(go.transform, "…", 10, FontStyle.Bold, WardrobeLook.Body);
+            cell.Rest.raycastTarget = false;
+            var shadow = cell.Rest.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            shadow.effectDistance = new Vector2(1f, -1f);
+            OnlineWindow.Place(cell.Rest.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(-4f, 0f), new Vector2(4f, TextH));
+        }
+
         private static void Watch(EventTrigger trigger, EventTriggerType type, UnityEngine.Events.UnityAction<BaseEventData> call)
         {
             var entry = new EventTrigger.Entry { eventID = type };
@@ -627,7 +654,8 @@ namespace NewAgeQoL
         private static void Stand()
         {
             int game = 0, own = 0;
-            foreach (var cell in Cells) if (cell.Go != null) { if (cell.Id < 0) own++; else game++; }
+            bool ownTall = false;
+            foreach (var cell in Cells) if (cell.Go != null) { if (cell.Id < 0) { own++; if (cell.Rest != null) ownTall = true; } else game++; }
             if (game + own == 0) { Hide(); return; }
 
             bool freed = LeftColumn.TopBlockHidden;
@@ -652,7 +680,7 @@ namespace NewAgeQoL
             }
             if (Show(_marks, own > 0))
             {
-                float low = Pad * 2f + Side;
+                float low = ownTall ? high : Pad * 2f + Side;
                 Fit(_marks, Pad * 2f + own * Side + (own - 1) * (Step - Side), low, new Vector2(next, -y));
             }
         }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -36,6 +38,14 @@ namespace NewAgeQoL
             internal int Count;
         }
 
+        private sealed class Have
+        {
+            internal int Count;
+            internal bool Done;
+        }
+
+        private const int MostHave = 9999999;
+
         private static GameObject _canvasGo;
         private static RectTransform _items;
         private static ScrollRect _itemsScroll;
@@ -65,6 +75,11 @@ namespace NewAgeQoL
         private static readonly List<Line> Cart = new List<Line>();
         private static readonly Dictionary<int, int> Variants = new Dictionary<int, int>();
         private static readonly HashSet<string> Open = new HashSet<string>();
+        private static readonly Dictionary<int, Have> Stock = new Dictionary<int, Have>();
+        private static readonly Dictionary<int, int> Wanted = new Dictionary<int, int>();
+        private static bool _loaded;
+        private static string _saved;
+        private static Text _dropTitle;
 
         private static int _craft;
         private static int _from;
@@ -95,6 +110,7 @@ namespace NewAgeQoL
                     return;
                 }
                 RecipeData.Fetch();
+                Load();
                 if (_seenData != RecipeData.Version)
                 {
                     Things.Clear();
@@ -102,6 +118,7 @@ namespace NewAgeQoL
                     Cart.RemoveAll(line => RecipeData.Making(line.Id) == null);
                 }
                 _seenData = RecipeData.Version;
+                Restore();
                 Collect();
                 _query = "";
                 _typed = "";
@@ -165,6 +182,7 @@ namespace NewAgeQoL
             _drops = null;
             _cartView = null;
             _dropHead = null;
+            _dropTitle = null;
             _dropView = null;
             _found = null;
             _craftText = null;
@@ -228,6 +246,7 @@ namespace NewAgeQoL
             if (RecipeData.Making(_picked) == null) _picked = Things[0];
             Cart.RemoveAll(line => RecipeData.Making(line.Id) == null);
             Variants.Clear();
+            Restore();
             Open.Clear();
             Fill();
             Pick(_picked);
@@ -449,6 +468,8 @@ namespace NewAgeQoL
             _cartView = (RectTransform)Scroller(box, 8f, 46f, CartW - 16f, CartMax, 2f, out _cart).transform;
 
             var drop = Say(box, global::NewAgeQoL.Lang.T("Всего дропа"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
+            Fit(drop, 11, 16);
+            _dropTitle = drop;
             _dropHead = drop.rectTransform;
             _dropView = (RectTransform)Scroller(box, 8f, 0f, CartW - 16f, 100f, 2f, out _drops).transform;
             FitCart();
@@ -654,6 +675,7 @@ namespace NewAgeQoL
                     if (list[i].Profession == _craft)
                     {
                         Variants[thing] = i;
+                        Wanted[thing] = list[i].Profession;
                         Recount();
                         break;
                     }
@@ -727,7 +749,9 @@ namespace NewAgeQoL
             if (list == null || list.Count < 2) return;
             int index;
             if (!Variants.TryGetValue(_picked, out index)) index = 0;
-            Variants[_picked] = ((index + by) % list.Count + list.Count) % list.Count;
+            index = ((index + by) % list.Count + list.Count) % list.Count;
+            Variants[_picked] = index;
+            Wanted[_picked] = list[index].Profession;
             Head();
             Tree();
             Recount();
@@ -859,11 +883,32 @@ namespace NewAgeQoL
         private static void ClearCart()
         {
             Cart.Clear();
+            Stock.Clear();
             Recount();
         }
 
+        private static bool _recounting;
+        private static bool _again;
+
         private static void Recount()
         {
+            if (_recounting) { _again = true; return; }
+            _recounting = true;
+            try
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    _again = false;
+                    Redraw();
+                    if (!_again) break;
+                }
+            }
+            finally { _recounting = false; }
+        }
+
+        private static void Redraw()
+        {
+            Save();
             if (_cart == null || _drops == null) return;
             Clear(_cart);
             Clear(_drops);
@@ -876,8 +921,17 @@ namespace NewAgeQoL
             Sum(drops, new Dictionary<int, long>());
             var order = new List<int>(drops.Keys);
             order.Sort((a, b) => string.Compare(RecipeData.ThingName(a), RecipeData.ThingName(b), StringComparison.CurrentCultureIgnoreCase));
-            foreach (int id in order) DropRow(id, drops[id]);
+            int ready = 0;
+            foreach (int id in order)
+            {
+                if (Collected(id)) ready++;
+                DropRow(id, drops[id]);
+            }
             if (Cart.Count > 0 && drops.Count == 0) Note(_drops, global::NewAgeQoL.Lang.T("Дропа не нужно"));
+            if (_dropTitle != null)
+                _dropTitle.text = order.Count > 0
+                    ? global::NewAgeQoL.Lang.F("Всего дропа · собрано {0} из {1}", ready, order.Count)
+                    : global::NewAgeQoL.Lang.T("Всего дропа");
             Icons();
         }
 
@@ -1041,16 +1095,185 @@ namespace NewAgeQoL
         {
             var info = RecipeData.Thing(id);
             int rarity = info != null ? info.Rarity : 0;
-            var rt = Plain(_drops, "drop" + id, 40f);
-            Icon(rt, info != null ? info.Image : null, 6f, 4f, 32f, rarity, id);
+            Have have;
+            Stock.TryGetValue(id, out have);
+            bool done = have != null && have.Done;
+            long got = have != null ? have.Count : 0;
+            var rt = Plain(_drops, "drop" + id, 44f);
+            if (done) rt.GetComponent<Image>().color = WardrobeLook.Mix(WardrobeLook.Tab, WardrobeLook.Good, 0.32f);
             float w = CartW - 16f;
+
+            var tick = Wardrobe.Arrow(rt, done ? "✓" : "", () => Flip(id));
+            Wardrobe.At((RectTransform)tick.transform, 6f, 8f, 28f, 28f);
+            tick.GetComponent<Image>().color = done ? WardrobeLook.Good : WardrobeLook.Field;
+            var tickEdge = tick.gameObject.AddComponent<Outline>();
+            tickEdge.effectColor = done ? WardrobeLook.Good : WardrobeLook.FieldEdge;
+            tickEdge.effectDistance = new Vector2(1f, -1f);
+            foreach (var label in tick.GetComponentsInChildren<Text>(true)) label.color = WardrobeLook.OnAccent;
+
+            Icon(rt, info != null ? info.Image : null, 40f, 6f, 32f, rarity, id);
             var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(id)), 14, FontStyle.Normal, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
-            Wardrobe.At(name.rectTransform, 46f, 0f, w - 46f - 132f, 40f);
+            Wardrobe.At(name.rectTransform, 78f, 0f, w - 78f - 192f, 44f);
+            name.horizontalOverflow = HorizontalWrapMode.Wrap;
             Fit(name, 9, 14);
+
+            if (!done)
+            {
+                var field = OnlineWindow.MakeInput(rt, 84f, global::NewAgeQoL.Lang.T("в наличии"));
+                WardrobeLook.Style(field);
+                field.contentType = InputField.ContentType.Custom;
+                field.characterValidation = InputField.CharacterValidation.None;
+                field.onValidateInput = (text, index, c) => c >= '0' && c <= '9' ? c : '\0';
+                field.characterLimit = 7;
+                field.textComponent.alignment = TextAnchor.MiddleCenter;
+                field.textComponent.fontSize = 15;
+                var hint = field.placeholder as Text;
+                if (hint != null) { hint.alignment = TextAnchor.MiddleCenter; Fit(hint, 9, 12); }
+                field.SetTextWithoutNotify(got > 0 ? got.ToString(CultureInfo.InvariantCulture) : "");
+                field.onEndEdit.AddListener(text => Got(id, text, count));
+                Wardrobe.At((RectTransform)field.transform, w - 186f, 7f, 84f, 30f);
+            }
+
+            string left = done ? global::NewAgeQoL.Lang.T("собрано")
+                : got > 0 && got >= count ? global::NewAgeQoL.Lang.T("хватает")
+                : got > 0 ? global::NewAgeQoL.Lang.F("ещё {0}", count - got)
+                : "";
             var amount = Say(rt, "× " + count, 16, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleRight);
-            Wardrobe.At(amount.rectTransform, w - 128f, 0f, 120f, 40f);
-            amount.horizontalOverflow = HorizontalWrapMode.Wrap;
+            Wardrobe.At(amount.rectTransform, w - 98f, left.Length > 0 ? 2f : 0f, 92f, left.Length > 0 ? 22f : 44f);
             Fit(amount, 10, 16);
+            if (left.Length == 0) return;
+            var rest = Say(rt, left, 12, FontStyle.Bold, done || (got > 0 && got >= count) ? WardrobeLook.Good : WardrobeLook.Accent, TextAnchor.MiddleRight);
+            Wardrobe.At(rest.rectTransform, w - 98f, 24f, 92f, 18f);
+            Fit(rest, 9, 12);
+        }
+
+        private static bool Collected(int id)
+        {
+            Have have;
+            return Stock.TryGetValue(id, out have) && have.Done;
+        }
+
+        private static void Flip(int id)
+        {
+            Have have;
+            if (!Stock.TryGetValue(id, out have)) Stock[id] = have = new Have();
+            have.Done = !have.Done;
+            if (have.Done) have.Count = 0;
+            if (!have.Done && have.Count == 0) Stock.Remove(id);
+            Recount();
+        }
+
+        private static void Got(int id, string text, long need)
+        {
+            int typed;
+            if (!int.TryParse((text ?? "").Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out typed)) typed = 0;
+            typed = Mathf.Clamp(typed, 0, MostHave);
+            Have have;
+            if (!Stock.TryGetValue(id, out have))
+            {
+                if (typed == 0) { Recount(); return; }
+                Stock[id] = have = new Have();
+            }
+            if (need > 0 && typed >= need)
+            {
+                have.Done = true;
+                have.Count = 0;
+                Recount();
+                return;
+            }
+            if (have.Count == typed) return;
+            have.Count = typed;
+            if (have.Count == 0 && !have.Done) Stock.Remove(id);
+            Recount();
+        }
+
+        private static string SavePath
+        {
+            get { return Path.Combine(Path.Combine(BepInEx.Paths.ConfigPath, "newage.qol"), "craftcart.txt"); }
+        }
+
+        private static void Load()
+        {
+            if (_loaded) return;
+            try
+            {
+                string path = SavePath;
+                if (File.Exists(path))
+                    foreach (var raw in File.ReadAllLines(path, Encoding.UTF8))
+                    {
+                        var parts = raw.Split('\t');
+                        int id, value;
+                        if (parts.Length < 3
+                            || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out id) || id <= 0
+                            || !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) continue;
+                        if (parts[0] == "cart")
+                        {
+                            if (value >= 1 && !Cart.Exists(line => line.Id == id)) Cart.Add(new Line { Id = id, Count = Mathf.Clamp(value, 1, 99999) });
+                        }
+                        else if (parts[0] == "variant") Wanted[id] = value;
+                        else if (parts[0] == "have")
+                        {
+                            bool done = parts.Length > 3 && parts[3] == "1";
+                            value = done ? 0 : Mathf.Clamp(value, 0, MostHave);
+                            if (value > 0 || done) Stock[id] = new Have { Count = value, Done = done };
+                        }
+                    }
+                _loaded = true;
+                _saved = Dump();
+                Plugin.Trace("[craft] cart read: " + Cart.Count + " items, " + Stock.Count + " components marked");
+            }
+            catch (Exception e) { Plugin.Warn("[craft] reading cart: " + e.Message); }
+        }
+
+        private static void Restore()
+        {
+            foreach (var pair in Wanted)
+            {
+                var list = RecipeData.Making(pair.Key);
+                if (list == null) continue;
+                for (int i = 0; i < list.Count; i++)
+                    if (list[i].Profession == pair.Value) { Variants[pair.Key] = i; break; }
+            }
+        }
+
+        private static string Dump()
+        {
+            var text = new StringBuilder();
+            foreach (var line in Cart)
+                text.Append("cart\t").Append(line.Id.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(line.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            foreach (var pair in Wanted)
+                text.Append("variant\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            foreach (var pair in Stock)
+                if (pair.Value.Count > 0 || pair.Value.Done)
+                    text.Append("have\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Count.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Done ? "1" : "0").Append('\n');
+            return text.ToString();
+        }
+
+        private static void Save()
+        {
+            if (!_loaded) return;
+            string text = Dump();
+            if (text == _saved) return;
+            try
+            {
+                string path = SavePath;
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                string temp = path + ".tmp";
+                File.WriteAllText(temp, text, new UTF8Encoding(false));
+                if (!File.Exists(path)) File.Move(temp, path);
+                else
+                {
+                    try { File.Replace(temp, path, null); }
+                    catch (Exception e)
+                    {
+                        Plugin.Caught("[craft] atomic replace failed, replacing in steps: " + e.Message);
+                        File.Delete(path);
+                        File.Move(temp, path);
+                    }
+                }
+                _saved = text;
+            }
+            catch (Exception e) { Plugin.Warn("[craft] saving cart: " + e.Message); }
         }
 
         private static RectTransform Clickable(RectTransform host, string name, float high, Action click)

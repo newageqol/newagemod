@@ -137,14 +137,16 @@ namespace NewAgeQoL
             int best = -1;
             for (int s = 0; s < info.characterCount; s++)
             {
-                if (info.characterInfo[s].character != want[0]) continue;
+                if (Breaks(info.characterInfo[s].character)) continue;
                 int i = s, k = 0;
                 while (i < info.characterCount && k < want.Length)
                 {
-                    char c = info.characterInfo[i].character;
-                    if (Breaks(c)) { i++; continue; }
-                    if (c != want[k]) break;
-                    i++; k++;
+                    var ch = info.characterInfo[i];
+                    if (Breaks(ch.character)) { i++; continue; }
+                    string piece = Piece(ch);
+                    if (piece.Length == 0) { i++; continue; }
+                    if (string.CompareOrdinal(want, k, piece, 0, piece.Length) != 0) break;
+                    i++; k += piece.Length;
                 }
                 if (k < want.Length) continue;
                 if (best < 0 || Mathf.Abs(s - near) < Mathf.Abs(best - near)) best = s;
@@ -371,9 +373,17 @@ namespace NewAgeQoL
                 if (Breaks(ch.character)) continue;
                 if (line >= 0 && ch.lineNumber != line) made.Append('\n');
                 line = ch.lineNumber;
-                made.Append(ch.character);
+                made.Append(Piece(ch));
             }
             return made.ToString();
+        }
+
+        private static string Piece(TMP_CharacterInfo ch)
+        {
+            if (ch.elementType != TMP_TextElementType.Sprite) return ch.character.ToString();
+            var sprite = ch.textElement;
+            if (sprite == null) return "";
+            return Smiles.CodeOf(sprite.textAsset as TMP_SpriteAsset, (int)sprite.glyphIndex) ?? "";
         }
 
         private void Copy()

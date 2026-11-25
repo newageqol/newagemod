@@ -405,7 +405,7 @@ namespace NewAgeQoL
                     Clan = Attr(a, "icon"),
                     Rank = Int(Attr(a, "rank")),
                     Vip = Attr(a, "vip") == "1",
-                    Dealer = Attr(a, "dealer") == "1",
+                    Dealer = Has(a, "dealer"),
                     Rights = Attr(a, "admin"),
                     Away = Yes(a, "a") || Yes(a, "afk") || Yes(a, "away") || Yes(a, "idle") || Yes(a, "sleep"),
                 };
@@ -429,6 +429,8 @@ namespace NewAgeQoL
             string got = Attr(a, key);
             return got == "1" || got == "true";
         }
+
+        private static bool Has(string a, string key) => Regex.IsMatch(a, "\\b" + key + "=\"");
 
         private static string Attr(string a, string key)
         {

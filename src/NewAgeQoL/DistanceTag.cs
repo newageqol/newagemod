@@ -20,6 +20,8 @@ namespace NewAgeQoL
         private static float _next;
         private static bool _fighting;
         internal static readonly HashSet<int> Skip = new HashSet<int>();
+        private static readonly HashSet<int> SummonRaces = new HashSet<int> { 100, 227, 234, 300, 301, 302, 310, 311, 312 };
+        private static bool _racesRead;
 
         private static ICombatData Combat()
         {
@@ -36,6 +38,7 @@ namespace NewAgeQoL
                 Now.Clear();
                 bool fighting = SideButtons.InCombat();
                 if (_fighting && !fighting) Skip.Clear();
+                if (!_fighting && fighting) _racesRead = false;
                 _fighting = fighting;
                 var cd = fighting ? Combat() : null;
                 var me = FighterHint.Body(cd);
@@ -46,7 +49,8 @@ namespace NewAgeQoL
                     foreach (var pair in cd.Characters)
                     {
                         var ch = pair.Value;
-                        if (!(ch is PlayerCharacter) || ch.UserId == me.UserId || Skip.Contains(ch.UserId)) continue;
+                        if (ch == null || ch.UserId == me.UserId || Skip.Contains(ch.UserId)) continue;
+                        if (!(ch is PlayerCharacter) && !Monster(cd, ch as BotCharacter)) continue;
                         var caption = cd.GetCharacterCaption(ch.UserId);
                         if (caption == null) continue;
                         int far;
@@ -62,6 +66,35 @@ namespace NewAgeQoL
                 Shown.AddRange(Now);
             }
             catch (Exception e) { Plugin.Caught("[distance] " + e.Message); }
+        }
+
+        private static bool Monster(ICombatData cd, BotCharacter bot)
+        {
+            if (bot == null || bot.FitmentAura != null) return false;
+            return !Races().Contains(bot.Race) || !Players(cd, bot.Team);
+        }
+
+        internal static bool Players(ICombatData cd, int team)
+        {
+            if (cd?.Characters == null) return false;
+            foreach (var pair in cd.Characters)
+                if (pair.Value is PlayerCharacter && pair.Value.Team == team) return true;
+            return false;
+        }
+
+        private static HashSet<int> Races()
+        {
+            if (_racesRead) return SummonRaces;
+            _racesRead = true;
+            try
+            {
+                string file = System.IO.Path.Combine(BepInEx.Paths.CachePath, "NewAge2D", "player-summons.txt");
+                if (System.IO.File.Exists(file))
+                    foreach (string line in System.IO.File.ReadAllLines(file))
+                        if (int.TryParse(line.Trim(), out int race)) SummonRaces.Add(race);
+            }
+            catch (Exception e) { Plugin.Caught("[distance] summon races: " + e.Message); }
+            return SummonRaces;
         }
 
         private static GameObject Put(LifeManaEnergyDisplay caption, int far, bool near)
@@ -149,7 +182,11 @@ namespace NewAgeQoL
             {
                 var one = msg as SummonCreatureResponseMessage;
                 if (one == null) return;
-                if (DistanceTag.Skip.Add(one.UserId)) Plugin.Trace("[distance] no distance over summoned " + one.UserId);
+                ICombatData cd = null;
+                try { cd = Controllers.User?.CombatData; }
+                catch { }
+                if (!DistanceTag.Players(cd, one.Team)) return;
+                if (DistanceTag.Skip.Add(one.UserId)) Plugin.Trace("[distance] no distance over creature " + one.UserId + " summoned by a player");
             }
             catch (Exception e) { Plugin.Caught("[distance] summon: " + e.Message); }
         }

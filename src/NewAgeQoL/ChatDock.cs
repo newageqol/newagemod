@@ -83,6 +83,10 @@ namespace NewAgeQoL
         private static GameObject _canvasGo;
         private static Canvas _canvas;
         private static RectTransform _root;
+        private static RectTransform _sheet;
+        private static RectTransform _hat;
+        private static RectTransform _hatRim;
+        private const float TabCurve = 14f;
         private static ChatPanelContent _view;
         private static Transform _rowsHost;
         private static GameObject _rowPrefab;
@@ -140,7 +144,7 @@ namespace NewAgeQoL
 
         private const float Want = 172f;
 
-        internal static float PanelHeight => Fits(Want) + Edge;
+        internal static float PanelHeight => Fits(Want + CombatBar.Spare) + Edge;
 
         internal static float LeftPixels
         {
@@ -1152,10 +1156,52 @@ namespace NewAgeQoL
             return _canvas;
         }
 
+        private static RectTransform Layer(string name, Color color, bool edged)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_root, false);
+            var art = go.GetComponent<Image>();
+            art.color = color;
+            art.sprite = OnlineWindow.Rounded(16);
+            art.type = Image.Type.Sliced;
+            art.raycastTarget = edged;
+            if (edged)
+            {
+                var edge = go.AddComponent<Outline>();
+                edge.effectColor = WardrobeLook.Edge;
+                edge.effectDistance = new Vector2(1f, -1f);
+            }
+            return (RectTransform)go.transform;
+        }
+
+        private static void Hat(float rise, float tabWide)
+        {
+            if (_sheet == null) return;
+            var top = new Vector2(0f, rise);
+            if (_sheet.offsetMax != top) _sheet.offsetMax = top;
+            bool shown = rise > 0f && tabWide > 0f;
+            Cap(_hat, shown, rise, tabWide, 0f);
+            Cap(_hatRim, shown, rise, tabWide, 1f);
+        }
+
+        private static void Cap(RectTransform rt, bool shown, float rise, float wide, float rim)
+        {
+            if (rt == null) return;
+            if (rt.gameObject.activeSelf != shown) rt.gameObject.SetActive(shown);
+            if (!shown) return;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            float tall = CombatBar.TabHigh + TabCurve + rim;
+            var size = new Vector2(wide + rim * 2f, tall);
+            if (rt.sizeDelta != size) rt.sizeDelta = size;
+            var spot = new Vector2(0f, rise - TabCurve);
+            if (rt.anchoredPosition != spot) rt.anchoredPosition = spot;
+        }
+
         private static void Place(bool deep)
         {
             float scale = Scale(Sheet());
-            float high = Fits(Want);
+            float high = Fits(Want + CombatBar.Spare);
             var area = _canvasGo != null ? _canvasGo.transform as RectTransform : null;
             float room = area != null && area.rect.width > 100f ? area.rect.width - Edge * 2f : Wide;
             _root.anchorMin = _root.anchorMax = new Vector2(0.5f, 0f);
@@ -1164,6 +1210,7 @@ namespace NewAgeQoL
             if (_root.sizeDelta != size) _root.sizeDelta = size;
             var spot = new Vector2(0f, Edge - Sink);
             if (_root.anchoredPosition != spot) _root.anchoredPosition = spot;
+            Hat(CombatBar.Row, CombatBar.TabWide);
             Lift((high + Edge + CombatBar.Height + SpeedBar.Height) * scale, deep);
 
         }
@@ -1787,6 +1834,9 @@ namespace NewAgeQoL
             _canvasGo = null;
             _canvas = null;
             _root = null;
+            _sheet = null;
+            _hat = null;
+            _hatRim = null;
             _view = null;
             _ink = null;
             _tabsRt = null;
@@ -1846,16 +1896,14 @@ namespace NewAgeQoL
                 scaler.matchWidthOrHeight = 1f;
                 UiScale.Own(scaler);
 
-                var panel = new GameObject("panel", typeof(RectTransform), typeof(Image), typeof(Outline));
+                var panel = new GameObject("panel", typeof(RectTransform));
                 panel.transform.SetParent(_canvasGo.transform, false);
                 _root = (RectTransform)panel.transform;
-                var back = panel.GetComponent<Image>();
-                back.color = WardrobeLook.Window;
-                back.sprite = OnlineWindow.Rounded(16);
-                back.type = Image.Type.Sliced;
-                var edge = panel.GetComponent<Outline>();
-                edge.effectColor = WardrobeLook.Edge;
-                edge.effectDistance = new Vector2(1f, -1f);
+                _hatRim = Layer("tab rim", WardrobeLook.Edge, false);
+                _sheet = Layer("back", WardrobeLook.Window, true);
+                OnlineWindow.Place(_sheet, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+                _hat = Layer("tab", WardrobeLook.Window, false);
+                Hat(0f, 0f);
 
                 Bars(_root);
                 Middle(_root);

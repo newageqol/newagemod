@@ -352,6 +352,12 @@ namespace NewAgeQoL
             return q;
         }
 
+        internal static int InvOf(int thingId)
+        {
+            lock (Scanned) foreach (var s in Scanned) if (s.ThingId == thingId && s.Qty > 0) return s.Inv;
+            return 0;
+        }
+
         internal static int QtyOf(int thingId, HashSet<int> skipInv)
         {
             int q = 0;

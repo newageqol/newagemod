@@ -12,14 +12,20 @@ namespace NewAgeQoL
     internal static class CombatBar
     {
         private const float High = 46f;
+        private const float Reserve = 86f;
         private const float Pad = 10f;
         private const float Space = 5f;
         private const float Split = 12f;
-        internal const float CellSide = 36f;
+        internal const float CellSide = 38f;
         internal const float SmallSide = 32f;
-        private const float Grow = CellSide * 0.21f;
-        private const float ClockHigh = 40f;
-        private const float Widest = 420f;
+        private const float ClockHigh = 28f;
+        private const float TimerW = 58f;
+        private const float DigitW = 15f;
+        private const float DotW = 8f;
+        private const float Roomy = 1100f;
+        private const int ShapeSide = 96;
+        private const float PhaseTrim = 0.22f;
+        private const float AttackTrim = 0.15f;
 
         private sealed class Taken
         {
@@ -38,6 +44,10 @@ namespace NewAgeQoL
             internal GameObject Source;
             internal Image Pic;
             internal Image Mirror;
+            internal Sprite Raw;
+            internal Image Glow;
+            internal bool Ready;
+            internal bool Left;
             internal Button Press;
             internal Button Game;
         }
@@ -75,6 +85,17 @@ namespace NewAgeQoL
         private static RectTransform _strip;
         private static RectTransform _top;
         private static RectTransform _mid;
+        private static RectTransform _hold;
+        private static Text _round;
+        private static RectTransform _time;
+        private static readonly List<Text> Digits = new List<Text>();
+        private static string _countText;
+        private static string _roundSaid;
+        private static int _countSaid = int.MinValue;
+        private static float _tabWide;
+        private static AccessTools.FieldRef<PhaseTimerScript, float> _leftRef;
+        private static AccessTools.FieldRef<PhaseTimerScript, bool> _liveRef;
+        private static bool _countWired;
         private static float _next;
         private static float _since;
         private static PhaseTimerScript _clock;
@@ -85,7 +106,15 @@ namespace NewAgeQoL
         internal static bool On => ChatDock.Active && SideButtons.InCombat();
 
 
-        internal static float Height => _strip == null ? 0f : High + (Top.Count > 0 ? ClockHigh : 0f);
+        internal static float Height => _strip == null ? 0f : High + ClockHigh;
+
+        internal static float Spare => _strip == null ? 0f : Mathf.Max(0f, Reserve - Height);
+
+        internal static float Row => _strip == null ? 0f : High;
+
+        internal static float TabHigh => ClockHigh;
+
+        internal static float TabWide => _strip == null || string.IsNullOrEmpty(_roundSaid) ? 0f : _tabWide;
 
         private static float Span => _strip != null ? _strip.sizeDelta.x : ChatDock.Span;
 
@@ -99,7 +128,7 @@ namespace NewAgeQoL
             }
         }
 
-        private static float PairHalf => CellSide + Space * 0.5f;
+        private static float PairHalf => CellSide + TimerW * 0.5f;
 
         private static float Middle => Left + Span * 0.5f;
 
@@ -125,6 +154,8 @@ namespace NewAgeQoL
 
         internal static void Tick()
         {
+            Count();
+            Pulse();
             if (Time.unscaledTime < _next) return;
             _next = Time.unscaledTime + (Seats.Count < 2 || Held.Count == 0 ? 0.02f : 0.15f);
             try
@@ -136,7 +167,7 @@ namespace NewAgeQoL
                 Grab();
                 Faces();
                 Mute();
-                Fit(_top, Top);
+                Say();
                 Effects();
                 Place();
                 Shade();
@@ -156,18 +187,240 @@ namespace NewAgeQoL
             _since = Time.unscaledTime;
 
             var back = _stripGo.GetComponent<Image>();
-            back.color = WardrobeLook.Window;
-            back.sprite = OnlineWindow.Rounded(16);
-            back.type = Image.Type.Sliced;
+            back.color = Color.clear;
             back.raycastTarget = false;
-
-            var edge = _stripGo.GetComponent<Outline>();
-            edge.effectColor = WardrobeLook.Edge;
-            edge.effectDistance = new Vector2(1f, -1f);
+            _stripGo.GetComponent<Outline>().enabled = false;
 
             _top = Zone("clock", new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), Vector2.zero, ClockHigh);
+            _top.sizeDelta = new Vector2(420f, ClockHigh);
             _mid = Zone("center", new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-PairHalf, 0f), High);
+
+            _hold = Zone("hidden clock", new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), Vector2.zero, ClockHigh);
+            var veil = _hold.gameObject.AddComponent<CanvasGroup>();
+            veil.alpha = 0f;
+            veil.blocksRaycasts = false;
+            veil.interactable = false;
+
+            _round = OnlineWindow.Label(_top, "", 15, FontStyle.Normal, WardrobeLook.Label);
+            OnlineWindow.Place((RectTransform)_round.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            _round.raycastTarget = false;
+            _round.supportRichText = true;
+            _round.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            Capsule();
+            Rule();
+
+            var holder = new GameObject("time", typeof(RectTransform));
+            holder.transform.SetParent(_mid, false);
+            _time = (RectTransform)holder.transform;
+            _time.anchorMin = _time.anchorMax = new Vector2(0f, 0.5f);
+            _time.pivot = new Vector2(0.5f, 0.5f);
+            _time.sizeDelta = new Vector2(TimerW, High);
+            _time.anchoredPosition = new Vector2(CellSide + TimerW * 0.5f, 0f);
+            _roundSaid = null;
+            _countSaid = int.MinValue;
+            _countText = null;
+            _tabWide = 0f;
             Plugin.Trace("[bar] built");
+        }
+
+        private static void Capsule()
+        {
+            var go = new GameObject("capsule", typeof(RectTransform), typeof(Image), typeof(Outline));
+            go.transform.SetParent(_mid, false);
+            go.transform.SetAsFirstSibling();
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.sizeDelta = new Vector2(CellSide * 2f + TimerW, CellSide);
+            rt.anchoredPosition = Vector2.zero;
+            var art = go.GetComponent<Image>();
+            art.sprite = OnlineWindow.RoundedExact(Mathf.RoundToInt(CellSide * 0.5f));
+            art.type = Image.Type.Sliced;
+            art.color = WardrobeLook.Field;
+            art.raycastTarget = false;
+            var edge = go.GetComponent<Outline>();
+            edge.effectColor = WardrobeLook.FieldEdge;
+            edge.effectDistance = new Vector2(1f, -1f);
+            Seam(rt, CellSide);
+            Seam(rt, CellSide + TimerW);
+        }
+
+        private static void Rule()
+        {
+            var go = new GameObject("rule", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(_strip, false);
+            var rt = (RectTransform)go.transform;
+            OnlineWindow.Place(rt, Vector2.zero, new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(18f, 0f), new Vector2(-18f, 1f));
+            var art = go.GetComponent<Image>();
+            art.color = WardrobeLook.Edge;
+            art.raycastTarget = false;
+        }
+
+        private static void Seam(RectTransform host, float x)
+        {
+            var go = new GameObject("seam", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(host, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(1f, CellSide);
+            rt.anchoredPosition = new Vector2(x, 0f);
+            var art = go.GetComponent<Image>();
+            art.color = WardrobeLook.FieldEdge;
+            art.raycastTarget = false;
+        }
+
+        private static readonly Dictionary<int, Sprite> Shapes = new Dictionary<int, Sprite>();
+
+        private static Sprite Shaped(Sprite raw, bool left)
+        {
+            if (raw == null || raw.texture == null) return raw;
+            int key = raw.GetInstanceID() * 2 + (left ? 0 : 1);
+            Sprite made;
+            if (Shapes.TryGetValue(key, out made) && made != null && made.texture != null) return made;
+            try { made = Cut(raw, left); }
+            catch (Exception e) { Plugin.Caught("[bar] shape " + raw.name + ": " + e.Message); made = null; }
+            if (made == null) return raw;
+            Shapes[key] = made;
+            return made;
+        }
+
+        private static Sprite Cut(Sprite raw, bool left)
+        {
+            var source = raw.texture;
+            Rect box = raw.textureRect;
+            float edge = Mathf.Min(box.width, box.height) * (1f - (left ? PhaseTrim : AttackTrim) * 2f);
+            float bx = box.x + (box.width - edge) * 0.5f, by = box.y + (box.height - edge) * 0.5f;
+            int side = ShapeSide;
+            var rt = RenderTexture.GetTemporary(side, side, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var was = RenderTexture.active;
+            Texture2D copy;
+            try
+            {
+                Graphics.Blit(source, rt, new Vector2(edge / source.width, edge / source.height), new Vector2(bx / source.width, by / source.height));
+                RenderTexture.active = rt;
+                copy = new Texture2D(side, side, TextureFormat.RGBA32, false, false);
+                copy.ReadPixels(new Rect(0, 0, side, side), 0, 0);
+            }
+            finally
+            {
+                RenderTexture.active = was;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+            var px = copy.GetPixels32();
+            float r = side * 0.5f;
+            for (int y = 0; y < side; y++)
+                for (int x = 0; x < side; x++)
+                {
+                    bool outer = left ? x < r : x >= r;
+                    if (!outer) continue;
+                    float dx = x + 0.5f - r, dy = y + 0.5f - r;
+                    float keep = Mathf.Clamp01(r - Mathf.Sqrt(dx * dx + dy * dy));
+                    int at = y * side + x;
+                    px[at].a = (byte)Mathf.RoundToInt(px[at].a * keep);
+                }
+            copy.SetPixels32(px);
+            copy.Apply(false, true);
+            copy.name = "QoLBarShape";
+            copy.filterMode = FilterMode.Bilinear;
+            copy.wrapMode = TextureWrapMode.Clamp;
+            copy.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            var art = Sprite.Create(copy, new Rect(0, 0, side, side), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+            art.name = raw.name + (left ? "_left" : "_right");
+            art.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return art;
+        }
+
+        private static Text Digit(int index)
+        {
+            while (Digits.Count <= index)
+            {
+                var one = OnlineWindow.Label(_time, "", 26, FontStyle.Bold, WardrobeLook.Bright);
+                one.raycastTarget = false;
+                one.horizontalOverflow = HorizontalWrapMode.Overflow;
+                one.verticalOverflow = VerticalWrapMode.Overflow;
+                var rt = one.rectTransform;
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                Digits.Add(one);
+            }
+            return Digits[index];
+        }
+
+        private static void Draw(string text, Color tint)
+        {
+            float total = 0f;
+            foreach (char c in text) total += c == '.' ? DotW : DigitW;
+            float x = -total * 0.5f;
+            int count = Math.Max(text.Length, Digits.Count);
+            for (int i = 0; i < count; i++)
+            {
+                var cell = Digit(i);
+                if (i >= text.Length) { if (cell.text.Length > 0) cell.text = ""; continue; }
+                char c = text[i];
+                float w = c == '.' ? DotW : DigitW;
+                var rt = cell.rectTransform;
+                var size = new Vector2(w, High);
+                if (rt.sizeDelta != size) rt.sizeDelta = size;
+                var spot = new Vector2(x + w * 0.5f, -0.7f);
+                if (rt.anchoredPosition != spot) rt.anchoredPosition = spot;
+                string one = c.ToString();
+                if (cell.text != one) cell.text = one;
+                if (cell.color != tint) cell.color = tint;
+                x += w;
+            }
+        }
+
+        private static void Say()
+        {
+            if (_round == null) return;
+            string line = "";
+            try
+            {
+                var cd = FighterHint.Cd();
+                if (cd != null && cd.RoundNum > 0)
+                    line = Lang.T("Раунд") + " <b><color=#ECEEF1>" + cd.RoundNum + "</color></b>   <color=#5A626E>|</color>   <color=#E2B85C>"
+                           + Lang.T(cd.RoundType == RoundType.WALK_ROUND ? "Фаза ходьбы" : "Фаза боя") + "</color>";
+            }
+            catch (Exception e) { Plugin.Caught("[bar] round: " + e.Message); }
+            if (line == _roundSaid) return;
+            _roundSaid = line;
+            _round.text = line;
+            _tabWide = line.Length == 0 ? 0f : Mathf.Ceil(_round.preferredWidth) + 44f;
+        }
+
+        private static void Count()
+        {
+            if (_time == null) return;
+            int cs = -1;
+            try
+            {
+                var script = _clock;
+                if (script != null)
+                {
+                    if (!_countWired)
+                    {
+                        _countWired = true;
+                        try
+                        {
+                            _leftRef = AccessTools.FieldRefAccess<PhaseTimerScript, float>("_roundTime");
+                            _liveRef = AccessTools.FieldRefAccess<PhaseTimerScript, bool>("_initialized");
+                        }
+                        catch (Exception e) { Plugin.Caught("[bar] phase time: " + e.Message); }
+                    }
+                    if (_leftRef != null && (_liveRef == null || _liveRef(script)))
+                        cs = Mathf.Max(0, Mathf.FloorToInt(_leftRef(script) * 100f));
+                }
+            }
+            catch (Exception e) { Plugin.Caught("[bar] phase time: " + e.Message); _leftRef = null; }
+            if (cs == _countSaid) return;
+            _countSaid = cs;
+            string text = cs < 0 ? "" : cs >= 100 ? (cs / 100).ToString() : "0." + cs.ToString("00");
+            var tint = cs > 500 ? WardrobeLook.Bright : cs > 100 ? WardrobeLook.Accent : WardrobeLook.Bad;
+            if (text == _countText && Digits.Count > 0 && Digits[0].color == tint) return;
+            _countText = text;
+            Draw(text, tint);
         }
 
         private static RectTransform Zone(string name, Vector2 anchor, Vector2 pivot, Vector2 spot, float tall)
@@ -189,11 +442,13 @@ namespace NewAgeQoL
             get
             {
                 int count = SkillList.TrickCount;
-                if (count <= 0) return _need;
+                if (count <= 0) return Mathf.Max(_need, _strip != null ? Roomy : 0f);
                 float row = count * (SmallSide + SkillList.Gap) - SkillList.Gap;
-                float want = (row + Pad + Space + Split + PairHalf) * 2f;
+                float left = row + Pad + Space + Split + PairHalf;
+                float right = PairHalf + Space + Split + Extra.Length * (SmallSide + Space) + Pad;
+                float want = Mathf.Max(left, right) * 2f;
                 if (want > _need) _need = want;
-                return _need;
+                return Mathf.Max(_need, Roomy);
             }
         }
 
@@ -215,7 +470,7 @@ namespace NewAgeQoL
             if (phase == null) phase = Knob();
             Component attack = Part(ctrl, "AttackButton");
 
-            Take(timer, _top, Top);
+            Take(timer, _hold, Top);
             if (phase != null && (timer == null || !phase.transform.IsChildOf(timer.transform))) Seat(phase, 0);
             Seat(attack, 1);
         }
@@ -427,7 +682,7 @@ namespace NewAgeQoL
             rt.sizeDelta = new Vector2(box.width, box.height);
             rt.localScale = new Vector3(0.001f, 0.001f, 1f);
             Curtain.Show(rt);
-            Picture(frame, still, still != null ? null : face, rt.gameObject);
+            Picture(frame, still, still != null ? null : face, rt.gameObject, index == 0);
             var shown = still != null ? still : face != null ? face.sprite : null;
             Plugin.Trace("[bar] placed " + rt.name + " " + Mathf.RoundToInt(box.width) + "x" + Mathf.RoundToInt(box.height)
                 + (shown != null ? ", image " + shown.name + (still != null ? " own" : " live") : ", no image"));
@@ -438,8 +693,9 @@ namespace NewAgeQoL
             float sum = 0f;
             for (int i = 0; i < count; i++)
             {
-                sum += (i < 2 ? CellSide : SmallSide) + Space;
-                if (i == 1) sum += Split;
+                if (i == 0) sum += CellSide + TimerW;
+                else if (i == 1) sum += CellSide + Space + Split;
+                else sum += SmallSide + Space;
             }
             return sum;
         }
@@ -459,19 +715,13 @@ namespace NewAgeQoL
 
                 bool round = Seats.Count >= 2;
                 var back = go.GetComponent<Image>();
-                back.color = WardrobeLook.Card;
-                back.sprite = round ? OnlineWindow.Disc() : OnlineWindow.Rounded(6);
-                back.type = round ? Image.Type.Simple : Image.Type.Sliced;
-                if (!round) back.pixelsPerUnitMultiplier = 4f;
+                back.color = round ? WardrobeLook.Card : Color.clear;
+                back.sprite = OnlineWindow.Disc();
+                back.type = Image.Type.Simple;
                 back.raycastTarget = false;
 
-                var edge = go.GetComponent<Outline>();
-                edge.enabled = !round;
-                edge.effectColor = WardrobeLook.FieldEdge;
-                edge.effectDistance = new Vector2(2f, -2f);
-                var mask = go.GetComponent<RectMask2D>();
-                mask.enabled = !round;
-                mask.padding = new Vector4(1f, 1f, 1f, 1f);
+                go.GetComponent<Outline>().enabled = false;
+                go.GetComponent<RectMask2D>().enabled = false;
 
                 if (round)
                 {
@@ -549,14 +799,15 @@ namespace NewAgeQoL
             return top != null ? top : clean != null ? clean : best;
         }
 
-        private static void Picture(RectTransform frame, Sprite still, Image face, GameObject source)
+        private static void Picture(RectTransform frame, Sprite still, Image face, GameObject source, bool left)
         {
             var go = new GameObject("pic", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(frame, false);
-            OnlineWindow.Place((RectTransform)go.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
-                new Vector2(-Grow, -Grow), new Vector2(Grow, Grow));
+            OnlineWindow.Place((RectTransform)go.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             var pic = go.GetComponent<Image>();
-            pic.sprite = still != null ? still : face != null ? face.sprite : null;
+            var raw = still != null ? still : face != null ? face.sprite : null;
+            var own = Icons.Flash(left ? "bar_phase" : "bar_attack");
+            pic.sprite = own != null ? own : Shaped(raw, left);
             pic.enabled = pic.sprite != null;
             pic.preserveAspect = false;
             var press = go.GetComponent<Button>();
@@ -566,23 +817,21 @@ namespace NewAgeQoL
             colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
             press.colors = colors;
             press.onClick.AddListener(() => Click(source));
-            Rim(frame);
-            Faces2.Add(new Seated { Source = source, Pic = pic, Press = press, Mirror = face });
-        }
-
-        private static void Rim(RectTransform frame)
-        {
-            var go = new GameObject("rim", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(frame, false);
-            OnlineWindow.Place((RectTransform)go.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            var art = go.GetComponent<Image>();
-            art.sprite = OnlineWindow.Rounded(6);
-            art.type = Image.Type.Sliced;
-            art.pixelsPerUnitMultiplier = 4f;
-            art.fillCenter = false;
-            art.color = WardrobeLook.FieldEdge;
-            art.raycastTarget = false;
-            go.transform.SetAsLastSibling();
+            Image glow = null;
+            var ring = own != null ? Icons.Flash(left ? "bar_glow_left" : "bar_glow_right") : null;
+            if (ring != null)
+            {
+                var ringGo = new GameObject("glow", typeof(RectTransform), typeof(Image));
+                ringGo.transform.SetParent(frame, false);
+                OnlineWindow.Place((RectTransform)ringGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(-Halo, -Halo), new Vector2(Halo, Halo));
+                glow = ringGo.GetComponent<Image>();
+                glow.sprite = ring;
+                glow.raycastTarget = false;
+                var tint = left ? new Color(1f, 0.86f, 0.45f, 0f) : new Color(1f, 0.55f, 0.45f, 0f);
+                glow.color = tint;
+                ringGo.transform.SetAsLastSibling();
+            }
+            Faces2.Add(new Seated { Source = source, Pic = pic, Press = press, Mirror = own != null ? null : face, Raw = raw, Left = left, Glow = glow });
         }
 
         private static readonly GameObject[] Extra = new GameObject[4];
@@ -776,18 +1025,53 @@ namespace NewAgeQoL
             catch (Exception e) { Plugin.Caught("[bar] press " + source.name + ": " + e.Message); }
         }
 
+        private const float Beat = 1.4f;
+        private const float Halo = 7f;
+
+        private static void Pulse()
+        {
+            if (Faces2.Count == 0) return;
+            float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / Beat);
+            foreach (var seat in Faces2)
+            {
+                var glow = seat.Glow;
+                if (glow == null) continue;
+                float want = seat.Ready ? Mathf.Lerp(0.25f, 1f, wave) : 0f;
+                var c = glow.color;
+                if (Mathf.Abs(c.a - want) < 0.01f) continue;
+                c.a = want;
+                glow.color = c;
+            }
+        }
+
+        private static bool Open()
+        {
+            foreach (var seat in Faces2)
+            {
+                var source = seat.Source;
+                if (source == null || source.GetComponent<EndPhaseButton>() == null) continue;
+                return Alive(seat) || Stuck(source);
+            }
+            return true;
+        }
+
         private static void Shade()
         {
+            bool open = Open();
             foreach (var seat in Faces2)
             {
                 if (seat.Pic == null) continue;
                 var mirror = seat.Mirror;
                 var look = mirror != null ? mirror.sprite : null;
-                if (look != null && look.texture != null && seat.Pic.sprite != look) seat.Pic.sprite = look;
+                if (look != null && look.texture != null && seat.Raw != look)
+                {
+                    seat.Raw = look;
+                    seat.Pic.sprite = Shaped(look, seat.Left);
+                }
                 bool drawn = seat.Pic.sprite != null;
                 if (seat.Pic.enabled != drawn) seat.Pic.enabled = drawn;
                 var source = seat.Source;
-                bool live = Alive(seat);
+                bool live = Alive(seat) && open;
                 if (!live && Stuck(source)) live = true;
                 bool held = false;
                 float age = -1f;
@@ -811,31 +1095,9 @@ namespace NewAgeQoL
                 var swell = new Vector3(pop, pop, 1f);
                 if ((seat.Pic.transform.localScale - swell).sqrMagnitude > 0.00005f) seat.Pic.transform.localScale = swell;
                 bool usable = live && !held;
+                seat.Ready = usable;
                 if (seat.Press != null && seat.Press.interactable != usable) seat.Press.interactable = usable;
             }
-        }
-
-        private static void Fit(RectTransform host, List<RectTransform> row)
-        {
-            if (host == null) return;
-            for (int i = row.Count - 1; i >= 0; i--) if (row[i] == null) row.RemoveAt(i);
-
-            float tallest = host.sizeDelta.y;
-            float x = 0f;
-            foreach (var rt in row)
-            {
-                float tall = rt.rect.height;
-                float wide = rt.rect.width;
-                float k = tall > 1f ? Mathf.Min(1f, (tallest - 4f) / tall) : 1f;
-                if (wide * k > Widest) k = Widest / wide;
-                if (Mathf.Abs(rt.localScale.x - k) > 0.001f) rt.localScale = new Vector3(k, k, 1f);
-                var spot = new Vector2(x, 0f);
-                if (rt.anchoredPosition != spot) rt.anchoredPosition = spot;
-                x += wide * k + Space;
-            }
-
-            var size = new Vector2(Mathf.Max(0f, x - Space), tallest);
-            if (host.sizeDelta != size) host.sizeDelta = size;
         }
 
         private static void Faces()
@@ -1066,6 +1328,14 @@ namespace NewAgeQoL
             _clock = null;
             _top = null;
             _mid = null;
+            _hold = null;
+            _round = null;
+            _time = null;
+            Digits.Clear();
+            _roundSaid = null;
+            _countSaid = int.MinValue;
+            _countText = null;
+            _tabWide = 0f;
         }
     }
 

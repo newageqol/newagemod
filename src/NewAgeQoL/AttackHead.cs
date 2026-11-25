@@ -96,7 +96,11 @@ namespace NewAgeQoL
             if (_head == null) _head = Head();
 
             var name = _nameField?.GetValue(view) as Text;
-            if (name != null) name.text = _head;
+            if (name != null)
+            {
+                name.supportRichText = true;
+                name.text = _head;
+            }
             if (!on) return;
 
             var body = _bodyField?.GetValue(view) as AttackDescription;
@@ -130,6 +134,7 @@ namespace NewAgeQoL
                 if (digits == null) continue;
                 int guard = Guard(row.BodyPart, mine);
                 digits.text = guard < 0 ? "" : guard.ToString();
+                digits.color = mine ? WardrobeLook.Label : WardrobeLook.Accent;
             }
         }
 
@@ -195,7 +200,9 @@ namespace NewAgeQoL
             try { caption = ResourceStrings.GetString("combat.gui.attack.dialog.caption"); }
             catch { caption = Lang.T("Атака"); }
             if (string.IsNullOrEmpty(caption)) caption = Lang.T("Атака");
-            return _login.Length > 0 ? caption + " — " + _login : caption;
+            caption = caption.Trim().TrimEnd(':', ' ', '—', '-').Trim();
+            if (_login.Length == 0) return caption;
+            return caption + "<color=#747B85>  ·  </color><color=#E2B85C>" + _login.Replace("<", "‹") + "</color>";
         }
     }
 }

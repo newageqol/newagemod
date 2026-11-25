@@ -424,6 +424,14 @@ namespace NewAgeQoL
             return null;
         }
 
+        internal static string CodeOf(TMP_SpriteAsset asset, int index)
+        {
+            if (!_ready || asset == null || !ReferenceEquals(asset, _asset)) return null;
+            foreach (var face in Faces)
+                if (index >= face.Start && index < face.Start + face.Count) return face.Code;
+            return null;
+        }
+
         internal static Sprite Icon()
         {
             if (_icon != null) return _icon;

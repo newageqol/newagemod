@@ -1834,15 +1834,33 @@ namespace NewAgeQoL
         {
             if (string.IsNullOrEmpty(image)) return null;
             Sprite sprite;
-            if (Sharp.TryGetValue(image, out sprite) && sprite != null) return sprite;
+            if (Sharp.TryGetValue(image, out sprite))
+            {
+                if (sprite != null) return sprite;
+                Sharp.Remove(image);
+                Loading.Remove(image);
+            }
             try
             {
                 sprite = AtlasUtils.GetThingSprite(image);
                 if (sprite != null) return sprite;
             }
             catch { }
+            return Saved(image);
+        }
+
+        internal static Sprite Saved(string image)
+        {
+            if (string.IsNullOrEmpty(image)) return null;
+            Sprite sprite;
+            if (Sharp.TryGetValue(image, out sprite))
+            {
+                if (sprite != null) return sprite;
+                Sharp.Remove(image);
+                Loading.Remove(image);
+            }
             Load(image);
-            return null;
+            return Sharp.TryGetValue(image, out sprite) && sprite != null ? sprite : null;
         }
 
         private static string Folder => System.IO.Path.Combine(System.IO.Path.Combine(BepInEx.Paths.CachePath, "NewAgeQoL"), "things");
@@ -1895,7 +1913,10 @@ namespace NewAgeQoL
                 return false;
             }
             texture.name = "qol_thing_" + image;
-            Sharp[image] = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            texture.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            Sharp[image] = sprite;
             return true;
         }
     }

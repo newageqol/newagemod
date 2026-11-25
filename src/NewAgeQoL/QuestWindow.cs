@@ -231,7 +231,7 @@ namespace NewAgeQoL
             _find.text = _query;
             _find.onValueChanged.AddListener(v => { _query = Norm(v); Fill(); });
             Shrink(OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Обновить"), 96f, BarH, () => { QuestBoard.Reask(); Fill(); }));
-            _talk = OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Открыть"), 96f, BarH, () => { if (_picked > 0) QuestBoard.Talk(_picked); });
+            _talk = OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Открыть"), 96f, BarH, () => { if (_picked > 0 && !SideButtons.InCombat()) QuestBoard.Talk(_picked); });
             Shrink(_talk);
             _track = OnlineWindow.MakeGameButton(barGo.transform, Lang.T("Сбросить"), 110f, BarH, () => { QuestTrack.Clear(); Paint(); });
             Shrink(_track);
@@ -509,7 +509,7 @@ namespace NewAgeQoL
                 bool on = line.Key == _picked;
                 img.color = on ? WardrobeLook.Mix(WardrobeLook.Tab, WardrobeLook.Accent, 0.28f) : WardrobeLook.Tab;
             }
-            if (_talk != null) _talk.interactable = _picked > 0;
+            if (_talk != null) _talk.interactable = _picked > 0 && !SideButtons.InCombat();
             if (_track != null) _track.interactable = QuestTrack.Any;
             foreach (var star in Stars)
             {
