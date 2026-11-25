@@ -45,6 +45,13 @@ namespace NewAgeQoL
         }
 
         private const int MostHave = 9999999;
+        private const int MostBins = 10;
+
+        private sealed class Bin
+        {
+            internal readonly List<Line> Lines = new List<Line>();
+            internal readonly Dictionary<int, Have> Marks = new Dictionary<int, Have>();
+        }
 
         private static GameObject _canvasGo;
         private static RectTransform _items;
@@ -72,10 +79,15 @@ namespace NewAgeQoL
         private static readonly List<int> Listed = new List<int>();
         private static int _drawn;
 
-        private static readonly List<Line> Cart = new List<Line>();
+        private static readonly List<Bin> Bins = new List<Bin> { new Bin() };
+        private static int _bin;
+        private static List<Line> Cart => Bins[_bin].Lines;
+        private static Dictionary<int, Have> Stock => Bins[_bin].Marks;
+        private static RectTransform _bins;
+        private static Text _cartTitle;
+        private static RectTransform _clear;
         private static readonly Dictionary<int, int> Variants = new Dictionary<int, int>();
         private static readonly HashSet<string> Open = new HashSet<string>();
-        private static readonly Dictionary<int, Have> Stock = new Dictionary<int, Have>();
         private static readonly Dictionary<int, int> Wanted = new Dictionary<int, int>();
         private static bool _loaded;
         private static string _saved;
@@ -115,7 +127,7 @@ namespace NewAgeQoL
                 {
                     Things.Clear();
                     Variants.Clear();
-                    Cart.RemoveAll(line => RecipeData.Making(line.Id) == null);
+                    Drop();
                 }
                 _seenData = RecipeData.Version;
                 Restore();
@@ -179,6 +191,9 @@ namespace NewAgeQoL
             _tree = null;
             _treeScroll = null;
             _cart = null;
+            _bins = null;
+            _cartTitle = null;
+            _clear = null;
             _drops = null;
             _cartView = null;
             _dropHead = null;
@@ -244,7 +259,7 @@ namespace NewAgeQoL
             Collect();
             if (Things.Count == 0) { Close(); return; }
             if (RecipeData.Making(_picked) == null) _picked = Things[0];
-            Cart.RemoveAll(line => RecipeData.Making(line.Id) == null);
+            Drop();
             Variants.Clear();
             Restore();
             Open.Clear();
@@ -462,10 +477,16 @@ namespace NewAgeQoL
 
         private static void BuildCart(RectTransform box)
         {
-            var head = Say(box, global::NewAgeQoL.Lang.T("Корзина"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
-            Wardrobe.At(head.rectTransform, 16f, 10f, 200f, 30f);
-            Wardrobe.At(Wardrobe.GameButton(box, global::NewAgeQoL.Lang.T("Очистить"), ClearCart, true), CartW - 128f, 10f, 112f, 30f);
-            _cartView = (RectTransform)Scroller(box, 8f, 46f, CartW - 16f, CartMax, 2f, out _cart).transform;
+            _cartTitle = Say(box, global::NewAgeQoL.Lang.T("Корзина"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
+            Wardrobe.At(_cartTitle.rectTransform, 16f, 10f, CartW - 160f, 30f);
+            Fit(_cartTitle, 11, 16);
+            _clear = Wardrobe.GameButton(box, global::NewAgeQoL.Lang.T("Очистить"), ClearCart, true);
+            Wardrobe.At(_clear, CartW - 128f, 10f, 112f, 30f);
+            var binsGo = new GameObject("bins", typeof(RectTransform));
+            binsGo.transform.SetParent(box, false);
+            _bins = (RectTransform)binsGo.transform;
+            Wardrobe.At(_bins, 8f, 46f, CartW - 16f, BinH);
+            _cartView = (RectTransform)Scroller(box, 8f, CartY, CartW - 16f, CartMax, 2f, out _cart).transform;
 
             var drop = Say(box, global::NewAgeQoL.Lang.T("Всего дропа"), 16, FontStyle.Bold, WardrobeLook.Accent, TextAnchor.MiddleLeft);
             Fit(drop, 11, 16);
@@ -475,15 +496,17 @@ namespace NewAgeQoL
             FitCart();
         }
 
-        private const float CartMax = 230f;
+        private const float CartMax = 200f;
+        private const float BinH = 36f;
+        private const float CartY = 46f + BinH + 6f;
 
         private static void FitCart()
         {
             if (_cartView == null || _dropHead == null || _dropView == null) return;
             LayoutRebuilder.ForceRebuildLayoutImmediate(_cart);
             float h = Mathf.Clamp(LayoutUtility.GetPreferredHeight(_cart), 50f, CartMax);
-            Wardrobe.At(_cartView, 8f, 46f, CartW - 16f, h);
-            float y = 46f + h + 8f;
+            Wardrobe.At(_cartView, 8f, CartY, CartW - 16f, h);
+            float y = CartY + h + 8f;
             Wardrobe.At(_dropHead, 16f, y, CartW - 32f, 28f);
             Wardrobe.At(_dropView, 8f, y + 32f, CartW - 16f, BodyH - y - 32f - 8f);
         }
@@ -882,9 +905,99 @@ namespace NewAgeQoL
 
         private static void ClearCart()
         {
+            if (Empty(Bins[_bin]) && Bins.Count > 1)
+            {
+                Bins.RemoveAt(_bin);
+                if (_bin >= Bins.Count) _bin = Bins.Count - 1;
+                Plugin.Trace("[craft] cart removed, left " + Bins.Count);
+                Recount();
+                return;
+            }
             Cart.Clear();
             Stock.Clear();
             Recount();
+        }
+
+        private static void Drop()
+        {
+            foreach (var bin in Bins) bin.Lines.RemoveAll(line => RecipeData.Making(line.Id) == null);
+        }
+
+        private static bool Empty(Bin bin) => bin.Lines.Count == 0 && bin.Marks.Count == 0;
+
+        private static void Switch(int index)
+        {
+            if (index < 0 || index >= Bins.Count || index == _bin) return;
+            _bin = index;
+            Recount();
+        }
+
+        private static void NewBin()
+        {
+            for (int i = 0; i < Bins.Count; i++)
+                if (Empty(Bins[i])) { _bin = i; Recount(); return; }
+            if (Bins.Count >= MostBins) return;
+            Bins.Add(new Bin());
+            _bin = Bins.Count - 1;
+            Plugin.Trace("[craft] new cart " + Bins.Count);
+            Recount();
+        }
+
+        private static void BinTabs()
+        {
+            if (_bins == null) return;
+            Clear(_bins);
+            const float gap = 4f;
+            float wide = Mathf.Min(BinH, (CartW - 16f - gap * MostBins) / (MostBins + 1));
+            for (int i = 0; i < Bins.Count; i++)
+            {
+                int index = i;
+                var bin = Bins[i];
+                bool on = i == _bin;
+                bool full = bin.Lines.Count > 0;
+                var tab = Wardrobe.Arrow(_bins, "", () => Switch(index));
+                var rt = (RectTransform)tab.transform;
+                Wardrobe.At(rt, i * (wide + gap), 0f, wide, BinH);
+                tab.GetComponent<Image>().color = on ? WardrobeLook.Accent : WardrobeLook.Button;
+                if (full)
+                {
+                    int first = bin.Lines[0].Id;
+                    var info = RecipeData.Thing(first);
+                    var recipe = Variant(first);
+                    string image = info != null && !string.IsNullOrEmpty(info.Image) ? info.Image : recipe != null ? recipe.ResultImage : null;
+                    int rarity = info != null ? info.Rarity : recipe != null ? recipe.ResultRarity : 0;
+                    float side = Mathf.Min(wide, BinH) - 6f;
+                    Icon(rt, image, (wide - side) / 2f, (BinH - side) / 2f, side, rarity, first);
+                }
+                var number = Say(rt, (i + 1).ToString(CultureInfo.InvariantCulture), full ? 11 : 15, FontStyle.Bold,
+                    full ? (on ? WardrobeLook.Accent : WardrobeLook.Bright) : (on ? WardrobeLook.OnAccent : WardrobeLook.Bright),
+                    full ? TextAnchor.LowerRight : TextAnchor.MiddleCenter);
+                OnlineWindow.Place(number.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(2f, 1f), new Vector2(-3f, -1f));
+                number.raycastTarget = false;
+                if (full)
+                {
+                    var shade = number.gameObject.AddComponent<Outline>();
+                    shade.effectColor = new Color(0f, 0f, 0f, 0.9f);
+                    shade.effectDistance = new Vector2(1f, -1f);
+                }
+            }
+            if (Bins.Count < MostBins)
+            {
+                var add = Wardrobe.Arrow(_bins, "+", NewBin);
+                Wardrobe.At((RectTransform)add.transform, Bins.Count * (wide + gap), 0f, wide, BinH);
+            }
+            if (_cartTitle != null)
+                _cartTitle.text = Bins.Count > 1
+                    ? global::NewAgeQoL.Lang.F("Корзина {0}", _bin + 1)
+                    : global::NewAgeQoL.Lang.T("Корзина");
+            if (_clear != null)
+            {
+                var label = _clear.GetComponentInChildren<Text>(true);
+                if (label != null)
+                    label.text = Empty(Bins[_bin]) && Bins.Count > 1
+                        ? global::NewAgeQoL.Lang.T("Убрать")
+                        : global::NewAgeQoL.Lang.T("Очистить");
+            }
         }
 
         private static bool _recounting;
@@ -913,6 +1026,7 @@ namespace NewAgeQoL
             Clear(_cart);
             Clear(_drops);
             Prune();
+            BinTabs();
             foreach (var line in Cart) CartRow(line);
             if (Cart.Count == 0) Note(_cart, global::NewAgeQoL.Lang.T("Пусто — выбери вещь и нажми «В корзину»"));
             FitCart();
@@ -1198,6 +1312,11 @@ namespace NewAgeQoL
             try
             {
                 string path = SavePath;
+                Bins.Clear();
+                Bins.Add(new Bin());
+                _bin = 0;
+                int seen = 0;
+                int active = 0;
                 if (File.Exists(path))
                     foreach (var raw in File.ReadAllLines(path, Encoding.UTF8))
                     {
@@ -1206,7 +1325,18 @@ namespace NewAgeQoL
                         if (parts.Length < 3
                             || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out id) || id <= 0
                             || !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) continue;
-                        if (parts[0] == "cart")
+                        if (parts[0] == "bin")
+                        {
+                            if (seen > 0)
+                            {
+                                if (Bins.Count >= MostBins) break;
+                                Bins.Add(new Bin());
+                                _bin = Bins.Count - 1;
+                            }
+                            seen++;
+                            if (value == 1) active = _bin;
+                        }
+                        else if (parts[0] == "cart")
                         {
                             if (value >= 1 && !Cart.Exists(line => line.Id == id)) Cart.Add(new Line { Id = id, Count = Mathf.Clamp(value, 1, 99999) });
                         }
@@ -1218,9 +1348,10 @@ namespace NewAgeQoL
                             if (value > 0 || done) Stock[id] = new Have { Count = value, Done = done };
                         }
                     }
+                _bin = active;
                 _loaded = true;
                 _saved = Dump();
-                Plugin.Trace("[craft] cart read: " + Cart.Count + " items, " + Stock.Count + " components marked");
+                Plugin.Trace("[craft] carts read: " + Bins.Count + ", open " + (_bin + 1) + ": " + Cart.Count + " items, " + Stock.Count + " components marked");
             }
             catch (Exception e) { Plugin.Warn("[craft] reading cart: " + e.Message); }
         }
@@ -1239,13 +1370,18 @@ namespace NewAgeQoL
         private static string Dump()
         {
             var text = new StringBuilder();
-            foreach (var line in Cart)
-                text.Append("cart\t").Append(line.Id.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(line.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
             foreach (var pair in Wanted)
                 text.Append("variant\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.ToString(CultureInfo.InvariantCulture)).Append('\n');
-            foreach (var pair in Stock)
-                if (pair.Value.Count > 0 || pair.Value.Done)
-                    text.Append("have\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Count.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Done ? "1" : "0").Append('\n');
+            for (int i = 0; i < Bins.Count; i++)
+            {
+                var bin = Bins[i];
+                text.Append("bin\t").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append('\t').Append(i == _bin ? "1" : "0").Append('\n');
+                foreach (var line in bin.Lines)
+                    text.Append("cart\t").Append(line.Id.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(line.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
+                foreach (var pair in bin.Marks)
+                    if (pair.Value.Count > 0 || pair.Value.Done)
+                        text.Append("have\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Count.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Done ? "1" : "0").Append('\n');
+            }
             return text.ToString();
         }
 

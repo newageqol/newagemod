@@ -1044,20 +1044,15 @@ namespace NewAgeQoL
             }
         }
 
-        private static bool Open()
+        private static bool Settling()
         {
-            foreach (var seat in Faces2)
-            {
-                var source = seat.Source;
-                if (source == null || source.GetComponent<EndPhaseButton>() == null) continue;
-                return Alive(seat) || Stuck(source);
-            }
-            return true;
+            try { return Strike.Calculating; }
+            catch (Exception e) { Plugin.Caught("[bar] round state: " + e.Message); return false; }
         }
 
         private static void Shade()
         {
-            bool open = Open();
+            bool settling = Settling();
             foreach (var seat in Faces2)
             {
                 if (seat.Pic == null) continue;
@@ -1071,7 +1066,7 @@ namespace NewAgeQoL
                 bool drawn = seat.Pic.sprite != null;
                 if (seat.Pic.enabled != drawn) seat.Pic.enabled = drawn;
                 var source = seat.Source;
-                bool live = Alive(seat) && open;
+                bool live = Alive(seat) && (!settling || (source != null && source.GetComponent<EndPhaseButton>() != null));
                 if (!live && Stuck(source)) live = true;
                 bool held = false;
                 float age = -1f;

@@ -812,10 +812,17 @@ namespace NewAgeQoL
             }
         }
 
+        private static bool Claim(BaseEnterfightWidget widget, out int players, out int max)
+        {
+            if (FightBoard.Claim(Room, widget.Id, out players, out max)) return true;
+            int map = TeamFights.Here();
+            return map > 0 && map != Room && FightBoard.Claim(map, widget.Id, out players, out max);
+        }
+
         private static string Players(BaseEnterfightWidget widget)
         {
             int players, max;
-            if (FightBoard.Claim(Room, widget.Id, out players, out max)) return Lang.F("{0} из {1}", players, max);
+            if (Claim(widget, out players, out max)) return Lang.F("{0} из {1}", players, max);
             return Words(widget, "PlayersText");
         }
 

@@ -404,7 +404,9 @@ namespace NewAgeQoL
 
         internal static bool IsContract(ThingItemMessage t) => t != null && IsContract(t.ThingId);
 
-        internal static bool IsContract(int thingId) => thingId >= 4000 && thingId <= 4999;
+        private static readonly HashSet<int> NotContracts = new HashSet<int> { 4007, 4010, 4011, 4012, 4033, 4042, 4043, 4044, 4045, 4046 };
+
+        internal static bool IsContract(int thingId) => thingId >= 4000 && thingId <= 4999 && !NotContracts.Contains(thingId);
 
         internal static void LearnIcon(ThingItemMessage t)
         {
