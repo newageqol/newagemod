@@ -43,6 +43,7 @@ namespace NewAgeQoL
             {
                 Listen();
                 ShopCards.Tick();
+                MarketLook.Tick();
                 if (MarketAirCenterPatch.Pending && Time.unscaledTime - MarketAirCenterPatch.PendingAt > 1f)
                     MarketAirCenterPatch.Pending = false;
             }

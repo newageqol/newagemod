@@ -222,7 +222,7 @@ namespace NewAgeQoL
             _rowIndex = 0;
             if (!known) { AddRow(FighterHint.Status(ch, cd, false), "", "", "", WardrobeLook.Body); return; }
             if (items.Count == 0) { AddRow(Lang.T("нет эффектов"), "", "", "", WardrobeLook.Body); return; }
-            foreach (var it in items)
+            foreach (var it in FighterHint.Ordered(items))
             {
                 string name = FighterHint.StateName(it);
                 string src = FighterHint.Sources(it, cd, ch.UserId);

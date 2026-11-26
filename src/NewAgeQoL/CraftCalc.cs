@@ -11,7 +11,7 @@ namespace NewAgeQoL
 {
     internal static class CraftCalc
     {
-        private const float PanelW = 1300f;
+        private const float PanelW = 1360f;
         private const float PanelH = 820f;
         private const float Top = 60f;
         private const float BodyH = PanelH - Top - 16f;
@@ -38,19 +38,11 @@ namespace NewAgeQoL
             internal int Count;
         }
 
-        private sealed class Have
-        {
-            internal int Count;
-            internal bool Done;
-        }
-
-        private const int MostHave = 9999999;
         private const int MostBins = 10;
 
         private sealed class Bin
         {
             internal readonly List<Line> Lines = new List<Line>();
-            internal readonly Dictionary<int, Have> Marks = new Dictionary<int, Have>();
         }
 
         private static GameObject _canvasGo;
@@ -82,7 +74,6 @@ namespace NewAgeQoL
         private static readonly List<Bin> Bins = new List<Bin> { new Bin() };
         private static int _bin;
         private static List<Line> Cart => Bins[_bin].Lines;
-        private static Dictionary<int, Have> Stock => Bins[_bin].Marks;
         private static RectTransform _bins;
         private static Text _cartTitle;
         private static RectTransform _clear;
@@ -139,7 +130,9 @@ namespace NewAgeQoL
                 Fill();
                 Pick(_picked);
                 Recount();
-                Plugin.Trace("[craft] window opened: items " + Things.Count + ", in cart " + Cart.Count);
+                Flasks.RequestScan();
+                Artifacts.RequestStorage();
+                Plugin.Trace("[craft] window opened: items " + Things.Count + ", in cart " + Cart.Count + ", at storage " + Artifacts.NearStorage());
             }
             catch (Exception e) { Plugin.Fault("[craft] window: " + e); Close(); }
         }
@@ -176,9 +169,23 @@ namespace NewAgeQoL
             Plugin.Trace("[craft] opened on recipe of " + name + " (" + thing + ")");
         }
 
+        internal static bool IsOpen => _canvasGo != null;
+
+        internal static void Under(bool low)
+        {
+            if (_canvasGo == null) return;
+            var canvas = _canvasGo.GetComponent<Canvas>();
+            if (canvas != null) canvas.sortingOrder = low ? 440 : 831;
+            _hoverId = 0;
+            _hoverNote = null;
+            if (_tip != null) _tip.SetActive(false);
+        }
+
         internal static void Close()
         {
+            MarketLook.Drop();
             _hoverId = 0;
+            _hoverNote = null;
             _tipFor = 0;
             _tip = null;
             _tipText = null;
@@ -214,6 +221,7 @@ namespace NewAgeQoL
         internal static bool EscapeClose()
         {
             if (_canvasGo == null) return false;
+            if (MarketLook.Open) return false;
             Close();
             return true;
         }
@@ -242,6 +250,7 @@ namespace NewAgeQoL
             }
             More();
             Tip();
+            Owned();
             if (_toTop != null && _items != null)
             {
                 bool far = _items.anchoredPosition.y > RowH * 3f;
@@ -914,7 +923,6 @@ namespace NewAgeQoL
                 return;
             }
             Cart.Clear();
-            Stock.Clear();
             Recount();
         }
 
@@ -923,7 +931,7 @@ namespace NewAgeQoL
             foreach (var bin in Bins) bin.Lines.RemoveAll(line => RecipeData.Making(line.Id) == null);
         }
 
-        private static bool Empty(Bin bin) => bin.Lines.Count == 0 && bin.Marks.Count == 0;
+        private static bool Empty(Bin bin) => bin.Lines.Count == 0;
 
         private static void Switch(int index)
         {
@@ -1036,12 +1044,16 @@ namespace NewAgeQoL
             var order = new List<int>(drops.Keys);
             order.Sort((a, b) => string.Compare(RecipeData.ThingName(a), RecipeData.ThingName(b), StringComparison.CurrentCultureIgnoreCase));
             int ready = 0;
+            DropIds.Clear();
             foreach (int id in order)
             {
-                if (Collected(id)) ready++;
+                DropIds.Add(id);
+                if (Mine(id) >= drops[id]) ready++;
                 DropRow(id, drops[id]);
             }
             if (Cart.Count > 0 && drops.Count == 0) Note(_drops, global::NewAgeQoL.Lang.T("Дропа не нужно"));
+            if (order.Count > 0) Remark(_drops, StorageNote());
+            _ownedSaid = OwnedKey();
             if (_dropTitle != null)
                 _dropTitle.text = order.Count > 0
                     ? global::NewAgeQoL.Lang.F("Всего дропа · собрано {0} из {1}", ready, order.Count)
@@ -1209,95 +1221,76 @@ namespace NewAgeQoL
         {
             var info = RecipeData.Thing(id);
             int rarity = info != null ? info.Rarity : 0;
-            Have have;
-            Stock.TryGetValue(id, out have);
-            bool done = have != null && have.Done;
-            long got = have != null ? have.Count : 0;
+            long mine = Mine(id);
+            bool enough = mine >= count;
             var rt = Plain(_drops, "drop" + id, 44f);
-            if (done) rt.GetComponent<Image>().color = WardrobeLook.Mix(WardrobeLook.Tab, WardrobeLook.Good, 0.32f);
+            if (enough) rt.GetComponent<Image>().color = WardrobeLook.Mix(WardrobeLook.Tab, WardrobeLook.Good, 0.32f);
             float w = CartW - 16f;
 
-            var tick = Wardrobe.Arrow(rt, done ? "✓" : "", () => Flip(id));
-            Wardrobe.At((RectTransform)tick.transform, 6f, 8f, 28f, 28f);
-            tick.GetComponent<Image>().color = done ? WardrobeLook.Good : WardrobeLook.Field;
-            var tickEdge = tick.gameObject.AddComponent<Outline>();
-            tickEdge.effectColor = done ? WardrobeLook.Good : WardrobeLook.FieldEdge;
-            tickEdge.effectDistance = new Vector2(1f, -1f);
-            foreach (var label in tick.GetComponentsInChildren<Text>(true)) label.color = WardrobeLook.OnAccent;
-
-            Icon(rt, info != null ? info.Image : null, 40f, 6f, 32f, rarity, id);
+            Icon(rt, info != null ? info.Image : null, 6f, 6f, 32f, rarity, id);
             var name = Say(rt, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(id)), 14, FontStyle.Normal, WardrobeData.RarityColor(rarity), TextAnchor.MiddleLeft);
-            Wardrobe.At(name.rectTransform, 78f, 0f, w - 78f - 192f, 44f);
+            Wardrobe.At(name.rectTransform, 44f, 0f, w - 44f - 192f, 44f);
             name.horizontalOverflow = HorizontalWrapMode.Wrap;
             Fit(name, 9, 14);
 
-            if (!done)
-            {
-                var field = OnlineWindow.MakeInput(rt, 84f, global::NewAgeQoL.Lang.T("в наличии"));
-                WardrobeLook.Style(field);
-                field.contentType = InputField.ContentType.Custom;
-                field.characterValidation = InputField.CharacterValidation.None;
-                field.onValidateInput = (text, index, c) => c >= '0' && c <= '9' ? c : '\0';
-                field.characterLimit = 7;
-                field.textComponent.alignment = TextAnchor.MiddleCenter;
-                field.textComponent.fontSize = 15;
-                var hint = field.placeholder as Text;
-                if (hint != null) { hint.alignment = TextAnchor.MiddleCenter; Fit(hint, 9, 12); }
-                field.SetTextWithoutNotify(got > 0 ? got.ToString(CultureInfo.InvariantCulture) : "");
-                field.onEndEdit.AddListener(text => Got(id, text, count));
-                Wardrobe.At((RectTransform)field.transform, w - 186f, 7f, 84f, 30f);
-            }
+            var look = Wardrobe.Arrow(rt, "", () => MarketLook.Show(id, global::NewAgeQoL.Lang.Game(RecipeData.ThingName(id))));
+            Wardrobe.At((RectTransform)look.transform, w - 186f, 7f, 30f, 30f);
+            look.GetComponent<Image>().color = MarketLook.Here ? WardrobeLook.Field : WardrobeLook.Mix(WardrobeLook.Field, WardrobeLook.Tab, 0.5f);
+            var lookEdge = look.gameObject.AddComponent<Outline>();
+            lookEdge.effectColor = WardrobeLook.FieldEdge;
+            lookEdge.effectDistance = new Vector2(1f, -1f);
+            var bagGo = new GameObject("bag", typeof(RectTransform), typeof(Image));
+            bagGo.transform.SetParent(look.transform, false);
+            OnlineWindow.Place((RectTransform)bagGo.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(6f, 6f), new Vector2(-6f, -6f));
+            var bag = bagGo.GetComponent<Image>();
+            bag.sprite = global::NewAgeQoL.Icons.Bag();
+            bag.preserveAspect = true;
+            bag.raycastTarget = false;
+            bag.color = MarketLook.Here ? WardrobeLook.Accent : WardrobeLook.Faint;
+            look.gameObject.AddComponent<CraftNote>().Text = () => MarketLook.Here
+                ? global::NewAgeQoL.Lang.T("Предложения на рынке")
+                : global::NewAgeQoL.Lang.T("Предложения на рынке: только когда стоите на рынке");
 
-            string left = done ? global::NewAgeQoL.Lang.T("собрано")
-                : got > 0 && got >= count ? global::NewAgeQoL.Lang.T("хватает")
-                : got > 0 ? global::NewAgeQoL.Lang.F("ещё {0}", count - got)
-                : "";
-            var amount = Say(rt, "× " + count, 16, FontStyle.Bold, WardrobeLook.Bright, TextAnchor.MiddleRight);
-            Wardrobe.At(amount.rectTransform, w - 98f, left.Length > 0 ? 2f : 0f, 92f, left.Length > 0 ? 22f : 44f);
+            var amount = Say(rt, mine.ToString(CultureInfo.InvariantCulture) + " / " + count.ToString(CultureInfo.InvariantCulture), 16, FontStyle.Bold,
+                enough ? WardrobeLook.Good : WardrobeLook.Bright, TextAnchor.MiddleRight);
+            Wardrobe.At(amount.rectTransform, w - 148f, 2f, 142f, 22f);
             Fit(amount, 10, 16);
-            if (left.Length == 0) return;
-            var rest = Say(rt, left, 12, FontStyle.Bold, done || (got > 0 && got >= count) ? WardrobeLook.Good : WardrobeLook.Accent, TextAnchor.MiddleRight);
-            Wardrobe.At(rest.rectTransform, w - 98f, 24f, 92f, 18f);
+            string left = enough ? global::NewAgeQoL.Lang.T("хватает")
+                : global::NewAgeQoL.Lang.F("не хватает {0}", count - mine);
+            var rest = Say(rt, left, 12, FontStyle.Bold, enough ? WardrobeLook.Good : WardrobeLook.Accent, TextAnchor.MiddleRight);
+            Wardrobe.At(rest.rectTransform, w - 148f, 24f, 142f, 18f);
             Fit(rest, 9, 12);
         }
 
-        private static bool Collected(int id)
+        private static readonly List<int> DropIds = new List<int>();
+        private static string _ownedSaid;
+        private static float _ownedAt;
+
+        private static long Mine(int id) => (long)Flasks.QtyOf(id) + Storage.QtyOf(id);
+
+        private static string OwnedKey()
         {
-            Have have;
-            return Stock.TryGetValue(id, out have) && have.Done;
+            var at = Storage.Updated;
+            var key = new System.Text.StringBuilder(at.HasValue ? at.Value.Ticks.ToString(CultureInfo.InvariantCulture) : "-");
+            foreach (int id in DropIds) key.Append(',').Append(Mine(id));
+            return key.ToString();
         }
 
-        private static void Flip(int id)
+        private static string StorageNote()
         {
-            Have have;
-            if (!Stock.TryGetValue(id, out have)) Stock[id] = have = new Have();
-            have.Done = !have.Done;
-            if (have.Done) have.Count = 0;
-            if (!have.Done && have.Count == 0) Stock.Remove(id);
-            Recount();
+            var at = Storage.Updated;
+            if (!at.HasValue)
+                return global::NewAgeQoL.Lang.T("Хранилище ещё не просмотрено, посчитан только инвентарь. Зайдите в хранилище, и мод его запомнит.");
+            return global::NewAgeQoL.Lang.F("Хранилище запомнено {0} (Киев). Положенное без мода учтётся при следующем заходе в хранилище.",
+                Kyiv.From(at.Value).ToString("dd.MM HH:mm", CultureInfo.InvariantCulture));
         }
 
-        private static void Got(int id, string text, long need)
+        private static void Owned()
         {
-            int typed;
-            if (!int.TryParse((text ?? "").Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out typed)) typed = 0;
-            typed = Mathf.Clamp(typed, 0, MostHave);
-            Have have;
-            if (!Stock.TryGetValue(id, out have))
-            {
-                if (typed == 0) { Recount(); return; }
-                Stock[id] = have = new Have();
-            }
-            if (need > 0 && typed >= need)
-            {
-                have.Done = true;
-                have.Count = 0;
-                Recount();
-                return;
-            }
-            if (have.Count == typed) return;
-            have.Count = typed;
-            if (have.Count == 0 && !have.Done) Stock.Remove(id);
+            if (Time.unscaledTime < _ownedAt) return;
+            _ownedAt = Time.unscaledTime + 1f;
+            if (DropIds.Count == 0 || OwnedKey() == _ownedSaid) return;
+            Plugin.Trace("[craft] stock in bag or storage changed, recounting");
             Recount();
         }
 
@@ -1341,17 +1334,11 @@ namespace NewAgeQoL
                             if (value >= 1 && !Cart.Exists(line => line.Id == id)) Cart.Add(new Line { Id = id, Count = Mathf.Clamp(value, 1, 99999) });
                         }
                         else if (parts[0] == "variant") Wanted[id] = value;
-                        else if (parts[0] == "have")
-                        {
-                            bool done = parts.Length > 3 && parts[3] == "1";
-                            value = done ? 0 : Mathf.Clamp(value, 0, MostHave);
-                            if (value > 0 || done) Stock[id] = new Have { Count = value, Done = done };
-                        }
                     }
                 _bin = active;
                 _loaded = true;
                 _saved = Dump();
-                Plugin.Trace("[craft] carts read: " + Bins.Count + ", open " + (_bin + 1) + ": " + Cart.Count + " items, " + Stock.Count + " components marked");
+                Plugin.Trace("[craft] carts read: " + Bins.Count + ", open " + (_bin + 1) + ": " + Cart.Count + " items");
             }
             catch (Exception e) { Plugin.Warn("[craft] reading cart: " + e.Message); }
         }
@@ -1378,9 +1365,6 @@ namespace NewAgeQoL
                 text.Append("bin\t").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append('\t').Append(i == _bin ? "1" : "0").Append('\n');
                 foreach (var line in bin.Lines)
                     text.Append("cart\t").Append(line.Id.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(line.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
-                foreach (var pair in bin.Marks)
-                    if (pair.Value.Count > 0 || pair.Value.Done)
-                        text.Append("have\t").Append(pair.Key.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Count.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(pair.Value.Done ? "1" : "0").Append('\n');
             }
             return text.ToString();
         }
@@ -1455,6 +1439,21 @@ namespace NewAgeQoL
             label.gameObject.AddComponent<LayoutElement>().preferredHeight = 50f;
         }
 
+        private static void Remark(RectTransform host, string text)
+        {
+            var go = new GameObject("remark", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            go.transform.SetParent(host, false);
+            var vlg = go.GetComponent<VerticalLayoutGroup>();
+            vlg.padding = new RectOffset(10, 10, 8, 8);
+            vlg.childControlWidth = true;
+            vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+            var label = Say(go.transform, text, 13, FontStyle.Normal, WardrobeLook.Faint, TextAnchor.UpperLeft);
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+        }
+
         private static void Icon(RectTransform host, string image, float x, float y, float size, int rarity, int thing)
         {
             var frame = Wardrobe.Box(host, "icon", x, y, size, size, WardrobeLook.Field, 6);
@@ -1485,6 +1484,24 @@ namespace NewAgeQoL
             }
         }
 
+        private static Func<string> _hoverNote;
+
+        internal static void EnterNote(Func<string> text)
+        {
+            _hoverId = -1;
+            _hoverNote = text;
+            _hoverAt = Time.unscaledTime + 0.3f;
+        }
+
+        internal static void LeaveNote(Func<string> text)
+        {
+            if (_hoverId != -1 || _hoverNote != text) return;
+            _hoverId = 0;
+            _hoverNote = null;
+            _tipFor = 0;
+            if (_tip != null) _tip.SetActive(false);
+        }
+
         internal static void Enter(int thing)
         {
             _hoverId = thing;
@@ -1509,7 +1526,13 @@ namespace NewAgeQoL
             }
             if (Time.unscaledTime < _hoverAt) return;
             if (_tip == null) BuildTip();
-            if (_tipFor != _hoverId)
+            if (_hoverId < 0)
+            {
+                _tipFor = -1;
+                string note = _hoverNote != null ? _hoverNote() : "";
+                if (_tipText.text != note) _tipText.text = note;
+            }
+            else if (_tipFor != _hoverId)
             {
                 int thing = _hoverId;
                 _tipFor = thing;
@@ -1707,6 +1730,17 @@ namespace NewAgeQoL
         public void OnPointerExit(PointerEventData data) => CraftCalc.Leave(Id);
 
         private void OnDisable() => CraftCalc.Leave(Id);
+    }
+
+    internal sealed class CraftNote : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        internal Func<string> Text;
+
+        public void OnPointerEnter(PointerEventData data) => CraftCalc.EnterNote(Text);
+
+        public void OnPointerExit(PointerEventData data) => CraftCalc.LeaveNote(Text);
+
+        private void OnDisable() => CraftCalc.LeaveNote(Text);
     }
 
     internal sealed class CraftCalcTicker : MonoBehaviour

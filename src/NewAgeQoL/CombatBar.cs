@@ -376,18 +376,35 @@ namespace NewAgeQoL
         {
             if (_round == null) return;
             string line = "";
+            string widest = "";
             try
             {
                 var cd = FighterHint.Cd();
                 if (cd != null && cd.RoundNum > 0)
-                    line = Lang.T("Раунд") + " <b><color=#ECEEF1>" + cd.RoundNum + "</color></b>   <color=#5A626E>|</color>   <color=#E2B85C>"
-                           + Lang.T(cd.RoundType == RoundType.WALK_ROUND ? "Фаза ходьбы" : "Фаза боя") + "</color>";
+                {
+                    line = RoundLine(cd.RoundNum.ToString(), cd.RoundType == RoundType.WALK_ROUND ? "Фаза ходьбы" : "Фаза боя");
+                    widest = new string('8', Mathf.Max(2, cd.RoundNum.ToString().Length));
+                }
             }
             catch (Exception e) { Plugin.Caught("[bar] round: " + e.Message); }
             if (line == _roundSaid) return;
             _roundSaid = line;
+            float wide = 0f;
+            if (line.Length > 0)
+            {
+                _round.text = RoundLine(widest, "Фаза ходьбы");
+                wide = _round.preferredWidth;
+                _round.text = RoundLine(widest, "Фаза боя");
+                wide = Mathf.Max(wide, _round.preferredWidth);
+            }
             _round.text = line;
-            _tabWide = line.Length == 0 ? 0f : Mathf.Ceil(_round.preferredWidth) + 44f;
+            _tabWide = line.Length == 0 ? 0f : Mathf.Ceil(wide) + 44f;
+        }
+
+        private static string RoundLine(string num, string phase)
+        {
+            return Lang.T("Раунд") + " <b><color=#ECEEF1>" + num + "</color></b>   <color=#5A626E>|</color>   <color=#E2B85C>"
+                   + Lang.T(phase) + "</color>";
         }
 
         private static void Count()

@@ -2102,7 +2102,7 @@ namespace NewAgeQoL
             Tip(Pic(keys.transform, Icons.Enter(), () => Send(EChatMessageType.MSG_COMMON), WardrobeLook.OnAccent, WardrobeLook.Accent), Lang.T("Всем (Enter)"));
             Tip(Key(keys.transform, Lang.T("К"), KeySide, () => Send(EChatMessageType.MSG_CLAN)), Lang.T("В клан"));
             Tip(Key(keys.transform, Lang.T("А"), KeySide, () => Send(EChatMessageType.MSG_ALLIANCE)), Lang.T("В альянс"));
-            Tip(Pic(keys.transform, Icons.Head(), () => Send(EChatMessageType.MSG_PRIVATE)), Lang.T("Приватное сообщение (Shift+Пробел)"));
+            Tip(Pic(keys.transform, Icons.Head(), () => Send(EChatMessageType.MSG_PRIVATE)), Lang.T("Приватное сообщение (Пробел+Shift)"));
             Button faces = null;
             faces = Pic(keys.transform, Smiles.Icon(), () => Smiles.Toggle((RectTransform)faces.transform), Color.white);
             Tip(faces, Lang.T("Смайлики"));

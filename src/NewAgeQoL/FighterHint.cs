@@ -585,7 +585,7 @@ namespace NewAgeQoL
             {
                 var body = new List<string[]>();
                 var paint = new List<Color32>();
-                foreach (var it in items)
+                foreach (var it in Ordered(items))
                 {
                     string name = StateName(it);
                     int power = Power(it);
@@ -751,6 +751,15 @@ namespace NewAgeQoL
             settings.scaleFactor = scale;
             float drawn = Gauge.GetPreferredWidth(t.text, settings) / scale;
             return Mathf.Max(w, drawn) + 2f;
+        }
+
+        internal static List<UserEnchantmentsResponseItem> Ordered(List<UserEnchantmentsResponseItem> items)
+        {
+            var sorted = new List<UserEnchantmentsResponseItem>(items.Count);
+            foreach (var it in items) if (it.Highlighting == (int)EHighlightingType.Positive) sorted.Add(it);
+            foreach (var it in items) if (it.Highlighting != (int)EHighlightingType.Positive && it.Highlighting != (int)EHighlightingType.Negative) sorted.Add(it);
+            foreach (var it in items) if (it.Highlighting == (int)EHighlightingType.Negative) sorted.Add(it);
+            return sorted;
         }
 
         internal static string Turns(int n)

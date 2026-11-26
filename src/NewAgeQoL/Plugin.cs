@@ -9,7 +9,7 @@ namespace NewAgeQoL
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "newage.qol";
-        public const string Version = "0.61.0";
+        public const string Version = "0.62.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -541,6 +541,7 @@ namespace NewAgeQoL
                 new Part { Name = "Counter.Tick", Do = Counter.Tick },
                 new Part { Name = "AnimAck.Tick", Do = AnimAck.Tick },
                 new Part { Name = "Market.Tick", Do = Market.Tick },
+                new Part { Name = "Storage.Tick", Do = Storage.Tick },
                 new Part { Name = "SkillList.Tick", Do = SkillList.Tick },
                 new Part { Name = "SkillList.Aim", Do = SkillList.Aim },
                 new Part { Name = "Focus.Tick", Do = Focus.Tick },

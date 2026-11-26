@@ -10,7 +10,7 @@ namespace NewAgeQoL
 
         private static Sprite _drop, _bolt, _spark, _enter, _bin, _cap, _head, _burst, _scroll, _quest;
         private static Sprite _star, _starEmpty;
-        private static Sprite _blades, _downward, _again, _chevron;
+        private static Sprite _blades, _downward, _again, _chevron, _bag;
 
         private static readonly Vector2[] Zigzag =
         {
@@ -167,6 +167,23 @@ namespace NewAgeQoL
                     return false;
                 });
             return _bin;
+        }
+
+        internal static Sprite Bag()
+        {
+            if (Gone(_bag))
+                _bag = Shape((x, y) =>
+                {
+                    if (Mathf.Abs(x) <= 0.66f && y >= -0.86f && y <= 0.3f)
+                    {
+                        bool belt = y >= -0.08f && y <= 0.04f && Mathf.Abs(x) <= 0.5f;
+                        return !belt;
+                    }
+                    float dy = y - 0.3f;
+                    float r = Mathf.Sqrt(x * x + dy * dy);
+                    return dy >= 0f && r >= 0.26f && r <= 0.4f;
+                });
+            return _bag;
         }
 
         internal static Sprite Burst()
